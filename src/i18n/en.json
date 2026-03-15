@@ -73,6 +73,7 @@
       "dashboard": "Dashboard",
       "funnelAudit": "Funnel Audit",
       "funnelDesigner": "Funnel Designer",
+      "assetsLibrary": "Assets Library",
       "settings": "Settings",
       "logout": "Log out"
     },
@@ -86,6 +87,10 @@
     "funnelDesigner": {
       "title": "Funnel Designer",
       "description": "Visually design and build your sales funnels."
+    },
+    "assetsLibrary": {
+      "title": "Assets Library",
+      "description": "Create and manage all content for your customer journey."
     },
     "settings": {
       "title": "Settings",
@@ -124,6 +129,9 @@
     "noFunnels": "No funnels yet. Create your first one!",
     "noTemplates": "No templates yet.",
     "nodeAdded": "Element added!",
+    "linkAsset": "Link Sales Copy",
+    "selectAsset": "Select an asset...",
+    "noAssetLinked": "No asset linked. Select a sales copy asset to see its sections here.",
     "pages": {
       "optIn": "Opt-in Page",
       "optInDesc": "Capture leads with a lead...",
@@ -155,6 +163,26 @@
       "thankYouDesc": "Post-purchase thank you",
       "membership": "Membership Area",
       "membershipDesc": "Member content access"
+    }
+  },
+  "assets": {
+    "title": "Assets Library",
+    "create": "New Asset",
+    "untitled": "Untitled",
+    "empty": "No assets yet",
+    "emptyDescription": "Create your first asset to get started.",
+    "saveError": "Error saving",
+    "deleteError": "Error deleting",
+    "deleted": "Deleted!",
+    "newSection": "New Section",
+    "sectionTitle": "Section title...",
+    "sectionContentPlaceholder": "Start writing your content here...",
+    "addSection": "Add Section",
+    "types": {
+      "salesCopy": "Sales Copy",
+      "emailSequence": "Email Sequences",
+      "adCreative": "Ad Creatives",
+      "socialMedia": "Social Media"
     }
   }
 }

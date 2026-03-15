@@ -73,6 +73,7 @@
       "dashboard": "Dashboard",
       "funnelAudit": "Funnel Audit",
       "funnelDesigner": "Funnel Designer",
+      "assetsLibrary": "Assets Library",
       "settings": "Instellingen",
       "logout": "Uitloggen"
     },
@@ -86,6 +87,10 @@
     "funnelDesigner": {
       "title": "Funnel Designer",
       "description": "Ontwerp en bouw visueel je sales funnels."
+    },
+    "assetsLibrary": {
+      "title": "Assets Library",
+      "description": "Maak en beheer alle content voor je customer journey."
     },
     "settings": {
       "title": "Instellingen",
@@ -124,6 +129,9 @@
     "noFunnels": "Nog geen funnels. Maak je eerste aan!",
     "noTemplates": "Nog geen templates.",
     "nodeAdded": "Element toegevoegd!",
+    "linkAsset": "Koppel Sales Copy",
+    "selectAsset": "Selecteer een asset...",
+    "noAssetLinked": "Geen asset gekoppeld. Selecteer een sales copy asset om de secties hier te zien.",
     "pages": {
       "optIn": "Opt-in Pagina",
       "optInDesc": "Leads vastleggen met een lead...",
@@ -155,6 +163,26 @@
       "thankYouDesc": "Bedankt na aankoop",
       "membership": "Ledensectie",
       "membershipDesc": "Toegang tot ledencontent"
+    }
+  },
+  "assets": {
+    "title": "Assets Library",
+    "create": "Nieuw Asset",
+    "untitled": "Naamloos",
+    "empty": "Nog geen assets",
+    "emptyDescription": "Maak je eerste asset aan om te beginnen.",
+    "saveError": "Fout bij opslaan",
+    "deleteError": "Fout bij verwijderen",
+    "deleted": "Verwijderd!",
+    "newSection": "Nieuwe Sectie",
+    "sectionTitle": "Sectietitel...",
+    "sectionContentPlaceholder": "Begin hier met schrijven...",
+    "addSection": "Sectie toevoegen",
+    "types": {
+      "salesCopy": "Sales Copy",
+      "emailSequence": "E-mail Sequenties",
+      "adCreative": "Ad Creatives",
+      "socialMedia": "Social Media"
     }
   }
 }

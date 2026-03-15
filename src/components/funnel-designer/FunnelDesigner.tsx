@@ -29,6 +29,7 @@ import {
 import ElementsPanel from "./ElementsPanel";
 import FunnelNode from "./FunnelNode";
 import TrafficSourceNode from "./TrafficSourceNode";
+import NodeDetailsPanel from "./NodeDetailsPanel";
 import { TRAFFIC_SOURCES, FUNNEL_PAGES } from "./constants";
 
 const nodeTypes = {
@@ -64,6 +65,7 @@ const FunnelDesigner = () => {
   const [showNewFunnel, setShowNewFunnel] = useState(false);
   const [funnelName, setFunnelName] = useState("");
   const [templateName, setTemplateName] = useState("");
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const nodeIdCounter = useRef(0);
 
   // Load funnels
@@ -244,7 +246,25 @@ const FunnelDesigner = () => {
     setNodes([]);
     setEdges([]);
     setCurrentFunnel(null);
+    setSelectedNodeId(null);
   }, [setNodes, setEdges]);
+
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    if (node.type === "funnelPage") {
+      setSelectedNodeId(node.id);
+    }
+  }, []);
+
+  const handleLinkAsset = useCallback((assetId: string | null) => {
+    if (!selectedNodeId) return;
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === selectedNodeId ? { ...n, data: { ...n.data, linkedAssetId: assetId } } : n
+      )
+    );
+  }, [selectedNodeId, setNodes]);
+
+  const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
   return (
     <div className="flex h-full bg-background-dashboard overflow-hidden">
@@ -288,6 +308,8 @@ const FunnelDesigner = () => {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            onPaneClick={() => setSelectedNodeId(null)}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             fitView
@@ -298,6 +320,17 @@ const FunnelDesigner = () => {
           </ReactFlow>
         </div>
       </div>
+
+      {/* Node Details Panel */}
+      {selectedNode && selectedNode.type === "funnelPage" && (
+        <NodeDetailsPanel
+          nodeId={selectedNode.id}
+          nodeLabel={t((selectedNode.data as any).label)}
+          linkedAssetId={(selectedNode.data as any).linkedAssetId || null}
+          onLinkAsset={handleLinkAsset}
+          onClose={() => setSelectedNodeId(null)}
+        />
+      )}
 
       {/* My Funnels Dialog */}
       <Dialog open={showFunnelList} onOpenChange={setShowFunnelList}>

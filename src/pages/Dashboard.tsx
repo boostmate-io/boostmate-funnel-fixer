@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
-import { BarChart3, PenTool } from "lucide-react";
+import { BarChart3, PenTool, Library } from "lucide-react";
 import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
+import AssetsLibrary from "@/components/assets/AssetsLibrary";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -30,8 +31,8 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-background-dashboard">
       <DashboardSidebar activeModule={activeModule} onModuleChange={setActiveModule} />
-      <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" ? "" : "p-8"}`}>
-        {activeModule !== "funnel-designer" && (
+      <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" || activeModule === "assets-library" ? "" : "p-8"}`}>
+        {activeModule !== "funnel-designer" && activeModule !== "assets-library" && (
           <div className="mb-8">
             <h1 className="text-2xl font-display font-bold text-foreground">
               {activeModule === "overview" && t("dashboard.title")}
@@ -58,6 +59,13 @@ const Dashboard = () => {
               <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.funnelDesigner.title")}</h3>
               <p className="text-sm text-muted-foreground">{t("dashboard.funnelDesigner.description")}</p>
             </button>
+            <button onClick={() => setActiveModule("assets-library")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+              <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
+                <Library className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.assetsLibrary.title")}</h3>
+              <p className="text-sm text-muted-foreground">{t("dashboard.assetsLibrary.description")}</p>
+            </button>
           </div>
         )}
 
@@ -72,6 +80,12 @@ const Dashboard = () => {
         {activeModule === "funnel-designer" && (
           <div className="h-[calc(100vh-64px)]">
             <FunnelDesigner />
+          </div>
+        )}
+
+        {activeModule === "assets-library" && (
+          <div className="h-full">
+            <AssetsLibrary />
           </div>
         )}
 
