@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, PenTool } from "lucide-react";
+import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 
 const Dashboard = () => {
   const { t } = useTranslation();
