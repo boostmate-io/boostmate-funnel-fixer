@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
+import KnowledgeCenter from "@/components/dashboard/KnowledgeCenter";
 import { BarChart3, PenTool, Library } from "lucide-react";
 import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
