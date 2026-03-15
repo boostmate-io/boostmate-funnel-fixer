@@ -117,7 +117,7 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
               {t("auditModule.newAudit.description")}
             </p>
           </div>
-          <AuditWizard onComplete={handleWizardComplete} />
+          <AuditWizard onComplete={handleWizardComplete} hideEmailStep />
         </div>
       )}
 
