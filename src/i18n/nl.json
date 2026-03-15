@@ -238,5 +238,25 @@
     },
     "backToList": "Terug naar audits",
     "saveError": "Fout bij opslaan audit"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Volg en analyseer je funnel prestaties dag per dag.",
+    "selectFunnel": "Selecteer een funnel...",
+    "noFunnelSelected": "Selecteer een funnel om metrics te tracken.",
+    "dailyEntry": "Dagelijkse Data Invoer",
+    "history": "Geschiedenis (laatste 30 dagen)",
+    "step": "Stap",
+    "type": "Type",
+    "metrics": "Metrics",
+    "date": "Datum",
+    "totalSpend": "Totale Spend",
+    "totalRevenue": "Totale Omzet",
+    "saveDay": "Dag Opslaan",
+    "saving": "Opslaan...",
+    "saved": "Data opgeslagen!",
+    "saveError": "Fout bij opslaan data",
+    "loading": "Laden...",
+    "noHistory": "Nog geen data ingevoerd."
   }
 }
