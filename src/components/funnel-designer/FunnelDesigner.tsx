@@ -308,6 +308,8 @@ const FunnelDesigner = () => {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            onPaneClick={() => setSelectedNodeId(null)}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             fitView
@@ -318,6 +320,17 @@ const FunnelDesigner = () => {
           </ReactFlow>
         </div>
       </div>
+
+      {/* Node Details Panel */}
+      {selectedNode && selectedNode.type === "funnelPage" && (
+        <NodeDetailsPanel
+          nodeId={selectedNode.id}
+          nodeLabel={t((selectedNode.data as any).label)}
+          linkedAssetId={(selectedNode.data as any).linkedAssetId || null}
+          onLinkAsset={handleLinkAsset}
+          onClose={() => setSelectedNodeId(null)}
+        />
+      )}
 
       {/* My Funnels Dialog */}
       <Dialog open={showFunnelList} onOpenChange={setShowFunnelList}>
