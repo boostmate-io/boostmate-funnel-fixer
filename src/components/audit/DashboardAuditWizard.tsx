@@ -65,6 +65,19 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
 
     setAuditResult(mockResult);
     await saveAudit(data, mockResult, scrapeResult.screenshot, scrapeResult.markdown);
+
+    // Create sales copy asset from scraped content
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && scrapeResult.markdown) {
+      const domain = data.landingPageUrl.replace(/^https?:\/\//, "").split("/")[0];
+      await createSalesCopyFromMarkdown(
+        user.id,
+        activeProject?.id || null,
+        `Sales Copy - ${domain}`,
+        scrapeResult.markdown
+      );
+    }
+
     setPhase("results");
   };
 

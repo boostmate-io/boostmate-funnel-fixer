@@ -11,6 +11,7 @@ import AuthModal from "@/components/auth/AuthModal";
 import { AuditFormData } from "@/types/audit";
 import { mockResult } from "@/components/audit/mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
+import { createSalesCopyFromMarkdown } from "@/lib/api/createSalesCopyFromMarkdown";
 
 type Phase = "wizard" | "analyzing" | "results";
 
