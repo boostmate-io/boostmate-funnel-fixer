@@ -30,16 +30,17 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-background-dashboard">
       <DashboardSidebar activeModule={activeModule} onModuleChange={setActiveModule} />
-      <main className="flex-1 overflow-auto p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-display font-bold text-foreground">
-            {activeModule === "overview" && t("dashboard.title")}
-            {activeModule === "funnel-audit" && t("dashboard.sidebar.funnelAudit")}
-            {activeModule === "funnel-designer" && t("dashboard.sidebar.funnelDesigner")}
-            {activeModule === "settings" && t("dashboard.settings.title")}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">{t("dashboard.welcomeBack", { email: user.email })}</p>
-        </div>
+      <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" ? "" : "p-8"}`}>
+        {activeModule !== "funnel-designer" && (
+          <div className="mb-8">
+            <h1 className="text-2xl font-display font-bold text-foreground">
+              {activeModule === "overview" && t("dashboard.title")}
+              {activeModule === "funnel-audit" && t("dashboard.sidebar.funnelAudit")}
+              {activeModule === "settings" && t("dashboard.settings.title")}
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">{t("dashboard.welcomeBack", { email: user.email })}</p>
+          </div>
+        )}
 
         {activeModule === "overview" && (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -69,7 +70,7 @@ const Dashboard = () => {
         )}
 
         {activeModule === "funnel-designer" && (
-          <div className="h-[calc(100vh-140px)]">
+          <div className="h-[calc(100vh-64px)]">
             <FunnelDesigner />
           </div>
         )}

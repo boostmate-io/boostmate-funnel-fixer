@@ -247,7 +247,7 @@ const FunnelDesigner = () => {
   }, [setNodes, setEdges]);
 
   return (
-    <div className="flex h-full bg-background-dashboard rounded-xl border border-border overflow-hidden">
+    <div className="flex h-full bg-background-dashboard overflow-hidden">
       <ElementsPanel onAddNode={addNode} />
 
       <div className="flex-1 flex flex-col">
