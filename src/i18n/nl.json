@@ -161,5 +161,25 @@
       "membership": "Ledensectie",
       "membershipDesc": "Toegang tot ledencontent"
     }
+  },
+  "assets": {
+    "title": "Assets Library",
+    "create": "Nieuw Asset",
+    "untitled": "Naamloos",
+    "empty": "Nog geen assets",
+    "emptyDescription": "Maak je eerste asset aan om te beginnen.",
+    "saveError": "Fout bij opslaan",
+    "deleteError": "Fout bij verwijderen",
+    "deleted": "Verwijderd!",
+    "newSection": "Nieuwe Sectie",
+    "sectionTitle": "Sectietitel...",
+    "sectionContentPlaceholder": "Begin hier met schrijven...",
+    "addSection": "Sectie toevoegen",
+    "types": {
+      "salesCopy": "Sales Copy",
+      "emailSequence": "E-mail Sequenties",
+      "adCreative": "Ad Creatives",
+      "socialMedia": "Social Media"
+    }
   }
 }

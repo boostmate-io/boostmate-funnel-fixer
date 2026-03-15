@@ -161,5 +161,25 @@
       "membership": "Membership Area",
       "membershipDesc": "Member content access"
     }
+  },
+  "assets": {
+    "title": "Assets Library",
+    "create": "New Asset",
+    "untitled": "Untitled",
+    "empty": "No assets yet",
+    "emptyDescription": "Create your first asset to get started.",
+    "saveError": "Error saving",
+    "deleteError": "Error deleting",
+    "deleted": "Deleted!",
+    "newSection": "New Section",
+    "sectionTitle": "Section title...",
+    "sectionContentPlaceholder": "Start writing your content here...",
+    "addSection": "Add Section",
+    "types": {
+      "salesCopy": "Sales Copy",
+      "emailSequence": "Email Sequences",
+      "adCreative": "Ad Creatives",
+      "socialMedia": "Social Media"
+    }
   }
 }
