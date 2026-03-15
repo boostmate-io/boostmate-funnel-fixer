@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
+import { useProject } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
 import AuditWizard from "./AuditWizard";
 import AnalyzingScreen from "./AnalyzingScreen";
@@ -8,6 +9,7 @@ import AuditResults from "./AuditResults";
 import { AuditFormData, AuditResult } from "@/types/audit";
 import { mockResult } from "./mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
+import { createSalesCopyFromMarkdown } from "@/lib/api/createSalesCopyFromMarkdown";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
