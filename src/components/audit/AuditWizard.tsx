@@ -14,7 +14,7 @@ interface StepConfig {
   type: "input" | "textarea" | "url" | "email";
 }
 
-const steps: StepConfig[] = [
+const allSteps: StepConfig[] = [
   { field: "targetAudience", labelKey: "audit.questions.targetAudience", placeholderKey: "audit.questions.targetAudiencePlaceholder", type: "textarea" },
   { field: "offer", labelKey: "audit.questions.offer", placeholderKey: "audit.questions.offerPlaceholder", type: "textarea" },
   { field: "landingPageUrl", labelKey: "audit.questions.landingPageUrl", placeholderKey: "audit.questions.landingPageUrlPlaceholder", type: "url" },
@@ -27,10 +27,12 @@ const steps: StepConfig[] = [
 
 interface AuditWizardProps {
   onComplete: (data: AuditFormData) => void;
+  hideEmailStep?: boolean;
 }
 
-const AuditWizard = ({ onComplete }: AuditWizardProps) => {
+const AuditWizard = ({ onComplete, hideEmailStep = false }: AuditWizardProps) => {
   const { t } = useTranslation();
+  const steps = hideEmailStep ? allSteps.filter(s => s.field !== "email") : allSteps;
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<AuditFormData>(initialFormData);
   const [error, setError] = useState("");
