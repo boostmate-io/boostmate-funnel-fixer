@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import FunnelSelector from "./FunnelSelector";
 import AnalyticsSummary from "./AnalyticsSummary";
+import AnalyticsCharts from "./AnalyticsCharts";
 import DailyDataEntry from "./DailyDataEntry";
 import AnalyticsHistory from "./AnalyticsHistory";
 
