@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,7 @@ interface AuthModalProps {
 }
 
 const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "" }: AuthModalProps) => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"login" | "signup">("signup");
   const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState("");
@@ -23,25 +25,20 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "" }: AuthModalPro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
+        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
         if (error) throw error;
-        toast.success("Account aangemaakt! Check je e-mail om te bevestigen.");
+        toast.success(t("auth.signupSuccess"));
         onSuccess();
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success("Succesvol ingelogd!");
+        toast.success(t("auth.loginSuccess"));
         onSuccess();
       }
     } catch (err: any) {
-      toast.error(err.message || "Er ging iets mis");
+      toast.error(err.message || t("auth.error"));
     } finally {
       setLoading(false);
     }
@@ -53,50 +50,24 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "" }: AuthModalPro
         <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
           <X className="w-5 h-5" />
         </button>
-
         <h2 className="text-2xl font-display font-bold text-foreground mb-1">
-          {mode === "signup" ? "Account aanmaken" : "Inloggen"}
+          {mode === "signup" ? t("auth.signup") : t("auth.login")}
         </h2>
         <p className="text-muted-foreground mb-6 text-sm">
-          {mode === "signup" ? "Bewaar je audit en krijg toegang tot alle tools." : "Log in op je Boostmate account."}
+          {mode === "signup" ? t("auth.signupSubtitle") : t("auth.loginSubtitle")}
         </p>
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            type="email"
-            placeholder="E-mailadres"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="h-11"
-          />
-          <Input
-            type="password"
-            placeholder="Wachtwoord (min. 6 tekens)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="h-11"
-          />
+          <Input type="email" placeholder={t("auth.emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required className="h-11" />
+          <Input type="password" placeholder={t("auth.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="h-11" />
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
-            {loading ? "Even geduld..." : mode === "signup" ? "Account aanmaken" : "Inloggen"}
+            {loading ? t("auth.loading") : mode === "signup" ? t("auth.signup") : t("auth.login")}
           </Button>
         </form>
-
         <p className="text-center text-sm text-muted-foreground mt-4">
           {mode === "signup" ? (
-            <>Heb je al een account?{" "}
-              <button onClick={() => setMode("login")} className="text-primary font-medium hover:underline">
-                Inloggen
-              </button>
-            </>
+            <>{t("auth.haveAccount")}{" "}<button onClick={() => setMode("login")} className="text-primary font-medium hover:underline">{t("auth.login")}</button></>
           ) : (
-            <>Nog geen account?{" "}
-              <button onClick={() => setMode("signup")} className="text-primary font-medium hover:underline">
-                Registreren
-              </button>
-            </>
+            <>{t("auth.noAccount")}{" "}<button onClick={() => setMode("signup")} className="text-primary font-medium hover:underline">{t("auth.register")}</button></>
           )}
         </p>
       </div>

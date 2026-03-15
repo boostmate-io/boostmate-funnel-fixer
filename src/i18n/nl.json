@@ -1,0 +1,93 @@
+{
+  "header": {
+    "login": "Inloggen"
+  },
+  "audit": {
+    "title": "Gratis Funnel Audit",
+    "subtitle": "Ontdek waarom je funnel niet converteert en krijg een concrete strategie om meer klanten te winnen.",
+    "step": "Stap {{current}} van {{total}}",
+    "next": "Volgende",
+    "previous": "Vorige",
+    "analyze": "Analyseer mijn funnel",
+    "required": "Dit veld is verplicht",
+    "invalidEmail": "Vul een geldig e-mailadres in",
+    "invalidUrl": "Vul een geldige URL in (start met https://)",
+    "questions": {
+      "targetAudience": "Wie is je doelpubliek?",
+      "targetAudiencePlaceholder": "Bijv. Coaches die hun online programma willen lanceren...",
+      "offer": "Wat is je aanbod?",
+      "offerPlaceholder": "Bijv. Een 12-weeks groepsprogramma voor €2.497...",
+      "landingPageUrl": "Wat is je landingspagina URL?",
+      "landingPageUrlPlaceholder": "https://jouw-website.com/aanbod",
+      "trafficSource": "Waar komt je verkeer vandaan?",
+      "trafficSourcePlaceholder": "Bijv. Facebook Ads, Instagram organisch, Google...",
+      "monthlyTraffic": "Hoeveel verkeer krijg je per maand?",
+      "monthlyTrafficPlaceholder": "Bijv. 5.000 bezoekers",
+      "conversionRate": "Wat is je huidige conversieratio?",
+      "conversionRatePlaceholder": "Bijv. 2%",
+      "funnelStrategy": "Leg je huidige funnel strategie uit",
+      "funnelStrategyPlaceholder": "Beschrijf de stappen die een prospect doorloopt van eerste contact tot aankoop...",
+      "email": "Wat is je e-mailadres?",
+      "emailPlaceholder": "jouw@email.com"
+    }
+  },
+  "analyzing": {
+    "title": "Bezig met analyseren",
+    "messages": {
+      "landing": "Landingspagina analyseren...",
+      "leaks": "Conversie lekken identificeren...",
+      "strategy": "Funnel strategie evalueren...",
+      "report": "Rapport genereren..."
+    }
+  },
+  "results": {
+    "title": "Jouw Funnel Score",
+    "positives": "Wat gaat er goed",
+    "leaks": "Top 3 Conversie Lekken",
+    "fix": "Fix",
+    "currentStrategy": "Huidige Strategie",
+    "optimizedStrategy": "Geoptimaliseerde Strategie",
+    "ctaTitle": "Wil je een volledige geoptimaliseerde customer journey?",
+    "ctaDescription": "Maak een gratis account aan om je audit te bewaren en een complete funnel strategie te ontwerpen.",
+    "ctaButton": "Gratis account aanmaken"
+  },
+  "auth": {
+    "signup": "Account aanmaken",
+    "login": "Inloggen",
+    "signupSubtitle": "Bewaar je audit en krijg toegang tot alle tools.",
+    "loginSubtitle": "Log in op je Boostmate account.",
+    "emailPlaceholder": "E-mailadres",
+    "passwordPlaceholder": "Wachtwoord (min. 6 tekens)",
+    "loading": "Even geduld...",
+    "haveAccount": "Heb je al een account?",
+    "noAccount": "Nog geen account?",
+    "register": "Registreren",
+    "signupSuccess": "Account aangemaakt! Check je e-mail om te bevestigen.",
+    "loginSuccess": "Succesvol ingelogd!",
+    "error": "Er ging iets mis"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcomeBack": "Welkom terug, {{email}}",
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "funnelAudit": "Funnel Audit",
+      "settings": "Instellingen",
+      "logout": "Uitloggen"
+    },
+    "logoutSuccess": "Uitgelogd",
+    "funnelAudit": {
+      "title": "Funnel Audit",
+      "description": "Analyseer en optimaliseer je sales funnel stap voor stap.",
+      "placeholder": "Funnel Audit Module",
+      "placeholderDescription": "Deze module wordt binnenkort uitgewerkt. Hier kun je straks een volledige audit van je funnel uitvoeren."
+    },
+    "settings": {
+      "title": "Instellingen",
+      "account": "Account",
+      "email": "E-mail",
+      "language": "Taal",
+      "languageDescription": "Kies je voorkeurstaal"
+    }
+  }
+}

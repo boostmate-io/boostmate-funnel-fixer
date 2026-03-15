@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { BarChart3, LayoutDashboard, LogOut, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -8,18 +9,19 @@ interface DashboardSidebarProps {
   onModuleChange: (module: string) => void;
 }
 
-const navItems = [
-  { id: "overview", label: "Dashboard", icon: LayoutDashboard },
-  { id: "funnel-audit", label: "Funnel Audit", icon: BarChart3 },
-  { id: "settings", label: "Instellingen", icon: Settings },
-];
-
 const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+
+  const navItems = [
+    { id: "overview", label: t("dashboard.sidebar.dashboard"), icon: LayoutDashboard },
+    { id: "funnel-audit", label: t("dashboard.sidebar.funnelAudit"), icon: BarChart3 },
+    { id: "settings", label: t("dashboard.sidebar.settings"), icon: Settings },
+  ];
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    toast.success("Uitgelogd");
+    toast.success(t("dashboard.logoutSuccess"));
     navigate("/");
   };
 
@@ -30,7 +32,6 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
           <span className="text-primary">Boost</span>mate
         </h1>
       </div>
-
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => (
           <button
@@ -47,14 +48,13 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
           </button>
         ))}
       </nav>
-
       <div className="p-4 border-t border-border">
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
         >
           <LogOut className="w-5 h-5" />
-          Uitloggen
+          {t("dashboard.sidebar.logout")}
         </button>
       </div>
     </aside>
