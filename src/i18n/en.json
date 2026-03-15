@@ -1,0 +1,93 @@
+{
+  "header": {
+    "login": "Log in"
+  },
+  "audit": {
+    "title": "Free Funnel Audit",
+    "subtitle": "Discover why your funnel isn't converting and get a concrete strategy to win more clients.",
+    "step": "Step {{current}} of {{total}}",
+    "next": "Next",
+    "previous": "Previous",
+    "analyze": "Analyze my funnel",
+    "required": "This field is required",
+    "invalidEmail": "Enter a valid email address",
+    "invalidUrl": "Enter a valid URL (start with https://)",
+    "questions": {
+      "targetAudience": "Who is your target audience?",
+      "targetAudiencePlaceholder": "E.g. Coaches who want to launch their online program...",
+      "offer": "What is your offer?",
+      "offerPlaceholder": "E.g. A 12-week group program for €2,497...",
+      "landingPageUrl": "What is your landing page URL?",
+      "landingPageUrlPlaceholder": "https://your-website.com/offer",
+      "trafficSource": "Where does your traffic come from?",
+      "trafficSourcePlaceholder": "E.g. Facebook Ads, Instagram organic, Google...",
+      "monthlyTraffic": "How much traffic do you get per month?",
+      "monthlyTrafficPlaceholder": "E.g. 5,000 visitors",
+      "conversionRate": "What is your current conversion rate?",
+      "conversionRatePlaceholder": "E.g. 2%",
+      "funnelStrategy": "Describe your current funnel strategy",
+      "funnelStrategyPlaceholder": "Describe the steps a prospect goes through from first contact to purchase...",
+      "email": "What is your email address?",
+      "emailPlaceholder": "your@email.com"
+    }
+  },
+  "analyzing": {
+    "title": "Analyzing",
+    "messages": {
+      "landing": "Analyzing landing page...",
+      "leaks": "Identifying conversion leaks...",
+      "strategy": "Evaluating funnel strategy...",
+      "report": "Generating report..."
+    }
+  },
+  "results": {
+    "title": "Your Funnel Score",
+    "positives": "What's going well",
+    "leaks": "Top 3 Conversion Leaks",
+    "fix": "Fix",
+    "currentStrategy": "Current Strategy",
+    "optimizedStrategy": "Optimized Strategy",
+    "ctaTitle": "Want a fully optimized customer journey?",
+    "ctaDescription": "Create a free account to save your audit and design a complete funnel strategy.",
+    "ctaButton": "Create free account"
+  },
+  "auth": {
+    "signup": "Create account",
+    "login": "Log in",
+    "signupSubtitle": "Save your audit and get access to all tools.",
+    "loginSubtitle": "Log in to your Boostmate account.",
+    "emailPlaceholder": "Email address",
+    "passwordPlaceholder": "Password (min. 6 characters)",
+    "loading": "Please wait...",
+    "haveAccount": "Already have an account?",
+    "noAccount": "Don't have an account yet?",
+    "register": "Register",
+    "signupSuccess": "Account created! Check your email to confirm.",
+    "loginSuccess": "Successfully logged in!",
+    "error": "Something went wrong"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcomeBack": "Welcome back, {{email}}",
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "funnelAudit": "Funnel Audit",
+      "settings": "Settings",
+      "logout": "Log out"
+    },
+    "logoutSuccess": "Logged out",
+    "funnelAudit": {
+      "title": "Funnel Audit",
+      "description": "Analyze and optimize your sales funnel step by step.",
+      "placeholder": "Funnel Audit Module",
+      "placeholderDescription": "This module will be developed soon. You'll be able to run a full audit of your funnel here."
+    },
+    "settings": {
+      "title": "Settings",
+      "account": "Account",
+      "email": "Email",
+      "language": "Language",
+      "languageDescription": "Choose your preferred language"
+    }
+  }
+}
