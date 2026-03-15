@@ -31,7 +31,7 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-background-dashboard">
       <DashboardSidebar activeModule={activeModule} onModuleChange={setActiveModule} />
-      <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" ? "" : "p-8"}`}>
+      <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" || activeModule === "assets-library" ? "" : "p-8"}`}>
         {activeModule !== "funnel-designer" && (
           <div className="mb-8">
             <h1 className="text-2xl font-display font-bold text-foreground">
