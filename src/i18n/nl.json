@@ -96,6 +96,10 @@
       "title": "Assets Library",
       "description": "Maak en beheer alle content voor je customer journey."
     },
+    "analytics": {
+      "title": "Analytics",
+      "description": "Volg dagelijkse prestaties van je funnels."
+    },
     "settings": {
       "title": "Instellingen",
       "account": "Account",
