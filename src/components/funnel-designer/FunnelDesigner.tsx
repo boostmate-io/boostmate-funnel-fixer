@@ -273,6 +273,15 @@ const FunnelDesigner = () => {
     );
   }, [selectedNodeId, setNodes]);
 
+  const handleRenameNode = useCallback((name: string) => {
+    if (!selectedNodeId) return;
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === selectedNodeId ? { ...n, data: { ...n.data, customLabel: name || undefined } } : n
+      )
+    );
+  }, [selectedNodeId, setNodes]);
+
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
   return (
