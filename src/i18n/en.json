@@ -179,6 +179,22 @@
       "membershipDesc": "Member content access"
     }
   },
+  "knowledge": {
+    "title": "Knowledge Center",
+    "description": "Documents the AI uses as context for audits and content generation.",
+    "new": "New Document",
+    "untitled": "Untitled Document",
+    "empty": "No documents yet. Create your first knowledge document.",
+    "selectDocument": "Select a document to edit",
+    "titlePlaceholder": "Document title...",
+    "contentPlaceholder": "Write knowledge content here that the AI will use as context...",
+    "save": "Save",
+    "saved": "Document saved!",
+    "created": "Document created!",
+    "deleted": "Document deleted!",
+    "saveError": "Error saving document",
+    "deleteError": "Error deleting document"
+  },
   "assets": {
     "title": "Assets Library",
     "create": "New Asset",
