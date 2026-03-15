@@ -11,6 +11,7 @@ interface AuditDetailProps {
     result: any;
     offer: string;
     created_at: string;
+    landing_page_screenshot?: string;
   };
   onBack: () => void;
 }
@@ -34,7 +35,12 @@ const AuditDetail = ({ audit, onBack }: AuditDetailProps) => {
       <Button variant="ghost" onClick={onBack} className="gap-2 mb-6">
         <ArrowLeft className="w-4 h-4" /> {t("auditModule.backToList")}
       </Button>
-      <AuditResults result={audit.result as AuditResult} onCreateAccount={() => {}} showCta={false} />
+      <AuditResults
+        result={audit.result as AuditResult}
+        onCreateAccount={() => {}}
+        showCta={false}
+        landingPageScreenshot={audit.landing_page_screenshot}
+      />
     </div>
   );
 };
