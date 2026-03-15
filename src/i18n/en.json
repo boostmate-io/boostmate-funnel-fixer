@@ -96,6 +96,10 @@
       "title": "Assets Library",
       "description": "Create and manage all content for your customer journey."
     },
+    "analytics": {
+      "title": "Analytics",
+      "description": "Track daily performance data for your funnels."
+    },
     "settings": {
       "title": "Settings",
       "account": "Account",
