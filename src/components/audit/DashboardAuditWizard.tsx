@@ -22,6 +22,7 @@ interface DashboardAuditWizardProps {
 
 const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps) => {
   const { t } = useTranslation();
+  const { activeProject } = useProject();
   const [phase, setPhase] = useState<Phase>("wizard");
   const [formData, setFormData] = useState<AuditFormData | null>(null);
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
