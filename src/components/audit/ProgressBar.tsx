@@ -1,15 +1,18 @@
+import { useTranslation } from "react-i18next";
+
 interface ProgressBarProps {
   currentStep: number;
   totalSteps: number;
 }
 
 const ProgressBar = ({ currentStep, totalSteps }: ProgressBarProps) => {
+  const { t } = useTranslation();
   const progress = (currentStep / totalSteps) * 100;
 
   return (
     <div className="w-full">
       <div className="flex justify-between mb-2 text-sm text-muted-foreground">
-        <span>Stap {currentStep} van {totalSteps}</span>
+        <span>{t("audit.step", { current: currentStep, total: totalSteps })}</span>
         <span>{Math.round(progress)}%</span>
       </div>
       <div className="w-full h-2 rounded-full bg-secondary">

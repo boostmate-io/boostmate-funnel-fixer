@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,20 +9,20 @@ import { ArrowRight, ArrowLeft } from "lucide-react";
 
 interface StepConfig {
   field: keyof AuditFormData;
-  label: string;
-  placeholder: string;
+  labelKey: string;
+  placeholderKey: string;
   type: "input" | "textarea" | "url" | "email";
 }
 
 const steps: StepConfig[] = [
-  { field: "targetAudience", label: "Wie is je doelpubliek?", placeholder: "Bijv. Coaches die hun online programma willen lanceren...", type: "textarea" },
-  { field: "offer", label: "Wat is je aanbod?", placeholder: "Bijv. Een 12-weeks groepsprogramma voor €2.497...", type: "textarea" },
-  { field: "landingPageUrl", label: "Wat is je landingspagina URL?", placeholder: "https://jouw-website.com/aanbod", type: "url" },
-  { field: "trafficSource", label: "Waar komt je verkeer vandaan?", placeholder: "Bijv. Facebook Ads, Instagram organisch, Google...", type: "input" },
-  { field: "monthlyTraffic", label: "Hoeveel verkeer krijg je per maand?", placeholder: "Bijv. 5.000 bezoekers", type: "input" },
-  { field: "conversionRate", label: "Wat is je huidige conversieratio?", placeholder: "Bijv. 2%", type: "input" },
-  { field: "funnelStrategy", label: "Leg je huidige funnel strategie uit", placeholder: "Beschrijf de stappen die een prospect doorloopt van eerste contact tot aankoop...", type: "textarea" },
-  { field: "email", label: "Wat is je e-mailadres?", placeholder: "jouw@email.com", type: "email" },
+  { field: "targetAudience", labelKey: "audit.questions.targetAudience", placeholderKey: "audit.questions.targetAudiencePlaceholder", type: "textarea" },
+  { field: "offer", labelKey: "audit.questions.offer", placeholderKey: "audit.questions.offerPlaceholder", type: "textarea" },
+  { field: "landingPageUrl", labelKey: "audit.questions.landingPageUrl", placeholderKey: "audit.questions.landingPageUrlPlaceholder", type: "url" },
+  { field: "trafficSource", labelKey: "audit.questions.trafficSource", placeholderKey: "audit.questions.trafficSourcePlaceholder", type: "input" },
+  { field: "monthlyTraffic", labelKey: "audit.questions.monthlyTraffic", placeholderKey: "audit.questions.monthlyTrafficPlaceholder", type: "input" },
+  { field: "conversionRate", labelKey: "audit.questions.conversionRate", placeholderKey: "audit.questions.conversionRatePlaceholder", type: "input" },
+  { field: "funnelStrategy", labelKey: "audit.questions.funnelStrategy", placeholderKey: "audit.questions.funnelStrategyPlaceholder", type: "textarea" },
+  { field: "email", labelKey: "audit.questions.email", placeholderKey: "audit.questions.emailPlaceholder", type: "email" },
 ];
 
 interface AuditWizardProps {
@@ -29,6 +30,7 @@ interface AuditWizardProps {
 }
 
 const AuditWizard = ({ onComplete }: AuditWizardProps) => {
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<AuditFormData>(initialFormData);
   const [error, setError] = useState("");
@@ -39,15 +41,15 @@ const AuditWizard = ({ onComplete }: AuditWizardProps) => {
 
   const validate = () => {
     if (!value.trim()) {
-      setError("Dit veld is verplicht");
+      setError(t("audit.required"));
       return false;
     }
     if (step.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      setError("Vul een geldig e-mailadres in");
+      setError(t("audit.invalidEmail"));
       return false;
     }
     if (step.type === "url" && !/^https?:\/\/.+\..+/.test(value)) {
-      setError("Vul een geldige URL in (start met https://)");
+      setError(t("audit.invalidUrl"));
       return false;
     }
     return true;
@@ -86,14 +88,14 @@ const AuditWizard = ({ onComplete }: AuditWizardProps) => {
 
       <div className="mt-10" key={currentStep}>
         <label className="block text-xl font-display font-bold text-foreground mb-4">
-          {step.label}
+          {t(step.labelKey)}
         </label>
 
         {step.type === "textarea" ? (
           <Textarea
             value={value}
             onChange={(e) => handleChange(e.target.value)}
-            placeholder={step.placeholder}
+            placeholder={t(step.placeholderKey)}
             className="text-base min-h-[120px] border-border focus:ring-2 focus:ring-primary/30 animate-slide-in-right"
             autoFocus
           />
@@ -103,7 +105,7 @@ const AuditWizard = ({ onComplete }: AuditWizardProps) => {
             value={value}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={step.placeholder}
+            placeholder={t(step.placeholderKey)}
             className="h-12 text-base border-border focus:ring-2 focus:ring-primary/30 animate-slide-in-right"
             autoFocus
           />
@@ -113,16 +115,11 @@ const AuditWizard = ({ onComplete }: AuditWizardProps) => {
       </div>
 
       <div className="flex justify-between mt-8">
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          disabled={currentStep === 0}
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" /> Vorige
+        <Button variant="ghost" onClick={handleBack} disabled={currentStep === 0} className="gap-2">
+          <ArrowLeft className="w-4 h-4" /> {t("audit.previous")}
         </Button>
         <Button onClick={handleNext} size="lg" className="gap-2">
-          {isLastStep ? "Analyseer mijn funnel" : "Volgende"} <ArrowRight className="w-4 h-4" />
+          {isLastStep ? t("audit.analyze") : t("audit.next")} <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
     </div>

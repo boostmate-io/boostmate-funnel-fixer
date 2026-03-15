@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import AuditWizard from "@/components/audit/AuditWizard";
 import AnalyzingScreen from "@/components/audit/AnalyzingScreen";
 import AuditResults from "@/components/audit/AuditResults";
@@ -9,42 +10,42 @@ import { useNavigate } from "react-router-dom";
 const mockResult: AuditResult = {
   score: 42,
   positives: [
-    "Je hebt een duidelijk gedefinieerd aanbod",
-    "Je genereert consistent verkeer naar je pagina",
-    "Je gebruikt e-mail als opvolgkanaal",
+    "You have a clearly defined offer",
+    "You're generating consistent traffic to your page",
+    "You're using email as a follow-up channel",
   ],
   conversionLeaks: [
     {
-      title: "Onduidelijke waardepropositie boven de vouw",
-      description: "Bezoekers begrijpen binnen 5 seconden niet wat je aanbod is en waarom het voor hen relevant is.",
-      fix: "Herschrijf je headline met een specifiek resultaat + tijdsframe. Bijv: 'Lanceer je online programma in 8 weken — zonder techstress.'",
+      title: "Unclear value proposition above the fold",
+      description: "Visitors don't understand within 5 seconds what your offer is and why it's relevant to them.",
+      fix: "Rewrite your headline with a specific result + timeframe. E.g: 'Launch your online program in 8 weeks — without tech stress.'",
     },
     {
-      title: "Geen sociaal bewijs zichtbaar",
-      description: "Er ontbreken testimonials, case studies of resultaten die vertrouwen opbouwen.",
-      fix: "Voeg minimaal 3 testimonials toe met naam, foto en specifiek resultaat direct onder je aanbod.",
+      title: "No social proof visible",
+      description: "Testimonials, case studies or results that build trust are missing.",
+      fix: "Add at least 3 testimonials with name, photo and specific result directly below your offer.",
     },
     {
-      title: "Te veel stappen naar de conversie",
-      description: "Je funnel heeft te veel frictiepunten waardoor leads afhaken voordat ze actie ondernemen.",
-      fix: "Vereenvoudig je funnel tot maximaal 3 stappen: Ad → Landing Page → Booking/Checkout.",
+      title: "Too many steps to conversion",
+      description: "Your funnel has too many friction points causing leads to drop off before taking action.",
+      fix: "Simplify your funnel to maximum 3 steps: Ad → Landing Page → Booking/Checkout.",
     },
   ],
   currentStrategy: {
-    summary: "Je gebruikt momenteel een multi-step funnel met een webinar als tussenconversie.",
+    summary: "You're currently using a multi-step funnel with a webinar as an intermediate conversion.",
     problems: [
-      "Webinar show-up rate is typisch laag (15-25%)",
-      "Te lange sales cycle voor een aanbod onder €5.000",
-      "Geen urgentie of schaarste ingebouwd",
+      "Webinar show-up rate is typically low (15-25%)",
+      "Too long a sales cycle for an offer under €5,000",
+      "No urgency or scarcity built in",
     ],
   },
   optimizedStrategy: {
-    summary: "Een directe VSL-funnel met een strategiegesprek als conversie-event levert snellere resultaten.",
+    summary: "A direct VSL funnel with a strategy call as conversion event delivers faster results.",
     steps: [
-      "Vervang het webinar door een 15-min Video Sales Letter",
-      "Voeg een geautomatiseerde booking-flow toe na de VSL",
-      "Implementeer een 3-staps e-mail nurture voor no-shows",
-      "Gebruik retargeting ads voor paginabezoekers die niet booken",
+      "Replace the webinar with a 15-min Video Sales Letter",
+      "Add an automated booking flow after the VSL",
+      "Implement a 3-step email nurture for no-shows",
+      "Use retargeting ads for page visitors who don't book",
     ],
   },
 };
@@ -52,6 +53,7 @@ const mockResult: AuditResult = {
 type Phase = "wizard" | "analyzing" | "results";
 
 const Index = () => {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>("wizard");
   const [formData, setFormData] = useState<AuditFormData | null>(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -70,53 +72,32 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-display font-bold text-foreground">
             <span className="text-primary">Boost</span>mate
           </h1>
-          <button
-            onClick={() => setShowAuth(true)}
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Inloggen
+          <button onClick={() => setShowAuth(true)} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            {t("header.login")}
           </button>
         </div>
       </header>
 
-      {/* Main */}
       <main className="container max-w-5xl mx-auto px-4 py-12">
         {phase === "wizard" && (
           <div className="animate-fade-in">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-display font-bold text-foreground mb-3">
-                Gratis Funnel Audit
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-                Ontdek waarom je funnel niet converteert en krijg een concrete strategie om meer klanten te winnen.
-              </p>
+              <h2 className="text-4xl font-display font-bold text-foreground mb-3">{t("audit.title")}</h2>
+              <p className="text-lg text-muted-foreground max-w-xl mx-auto">{t("audit.subtitle")}</p>
             </div>
             <AuditWizard onComplete={handleWizardComplete} />
           </div>
         )}
-
         {phase === "analyzing" && <AnalyzingScreen />}
-
-        {phase === "results" && (
-          <AuditResults
-            result={mockResult}
-            onCreateAccount={() => setShowAuth(true)}
-          />
-        )}
+        {phase === "results" && <AuditResults result={mockResult} onCreateAccount={() => setShowAuth(true)} />}
       </main>
 
-      <AuthModal
-        open={showAuth}
-        onClose={() => setShowAuth(false)}
-        onSuccess={handleAuthSuccess}
-        defaultEmail={formData?.email || ""}
-      />
+      <AuthModal open={showAuth} onClose={() => setShowAuth(false)} onSuccess={handleAuthSuccess} defaultEmail={formData?.email || ""} />
     </div>
   );
 };
