@@ -100,6 +100,20 @@
       "languageDescription": "Choose your preferred language"
     }
   },
+  "projects": {
+    "title": "Projects",
+    "description": "Manage your projects. Each project has its own funnels and assets.",
+    "defaultName": "My Project",
+    "active": "Active",
+    "newPlaceholder": "New project name...",
+    "add": "Add",
+    "created": "Project created!",
+    "renamed": "Project renamed!",
+    "deleted": "Project deleted!",
+    "saveError": "Error saving project",
+    "deleteError": "Error deleting project",
+    "cannotDeleteLast": "You must have at least one project."
+  },
   "funnelDesigner": {
     "title": "Funnel Builder",
     "subtitle": "Drag, connect, and build your customer journey",

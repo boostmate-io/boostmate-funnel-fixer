@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
+import ProjectSettings from "@/components/dashboard/ProjectSettings";
 import { BarChart3, PenTool, Library } from "lucide-react";
 import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
@@ -90,13 +91,18 @@ const Dashboard = () => {
         )}
 
         {activeModule === "settings" && (
-          <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-6">
-            <div>
-              <h3 className="font-display font-bold text-foreground mb-2">{t("dashboard.settings.account")}</h3>
-              <p className="text-sm text-muted-foreground">{t("dashboard.settings.email")}: {user.email}</p>
+          <div className="space-y-6">
+            <div className="bg-card rounded-xl border border-border p-6 shadow-card">
+              <ProjectSettings />
             </div>
-            <div className="border-t border-border pt-6">
-              <LanguageSwitcher />
+            <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-6">
+              <div>
+                <h3 className="font-display font-bold text-foreground mb-2">{t("dashboard.settings.account")}</h3>
+                <p className="text-sm text-muted-foreground">{t("dashboard.settings.email")}: {user.email}</p>
+              </div>
+              <div className="border-t border-border pt-6">
+                <LanguageSwitcher />
+              </div>
             </div>
           </div>
         )}
