@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import FunnelSelector from "./FunnelSelector";
 import AnalyticsSummary from "./AnalyticsSummary";
+import AnalyticsCharts from "./AnalyticsCharts";
 import DailyDataEntry from "./DailyDataEntry";
 import AnalyticsHistory from "./AnalyticsHistory";
 
@@ -33,6 +34,11 @@ const AnalyticsModule = () => {
           <div>
             <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t("analytics.summary.title")}</h2>
             <AnalyticsSummary funnelId={selectedFunnel.id} nodes={selectedFunnel.nodes} edges={selectedFunnel.edges} />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t("analytics.charts.title")}</h2>
+            <AnalyticsCharts funnelId={selectedFunnel.id} nodes={selectedFunnel.nodes} />
           </div>
 
           <div>
