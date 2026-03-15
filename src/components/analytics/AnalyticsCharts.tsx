@@ -3,8 +3,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 import { format } from "date-fns";
 import { getMetricsForNodeType } from "./metricDefinitions";
 
@@ -183,7 +182,7 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                   <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                   {metricKeys.map((k) => (
                     <Line
                       key={k}
