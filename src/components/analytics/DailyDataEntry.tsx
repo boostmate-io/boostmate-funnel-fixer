@@ -14,7 +14,7 @@ import { getMetricsForNodeType, type MetricField } from "./metricDefinitions";
 interface FunnelNode {
   id: string;
   type: string;
-  data: { label: string; pageType?: string; trafficType?: string };
+  data: { label: string; customLabel?: string; pageType?: string; trafficType?: string };
 }
 
 interface DailyDataEntryProps {
