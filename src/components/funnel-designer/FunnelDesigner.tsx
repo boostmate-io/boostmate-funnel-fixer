@@ -292,9 +292,25 @@ const FunnelDesigner = () => {
         {/* Toolbar */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
           <div className="flex items-center gap-2">
-            <h2 className="font-display font-bold text-foreground text-sm">
-              {currentFunnel?.name || t("funnelDesigner.title")}
-            </h2>
+            {currentFunnel && renamingFunnel ? (
+              <Input
+                autoFocus
+                className="h-7 text-sm font-display font-bold w-56"
+                value={currentFunnel.name}
+                onChange={(e) => setCurrentFunnel({ ...currentFunnel, name: e.target.value })}
+                onBlur={() => setRenamingFunnel(false)}
+                onKeyDown={(e) => { if (e.key === "Enter") setRenamingFunnel(false); }}
+              />
+            ) : (
+              <h2
+                className="font-display font-bold text-foreground text-sm cursor-pointer group flex items-center gap-1.5"
+                onClick={() => currentFunnel && setRenamingFunnel(true)}
+                title={currentFunnel ? t("funnelDesigner.renameFunnel") : undefined}
+              >
+                {currentFunnel?.name || t("funnelDesigner.title")}
+                {currentFunnel && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+              </h2>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => { setShowNewFunnel(true); setFunnelName(""); setNodes([]); setEdges([]); }}>
