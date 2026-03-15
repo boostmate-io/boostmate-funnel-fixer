@@ -259,6 +259,15 @@
     "saved": "Data opgeslagen!",
     "saveError": "Fout bij opslaan data",
     "loading": "Laden...",
-    "noHistory": "Nog geen data ingevoerd."
+    "noHistory": "Nog geen data ingevoerd.",
+    "summary": {
+      "title": "Overzicht",
+      "daysTracked": "Dagen Bijgehouden",
+      "totalSpend": "Totale Spend",
+      "totalRevenue": "Totale Omzet",
+      "roas": "ROAS",
+      "totalMetrics": "Totalen",
+      "avgPerDay": "Gem. / Dag"
+    }
   }
 }
