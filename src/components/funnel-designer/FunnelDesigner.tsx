@@ -273,6 +273,15 @@ const FunnelDesigner = () => {
     );
   }, [selectedNodeId, setNodes]);
 
+  const handleRenameNode = useCallback((name: string) => {
+    if (!selectedNodeId) return;
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === selectedNodeId ? { ...n, data: { ...n.data, customLabel: name || undefined } } : n
+      )
+    );
+  }, [selectedNodeId, setNodes]);
+
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
   return (
@@ -335,8 +344,10 @@ const FunnelDesigner = () => {
         <NodeDetailsPanel
           nodeId={selectedNode.id}
           nodeLabel={t((selectedNode.data as any).label)}
+          customLabel={(selectedNode.data as any).customLabel || ""}
           linkedAssetId={(selectedNode.data as any).linkedAssetId || null}
           onLinkAsset={handleLinkAsset}
+          onRename={handleRenameNode}
           onClose={() => setSelectedNodeId(null)}
         />
       )}

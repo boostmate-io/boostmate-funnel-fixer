@@ -14,7 +14,7 @@ import { getMetricsForNodeType, type MetricField } from "./metricDefinitions";
 interface FunnelNode {
   id: string;
   type: string;
-  data: { label: string; pageType?: string; trafficType?: string };
+  data: { label: string; customLabel?: string; pageType?: string; trafficType?: string };
 }
 
 interface DailyDataEntryProps {
@@ -143,7 +143,7 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
       const rows = orderedNodes.map((node) => ({
         entry_id: entry.id,
         node_id: node.id,
-        node_label: node.data?.label || "",
+        node_label: node.data?.customLabel || node.data?.label || "",
         node_type: getNodeType(node),
         metrics: metricsData[node.id] || {},
       }));
@@ -198,7 +198,7 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
                 const nodeData = metricsData[node.id] || {};
                 return (
                   <TableRow key={node.id}>
-                    <TableCell className="font-medium">{node.data?.label || node.id}</TableCell>
+                    <TableCell className="font-medium">{node.data?.customLabel || t(node.data?.label) || node.id}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{getNodeType(node)}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-3">

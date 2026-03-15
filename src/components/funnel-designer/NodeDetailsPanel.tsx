@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Link2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AssetSectionsList from "../assets/AssetSectionsList";
 
@@ -15,12 +16,14 @@ interface Asset {
 interface NodeDetailsPanelProps {
   nodeId: string;
   nodeLabel: string;
+  customLabel?: string;
   linkedAssetId: string | null;
   onLinkAsset: (assetId: string | null) => void;
+  onRename: (name: string) => void;
   onClose: () => void;
 }
 
-const NodeDetailsPanel = ({ nodeId, nodeLabel, linkedAssetId, onLinkAsset, onClose }: NodeDetailsPanelProps) => {
+const NodeDetailsPanel = ({ nodeId, nodeLabel, customLabel, linkedAssetId, onLinkAsset, onRename, onClose }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAssetId, setSelectedAssetId] = useState<string>(linkedAssetId || "");
@@ -51,10 +54,20 @@ const NodeDetailsPanel = ({ nodeId, nodeLabel, linkedAssetId, onLinkAsset, onClo
   return (
     <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-border">
-        <h3 className="text-sm font-display font-bold text-foreground truncate">{nodeLabel}</h3>
+        <h3 className="text-sm font-display font-bold text-foreground truncate">{customLabel || nodeLabel}</h3>
         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
           <X className="w-4 h-4" />
         </Button>
+      </div>
+
+      <div className="p-4 border-b border-border space-y-3">
+        <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.customName")}</label>
+        <Input
+          value={customLabel || ""}
+          onChange={(e) => onRename(e.target.value)}
+          placeholder={nodeLabel}
+          className="text-sm h-8"
+        />
       </div>
 
       <div className="p-4 border-b border-border space-y-3">
