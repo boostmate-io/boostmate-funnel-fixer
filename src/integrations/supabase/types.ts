@@ -93,6 +93,57 @@ export type Database = {
           },
         ]
       }
+      audits: {
+        Row: {
+          conversion_rate: string
+          created_at: string
+          email: string
+          funnel_strategy: string
+          id: string
+          landing_page_url: string
+          monthly_traffic: string
+          offer: string
+          result: Json | null
+          score: number | null
+          target_audience: string
+          traffic_source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conversion_rate?: string
+          created_at?: string
+          email?: string
+          funnel_strategy?: string
+          id?: string
+          landing_page_url?: string
+          monthly_traffic?: string
+          offer?: string
+          result?: Json | null
+          score?: number | null
+          target_audience?: string
+          traffic_source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conversion_rate?: string
+          created_at?: string
+          email?: string
+          funnel_strategy?: string
+          id?: string
+          landing_page_url?: string
+          monthly_traffic?: string
+          offer?: string
+          result?: Json | null
+          score?: number | null
+          target_audience?: string
+          traffic_source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       funnels: {
         Row: {
           created_at: string

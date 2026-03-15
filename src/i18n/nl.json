@@ -212,5 +212,23 @@
       "adCreative": "Ad Creatives",
       "socialMedia": "Social Media"
     }
+  },
+  "auditModule": {
+    "list": {
+      "title": "Jouw Audits",
+      "description": "Bekijk al je funnel audits en hun scores.",
+      "newAudit": "Nieuwe Audit",
+      "empty": "Nog geen audits",
+      "emptyDescription": "Voer je eerste funnel audit uit om bruikbare inzichten te krijgen.",
+      "viewResults": "Bekijk resultaten →",
+      "pending": "In afwachting",
+      "untitled": "Naamloze Audit"
+    },
+    "newAudit": {
+      "title": "Nieuwe Funnel Audit",
+      "description": "Beantwoord een paar vragen over je funnel en krijg een gedetailleerde analyse."
+    },
+    "backToList": "Terug naar audits",
+    "saveError": "Fout bij opslaan audit"
   }
 }

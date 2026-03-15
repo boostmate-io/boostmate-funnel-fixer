@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import logo from "@/assets/logo-boostmate.svg";
 import AuditWizard from "@/components/audit/AuditWizard";
 import AnalyzingScreen from "@/components/audit/AnalyzingScreen";
 import AuditResults from "@/components/audit/AuditResults";
 import AuthModal from "@/components/auth/AuthModal";
 import { AuditFormData, AuditResult } from "@/types/audit";
-import { useNavigate } from "react-router-dom";
 
 const mockResult: AuditResult = {
   score: 42,
@@ -19,17 +21,17 @@ const mockResult: AuditResult = {
     {
       title: "Unclear value proposition above the fold",
       description: "Visitors don't understand within 5 seconds what your offer is and why it's relevant to them.",
-      fix: "Rewrite your headline with a specific result + timeframe. E.g: 'Launch your online program in 8 weeks — without tech stress.'",
+      fix: "Rewrite your headline with a specific result + timeframe.",
     },
     {
       title: "No social proof visible",
       description: "Testimonials, case studies or results that build trust are missing.",
-      fix: "Add at least 3 testimonials with name, photo and specific result directly below your offer.",
+      fix: "Add at least 3 testimonials with name, photo and specific result.",
     },
     {
       title: "Too many steps to conversion",
-      description: "Your funnel has too many friction points causing leads to drop off before taking action.",
-      fix: "Simplify your funnel to maximum 3 steps: Ad → Landing Page → Booking/Checkout.",
+      description: "Your funnel has too many friction points causing leads to drop off.",
+      fix: "Simplify your funnel to maximum 3 steps.",
     },
   ],
   currentStrategy: {
@@ -66,9 +68,39 @@ const Index = () => {
     setTimeout(() => setPhase("results"), 4000);
   };
 
-  const handleAuthSuccess = () => {
+  const saveAuditAndRedirect = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !formData) return;
+
+    // Create a default project for the new user
+    const { data: project } = await supabase
+      .from("projects")
+      .insert({ user_id: user.id, name: t("projects.defaultName") })
+      .select()
+      .single();
+
+    // Save the audit
+    await supabase.from("audits").insert({
+      user_id: user.id,
+      target_audience: formData.targetAudience,
+      offer: formData.offer,
+      landing_page_url: formData.landingPageUrl,
+      traffic_source: formData.trafficSource,
+      monthly_traffic: formData.monthlyTraffic,
+      conversion_rate: formData.conversionRate,
+      funnel_strategy: formData.funnelStrategy,
+      email: formData.email,
+      score: mockResult.score,
+      result: mockResult as any,
+    });
+
+    // Navigate to audit module in dashboard
+    navigate("/dashboard?module=funnel-audit");
+  };
+
+  const handleAuthSuccess = async () => {
     setShowAuth(false);
-    navigate("/dashboard");
+    await saveAuditAndRedirect();
   };
 
   return (

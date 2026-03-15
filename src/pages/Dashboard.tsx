@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
 import KnowledgeCenter from "@/components/dashboard/KnowledgeCenter";
+import AuditModule from "@/components/audit/AuditModule";
 import { BarChart3, PenTool, Library } from "lucide-react";
 import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
 
 const Dashboard = () => {
   const { t } = useTranslation();
-  const [activeModule, setActiveModule] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const initialModule = searchParams.get("module") || "overview";
+  const [activeModule, setActiveModule] = useState(initialModule);
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
 
@@ -33,8 +36,8 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-background-dashboard">
       <DashboardSidebar activeModule={activeModule} onModuleChange={setActiveModule} />
-      <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" || activeModule === "assets-library" ? "" : "p-8"}`}>
-        {activeModule !== "funnel-designer" && activeModule !== "assets-library" && (
+      <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" || activeModule === "assets-library" || activeModule === "funnel-audit" ? "" : "p-8"}`}>
+        {activeModule !== "funnel-designer" && activeModule !== "assets-library" && activeModule !== "funnel-audit" && (
           <div className="mb-8">
             <h1 className="text-2xl font-display font-bold text-foreground">
               {activeModule === "overview" && t("dashboard.title")}
@@ -71,13 +74,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {activeModule === "funnel-audit" && (
-          <div className="bg-card rounded-xl border border-border p-12 shadow-card text-center">
-            <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-display font-bold text-foreground mb-2">{t("dashboard.funnelAudit.placeholder")}</h3>
-            <p className="text-muted-foreground">{t("dashboard.funnelAudit.placeholderDescription")}</p>
-          </div>
-        )}
+        {activeModule === "funnel-audit" && <AuditModule />}
 
         {activeModule === "funnel-designer" && (
           <div className="h-[calc(100vh-64px)]">
