@@ -11,6 +11,7 @@ import AuthModal from "@/components/auth/AuthModal";
 import { AuditFormData } from "@/types/audit";
 import { mockResult } from "@/components/audit/mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
+import { createSalesCopyFromMarkdown } from "@/lib/api/createSalesCopyFromMarkdown";
 
 type Phase = "wizard" | "analyzing" | "results";
 
@@ -71,6 +72,17 @@ const Index = () => {
       landing_page_screenshot: screenshot,
       landing_page_content: pageContent,
     });
+
+    // Create sales copy asset from scraped content
+    if (pageContent) {
+      const domain = formData.landingPageUrl.replace(/^https?:\/\//, "").split("/")[0];
+      await createSalesCopyFromMarkdown(
+        user.id,
+        project?.id || null,
+        `Sales Copy - ${domain}`,
+        pageContent
+      );
+    }
 
     navigate("/dashboard?module=funnel-audit");
   };

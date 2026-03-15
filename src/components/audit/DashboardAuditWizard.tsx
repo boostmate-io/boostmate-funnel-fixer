@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
+import { useProject } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
 import AuditWizard from "./AuditWizard";
 import AnalyzingScreen from "./AnalyzingScreen";
@@ -8,6 +9,7 @@ import AuditResults from "./AuditResults";
 import { AuditFormData, AuditResult } from "@/types/audit";
 import { mockResult } from "./mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
+import { createSalesCopyFromMarkdown } from "@/lib/api/createSalesCopyFromMarkdown";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -20,6 +22,7 @@ interface DashboardAuditWizardProps {
 
 const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps) => {
   const { t } = useTranslation();
+  const { activeProject } = useProject();
   const [phase, setPhase] = useState<Phase>("wizard");
   const [formData, setFormData] = useState<AuditFormData | null>(null);
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
@@ -62,6 +65,19 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
 
     setAuditResult(mockResult);
     await saveAudit(data, mockResult, scrapeResult.screenshot, scrapeResult.markdown);
+
+    // Create sales copy asset from scraped content
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && scrapeResult.markdown) {
+      const domain = data.landingPageUrl.replace(/^https?:\/\//, "").split("/")[0];
+      await createSalesCopyFromMarkdown(
+        user.id,
+        activeProject?.id || null,
+        `Sales Copy - ${domain}`,
+        scrapeResult.markdown
+      );
+    }
+
     setPhase("results");
   };
 
