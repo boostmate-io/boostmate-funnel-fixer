@@ -15,6 +15,24 @@ export interface ConversionLeak {
   fix: string;
 }
 
+export interface FunnelNodeData {
+  id: string;
+  type: string;
+  position: { x: number; y: number };
+  data: Record<string, unknown>;
+}
+
+export interface FunnelEdgeData {
+  id: string;
+  source: string;
+  target: string;
+}
+
+export interface FunnelDiagram {
+  nodes: FunnelNodeData[];
+  edges: FunnelEdgeData[];
+}
+
 export interface AuditResult {
   score: number;
   positives: string[];
@@ -27,6 +45,8 @@ export interface AuditResult {
     summary: string;
     steps: string[];
   };
+  currentFunnel?: FunnelDiagram;
+  optimizedFunnel?: FunnelDiagram;
 }
 
 export const initialFormData: AuditFormData = {

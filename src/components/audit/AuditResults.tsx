@@ -1,16 +1,18 @@
 import { useTranslation } from "react-i18next";
 import ScoreGauge from "./ScoreGauge";
+import ReadOnlyFunnelView from "./ReadOnlyFunnelView";
 import { AuditResult } from "@/types/audit";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, AlertTriangle, ArrowRight, Lightbulb, Target } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ArrowRight, Lightbulb, Target, Monitor } from "lucide-react";
 
 interface AuditResultsProps {
   result: AuditResult;
   onCreateAccount: () => void;
   showCta?: boolean;
+  landingPageScreenshot?: string;
 }
 
-const AuditResults = ({ result, onCreateAccount, showCta = true }: AuditResultsProps) => {
+const AuditResults = ({ result, onCreateAccount, showCta = true, landingPageScreenshot }: AuditResultsProps) => {
   const { t } = useTranslation();
 
   return (
@@ -19,6 +21,23 @@ const AuditResults = ({ result, onCreateAccount, showCta = true }: AuditResultsP
         <h2 className="text-3xl font-display font-bold text-foreground mb-6">{t("results.title")}</h2>
         <ScoreGauge score={result.score} />
       </div>
+
+      {/* Landing Page Screenshot */}
+      {landingPageScreenshot && (
+        <div className="bg-card rounded-xl border border-border p-6 mb-6 shadow-card">
+          <h3 className="text-lg font-display font-bold text-foreground flex items-center gap-2 mb-4">
+            <Monitor className="w-5 h-5 text-muted-foreground" /> {t("results.landingPagePreview")}
+          </h3>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <img
+              src={landingPageScreenshot}
+              alt="Landing page screenshot"
+              className="w-full h-auto"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="bg-card rounded-xl border border-border p-6 mb-6 shadow-card">
         <h3 className="text-lg font-display font-bold text-foreground flex items-center gap-2 mb-4">
@@ -52,32 +71,39 @@ const AuditResults = ({ result, onCreateAccount, showCta = true }: AuditResultsP
         </div>
       </div>
 
+      {/* Strategy + Funnel Diagrams */}
       <div className="grid md:grid-cols-2 gap-6 mb-10">
         <div className="bg-card rounded-xl border border-border p-6 shadow-card">
           <h3 className="text-lg font-display font-bold text-foreground flex items-center gap-2 mb-4">
             <Target className="w-5 h-5 text-muted-foreground" /> {t("results.currentStrategy")}
           </h3>
           <p className="text-sm text-muted-foreground mb-3">{result.currentStrategy.summary}</p>
-          <ul className="space-y-2">
+          <ul className="space-y-2 mb-4">
             {result.currentStrategy.problems.map((p, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-foreground">
                 <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" /> {p}
               </li>
             ))}
           </ul>
+          {result.currentFunnel && (
+            <ReadOnlyFunnelView diagram={result.currentFunnel} />
+          )}
         </div>
         <div className="bg-card rounded-xl border border-primary/20 p-6 shadow-card">
           <h3 className="text-lg font-display font-bold text-foreground flex items-center gap-2 mb-4">
             <Lightbulb className="w-5 h-5 text-primary" /> {t("results.optimizedStrategy")}
           </h3>
           <p className="text-sm text-muted-foreground mb-3">{result.optimizedStrategy.summary}</p>
-          <ul className="space-y-2">
+          <ul className="space-y-2 mb-4">
             {result.optimizedStrategy.steps.map((s, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-foreground">
                 <CheckCircle2 className="w-4 h-4 text-success mt-0.5 shrink-0" /> {s}
               </li>
             ))}
           </ul>
+          {result.optimizedFunnel && (
+            <ReadOnlyFunnelView diagram={result.optimizedFunnel} />
+          )}
         </div>
       </div>
 

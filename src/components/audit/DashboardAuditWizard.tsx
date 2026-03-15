@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -6,51 +6,10 @@ import AuditWizard from "./AuditWizard";
 import AnalyzingScreen from "./AnalyzingScreen";
 import AuditResults from "./AuditResults";
 import { AuditFormData, AuditResult } from "@/types/audit";
+import { mockResult } from "./mockAuditData";
+import { scrapeLandingPage } from "@/lib/api/firecrawl";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-
-const mockResult: AuditResult = {
-  score: 42,
-  positives: [
-    "You have a clearly defined offer",
-    "You're generating consistent traffic to your page",
-    "You're using email as a follow-up channel",
-  ],
-  conversionLeaks: [
-    {
-      title: "Unclear value proposition above the fold",
-      description: "Visitors don't understand within 5 seconds what your offer is and why it's relevant to them.",
-      fix: "Rewrite your headline with a specific result + timeframe.",
-    },
-    {
-      title: "No social proof visible",
-      description: "Testimonials, case studies or results that build trust are missing.",
-      fix: "Add at least 3 testimonials with name, photo and specific result.",
-    },
-    {
-      title: "Too many steps to conversion",
-      description: "Your funnel has too many friction points causing leads to drop off.",
-      fix: "Simplify your funnel to maximum 3 steps.",
-    },
-  ],
-  currentStrategy: {
-    summary: "You're currently using a multi-step funnel with a webinar as an intermediate conversion.",
-    problems: [
-      "Webinar show-up rate is typically low (15-25%)",
-      "Too long a sales cycle for an offer under €5,000",
-      "No urgency or scarcity built in",
-    ],
-  },
-  optimizedStrategy: {
-    summary: "A direct VSL funnel with a strategy call as conversion event delivers faster results.",
-    steps: [
-      "Replace the webinar with a 15-min Video Sales Letter",
-      "Add an automated booking flow after the VSL",
-      "Implement a 3-step email nurture for no-shows",
-      "Use retargeting ads for page visitors who don't book",
-    ],
-  },
-};
 
 type Phase = "wizard" | "analyzing" | "results";
 
@@ -64,9 +23,10 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
   const [phase, setPhase] = useState<Phase>("wizard");
   const [formData, setFormData] = useState<AuditFormData | null>(null);
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
+  const [screenshot, setScreenshot] = useState("");
   const analyzeStarted = useRef(false);
 
-  const saveAudit = async (data: AuditFormData, result: AuditResult) => {
+  const saveAudit = async (data: AuditFormData, result: AuditResult, screenshotUrl: string, content: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -82,6 +42,8 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
       email: data.email,
       score: result.score,
       result: result as any,
+      landing_page_screenshot: screenshotUrl,
+      landing_page_content: content,
     });
 
     if (error) {
@@ -90,16 +52,17 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
     }
   };
 
-  const handleWizardComplete = (data: AuditFormData) => {
+  const handleWizardComplete = async (data: AuditFormData) => {
     setFormData(data);
     setPhase("analyzing");
     analyzeStarted.current = true;
 
-    setTimeout(async () => {
-      setAuditResult(mockResult);
-      await saveAudit(data, mockResult);
-      setPhase("results");
-    }, 4000);
+    const scrapeResult = await scrapeLandingPage(data.landingPageUrl);
+    setScreenshot(scrapeResult.screenshot);
+
+    setAuditResult(mockResult);
+    await saveAudit(data, mockResult, scrapeResult.screenshot, scrapeResult.markdown);
+    setPhase("results");
   };
 
   return (
@@ -128,7 +91,12 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
           <Button variant="ghost" onClick={onComplete} className="gap-2 mb-6">
             <ArrowLeft className="w-4 h-4" /> {t("auditModule.backToList")}
           </Button>
-          <AuditResults result={auditResult} onCreateAccount={() => {}} showCta={false} />
+          <AuditResults
+            result={auditResult}
+            onCreateAccount={() => {}}
+            showCta={false}
+            landingPageScreenshot={screenshot}
+          />
         </div>
       )}
     </div>

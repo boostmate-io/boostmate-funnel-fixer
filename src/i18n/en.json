@@ -47,6 +47,9 @@
     "fix": "Fix",
     "currentStrategy": "Current Strategy",
     "optimizedStrategy": "Optimized Strategy",
+    "landingPagePreview": "Landing Page Preview",
+    "currentFunnel": "Current Funnel",
+    "optimizedFunnel": "Optimized Funnel",
     "ctaTitle": "Want a fully optimized customer journey?",
     "ctaDescription": "Create a free account to save your audit and design a complete funnel strategy.",
     "ctaButton": "Create free account"
