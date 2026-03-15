@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
-import { BarChart3, LayoutDashboard, LogOut, PenTool, Settings, Library } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, PenTool, Settings, Library, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
     { id: "overview", label: t("dashboard.sidebar.dashboard"), icon: LayoutDashboard },
     { id: "funnel-audit", label: t("dashboard.sidebar.funnelAudit"), icon: BarChart3 },
     { id: "funnel-designer", label: t("dashboard.sidebar.funnelDesigner"), icon: PenTool },
+    { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: TrendingUp },
     { id: "assets-library", label: t("dashboard.sidebar.assetsLibrary"), icon: Library },
     { id: "settings", label: t("dashboard.sidebar.settings"), icon: Settings },
   ];

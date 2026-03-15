@@ -77,6 +77,7 @@
       "funnelAudit": "Funnel Audit",
       "funnelDesigner": "Funnel Designer",
       "assetsLibrary": "Assets Library",
+      "analytics": "Analytics",
       "settings": "Settings",
       "logout": "Log out"
     },
@@ -94,6 +95,10 @@
     "assetsLibrary": {
       "title": "Assets Library",
       "description": "Create and manage all content for your customer journey."
+    },
+    "analytics": {
+      "title": "Analytics",
+      "description": "Track daily performance data for your funnels."
     },
     "settings": {
       "title": "Settings",
@@ -233,5 +238,25 @@
     },
     "backToList": "Back to audits",
     "saveError": "Error saving audit"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Track and analyze your funnel performance day by day.",
+    "selectFunnel": "Select a funnel...",
+    "noFunnelSelected": "Select a funnel to start tracking metrics.",
+    "dailyEntry": "Daily Data Entry",
+    "history": "History (last 30 days)",
+    "step": "Step",
+    "type": "Type",
+    "metrics": "Metrics",
+    "date": "Date",
+    "totalSpend": "Total Spend",
+    "totalRevenue": "Total Revenue",
+    "saveDay": "Save Day Data",
+    "saving": "Saving...",
+    "saved": "Data saved!",
+    "saveError": "Error saving data",
+    "loading": "Loading...",
+    "noHistory": "No data recorded yet."
   }
 }
