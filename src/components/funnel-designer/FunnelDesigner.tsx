@@ -29,6 +29,7 @@ import {
 import ElementsPanel from "./ElementsPanel";
 import FunnelNode from "./FunnelNode";
 import TrafficSourceNode from "./TrafficSourceNode";
+import NodeDetailsPanel from "./NodeDetailsPanel";
 import { TRAFFIC_SOURCES, FUNNEL_PAGES } from "./constants";
 
 const nodeTypes = {
