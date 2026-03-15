@@ -88,6 +88,10 @@
       "title": "Funnel Designer",
       "description": "Visually design and build your sales funnels."
     },
+    "assetsLibrary": {
+      "title": "Assets Library",
+      "description": "Create and manage all content for your customer journey."
+    },
     "settings": {
       "title": "Settings",
       "account": "Account",
