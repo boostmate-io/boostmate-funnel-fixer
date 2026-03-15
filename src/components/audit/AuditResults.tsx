@@ -10,7 +10,7 @@ interface AuditResultsProps {
   showCta?: boolean;
 }
 
-const AuditResults = ({ result, onCreateAccount }: AuditResultsProps) => {
+const AuditResults = ({ result, onCreateAccount, showCta = true }: AuditResultsProps) => {
   const { t } = useTranslation();
 
   return (
