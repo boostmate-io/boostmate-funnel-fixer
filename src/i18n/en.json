@@ -259,6 +259,15 @@
     "saved": "Data saved!",
     "saveError": "Error saving data",
     "loading": "Loading...",
-    "noHistory": "No data recorded yet."
+    "noHistory": "No data recorded yet.",
+    "summary": {
+      "title": "Overview",
+      "daysTracked": "Days Tracked",
+      "totalSpend": "Total Spend",
+      "totalRevenue": "Total Revenue",
+      "roas": "ROAS",
+      "totalMetrics": "Totals",
+      "avgPerDay": "Avg / Day"
+    }
   }
 }
