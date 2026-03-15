@@ -142,7 +142,7 @@ const FunnelDesigner = () => {
 
   const saveFunnel = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session || !activeProject) return;
 
     const payload = {
       user_id: session.user.id,
@@ -150,6 +150,7 @@ const FunnelDesigner = () => {
       nodes: JSON.parse(JSON.stringify(nodes)),
       edges: JSON.parse(JSON.stringify(edges)),
       is_template: false,
+      project_id: activeProject.id,
     };
 
     if (currentFunnel?.id) {
@@ -172,7 +173,7 @@ const FunnelDesigner = () => {
       }
     }
     loadFunnels();
-  }, [currentFunnel, nodes, edges, t, loadFunnels]);
+  }, [currentFunnel, nodes, edges, t, loadFunnels, activeProject]);
 
   const saveAsTemplate = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
