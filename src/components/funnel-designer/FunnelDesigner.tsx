@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css";
 import { supabase } from "@/integrations/supabase/client";
 import { useProject } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
-import { Save, RotateCcw, Download, FolderOpen, Plus, Trash2 } from "lucide-react";
+import { Save, RotateCcw, Download, FolderOpen, Plus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
