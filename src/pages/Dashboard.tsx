@@ -35,6 +35,7 @@ const Dashboard = () => {
           <h1 className="text-2xl font-display font-bold text-foreground">
             {activeModule === "overview" && t("dashboard.title")}
             {activeModule === "funnel-audit" && t("dashboard.sidebar.funnelAudit")}
+            {activeModule === "funnel-designer" && t("dashboard.sidebar.funnelDesigner")}
             {activeModule === "settings" && t("dashboard.settings.title")}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">{t("dashboard.welcomeBack", { email: user.email })}</p>
