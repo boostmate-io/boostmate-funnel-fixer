@@ -12,6 +12,7 @@ import AnalyticsTrafficNode from "./AnalyticsTrafficNode";
 
 const nodeTypes = {
   funnelNode: AnalyticsFunnelNode,
+  funnelPage: AnalyticsFunnelNode,
   trafficSource: AnalyticsTrafficNode,
 };
 
