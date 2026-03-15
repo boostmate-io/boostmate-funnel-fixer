@@ -83,6 +83,12 @@ const Dashboard = () => {
           </div>
         )}
 
+        {activeModule === "assets-library" && (
+          <div className="h-full">
+            <AssetsLibrary />
+          </div>
+        )}
+
         {activeModule === "settings" && (
           <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-6">
             <div>
