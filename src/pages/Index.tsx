@@ -23,6 +23,15 @@ const Index = () => {
   const [pageContent, setPageContent] = useState("");
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        navigate("/dashboard");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   const handleWizardComplete = async (data: AuditFormData) => {
     setFormData(data);
     setPhase("analyzing");
