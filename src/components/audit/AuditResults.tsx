@@ -72,7 +72,7 @@ const AuditResults = ({ result, onCreateAccount, showCta = true, landingPageScre
       </div>
 
       {/* Strategy + Funnel Diagrams */}
-      <div className="grid md:grid-cols-2 gap-6 mb-10">
+      <div className="space-y-6 mb-10">
         <div className="bg-card rounded-xl border border-border p-6 shadow-card">
           <h3 className="text-lg font-display font-bold text-foreground flex items-center gap-2 mb-4">
             <Target className="w-5 h-5 text-muted-foreground" /> {t("results.currentStrategy")}
