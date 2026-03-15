@@ -181,19 +181,17 @@
   },
   "knowledge": {
     "title": "Knowledge Center",
-    "description": "Documents the AI uses as context for audits and content generation.",
-    "new": "New Document",
+    "description": "Upload documents the AI uses as context for audits and content generation.",
+    "upload": "Upload Document",
+    "uploading": "Uploading...",
     "untitled": "Untitled Document",
-    "empty": "No documents yet. Create your first knowledge document.",
-    "selectDocument": "Select a document to edit",
-    "titlePlaceholder": "Document title...",
-    "contentPlaceholder": "Write knowledge content here that the AI will use as context...",
-    "save": "Save",
-    "saved": "Document saved!",
-    "created": "Document created!",
+    "empty": "No documents yet. Upload your first knowledge document (PDF, DOCX, TXT).",
+    "uploaded": "Document uploaded!",
     "deleted": "Document deleted!",
     "saveError": "Error saving document",
-    "deleteError": "Error deleting document"
+    "deleteError": "Error deleting document",
+    "uploadError": "Error uploading file",
+    "downloadError": "Error downloading file"
   },
   "assets": {
     "title": "Assets Library",
