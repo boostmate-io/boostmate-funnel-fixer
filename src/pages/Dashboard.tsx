@@ -13,7 +13,9 @@ import AssetsLibrary from "@/components/assets/AssetsLibrary";
 
 const Dashboard = () => {
   const { t } = useTranslation();
-  const [activeModule, setActiveModule] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const initialModule = searchParams.get("module") || "overview";
+  const [activeModule, setActiveModule] = useState(initialModule);
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
 
