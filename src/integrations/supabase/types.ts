@@ -58,6 +58,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          project_id: string | null
           type: string
           updated_at: string
           user_id: string
@@ -67,6 +68,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          project_id?: string | null
           type?: string
           updated_at?: string
           user_id: string
@@ -76,11 +78,20 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          project_id?: string | null
           type?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       funnels: {
         Row: {
@@ -91,6 +102,7 @@ export type Database = {
           is_template: boolean
           name: string
           nodes: Json
+          project_id: string | null
           template_id: string | null
           updated_at: string
           user_id: string
@@ -103,6 +115,7 @@ export type Database = {
           is_template?: boolean
           name?: string
           nodes?: Json
+          project_id?: string | null
           template_id?: string | null
           updated_at?: string
           user_id: string
@@ -115,11 +128,19 @@ export type Database = {
           is_template?: boolean
           name?: string
           nodes?: Json
+          project_id?: string | null
           template_id?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "funnels_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "funnels_template_id_fkey"
             columns: ["template_id"]
@@ -128,6 +149,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
