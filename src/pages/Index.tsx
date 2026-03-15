@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import logo from "@/assets/logo-boostmate.svg";
 import AuditWizard from "@/components/audit/AuditWizard";
 import AnalyzingScreen from "@/components/audit/AnalyzingScreen";
 import AuditResults from "@/components/audit/AuditResults";
