@@ -11,11 +11,12 @@ interface AuthModalProps {
   onClose: () => void;
   onSuccess: () => void;
   defaultEmail?: string;
+  defaultMode?: "login" | "signup";
 }
 
-const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "" }: AuthModalProps) => {
+const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = "signup" }: AuthModalProps) => {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [mode, setMode] = useState<"login" | "signup">(defaultMode);
   const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
