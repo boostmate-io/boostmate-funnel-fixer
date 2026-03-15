@@ -1,26 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, Save } from "lucide-react";
+import { Plus, Trash2, FileText, Upload, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
 interface KnowledgeDocument {
   id: string;
   title: string;
-  content: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
   created_at: string;
   updated_at: string;
 }
 
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 const KnowledgeCenter = () => {
   const { t } = useTranslation();
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
-  const [selectedDoc, setSelectedDoc] = useState<KnowledgeDocument | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     checkAdmin();
@@ -50,49 +58,82 @@ const KnowledgeCenter = () => {
     setDocuments(data || []);
   };
 
-  const createDocument = async () => {
-    const { data, error } = await supabase
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const filePath = `${crypto.randomUUID()}/${file.name}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("knowledge-documents")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast.error(t("knowledge.uploadError"));
+      setUploading(false);
+      return;
+    }
+
+    const { data, error: dbError } = await supabase
       .from("knowledge_documents")
-      .insert({ title: t("knowledge.untitled"), content: "" })
+      .insert({
+        title: file.name.replace(/\.[^/.]+$/, ""),
+        file_name: file.name,
+        file_path: filePath,
+        file_size: file.size,
+        mime_type: file.type || "application/octet-stream",
+      })
       .select()
       .single();
-    if (error) {
+
+    if (dbError) {
       toast.error(t("knowledge.saveError"));
+      setUploading(false);
       return;
     }
+
     setDocuments((prev) => [data, ...prev]);
-    setSelectedDoc(data);
-    toast.success(t("knowledge.created"));
+    toast.success(t("knowledge.uploaded"));
+    setUploading(false);
+
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const saveDocument = async () => {
-    if (!selectedDoc) return;
-    const { error } = await supabase
-      .from("knowledge_documents")
-      .update({ title: selectedDoc.title, content: selectedDoc.content })
-      .eq("id", selectedDoc.id);
-    if (error) {
-      toast.error(t("knowledge.saveError"));
-      return;
-    }
-    setDocuments((prev) =>
-      prev.map((d) => (d.id === selectedDoc.id ? { ...d, ...selectedDoc } : d))
-    );
-    toast.success(t("knowledge.saved"));
-  };
+  const deleteDocument = async (doc: KnowledgeDocument) => {
+    // Delete file from storage
+    await supabase.storage.from("knowledge-documents").remove([doc.file_path]);
 
-  const deleteDocument = async (id: string) => {
     const { error } = await supabase
       .from("knowledge_documents")
       .delete()
-      .eq("id", id);
+      .eq("id", doc.id);
+
     if (error) {
       toast.error(t("knowledge.deleteError"));
       return;
     }
-    setDocuments((prev) => prev.filter((d) => d.id !== id));
-    if (selectedDoc?.id === id) setSelectedDoc(null);
+    setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
     toast.success(t("knowledge.deleted"));
+  };
+
+  const downloadDocument = async (doc: KnowledgeDocument) => {
+    const { data, error } = await supabase.storage
+      .from("knowledge-documents")
+      .download(doc.file_path);
+
+    if (error || !data) {
+      toast.error(t("knowledge.downloadError"));
+      return;
+    }
+
+    const url = URL.createObjectURL(data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = doc.file_name;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (loading) return null;
@@ -105,77 +146,68 @@ const KnowledgeCenter = () => {
           <h3 className="font-display font-bold text-foreground">{t("knowledge.title")}</h3>
           <p className="text-sm text-muted-foreground">{t("knowledge.description")}</p>
         </div>
-        <Button onClick={createDocument} size="sm" className="gap-2">
-          <Plus className="w-4 h-4" />
-          {t("knowledge.new")}
-        </Button>
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.txt,.md"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            size="sm"
+            className="gap-2"
+            disabled={uploading}
+          >
+            <Upload className="w-4 h-4" />
+            {uploading ? t("knowledge.uploading") : t("knowledge.upload")}
+          </Button>
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        {/* Document list */}
-        <div className="space-y-2 md:col-span-1 border-r border-border pr-4">
-          {documents.length === 0 && (
-            <p className="text-sm text-muted-foreground py-4">{t("knowledge.empty")}</p>
-          )}
+      {documents.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground text-sm">
+          {t("knowledge.empty")}
+        </div>
+      ) : (
+        <div className="space-y-2">
           {documents.map((doc) => (
-            <button
+            <div
               key={doc.id}
-              onClick={() => setSelectedDoc(doc)}
-              className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm text-left transition-colors ${
-                selectedDoc?.id === doc.id
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-foreground hover:bg-muted"
-              }`}
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg border border-border bg-background hover:bg-muted/50 transition-colors"
             >
-              <span className="flex items-center gap-2 truncate">
-                <FileText className="w-4 h-4 shrink-0" />
-                <span className="truncate">{doc.title}</span>
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteDocument(doc.id);
-                }}
-                className="text-muted-foreground hover:text-destructive shrink-0"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </button>
+              <div className="flex items-center gap-3 min-w-0">
+                <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {doc.file_name} · {formatFileSize(doc.file_size)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => downloadDocument(doc)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => deleteDocument(doc)}
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           ))}
         </div>
-
-        {/* Editor */}
-        <div className="md:col-span-2">
-          {selectedDoc ? (
-            <div className="space-y-4">
-              <Input
-                value={selectedDoc.title}
-                onChange={(e) =>
-                  setSelectedDoc({ ...selectedDoc, title: e.target.value })
-                }
-                className="font-medium"
-                placeholder={t("knowledge.titlePlaceholder")}
-              />
-              <Textarea
-                value={selectedDoc.content}
-                onChange={(e) =>
-                  setSelectedDoc({ ...selectedDoc, content: e.target.value })
-                }
-                placeholder={t("knowledge.contentPlaceholder")}
-                className="min-h-[300px] font-mono text-sm"
-              />
-              <Button onClick={saveDocument} size="sm" className="gap-2">
-                <Save className="w-4 h-4" />
-                {t("knowledge.save")}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground text-sm py-12">
-              {t("knowledge.selectDocument")}
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 };
