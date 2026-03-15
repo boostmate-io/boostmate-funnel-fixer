@@ -27,6 +27,7 @@ const allSteps: StepConfig[] = [
 
 interface AuditWizardProps {
   onComplete: (data: AuditFormData) => void;
+  hideEmailStep?: boolean;
 }
 
 const AuditWizard = ({ onComplete }: AuditWizardProps) => {
