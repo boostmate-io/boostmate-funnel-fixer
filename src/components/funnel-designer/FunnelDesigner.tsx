@@ -101,7 +101,8 @@ const FunnelDesigner = () => {
   useEffect(() => {
     loadFunnels();
     loadTemplates();
-  }, [loadFunnels, loadTemplates]);
+    resetCanvas();
+  }, [loadFunnels, loadTemplates, activeProject]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
