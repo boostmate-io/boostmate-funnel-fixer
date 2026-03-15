@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Link2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AssetSectionsList from "../assets/AssetSectionsList";
 
@@ -15,12 +16,14 @@ interface Asset {
 interface NodeDetailsPanelProps {
   nodeId: string;
   nodeLabel: string;
+  customLabel?: string;
   linkedAssetId: string | null;
   onLinkAsset: (assetId: string | null) => void;
+  onRename: (name: string) => void;
   onClose: () => void;
 }
 
-const NodeDetailsPanel = ({ nodeId, nodeLabel, linkedAssetId, onLinkAsset, onClose }: NodeDetailsPanelProps) => {
+const NodeDetailsPanel = ({ nodeId, nodeLabel, customLabel, linkedAssetId, onLinkAsset, onRename, onClose }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAssetId, setSelectedAssetId] = useState<string>(linkedAssetId || "");
