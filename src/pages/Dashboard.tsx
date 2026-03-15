@@ -90,6 +90,12 @@ const Dashboard = () => {
           </div>
         )}
 
+        {activeModule === "analytics" && (
+          <div className="h-full">
+            <AnalyticsModule />
+          </div>
+        )}
+
         {activeModule === "assets-library" && (
           <div className="h-full">
             <AssetsLibrary />
