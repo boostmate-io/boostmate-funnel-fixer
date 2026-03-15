@@ -81,13 +81,15 @@ const AuditResults = ({ result, onCreateAccount, showCta = true }: AuditResultsP
         </div>
       </div>
 
-      <div className="text-center bg-secondary/50 rounded-xl p-8 border border-border">
-        <h3 className="text-xl font-display font-bold text-foreground mb-2">{t("results.ctaTitle")}</h3>
-        <p className="text-muted-foreground mb-6">{t("results.ctaDescription")}</p>
-        <Button variant="hero" size="xl" onClick={onCreateAccount} className="gap-2">
-          {t("results.ctaButton")} <ArrowRight className="w-5 h-5" />
-        </Button>
-      </div>
+      {showCta && (
+        <div className="text-center bg-secondary/50 rounded-xl p-8 border border-border">
+          <h3 className="text-xl font-display font-bold text-foreground mb-2">{t("results.ctaTitle")}</h3>
+          <p className="text-muted-foreground mb-6">{t("results.ctaDescription")}</p>
+          <Button variant="hero" size="xl" onClick={onCreateAccount} className="gap-2">
+            {t("results.ctaButton")} <ArrowRight className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
