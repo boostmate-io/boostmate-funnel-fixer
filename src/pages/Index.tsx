@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,15 @@ const Index = () => {
   const [screenshot, setScreenshot] = useState("");
   const [pageContent, setPageContent] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        navigate("/dashboard");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleWizardComplete = async (data: AuditFormData) => {
     setFormData(data);
