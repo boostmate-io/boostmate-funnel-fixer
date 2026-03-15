@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
+import { useProject } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
 import { Plus, Trash2, FileText, Mail, Megaphone, Share2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
