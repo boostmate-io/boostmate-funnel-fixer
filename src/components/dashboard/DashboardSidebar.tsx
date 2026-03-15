@@ -4,6 +4,7 @@ import { BarChart3, LayoutDashboard, LogOut, PenTool, Settings, Library } from "
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import ProjectSwitcher from "./ProjectSwitcher";
 
 interface DashboardSidebarProps {
   activeModule: string;
@@ -32,6 +33,9 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
     <aside className="w-64 h-screen bg-card border-r border-border flex flex-col shrink-0">
       <div className="p-6 border-b border-border">
         <img src={logo} alt="Boostmate" className="h-7" />
+      </div>
+      <div className="border-b border-border">
+        <ProjectSwitcher />
       </div>
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => (
