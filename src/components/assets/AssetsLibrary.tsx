@@ -50,10 +50,10 @@ const AssetsLibrary = () => {
 
   const createAsset = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session || !activeProject) return;
     const { data, error } = await supabase
       .from("assets")
-      .insert({ user_id: session.user.id, type: activeType, name: t("assets.untitled") })
+      .insert({ user_id: session.user.id, type: activeType, name: t("assets.untitled"), project_id: activeProject.id })
       .select()
       .single();
     if (error) toast.error(t("assets.saveError"));

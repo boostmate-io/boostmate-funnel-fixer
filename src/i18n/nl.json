@@ -100,6 +100,20 @@
       "languageDescription": "Kies je voorkeurstaal"
     }
   },
+  "projects": {
+    "title": "Projecten",
+    "description": "Beheer je projecten. Elk project heeft eigen funnels en assets.",
+    "defaultName": "Mijn Project",
+    "active": "Actief",
+    "newPlaceholder": "Nieuw projectnaam...",
+    "add": "Toevoegen",
+    "created": "Project aangemaakt!",
+    "renamed": "Project hernoemd!",
+    "deleted": "Project verwijderd!",
+    "saveError": "Fout bij opslaan project",
+    "deleteError": "Fout bij verwijderen project",
+    "cannotDeleteLast": "Je moet minstens één project hebben."
+  },
   "funnelDesigner": {
     "title": "Funnel Builder",
     "subtitle": "Sleep, verbind en bouw je customer journey",

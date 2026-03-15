@@ -216,7 +216,7 @@ const FunnelDesigner = () => {
 
   const createNewFunnel = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session || !activeProject) return;
 
     const { data, error } = await supabase.from("funnels").insert({
       user_id: session.user.id,
@@ -224,6 +224,7 @@ const FunnelDesigner = () => {
       nodes: JSON.parse(JSON.stringify(nodes)),
       edges: JSON.parse(JSON.stringify(edges)),
       is_template: false,
+      project_id: activeProject.id,
     }).select().single();
 
     if (error) toast.error(t("funnelDesigner.saveError"));
@@ -234,7 +235,7 @@ const FunnelDesigner = () => {
       toast.success(t("funnelDesigner.created"));
       loadFunnels();
     }
-  }, [funnelName, nodes, edges, t, loadFunnels]);
+  }, [funnelName, nodes, edges, t, loadFunnels, activeProject]);
 
   const deleteFunnel = useCallback(async (id: string) => {
     const { error } = await supabase.from("funnels").delete().eq("id", id);
