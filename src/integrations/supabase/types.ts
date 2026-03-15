@@ -150,6 +150,79 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_analytics_entries: {
+        Row: {
+          created_at: string
+          date: string
+          funnel_id: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          funnel_id: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          funnel_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_analytics_entries_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funnel_step_metrics: {
+        Row: {
+          created_at: string
+          entry_id: string
+          id: string
+          metrics: Json
+          node_id: string
+          node_label: string
+          node_type: string
+        }
+        Insert: {
+          created_at?: string
+          entry_id: string
+          id?: string
+          metrics?: Json
+          node_id: string
+          node_label?: string
+          node_type?: string
+        }
+        Update: {
+          created_at?: string
+          entry_id?: string
+          id?: string
+          metrics?: Json
+          node_id?: string
+          node_label?: string
+          node_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_step_metrics_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "funnel_analytics_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funnels: {
         Row: {
           created_at: string
