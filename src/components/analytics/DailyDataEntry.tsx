@@ -143,7 +143,7 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
       const rows = orderedNodes.map((node) => ({
         entry_id: entry.id,
         node_id: node.id,
-        node_label: node.data?.label || "",
+        node_label: node.data?.customLabel || node.data?.label || "",
         node_type: getNodeType(node),
         metrics: metricsData[node.id] || {},
       }));
