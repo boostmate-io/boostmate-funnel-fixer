@@ -55,6 +55,7 @@ interface Funnel {
 
 const FunnelDesigner = () => {
   const { t } = useTranslation();
+  const { activeProject } = useProject();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [currentFunnel, setCurrentFunnel] = useState<Funnel | null>(null);
