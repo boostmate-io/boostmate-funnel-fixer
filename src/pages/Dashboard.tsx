@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, PenTool } from "lucide-react";
+import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -34,6 +35,7 @@ const Dashboard = () => {
           <h1 className="text-2xl font-display font-bold text-foreground">
             {activeModule === "overview" && t("dashboard.title")}
             {activeModule === "funnel-audit" && t("dashboard.sidebar.funnelAudit")}
+            {activeModule === "funnel-designer" && t("dashboard.sidebar.funnelDesigner")}
             {activeModule === "settings" && t("dashboard.settings.title")}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">{t("dashboard.welcomeBack", { email: user.email })}</p>
@@ -48,6 +50,13 @@ const Dashboard = () => {
               <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.funnelAudit.title")}</h3>
               <p className="text-sm text-muted-foreground">{t("dashboard.funnelAudit.description")}</p>
             </button>
+            <button onClick={() => setActiveModule("funnel-designer")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+              <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
+                <PenTool className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.funnelDesigner.title")}</h3>
+              <p className="text-sm text-muted-foreground">{t("dashboard.funnelDesigner.description")}</p>
+            </button>
           </div>
         )}
 
@@ -56,6 +65,12 @@ const Dashboard = () => {
             <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-display font-bold text-foreground mb-2">{t("dashboard.funnelAudit.placeholder")}</h3>
             <p className="text-muted-foreground">{t("dashboard.funnelAudit.placeholderDescription")}</p>
+          </div>
+        )}
+
+        {activeModule === "funnel-designer" && (
+          <div className="h-[calc(100vh-140px)]">
+            <FunnelDesigner />
           </div>
         )}
 
