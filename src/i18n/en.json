@@ -212,5 +212,23 @@
       "adCreative": "Ad Creatives",
       "socialMedia": "Social Media"
     }
+  },
+  "auditModule": {
+    "list": {
+      "title": "Your Audits",
+      "description": "View all your funnel audits and their scores.",
+      "newAudit": "New Audit",
+      "empty": "No audits yet",
+      "emptyDescription": "Run your first funnel audit to get actionable insights.",
+      "viewResults": "View results →",
+      "pending": "Pending",
+      "untitled": "Untitled Audit"
+    },
+    "newAudit": {
+      "title": "New Funnel Audit",
+      "description": "Answer a few questions about your funnel and get a detailed analysis."
+    },
+    "backToList": "Back to audits",
+    "saveError": "Error saving audit"
   }
 }
