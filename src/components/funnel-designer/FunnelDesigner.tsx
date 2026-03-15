@@ -344,8 +344,10 @@ const FunnelDesigner = () => {
         <NodeDetailsPanel
           nodeId={selectedNode.id}
           nodeLabel={t((selectedNode.data as any).label)}
+          customLabel={(selectedNode.data as any).customLabel || ""}
           linkedAssetId={(selectedNode.data as any).linkedAssetId || null}
           onLinkAsset={handleLinkAsset}
+          onRename={handleRenameNode}
           onClose={() => setSelectedNodeId(null)}
         />
       )}

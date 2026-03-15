@@ -198,7 +198,7 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
                 const nodeData = metricsData[node.id] || {};
                 return (
                   <TableRow key={node.id}>
-                    <TableCell className="font-medium">{node.data?.label || node.id}</TableCell>
+                    <TableCell className="font-medium">{node.data?.customLabel || t(node.data?.label) || node.id}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{getNodeType(node)}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-3">
