@@ -179,6 +179,22 @@
       "membershipDesc": "Toegang tot ledencontent"
     }
   },
+  "knowledge": {
+    "title": "Knowledge Center",
+    "description": "Documenten die de AI gebruikt als context voor audits en contentgeneratie.",
+    "new": "Nieuw Document",
+    "untitled": "Naamloos Document",
+    "empty": "Nog geen documenten. Maak je eerste kennisdocument aan.",
+    "selectDocument": "Selecteer een document om te bewerken",
+    "titlePlaceholder": "Documenttitel...",
+    "contentPlaceholder": "Schrijf hier kenniscontent die de AI als context zal gebruiken...",
+    "save": "Opslaan",
+    "saved": "Document opgeslagen!",
+    "created": "Document aangemaakt!",
+    "deleted": "Document verwijderd!",
+    "saveError": "Fout bij opslaan document",
+    "deleteError": "Fout bij verwijderen document"
+  },
   "assets": {
     "title": "Assets Library",
     "create": "Nieuw Asset",

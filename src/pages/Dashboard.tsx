@@ -105,6 +105,7 @@ const Dashboard = () => {
                 <LanguageSwitcher />
               </div>
             </div>
+            <KnowledgeCenter />
           </div>
         )}
       </main>
