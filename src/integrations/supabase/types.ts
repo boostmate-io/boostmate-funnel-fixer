@@ -100,6 +100,8 @@ export type Database = {
           email: string
           funnel_strategy: string
           id: string
+          landing_page_content: string | null
+          landing_page_screenshot: string | null
           landing_page_url: string
           monthly_traffic: string
           offer: string
@@ -116,6 +118,8 @@ export type Database = {
           email?: string
           funnel_strategy?: string
           id?: string
+          landing_page_content?: string | null
+          landing_page_screenshot?: string | null
           landing_page_url?: string
           monthly_traffic?: string
           offer?: string
@@ -132,6 +136,8 @@ export type Database = {
           email?: string
           funnel_strategy?: string
           id?: string
+          landing_page_content?: string | null
+          landing_page_screenshot?: string | null
           landing_page_url?: string
           monthly_traffic?: string
           offer?: string
