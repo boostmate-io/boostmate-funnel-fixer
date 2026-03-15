@@ -129,6 +129,9 @@
     "noFunnels": "Nog geen funnels. Maak je eerste aan!",
     "noTemplates": "Nog geen templates.",
     "nodeAdded": "Element toegevoegd!",
+    "linkAsset": "Koppel Sales Copy",
+    "selectAsset": "Selecteer een asset...",
+    "noAssetLinked": "Geen asset gekoppeld. Selecteer een sales copy asset om de secties hier te zien.",
     "pages": {
       "optIn": "Opt-in Pagina",
       "optInDesc": "Leads vastleggen met een lead...",
