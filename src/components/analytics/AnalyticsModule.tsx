@@ -31,6 +31,11 @@ const AnalyticsModule = () => {
       {selectedFunnel ? (
         <div className="flex-1 overflow-auto p-6 space-y-8">
           <div>
+            <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t("analytics.summary.title")}</h2>
+            <AnalyticsSummary funnelId={selectedFunnel.id} nodes={selectedFunnel.nodes} edges={selectedFunnel.edges} />
+          </div>
+
+          <div>
             <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t("analytics.dailyEntry")}</h2>
             <DailyDataEntry funnelId={selectedFunnel.id} nodes={selectedFunnel.nodes} edges={selectedFunnel.edges} />
           </div>
