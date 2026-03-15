@@ -65,6 +65,7 @@ const FunnelDesigner = () => {
   const [showNewFunnel, setShowNewFunnel] = useState(false);
   const [funnelName, setFunnelName] = useState("");
   const [templateName, setTemplateName] = useState("");
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const nodeIdCounter = useRef(0);
 
   // Load funnels
