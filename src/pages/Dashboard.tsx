@@ -90,13 +90,18 @@ const Dashboard = () => {
         )}
 
         {activeModule === "settings" && (
-          <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-6">
-            <div>
-              <h3 className="font-display font-bold text-foreground mb-2">{t("dashboard.settings.account")}</h3>
-              <p className="text-sm text-muted-foreground">{t("dashboard.settings.email")}: {user.email}</p>
+          <div className="space-y-6">
+            <div className="bg-card rounded-xl border border-border p-6 shadow-card">
+              <ProjectSettings />
             </div>
-            <div className="border-t border-border pt-6">
-              <LanguageSwitcher />
+            <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-6">
+              <div>
+                <h3 className="font-display font-bold text-foreground mb-2">{t("dashboard.settings.account")}</h3>
+                <p className="text-sm text-muted-foreground">{t("dashboard.settings.email")}: {user.email}</p>
+              </div>
+              <div className="border-t border-border pt-6">
+                <LanguageSwitcher />
+              </div>
             </div>
           </div>
         )}
