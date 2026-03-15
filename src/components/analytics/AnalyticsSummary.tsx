@@ -1,10 +1,19 @@
 import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingUp, TrendingDown, DollarSign, MousePointerClick, Eye, Users } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Eye } from "lucide-react";
+import { ReactFlow, Background, ReactFlowProvider, type Node, type Edge } from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 import { getMetricsForNodeType } from "./metricDefinitions";
+import AnalyticsFunnelNode from "./AnalyticsFunnelNode";
+import AnalyticsTrafficNode from "./AnalyticsTrafficNode";
+
+const nodeTypes = {
+  funnelNode: AnalyticsFunnelNode,
+  trafficSource: AnalyticsTrafficNode,
+};
 
 interface AnalyticsSummaryProps {
   funnelId: string;
@@ -19,7 +28,7 @@ interface StepAggregate {
   days: number;
 }
 
-const AnalyticsSummary = ({ funnelId, nodes, edges }: AnalyticsSummaryProps) => {
+const AnalyticsSummaryInner = ({ funnelId, nodes, edges }: AnalyticsSummaryProps) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [entries, setEntries] = useState<any[]>([]);
@@ -56,7 +65,7 @@ const AnalyticsSummary = ({ funnelId, nodes, edges }: AnalyticsSummaryProps) => 
     load();
   }, [funnelId]);
 
-  const { totalSpend, totalRevenue, totalDays, roas, stepAggregates } = useMemo(() => {
+  const { totalSpend, totalRevenue, totalDays, roas, stepAggregates, stepAggregateMap } = useMemo(() => {
     let totalSpend = 0;
     let totalRevenue = 0;
     const totalDays = entries.length;
@@ -86,15 +95,60 @@ const AnalyticsSummary = ({ funnelId, nodes, edges }: AnalyticsSummaryProps) => 
 
     const roas = totalSpend > 0 ? +(totalRevenue / totalSpend).toFixed(2) : null;
 
-    // Sort aggregates by node order in funnel
     const nodeOrder = new Map<string, number>();
     nodes.forEach((n: any, i: number) => nodeOrder.set(n.id, i));
     const stepAggregates = Array.from(stepMap.entries())
       .sort(([a], [b]) => (nodeOrder.get(a) ?? 99) - (nodeOrder.get(b) ?? 99))
       .map(([, v]) => v);
 
-    return { totalSpend, totalRevenue, totalDays, roas, stepAggregates };
+    return { totalSpend, totalRevenue, totalDays, roas, stepAggregates, stepAggregateMap: stepMap };
   }, [entries, stepMetrics, nodes]);
+
+  // Build ReactFlow nodes with injected analytics metrics
+  const flowNodes: Node[] = useMemo(() => {
+    return nodes.map((n: any) => {
+      const agg = stepAggregateMap.get(n.id);
+      const analyticsMetrics: { label: string; value: string }[] = [];
+
+      if (agg) {
+        const nodeType = n.type === "trafficSource" ? "trafficSource" : (n.data?.pageType || "opt-in");
+        const fields = getMetricsForNodeType(nodeType);
+        // Recompute calculated fields
+        const computed: Record<string, number | null> = {};
+        fields.forEach((f) => {
+          if (f.computed) computed[f.key] = f.computed(agg.totals);
+        });
+
+        // Pick top 3 most relevant metrics to show
+        const displayFields = fields.slice(0, 4);
+        displayFields.forEach((f) => {
+          const val = f.computed ? computed[f.key] : agg.totals[f.key];
+          if (val != null) {
+            analyticsMetrics.push({
+              label: f.label,
+              value: f.type === "currency" ? `€${Number(val).toFixed(2)}` : f.type === "percentage" ? `${val}%` : String(val),
+            });
+          }
+        });
+      }
+
+      return {
+        ...n,
+        data: { ...n.data, analyticsMetrics },
+        draggable: false,
+        connectable: false,
+        selectable: false,
+      };
+    });
+  }, [nodes, stepAggregateMap]);
+
+  const flowEdges: Edge[] = useMemo(() => {
+    return edges.map((e: any) => ({
+      ...e,
+      animated: true,
+      style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+    }));
+  }, [edges]);
 
   if (loading) return <div className="text-muted-foreground text-sm py-4">{t("analytics.loading")}</div>;
   if (!entries.length) return null;
@@ -103,29 +157,34 @@ const AnalyticsSummary = ({ funnelId, nodes, edges }: AnalyticsSummaryProps) => 
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KPICard
-          icon={<Eye className="w-4 h-4" />}
-          label={t("analytics.summary.daysTracked")}
-          value={totalDays.toString()}
-        />
-        <KPICard
-          icon={<DollarSign className="w-4 h-4" />}
-          label={t("analytics.summary.totalSpend")}
-          value={`€${totalSpend.toFixed(2)}`}
-          variant="destructive"
-        />
-        <KPICard
-          icon={<TrendingUp className="w-4 h-4" />}
-          label={t("analytics.summary.totalRevenue")}
-          value={`€${totalRevenue.toFixed(2)}`}
-          variant="success"
-        />
+        <KPICard icon={<Eye className="w-4 h-4" />} label={t("analytics.summary.daysTracked")} value={totalDays.toString()} />
+        <KPICard icon={<DollarSign className="w-4 h-4" />} label={t("analytics.summary.totalSpend")} value={`€${totalSpend.toFixed(2)}`} variant="destructive" />
+        <KPICard icon={<TrendingUp className="w-4 h-4" />} label={t("analytics.summary.totalRevenue")} value={`€${totalRevenue.toFixed(2)}`} variant="success" />
         <KPICard
           icon={roas !== null && roas >= 1 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
           label={t("analytics.summary.roas")}
           value={roas !== null ? `${roas}x` : "—"}
           variant={roas !== null && roas >= 1 ? "success" : "destructive"}
         />
+      </div>
+
+      {/* Funnel visualization with metrics */}
+      <div className="w-full h-[320px] rounded-lg border border-border bg-background overflow-hidden">
+        <ReactFlow
+          nodes={flowNodes}
+          edges={flowEdges}
+          nodeTypes={nodeTypes}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          panOnDrag
+          zoomOnScroll
+          fitView
+          fitViewOptions={{ padding: 0.3 }}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background gap={16} size={1} />
+        </ReactFlow>
       </div>
 
       {/* Per-step summary table */}
@@ -142,7 +201,6 @@ const AnalyticsSummary = ({ funnelId, nodes, edges }: AnalyticsSummaryProps) => 
           <TableBody>
             {stepAggregates.map((step, i) => {
               const fields = getMetricsForNodeType(step.node_type);
-              // Recompute calculated fields on totals
               const computed: Record<string, number | null> = {};
               fields.forEach((f) => {
                 if (f.computed) computed[f.key] = f.computed(step.totals);
@@ -204,5 +262,11 @@ function KPICard({ icon, label, value, variant }: { icon: React.ReactNode; label
     </Card>
   );
 }
+
+const AnalyticsSummary = (props: AnalyticsSummaryProps) => (
+  <ReactFlowProvider>
+    <AnalyticsSummaryInner {...props} />
+  </ReactFlowProvider>
+);
 
 export default AnalyticsSummary;
