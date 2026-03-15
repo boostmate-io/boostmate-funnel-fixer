@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      funnels: {
+        Row: {
+          created_at: string
+          description: string | null
+          edges: Json
+          id: string
+          is_template: boolean
+          name: string
+          nodes: Json
+          template_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          edges?: Json
+          id?: string
+          is_template?: boolean
+          name?: string
+          nodes?: Json
+          template_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          edges?: Json
+          id?: string
+          is_template?: boolean
+          name?: string
+          nodes?: Json
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnels_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
