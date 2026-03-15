@@ -18,6 +18,7 @@ interface AuditRow {
   score: number | null;
   result: any;
   created_at: string;
+  landing_page_screenshot?: string;
 }
 
 interface AuditListProps {
