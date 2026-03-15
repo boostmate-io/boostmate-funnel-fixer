@@ -152,23 +152,32 @@ export type Database = {
       }
       knowledge_documents: {
         Row: {
-          content: string
           created_at: string
+          file_name: string
+          file_path: string
+          file_size: number
           id: string
+          mime_type: string
           title: string
           updated_at: string
         }
         Insert: {
-          content?: string
           created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
           id?: string
+          mime_type?: string
           title?: string
           updated_at?: string
         }
         Update: {
-          content?: string
           created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
           id?: string
+          mime_type?: string
           title?: string
           updated_at?: string
         }
