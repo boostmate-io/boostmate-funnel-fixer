@@ -30,8 +30,9 @@ interface AuditWizardProps {
   hideEmailStep?: boolean;
 }
 
-const AuditWizard = ({ onComplete }: AuditWizardProps) => {
+const AuditWizard = ({ onComplete, hideEmailStep = false }: AuditWizardProps) => {
   const { t } = useTranslation();
+  const steps = hideEmailStep ? allSteps.filter(s => s.field !== "email") : allSteps;
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<AuditFormData>(initialFormData);
   const [error, setError] = useState("");
