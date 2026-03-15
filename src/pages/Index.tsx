@@ -12,6 +12,7 @@ import { AuditFormData } from "@/types/audit";
 import { mockResult } from "@/components/audit/mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
 import { analyzeAudit, createSalesCopyAsset, createFunnelFromAnalysis } from "@/lib/api/auditAnalysis";
+import { AuditResult } from "@/types/audit";
 
 type Phase = "wizard" | "analyzing" | "results";
 
@@ -134,7 +135,12 @@ const Index = () => {
         {phase === "analyzing" && <AnalyzingScreen />}
         {phase === "results" && (
           <AuditResults
-            result={mockResult}
+            result={{
+              ...mockResult,
+              currentFunnel: analysisResult && analysisResult.nodes.length > 0
+                ? { nodes: analysisResult.nodes as any, edges: analysisResult.edges as any }
+                : mockResult.currentFunnel,
+            } as AuditResult}
             onCreateAccount={() => setShowAuth(true)}
             landingPageScreenshot={screenshot}
           />
