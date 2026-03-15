@@ -7,6 +7,7 @@ import { CheckCircle2, AlertTriangle, ArrowRight, Lightbulb, Target } from "luci
 interface AuditResultsProps {
   result: AuditResult;
   onCreateAccount: () => void;
+  showCta?: boolean;
 }
 
 const AuditResults = ({ result, onCreateAccount }: AuditResultsProps) => {
