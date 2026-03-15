@@ -135,7 +135,12 @@ const Index = () => {
         {phase === "analyzing" && <AnalyzingScreen />}
         {phase === "results" && (
           <AuditResults
-            result={mockResult}
+            result={{
+              ...mockResult,
+              currentFunnel: analysisResult && analysisResult.nodes.length > 0
+                ? { nodes: analysisResult.nodes as any, edges: analysisResult.edges as any }
+                : mockResult.currentFunnel,
+            } as AuditResult}
             onCreateAccount={() => setShowAuth(true)}
             landingPageScreenshot={screenshot}
           />
