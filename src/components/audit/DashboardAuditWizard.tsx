@@ -9,7 +9,7 @@ import AuditResults from "./AuditResults";
 import { AuditFormData, AuditResult } from "@/types/audit";
 import { mockResult } from "./mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
-import { createSalesCopyFromMarkdown } from "@/lib/api/createSalesCopyFromMarkdown";
+import { analyzeAudit, createSalesCopyAsset, createFunnelFromAnalysis } from "@/lib/api/auditAnalysis";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -60,21 +60,38 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
     setPhase("analyzing");
     analyzeStarted.current = true;
 
+    // Step 1: Scrape landing page
     const scrapeResult = await scrapeLandingPage(data.landingPageUrl);
     setScreenshot(scrapeResult.screenshot);
 
-    setAuditResult(mockResult);
-    await saveAudit(data, mockResult, scrapeResult.screenshot, scrapeResult.markdown);
+    // Step 2: AI analysis (sections + funnel) in parallel with saving audit
+    const [analysis] = await Promise.all([
+      analyzeAudit(scrapeResult.screenshot, scrapeResult.markdown, data.funnelStrategy, data.trafficSource),
+      saveAudit(data, mockResult, scrapeResult.screenshot, scrapeResult.markdown),
+    ]);
 
-    // Create sales copy asset from scraped content
+    setAuditResult(mockResult);
+
+    // Step 3: Create sales copy asset + funnel
     const { data: { user } } = await supabase.auth.getUser();
-    if (user && scrapeResult.markdown) {
+    if (user) {
+      const projectId = activeProject?.id || null;
       const domain = data.landingPageUrl.replace(/^https?:\/\//, "").split("/")[0];
-      await createSalesCopyFromMarkdown(
+
+      const assetId = await createSalesCopyAsset(
         user.id,
-        activeProject?.id || null,
+        projectId,
         `Sales Copy - ${domain}`,
-        scrapeResult.markdown
+        analysis.sections
+      );
+
+      await createFunnelFromAnalysis(
+        user.id,
+        projectId,
+        `Funnel - ${domain}`,
+        analysis.nodes,
+        analysis.edges,
+        assetId
       );
     }
 

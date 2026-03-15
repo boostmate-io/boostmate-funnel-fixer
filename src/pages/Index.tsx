@@ -11,7 +11,7 @@ import AuthModal from "@/components/auth/AuthModal";
 import { AuditFormData } from "@/types/audit";
 import { mockResult } from "@/components/audit/mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
-import { createSalesCopyFromMarkdown } from "@/lib/api/createSalesCopyFromMarkdown";
+import { analyzeAudit, createSalesCopyAsset, createFunnelFromAnalysis } from "@/lib/api/auditAnalysis";
 
 type Phase = "wizard" | "analyzing" | "results";
 
@@ -22,6 +22,7 @@ const Index = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [screenshot, setScreenshot] = useState("");
   const [pageContent, setPageContent] = useState("");
+  const [analysisResult, setAnalysisResult] = useState<Awaited<ReturnType<typeof analyzeAudit>> | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,12 +38,18 @@ const Index = () => {
     setFormData(data);
     setPhase("analyzing");
 
-    // Scrape landing page in background
-    const scrapePromise = scrapeLandingPage(data.landingPageUrl);
-
-    const scrapeResult = await scrapePromise;
+    const scrapeResult = await scrapeLandingPage(data.landingPageUrl);
     setScreenshot(scrapeResult.screenshot);
     setPageContent(scrapeResult.markdown);
+
+    // AI analysis
+    const analysis = await analyzeAudit(
+      scrapeResult.screenshot,
+      scrapeResult.markdown,
+      data.funnelStrategy,
+      data.trafficSource
+    );
+    setAnalysisResult(analysis);
 
     setPhase("results");
   };
@@ -73,14 +80,25 @@ const Index = () => {
       landing_page_content: pageContent,
     });
 
-    // Create sales copy asset from scraped content
-    if (pageContent) {
-      const domain = formData.landingPageUrl.replace(/^https?:\/\//, "").split("/")[0];
-      await createSalesCopyFromMarkdown(
+    // Create sales copy asset + funnel from analysis
+    const projectId = project?.id || null;
+    const domain = formData.landingPageUrl.replace(/^https?:\/\//, "").split("/")[0];
+
+    if (analysisResult) {
+      const assetId = await createSalesCopyAsset(
         user.id,
-        project?.id || null,
+        projectId,
         `Sales Copy - ${domain}`,
-        pageContent
+        analysisResult.sections
+      );
+
+      await createFunnelFromAnalysis(
+        user.id,
+        projectId,
+        `Funnel - ${domain}`,
+        analysisResult.nodes,
+        analysisResult.edges,
+        assetId
       );
     }
 
