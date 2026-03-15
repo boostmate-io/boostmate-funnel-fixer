@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -57,14 +57,14 @@ type Phase = "wizard" | "analyzing" | "results";
 interface DashboardAuditWizardProps {
   onBack: () => void;
   onComplete: () => void;
-  initialData?: AuditFormData | null;
 }
 
-const DashboardAuditWizard = ({ onBack, onComplete, initialData }: DashboardAuditWizardProps) => {
+const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps) => {
   const { t } = useTranslation();
-  const [phase, setPhase] = useState<Phase>(initialData ? "analyzing" : "wizard");
-  const [formData, setFormData] = useState<AuditFormData | null>(initialData || null);
+  const [phase, setPhase] = useState<Phase>("wizard");
+  const [formData, setFormData] = useState<AuditFormData | null>(null);
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
+  const analyzeStarted = useRef(false);
 
   const saveAudit = async (data: AuditFormData, result: AuditResult) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -93,23 +93,14 @@ const DashboardAuditWizard = ({ onBack, onComplete, initialData }: DashboardAudi
   const handleWizardComplete = (data: AuditFormData) => {
     setFormData(data);
     setPhase("analyzing");
+    analyzeStarted.current = true;
 
-    // Mock: simulate analysis, then save
     setTimeout(async () => {
       setAuditResult(mockResult);
       await saveAudit(data, mockResult);
       setPhase("results");
     }, 4000);
   };
-
-  // If initialData was passed (from public flow), start analyzing
-  if (initialData && phase === "analyzing" && !auditResult) {
-    setTimeout(async () => {
-      setAuditResult(mockResult);
-      if (formData) await saveAudit(formData, mockResult);
-      setPhase("results");
-    }, 4000);
-  }
 
   return (
     <div>
