@@ -111,7 +111,7 @@ const Index = () => {
         )}
       </main>
 
-      <AuthModal open={showAuth} onClose={() => setShowAuth(false)} onSuccess={handleAuthSuccess} defaultEmail={formData?.email || ""} />
+      <AuthModal open={showAuth} onClose={() => setShowAuth(false)} onSuccess={handleAuthSuccess} defaultEmail={formData?.email || ""} defaultMode="login" />
     </div>
   );
 };
