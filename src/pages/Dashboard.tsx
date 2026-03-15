@@ -59,6 +59,13 @@ const Dashboard = () => {
               <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.funnelDesigner.title")}</h3>
               <p className="text-sm text-muted-foreground">{t("dashboard.funnelDesigner.description")}</p>
             </button>
+            <button onClick={() => setActiveModule("assets-library")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+              <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
+                <Library className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.assetsLibrary.title")}</h3>
+              <p className="text-sm text-muted-foreground">{t("dashboard.assetsLibrary.description")}</p>
+            </button>
           </div>
         )}
 
