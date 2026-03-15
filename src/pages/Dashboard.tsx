@@ -74,13 +74,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {activeModule === "funnel-audit" && (
-          <div className="bg-card rounded-xl border border-border p-12 shadow-card text-center">
-            <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-display font-bold text-foreground mb-2">{t("dashboard.funnelAudit.placeholder")}</h3>
-            <p className="text-muted-foreground">{t("dashboard.funnelAudit.placeholderDescription")}</p>
-          </div>
-        )}
+        {activeModule === "funnel-audit" && <AuditModule />}
 
         {activeModule === "funnel-designer" && (
           <div className="h-[calc(100vh-64px)]">
