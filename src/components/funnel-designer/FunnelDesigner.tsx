@@ -246,7 +246,25 @@ const FunnelDesigner = () => {
     setNodes([]);
     setEdges([]);
     setCurrentFunnel(null);
+    setSelectedNodeId(null);
   }, [setNodes, setEdges]);
+
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    if (node.type === "funnelPage") {
+      setSelectedNodeId(node.id);
+    }
+  }, []);
+
+  const handleLinkAsset = useCallback((assetId: string | null) => {
+    if (!selectedNodeId) return;
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === selectedNodeId ? { ...n, data: { ...n.data, linkedAssetId: assetId } } : n
+      )
+    );
+  }, [selectedNodeId, setNodes]);
+
+  const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
   return (
     <div className="flex h-full bg-background-dashboard overflow-hidden">
