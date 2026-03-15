@@ -129,6 +129,9 @@
     "noFunnels": "No funnels yet. Create your first one!",
     "noTemplates": "No templates yet.",
     "nodeAdded": "Element added!",
+    "linkAsset": "Link Sales Copy",
+    "selectAsset": "Select an asset...",
+    "noAssetLinked": "No asset linked. Select a sales copy asset to see its sections here.",
     "pages": {
       "optIn": "Opt-in Page",
       "optInDesc": "Capture leads with a lead...",
