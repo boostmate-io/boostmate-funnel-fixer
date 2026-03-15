@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import logo from "@/assets/logo-boostmate.svg";
 import AuditWizard from "@/components/audit/AuditWizard";
 import AnalyzingScreen from "@/components/audit/AnalyzingScreen";
 import AuditResults from "@/components/audit/AuditResults";
@@ -74,9 +75,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-display font-bold text-foreground">
-            <span className="text-primary">Boost</span>mate
-          </h1>
+          <img src={logo} alt="Boostmate" className="h-8" />
           <button onClick={() => setShowAuth(true)} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             {t("header.login")}
           </button>
