@@ -13,6 +13,7 @@ import { FunnelDiagram } from "@/types/audit";
 
 const nodeTypes = {
   funnelNode: FunnelNode,
+  funnelPage: FunnelNode,
   trafficSource: TrafficSourceNode,
 };
 

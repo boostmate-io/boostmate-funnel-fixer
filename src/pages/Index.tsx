@@ -12,6 +12,7 @@ import { AuditFormData } from "@/types/audit";
 import { mockResult } from "@/components/audit/mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
 import { analyzeAudit, createSalesCopyAsset, createFunnelFromAnalysis } from "@/lib/api/auditAnalysis";
+import { AuditResult } from "@/types/audit";
 
 type Phase = "wizard" | "analyzing" | "results";
 

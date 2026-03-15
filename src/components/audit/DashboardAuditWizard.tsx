@@ -70,7 +70,14 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
       saveAudit(data, mockResult, scrapeResult.screenshot, scrapeResult.markdown),
     ]);
 
-    setAuditResult(mockResult);
+    // Build result with real funnel data
+    const realResult: AuditResult = {
+      ...mockResult,
+      currentFunnel: analysis.nodes.length > 0
+        ? { nodes: analysis.nodes as any, edges: analysis.edges as any }
+        : mockResult.currentFunnel,
+    };
+    setAuditResult(realResult);
 
     // Step 3: Create sales copy asset + funnel
     const { data: { user } } = await supabase.auth.getUser();
