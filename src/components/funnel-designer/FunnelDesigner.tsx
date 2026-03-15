@@ -73,17 +73,20 @@ const FunnelDesigner = () => {
   // Load funnels
   const loadFunnels = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session || !activeProject) return;
 
-    const { data } = await supabase
+    let query = supabase
       .from("funnels")
       .select("*")
       .eq("user_id", session.user.id)
       .eq("is_template", false)
       .order("updated_at", { ascending: false });
+    
+    query = query.eq("project_id", activeProject.id);
 
+    const { data } = await query;
     if (data) setFunnels(data as unknown as Funnel[]);
-  }, []);
+  }, [activeProject]);
 
   const loadTemplates = useCallback(async () => {
     const { data } = await supabase
