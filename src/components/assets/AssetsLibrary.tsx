@@ -28,6 +28,7 @@ const ASSET_TYPES = [
 
 const AssetsLibrary = () => {
   const { t } = useTranslation();
+  const { activeProject } = useProject();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [activeType, setActiveType] = useState("sales_copy");
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
@@ -35,14 +36,15 @@ const AssetsLibrary = () => {
 
   const loadAssets = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session || !activeProject) return;
     const { data } = await supabase
       .from("assets")
       .select("*")
       .eq("user_id", session.user.id)
+      .eq("project_id", activeProject.id)
       .order("updated_at", { ascending: false });
     if (data) setAssets(data as Asset[]);
-  }, []);
+  }, [activeProject]);
 
   useEffect(() => { loadAssets(); }, [loadAssets]);
 
