@@ -1,35 +1,35 @@
-# PRD: Publieke Landingspagina
+# PRD: Public Landing Page
 
-## Overzicht
-Marketing landingspagina met een publieke audit wizard voor leadgeneratie. Bezoekers kunnen een gratis funnel audit uitvoeren, waarna ze worden gevraagd een account aan te maken.
+## Overview
+Marketing landing page with a public audit wizard for lead generation. Visitors can perform a free funnel audit, after which they are prompted to create an account.
 
-## Doelstellingen
-- Leadgeneratie via gratis funnel audit
-- Conversie van bezoekers naar geregistreerde gebruikers
-- Showcase van BoostMate's AI-mogelijkheden
+## Objectives
+- Lead generation via free funnel audit
+- Convert visitors into registered users
+- Showcase BoostMate's AI capabilities
 
-## Functionele Vereisten
+## Functional Requirements
 
-### FR-1: Landingspagina
-- Hero sectie met value proposition
-- Uitleg van de audit-functionaliteit
-- CTA naar de audit wizard
+### FR-1: Landing Page
+- Hero section with value proposition
+- Explanation of the audit functionality
+- CTA to the audit wizard
 
-### FR-2: Publieke Audit Wizard
-- Zelfde wizard als in het dashboard maar zonder login vereist
-- Na voltooiing: scraping en AI-analyse worden uitgevoerd
-- Resultaten worden getoond
+### FR-2: Public Audit Wizard
+- Same wizard as in the dashboard but without login required
+- After completion: scraping and AI analysis are performed
+- Results are displayed
 
-### FR-3: Registratie Flow
-- Na het bekijken van resultaten wordt registratie aangeboden
-- Bij registratie wordt automatisch een project aangemaakt
-- Audit data, sales copy asset en funnel worden aan het project gekoppeld
-- Gebruiker komt direct in het dashboard terecht
+### FR-3: Registration Flow
+- After viewing results, registration is offered
+- On registration, a project is automatically created
+- Audit data, sales copy asset and funnel are linked to the project
+- User lands directly in the dashboard
 
-## Technische Details
-- `src/pages/Index.tsx` — Landingspagina en publieke audit flow
-- `src/components/audit/AuditWizard.tsx` — Publieke wizard
-- Na registratie: automatische project- en datacreatie
+## Technical Details
+- `src/pages/Index.tsx` — Landing page and public audit flow
+- `src/components/audit/AuditWizard.tsx` — Public wizard
+- After registration: automatic project and data creation
 
-## Afhankelijkheden
-- Authenticatie, Funnel Audit, Assets Library, Funnel Designer
+## Dependencies
+- Authentication, Funnel Audit, Assets Library, Funnel Designer

@@ -1,50 +1,50 @@
-# PRD: Authenticatie
+# PRD: Authentication
 
-## Overzicht
-Gebruikersregistratie, login, sessie-beheer en e-mailverificatie via Lovable Cloud Auth.
+## Overview
+User registration, login, session management and email verification via Lovable Cloud Auth.
 
-## Doelstellingen
-- Veilige gebruikersregistratie met e-mailverificatie
-- Login/logout functionaliteit
-- Sessie-beheer met automatische token refresh
-- Rolgebaseerde toegang (admin/user) via `user_roles` tabel
+## Objectives
+- Secure user registration with email verification
+- Login/logout functionality
+- Session management with automatic token refresh
+- Role-based access (admin/user) via `user_roles` table
 
-## Functionele Vereisten
+## Functional Requirements
 
-### FR-1: Registratie
-- Gebruiker kan een account aanmaken met e-mail en wachtwoord
-- E-mailverificatie is vereist voordat de gebruiker kan inloggen
-- Na verificatie wordt automatisch een eerste project aangemaakt
+### FR-1: Registration
+- Users can create an account with email and password
+- Email verification is required before the user can sign in
+- After verification, a first project is automatically created
 
 ### FR-2: Login
-- Gebruiker kan inloggen met e-mail en wachtwoord
-- Sessie wordt opgeslagen en automatisch hersteld bij herbezoek
-- Bij verlopen sessie wordt de gebruiker uitgelogd
+- Users can log in with email and password
+- Session is persisted and automatically restored on revisit
+- Expired sessions result in automatic logout
 
 ### FR-3: AuthModal
-- Modal-gebaseerde UX (geen aparte pagina's)
-- Wisselen tussen login- en registratiemodus
-- Foutmeldingen bij ongeldige credentials
+- Modal-based UX (no separate pages)
+- Toggle between login and registration mode
+- Error messages for invalid credentials
 
-### FR-4: Rolbeheer
-- Rollen worden opgeslagen in `user_roles` tabel (niet op profiel)
-- `has_role()` security definer functie voor RLS policies
-- Admin-rol geeft toegang tot Knowledge Center
+### FR-4: Role Management
+- Roles are stored in `user_roles` table (not on profile)
+- `has_role()` security definer function for RLS policies
+- Admin role grants access to Knowledge Center
 
 ## Database Schema
 
-### Tabel: `user_roles`
-| Kolom | Type | Beschrijving |
-|-------|------|-------------|
+### Table: `user_roles`
+| Column | Type | Description |
+|--------|------|-------------|
 | id | uuid | PK |
-| user_id | uuid | FK naar auth.users |
-| role | app_role (enum) | 'admin' of 'user' |
-| created_at | timestamptz | Aanmaakdatum |
+| user_id | uuid | FK to auth.users |
+| role | app_role (enum) | 'admin' or 'user' |
+| created_at | timestamptz | Creation date |
 
-## Technische Details
-- Supabase Auth voor authenticatie
-- RLS policies op alle tabellen met `auth.uid()`
+## Technical Details
+- Supabase Auth for authentication
+- RLS policies on all tables using `auth.uid()`
 - AuthModal component in `src/components/auth/AuthModal.tsx`
 
-## Afhankelijkheden
+## Dependencies
 - Lovable Cloud (Supabase Auth)
