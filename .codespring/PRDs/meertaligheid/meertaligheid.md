@@ -1,35 +1,35 @@
-# PRD: Meertaligheid (i18n)
+# PRD: Internationalization (i18n)
 
-## Overzicht
-Ondersteuning voor Nederlands en Engels via i18next met een taalwisselaar in de dashboard sidebar.
+## Overview
+Support for Dutch and English via i18next with a language switcher in the dashboard sidebar.
 
-## Doelstellingen
-- Volledige UI beschikbaar in NL en EN
-- Eenvoudig wisselen tussen talen
-- Taalkeuze wordt onthouden
+## Objectives
+- Full UI available in NL and EN
+- Easy switching between languages
+- Language preference is remembered
 
-## Functionele Vereisten
+## Functional Requirements
 
-### FR-1: Vertalingen
-- Alle UI-teksten via `t()` functie uit i18next
-- Vertalingsbestanden: `src/i18n/en.json` en `src/i18n/nl.json`
-- Fallback naar Engels bij ontbrekende vertalingen
+### FR-1: Translations
+- All UI texts via `t()` function from i18next
+- Translation files: `src/i18n/en.json` and `src/i18n/nl.json`
+- Fallback to English for missing translations
 
-### FR-2: Taalwisselaar
-- Component in de dashboard sidebar
-- Visuele indicator van de actieve taal
-- Directe taalwissel zonder pagina-refresh
+### FR-2: Language Switcher
+- Component in the dashboard sidebar
+- Visual indicator of the active language
+- Instant language switch without page refresh
 
-### FR-3: Taal Persistentie
-- Geselecteerde taal wordt opgeslagen in localStorage
-- Bij herbezoek wordt de laatst gekozen taal hersteld
+### FR-3: Language Persistence
+- Selected language is stored in localStorage
+- On revisit, the last chosen language is restored
 
-## Technische Details
-- `src/i18n/index.ts` — i18next configuratie
-- `src/i18n/en.json` — Engelse vertalingen
-- `src/i18n/nl.json` — Nederlandse vertalingen
-- `src/components/dashboard/LanguageSwitcher.tsx` — Taalwisselaar
-- Gebruikt `react-i18next` met `useTranslation` hook
+## Technical Details
+- `src/i18n/index.ts` — i18next configuration
+- `src/i18n/en.json` — English translations
+- `src/i18n/nl.json` — Dutch translations
+- `src/components/dashboard/LanguageSwitcher.tsx` — Language switcher
+- Uses `react-i18next` with `useTranslation` hook
 
-## Afhankelijkheden
-- Geen (standalone feature)
+## Dependencies
+- None (standalone feature)

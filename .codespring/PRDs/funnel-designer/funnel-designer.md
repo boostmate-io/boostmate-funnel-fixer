@@ -1,74 +1,74 @@
 # PRD: Funnel Designer
 
-## Overzicht
-Visuele drag-and-drop funnel builder waarmee gebruikers hun marketing funnels kunnen ontwerpen, opslaan en beheren.
+## Overview
+Visual drag-and-drop funnel builder that allows users to design, save and manage their marketing funnels.
 
-## Doelstellingen
-- Intuïtieve visuele editor voor funnel-ontwerp
-- Ondersteuning voor traffic sources en funnel pages
-- Template-systeem voor hergebruik
-- Koppeling met Assets Library
+## Objectives
+- Intuitive visual editor for funnel design
+- Support for traffic sources and funnel pages
+- Template system for reuse
+- Integration with Assets Library
 
-## Functionele Vereisten
+## Functional Requirements
 
 ### FR-1: Canvas
-- ReactFlow-gebaseerde canvas met drag-and-drop nodes
-- Twee node-types: `trafficSource` en `funnelPage`
-- Verbindingen (edges) tussen nodes met animatie en pijlen
-- Dot-grid achtergrond en zoom/pan controls
-- Delete nodes/edges met Backspace/Delete
+- ReactFlow-based canvas with drag-and-drop nodes
+- Two node types: `trafficSource` and `funnelPage`
+- Connections (edges) between nodes with animation and arrows
+- Dot-grid background and zoom/pan controls
+- Delete nodes/edges with Backspace/Delete
 
 ### FR-2: Elements Panel
-- Zijpaneel links met beschikbare elementen
+- Side panel on the left with available elements
 - Traffic Sources: Facebook Ads, Google Ads, Instagram Ads, TikTok Ads, Email, Organic Search, Direct Traffic
 - Funnel Pages: Landing Page, Sales Page, Opt-in Page, Thank You Page, Upsell Page, Checkout Page, Webinar Page
 
 ### FR-3: Funnel CRUD
-- Opslaan van funnel (insert of update)
-- Laden van bestaande funnels via dialoog
-- Aanmaken van nieuwe funnel met naam
-- Verwijderen van funnels
-- Hernoemen van actieve funnel (inline editing)
+- Save funnel (insert or update)
+- Load existing funnels via dialog
+- Create new funnel with name
+- Delete funnels
+- Rename active funnel (inline editing)
 
 ### FR-4: Templates
-- Opslaan van huidige funnel als template
-- Laden van templates om nieuwe funnel te starten
-- Templates zijn zichtbaar voor alle geauthenticeerde gebruikers
+- Save current funnel as template
+- Load templates to start a new funnel
+- Templates are visible to all authenticated users
 
 ### FR-5: Node Details Panel
-- Klik op een funnelPage node opent details panel rechts
-- Hernoemen van node (custom label)
-- Koppelen van een Asset aan de node (`linkedAssetId`)
+- Clicking a funnelPage node opens details panel on the right
+- Rename node (custom label)
+- Link an Asset to the node (`linkedAssetId`)
 
 ## Database Schema
 
-### Tabel: `funnels`
-| Kolom | Type | Beschrijving |
-|-------|------|-------------|
+### Table: `funnels`
+| Column | Type | Description |
+|--------|------|-------------|
 | id | uuid | PK |
-| user_id | uuid | Eigenaar |
-| project_id | uuid | FK naar projects |
-| name | text | Funnelnaam |
+| user_id | uuid | Owner |
+| project_id | uuid | FK to projects |
+| name | text | Funnel name |
 | nodes | jsonb | ReactFlow nodes array |
 | edges | jsonb | ReactFlow edges array |
 | is_template | boolean | Template flag |
-| template_id | uuid | FK naar bron-template |
-| description | text | Optionele beschrijving |
-| created_at | timestamptz | Aanmaakdatum |
-| updated_at | timestamptz | Laatst gewijzigd |
+| template_id | uuid | FK to source template |
+| description | text | Optional description |
+| created_at | timestamptz | Creation date |
+| updated_at | timestamptz | Last modified |
 
 ### RLS
-- Gebruikers beheren eigen funnels (`user_id = auth.uid()`)
-- Templates zijn leesbaar voor alle geauthenticeerde gebruikers
+- Users manage their own funnels (`user_id = auth.uid()`)
+- Templates are readable by all authenticated users
 
-## Technische Details
-- `src/components/funnel-designer/FunnelDesigner.tsx` — Hoofdcomponent
-- `src/components/funnel-designer/ElementsPanel.tsx` — Elementen zijpaneel
+## Technical Details
+- `src/components/funnel-designer/FunnelDesigner.tsx` — Main component
+- `src/components/funnel-designer/ElementsPanel.tsx` — Elements side panel
 - `src/components/funnel-designer/FunnelNode.tsx` — Funnel page node
 - `src/components/funnel-designer/TrafficSourceNode.tsx` — Traffic source node
 - `src/components/funnel-designer/NodeDetailsPanel.tsx` — Details panel
-- `src/components/funnel-designer/constants.ts` — Node definities
-- Gebruikt `@xyflow/react` library
+- `src/components/funnel-designer/constants.ts` — Node definitions
+- Uses `@xyflow/react` library
 
-## Afhankelijkheden
-- Authenticatie, Projectbeheer, Assets Library (voor node-koppeling)
+## Dependencies
+- Authentication, Project Management, Assets Library (for node linking)

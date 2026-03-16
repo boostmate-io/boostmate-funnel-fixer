@@ -1,51 +1,51 @@
 # PRD: Knowledge Center
 
-## Overzicht
-Admin-only module voor het uploaden en beheren van referentiedocumenten die als kennisbron dienen voor de AI bij het uitvoeren van analyses en het geven van adviezen.
+## Overview
+Admin-only module for uploading and managing reference documents that serve as a knowledge base for the AI when performing analyses and providing recommendations.
 
-## Doelstellingen
-- Centrale kennisbron voor AI-gestuurde features
-- Alleen toegankelijk voor administrators
-- Ondersteuning voor meerdere documentformaten
+## Objectives
+- Central knowledge base for AI-powered features
+- Accessible only to administrators
+- Support for multiple document formats
 
-## Functionele Vereisten
+## Functional Requirements
 
 ### FR-1: Document Upload
-- Uploaden van PDF, DOCX, TXT en MD bestanden
-- Opslag via Lovable Cloud Storage
-- Metadata: titel, bestandsnaam, pad, grootte, MIME-type
+- Upload PDF, DOCX, TXT and MD files
+- Storage via Lovable Cloud Storage
+- Metadata: title, filename, path, size, MIME type
 
-### FR-2: Document Beheer
-- Lijst van alle geüploade documenten
-- Hernoemen van documenten
-- Verwijderen van documenten
-- Alleen zichtbaar en toegankelijk voor admin-gebruikers
+### FR-2: Document Management
+- List of all uploaded documents
+- Rename documents
+- Delete documents
+- Only visible and accessible to admin users
 
-### FR-3: AI Integratie
-- Documenten dienen als context voor de `analyze-audit` Edge Function
-- AI kan referentiedocumenten raadplegen bij het genereren van adviezen
+### FR-3: AI Integration
+- Documents serve as context for the `analyze-audit` Edge Function
+- AI can consult reference documents when generating recommendations
 
 ## Database Schema
 
-### Tabel: `knowledge_documents`
-| Kolom | Type | Beschrijving |
-|-------|------|-------------|
+### Table: `knowledge_documents`
+| Column | Type | Description |
+|--------|------|-------------|
 | id | uuid | PK |
-| title | text | Document titel |
-| file_name | text | Originele bestandsnaam |
-| file_path | text | Pad in storage |
-| file_size | bigint | Bestandsgrootte in bytes |
+| title | text | Document title |
+| file_name | text | Original filename |
+| file_path | text | Storage path |
+| file_size | bigint | File size in bytes |
 | mime_type | text | MIME type |
-| created_at | timestamptz | Aanmaakdatum |
-| updated_at | timestamptz | Laatst gewijzigd |
+| created_at | timestamptz | Creation date |
+| updated_at | timestamptz | Last modified |
 
 ### RLS
-- Alleen admins via `has_role(auth.uid(), 'admin')` policy
+- Admin only via `has_role(auth.uid(), 'admin')` policy
 
-## Technische Details
-- `src/components/dashboard/KnowledgeCenter.tsx` — Hoofdcomponent
-- Lovable Cloud Storage voor bestandsopslag
-- Admin-check via `user_roles` tabel
+## Technical Details
+- `src/components/dashboard/KnowledgeCenter.tsx` — Main component
+- Lovable Cloud Storage for file storage
+- Admin check via `user_roles` table
 
-## Afhankelijkheden
-- Authenticatie (admin-rol vereist)
+## Dependencies
+- Authentication (admin role required)
