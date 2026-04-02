@@ -103,9 +103,10 @@ const Index = () => {
     navigate("/dashboard?module=funnel-audit", { replace: true });
   };
 
-  const handleAuthSuccess = async () => {
+  const handleAuthSuccess = () => {
     setShowAuth(false);
-    await saveAuditAndRedirect();
+    // Navigation will happen automatically via the Navigate redirect
+    // when AuthContext detects the user is logged in
   };
 
   return (

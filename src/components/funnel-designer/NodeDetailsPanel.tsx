@@ -27,19 +27,20 @@ interface NodeDetailsPanelProps {
 const NodeDetailsPanel = ({ nodeId, nodeLabel, customLabel, linkedAssetId, onLinkAsset, onRename, onClose }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAssetId, setSelectedAssetId] = useState<string>(linkedAssetId || "");
 
   const loadAssets = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
     const { data } = await supabase
       .from("assets")
       .select("id, name, type")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("type", "sales_copy")
       .order("name");
     if (data) setAssets(data as Asset[]);
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => { loadAssets(); }, [loadAssets]);
 
