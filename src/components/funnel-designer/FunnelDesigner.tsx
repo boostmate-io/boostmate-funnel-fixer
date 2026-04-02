@@ -331,6 +331,43 @@ const FunnelDesigner = () => {
       setDetailsNodeId(node.id);
     }
   }, []);
+  const handleLinkAsset = useCallback(
+    (assetId: string | null) => {
+      if (!detailsNodeId) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === detailsNodeId ? { ...n, data: { ...n.data, linkedAssetId: assetId } } : n
+        )
+      );
+    },
+    [detailsNodeId, setNodes]
+  );
+
+  const handleRenameNode = useCallback(
+    (name: string) => {
+      if (!detailsNodeId) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === detailsNodeId
+            ? { ...n, data: { ...n.data, customLabel: name || undefined } }
+            : n
+        )
+      );
+    },
+    [detailsNodeId, setNodes]
+  );
+
+  const handleNoteContentChange = useCallback(
+    (content: string) => {
+      if (!detailsNodeId) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === detailsNodeId ? { ...n, data: { ...n.data, noteContent: content } } : n
+        )
+      );
+    },
+    [detailsNodeId, setNodes]
+  );
 
   const detailsNode = nodes.find((n) => n.id === detailsNodeId);
 
