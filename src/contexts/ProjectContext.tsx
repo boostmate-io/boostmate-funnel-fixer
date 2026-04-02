@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useAuthReady } from "@/hooks/useAuthReady";
 
 interface Project {
   id: string;
@@ -31,6 +32,7 @@ export const useProject = () => {
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
+  const { user, isReady } = useAuthReady();
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
     localStorage.getItem("activeProjectId")
@@ -68,31 +70,37 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       setActiveProjectId(projectList[0].id);
       localStorage.setItem("activeProjectId", projectList[0].id);
     }
+
     setLoading(false);
   }, [t]);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        loadProjects(session.user.id);
-      } else {
-        setProjects([]);
-        setLoading(false);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [loadProjects]);
+    if (!isReady) {
+      setLoading(true);
+      return;
+    }
+
+    if (!user) {
+      setProjects([]);
+      setActiveProjectId(null);
+      localStorage.removeItem("activeProjectId");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    void loadProjects(user.id);
+  }, [isReady, user, loadProjects]);
 
   useEffect(() => {
     if (activeProjectId) localStorage.setItem("activeProjectId", activeProjectId);
   }, [activeProjectId]);
 
   const createProject = useCallback(async (name: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!user) return;
     const { data, error } = await supabase
       .from("projects")
-      .insert({ user_id: session.user.id, name })
+      .insert({ user_id: user.id, name })
       .select()
       .single();
     if (error) { toast.error(t("projects.saveError")); return; }
@@ -100,7 +108,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setProjects((prev) => [...prev, proj]);
     setActiveProjectId(proj.id);
     toast.success(t("projects.created"));
-  }, [t]);
+  }, [user, t]);
 
   const renameProject = useCallback(async (id: string, name: string) => {
     const { error } = await supabase.from("projects").update({ name }).eq("id", id);

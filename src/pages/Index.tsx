@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import logo from "@/assets/logo-boostmate.svg";
 import AuditWizard from "@/components/audit/AuditWizard";
 import AnalyzingScreen from "@/components/audit/AnalyzingScreen";
@@ -49,8 +48,13 @@ const Index = () => {
   };
 
   const saveAuditAndRedirect = async () => {
+    if (!formData) {
+      window.location.href = "/dashboard";
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !formData) return;
+    if (!user) return;
 
     const { data: project } = await supabase
       .from("projects")
@@ -95,7 +99,6 @@ const Index = () => {
       );
     }
 
-    // Navigation will happen automatically via useAuthReady detecting the session
     window.location.href = "/dashboard?module=funnel-audit";
   };
 

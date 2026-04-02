@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthReady } from "@/hooks/useAuthReady";
 
 interface Profile {
   id: string;
@@ -52,6 +53,7 @@ export const useAgency = () => {
 };
 
 export const AgencyProvider = ({ children }: { children: ReactNode }) => {
+  const { user, isReady } = useAuthReady();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [clients, setClients] = useState<AgencyClient[]>([]);
   const [invites, setInvites] = useState<AgencyInvite[]>([]);
@@ -67,29 +69,33 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
       .eq("id", userId)
       .single();
 
-    if (data) {
-      setProfile(data as unknown as Profile);
-    }
+    setProfile((data as unknown as Profile) || null);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        setCurrentUserId(session.user.id);
-        loadProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setCurrentUserId(null);
-        setClients([]);
-        setInvites([]);
-        setImpersonatedUserId(null);
-        setImpersonatedName(null);
-        setLoading(false);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [loadProfile]);
+    if (!isReady) {
+      setLoading(true);
+      return;
+    }
+
+    if (!user) {
+      setProfile(null);
+      setCurrentUserId(null);
+      setClients([]);
+      setInvites([]);
+      setImpersonatedUserId(null);
+      setImpersonatedName(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setCurrentUserId(user.id);
+    setImpersonatedUserId(null);
+    setImpersonatedName(null);
+    void loadProfile(user.id);
+  }, [isReady, user, loadProfile]);
 
   const isAgency = profile?.account_type === "agency";
   const isClient = profile?.account_type === "client";
@@ -131,8 +137,8 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (isAgency) {
-      loadClients();
-      loadInvites();
+      void loadClients();
+      void loadInvites();
     }
   }, [isAgency, loadClients, loadInvites]);
 
