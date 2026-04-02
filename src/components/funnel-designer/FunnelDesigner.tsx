@@ -451,14 +451,14 @@ const FunnelDesigner = () => {
         {/* Canvas */}
         <div className="flex-1 min-h-0" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={styledNodes}
-            edges={styledEdges}
+            nodes={nodes}
+            edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onNodeDoubleClick={onNodeDoubleClick}
-            onPaneClick={() => { setSelectedNodeId(null); }}
+            onPaneClick={() => { selectedNodeRef.current = null; }}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             onInit={setReactFlowInstance}
