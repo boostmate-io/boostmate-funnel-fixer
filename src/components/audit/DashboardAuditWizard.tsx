@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useProject } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import AuditWizard from "./AuditWizard";
 import AnalyzingScreen from "./AnalyzingScreen";
@@ -23,6 +24,7 @@ interface DashboardAuditWizardProps {
 const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps) => {
   const { t } = useTranslation();
   const { activeProject } = useProject();
+  const { user } = useAuth();
   const [phase, setPhase] = useState<Phase>("wizard");
   const [formData, setFormData] = useState<AuditFormData | null>(null);
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
@@ -30,7 +32,6 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
   const analyzeStarted = useRef(false);
 
   const saveAudit = async (data: AuditFormData, result: AuditResult, screenshotUrl: string, content: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     const { error } = await supabase.from("audits").insert({
@@ -60,17 +61,14 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
     setPhase("analyzing");
     analyzeStarted.current = true;
 
-    // Step 1: Scrape landing page
     const scrapeResult = await scrapeLandingPage(data.landingPageUrl);
     setScreenshot(scrapeResult.screenshot);
 
-    // Step 2: AI analysis (sections + funnel) in parallel with saving audit
     const [analysis] = await Promise.all([
       analyzeAudit(scrapeResult.screenshot, scrapeResult.markdown, data.funnelStrategy, data.trafficSource),
       saveAudit(data, mockResult, scrapeResult.screenshot, scrapeResult.markdown),
     ]);
 
-    // Build result with real funnel data
     const realResult: AuditResult = {
       ...mockResult,
       currentFunnel: analysis.nodes.length > 0
@@ -79,8 +77,6 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
     };
     setAuditResult(realResult);
 
-    // Step 3: Create sales copy asset + funnel
-    const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const projectId = activeProject?.id || null;
       const domain = data.landingPageUrl.replace(/^https?:\/\//, "").split("/")[0];

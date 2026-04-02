@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useProject } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Plus, Trash2, FileText, Mail, Megaphone, Share2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,31 +30,30 @@ const ASSET_TYPES = [
 const AssetsLibrary = () => {
   const { t } = useTranslation();
   const { activeProject } = useProject();
+  const { user } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [activeType, setActiveType] = useState("sales_copy");
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [editingName, setEditingName] = useState(false);
 
   const loadAssets = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !activeProject) return;
+    if (!user || !activeProject) return;
     const { data } = await supabase
       .from("assets")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("project_id", activeProject.id)
       .order("updated_at", { ascending: false });
     if (data) setAssets(data as Asset[]);
-  }, [activeProject]);
+  }, [user, activeProject]);
 
   useEffect(() => { loadAssets(); }, [loadAssets]);
 
   const createAsset = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !activeProject) return;
+    if (!user || !activeProject) return;
     const { data, error } = await supabase
       .from("assets")
-      .insert({ user_id: session.user.id, type: activeType, name: t("assets.untitled"), project_id: activeProject.id })
+      .insert({ user_id: user.id, type: activeType, name: t("assets.untitled"), project_id: activeProject.id })
       .select()
       .single();
     if (error) toast.error(t("assets.saveError"));
