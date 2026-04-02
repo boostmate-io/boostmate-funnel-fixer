@@ -187,10 +187,8 @@ const getWireframeForType = (pageType: string) => {
   }
 };
 
-/* ── Icon-style node (email, delay, etc.) ── */
-const IconStyleNode = memo(({ data }: NodeProps) => {
+const IconStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => {
   const { t } = useTranslation();
-  const nodeData = data as unknown as FunnelNodeData;
   const IconComponent = (Icons as any)[nodeData.icon] || Icons.FileText;
   const displayName = nodeData.customLabel || t(nodeData.label);
   const isDecision = nodeData.isDecision ?? false;
@@ -210,10 +208,8 @@ const IconStyleNode = memo(({ data }: NodeProps) => {
         <span className="text-[8px] text-muted-foreground text-center -mt-1">{t(nodeData.label)}</span>
       )}
 
-      {/* Handles */}
       <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
       <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-
       <Handle
         type="source"
         position={Position.Right}
@@ -232,8 +228,7 @@ const IconStyleNode = memo(({ data }: NodeProps) => {
       )}
     </div>
   );
-});
-IconStyleNode.displayName = "IconStyleNode";
+};
 
 /* ── Page-style node (wireframe thumbnail) ── */
 const FunnelNode = memo(({ data }: NodeProps) => {
