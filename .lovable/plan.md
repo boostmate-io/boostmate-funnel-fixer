@@ -1,39 +1,51 @@
 
 
-# Agency Upgrade: Bestaand Account als Eerste Client
+# Fix: Auth Race Condition Causing Logout
 
-## Probleem
-Bij upgrade van `personal` → `agency` blijft alle data (projecten, funnels, audits, assets) op het agency-account staan. Er wordt geen apart client-account aangemaakt.
+## Problem
+After login, the user briefly sees the dashboard then gets kicked back to the public site. Root cause: a token refresh storm.
 
-## Oplossing
-Bij de upgrade flow wordt automatisch een nieuw client-account aangemaakt dat de bestaande data overneemt, of — eenvoudiger — wordt het bestaande account conceptueel het eerste client-account van de agency.
+Three independent `onAuthStateChange` listeners (Dashboard, AgencyContext, ProjectContext) plus the Index page all fire simultaneously. The `INITIAL_SESSION` event arrives with `session = null` before the session is restored from storage. Dashboard immediately calls `navigate("/")`, and the parallel `getSession()` calls from the contexts create dozens of simultaneous token refreshes that hit the 429 rate limit, causing session loss.
 
-### Aanpak: "Self-client" patroon
-Wanneer een user upgradet naar agency:
+## Solution
+Create a centralized `useAuthReady` hook and use it as the single source of truth.
 
-1. **Behoud het huidige account als agency** (`account_type = 'agency'`)
-2. **Maak een `agency_clients` record aan** waar `agency_user_id = client_user_id = auth.uid()` — een self-referentie die aangeeft dat de agency ook een eigen client-account heeft
-3. **Alle bestaande data** (projecten, funnels, etc.) blijft gekoppeld aan dezelfde `user_id` en is toegankelijk via de self-client relatie
-4. **Toekomstige nieuwe clients** worden aparte accounts
+### 1. Create `src/hooks/useAuthReady.ts`
+- Calls `supabase.auth.getSession()` once to restore session from storage
+- Sets `isReady = true` only after that completes
+- Listens to `onAuthStateChange` for subsequent events
+- Returns `{ user, isReady }`
 
-### Benodigde wijzigingen
+### 2. Update `src/pages/Dashboard.tsx`
+- Replace the inline `onAuthStateChange` + `getSession` logic with `useAuthReady`
+- Show a loading state while `!isReady`
+- Only redirect to "/" when `isReady && !user` (not on initial null)
+- Remove the `if (!user) return null` guard (replaced by isReady check)
 
-**1. `AgencyContext.tsx` — `upgradeToAgency` functie**
-- Na het updaten van `account_type` naar `agency`, een `agency_clients` record inserten met `agency_user_id = client_user_id = currentUserId`
-- De display_name van het bestaande profiel gebruiken als eerste client-naam
+### 3. Update `src/pages/Index.tsx`
+- Replace inline `onAuthStateChange` with `useAuthReady`
+- Only redirect to "/dashboard" when `isReady && user`
 
-**2. `ClientManagement.tsx` — UI aanpassing**
-- De self-client herkennen en markeren als "My Account" of "Mijn bedrijf"
-- Eventueel een andere styling geven dan externe clients
+### 4. Update `src/contexts/AgencyContext.tsx`
+- Remove the separate `getSession()` call inside `loadProfile`
+- Instead, listen to `onAuthStateChange` only (no parallel getSession)
+- Guard against calling `loadProfile` when event is `INITIAL_SESSION` with null session
 
-**3. `is_agency_of` security function**
-- Werkt al correct: checkt `agency_user_id` en `client_user_id` in `agency_clients` — een self-referentie row past hier gewoon in
+### 5. Update `src/contexts/ProjectContext.tsx`
+- Same pattern: remove redundant `getSession()` call
+- React to auth state changes from the single subscription
 
-**4. Geen database migratie nodig**
-- Het `agency_clients` tabel ondersteunt al de self-referentie (geen unique constraint die dit blokkeert)
+## Technical Details
+- The key fix is ensuring `getSession()` completes before any navigation decision
+- The `INITIAL_SESSION` event with null session must NOT trigger a redirect
+- Reducing from 4+ `onAuthStateChange` listeners to a centralized hook eliminates the token refresh storm
 
-### Files te wijzigen
-- `src/contexts/AgencyContext.tsx` — upgrade functie uitbreiden
-- `src/components/agency/ClientManagement.tsx` — self-client markering
-- `src/components/agency/AgencySettings.tsx` — eventueel bevestigingsdialoog toevoegen
+## Files Changed
+| File | Change |
+|------|--------|
+| `src/hooks/useAuthReady.ts` | New hook |
+| `src/pages/Dashboard.tsx` | Use hook, fix redirect logic |
+| `src/pages/Index.tsx` | Use hook, fix redirect logic |
+| `src/contexts/AgencyContext.tsx` | Remove redundant getSession |
+| `src/contexts/ProjectContext.tsx` | Remove redundant getSession |
 
