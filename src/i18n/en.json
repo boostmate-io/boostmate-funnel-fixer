@@ -157,6 +157,10 @@
     "linkAsset": "Link Sales Copy",
     "selectAsset": "Select an asset...",
     "noAssetLinked": "No asset linked. Select a sales copy asset to see its sections here.",
+    "noteContent": "Note Content",
+    "textContent": "Text Content",
+    "notePlaceholder": "Enter your note here...",
+    "textPlaceholder": "Enter your text here...",
     "elements": {
       "optIn": "Opt-in Page",
       "squeeze": "Squeeze Page",
