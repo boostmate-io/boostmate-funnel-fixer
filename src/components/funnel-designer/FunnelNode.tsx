@@ -274,6 +274,9 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
   if (renderStyle === "text") return <div onDoubleClick={handleDoubleClick}><TextStyleRender nodeData={nodeData} /></div>;
 
   const WireframeComponent = getWireframeForType(nodeData.pageType);
+
+  return (
+    <div className="bg-card rounded-xl border border-border shadow-card w-[180px] group hover:shadow-card-hover transition-shadow relative overflow-visible" onDoubleClick={handleDoubleClick}>
       <div className="h-1.5 w-full rounded-t-xl" style={{ backgroundColor: nodeData.color }} />
 
       {/* Wireframe thumbnail */}
