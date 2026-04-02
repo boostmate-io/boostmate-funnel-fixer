@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
-import { BarChart3, LayoutDashboard, LogOut, PenTool, Settings, Library, TrendingUp } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, PenTool, Settings, Library, TrendingUp, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import ProjectSwitcher from "./ProjectSwitcher";
+import { useAgency } from "@/contexts/AgencyContext";
 
 interface DashboardSidebarProps {
   activeModule: string;
@@ -14,9 +15,11 @@ interface DashboardSidebarProps {
 const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { isAgency, impersonatedUserId } = useAgency();
 
   const navItems = [
     { id: "overview", label: t("dashboard.sidebar.dashboard"), icon: LayoutDashboard },
+    ...(isAgency && !impersonatedUserId ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
     { id: "funnel-audit", label: t("dashboard.sidebar.funnelAudit"), icon: BarChart3 },
     { id: "funnel-designer", label: t("dashboard.sidebar.funnelDesigner"), icon: PenTool },
     { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: TrendingUp },
