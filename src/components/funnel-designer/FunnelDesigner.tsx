@@ -71,10 +71,10 @@ const FunnelDesigner = () => {
   const [showNewFunnel, setShowNewFunnel] = useState(false);
   const [funnelName, setFunnelName] = useState("");
   const [templateName, setTemplateName] = useState("");
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
   const [renamingFunnel, setRenamingFunnel] = useState(false);
   const nodeIdCounter = useRef(0);
+  const selectedNodeRef = useRef<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
 
