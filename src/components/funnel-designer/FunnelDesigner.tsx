@@ -316,7 +316,7 @@ const FunnelDesigner = () => {
     setNodes([]);
     setEdges([]);
     setCurrentFunnel(null);
-    setSelectedNodeId(null);
+    selectedNodeRef.current = null;
     setDetailsNodeId(null);
   }, [setNodes, setEdges]);
 
