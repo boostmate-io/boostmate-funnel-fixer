@@ -97,3 +97,15 @@
 .animate-score-fill {
   animation: score-fill 1.5s ease-out forwards;
 }
+
+/* ReactFlow selected node/edge styling */
+.react-flow__node.selected > div {
+  outline: 2px solid hsl(252, 100%, 64%);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: hsl(252, 100%, 64%) !important;
+  stroke-width: 3 !important;
+}

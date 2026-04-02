@@ -10,7 +10,8 @@ type FunnelNodeData = {
   icon: string;
   color: string;
   isDecision?: boolean;
-  renderStyle?: "page" | "icon";
+  renderStyle?: "page" | "icon" | "note" | "text";
+  noteContent?: string;
 };
 
 /* ── Wireframe thumbnails per element type ── */
@@ -230,6 +231,37 @@ const IconStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => {
   );
 };
 
+/* ── Note-style node (sticky note) ── */
+const NoteStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => (
+  <div className="relative overflow-visible">
+    <div
+      className="min-w-[140px] max-w-[260px] rounded-md px-3 py-2 shadow-sm border border-border/50"
+      style={{ backgroundColor: `${nodeData.color}CC` }}
+    >
+      <p className="text-xs text-white whitespace-pre-wrap break-words leading-relaxed">
+        {nodeData.noteContent || "Double-click to edit..."}
+      </p>
+    </div>
+    <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
+    <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
+    <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" />
+  </div>
+);
+
+/* ── Text-style node (plain text label) ── */
+const TextStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => (
+  <div className="relative overflow-visible">
+    <div className="min-w-[80px] max-w-[260px] px-2 py-1">
+      <p className="text-xs font-medium whitespace-pre-wrap break-words leading-relaxed" style={{ color: nodeData.color }}>
+        {nodeData.noteContent || "Double-click to edit..."}
+      </p>
+    </div>
+    <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
+    <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
+    <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" />
+  </div>
+);
+
 /* ── Page-style node (wireframe thumbnail) ── */
 const FunnelNode = memo(({ data }: NodeProps) => {
   const { t } = useTranslation();
@@ -238,10 +270,10 @@ const FunnelNode = memo(({ data }: NodeProps) => {
   const isDecision = nodeData.isDecision ?? false;
   const renderStyle = nodeData.renderStyle ?? "page";
 
-  // Delegate to icon style for communication/action elements
-  if (renderStyle === "icon") {
-    return <IconStyleRender nodeData={nodeData} />;
-  }
+  // Delegate to special styles
+  if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} />;
+  if (renderStyle === "note") return <NoteStyleRender nodeData={nodeData} />;
+  if (renderStyle === "text") return <TextStyleRender nodeData={nodeData} />;
 
   const WireframeComponent = getWireframeForType(nodeData.pageType);
 

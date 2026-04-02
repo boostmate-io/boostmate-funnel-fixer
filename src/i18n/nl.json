@@ -157,6 +157,10 @@
     "linkAsset": "Koppel Sales Copy",
     "selectAsset": "Selecteer een asset...",
     "noAssetLinked": "Geen asset gekoppeld. Selecteer een sales copy asset om de secties hier te zien.",
+    "noteContent": "Notitie Inhoud",
+    "textContent": "Tekst Inhoud",
+    "notePlaceholder": "Voer je notitie in...",
+    "textPlaceholder": "Voer je tekst in...",
     "elements": {
       "optIn": "Opt-in Pagina",
       "squeeze": "Squeeze Pagina",

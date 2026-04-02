@@ -71,10 +71,10 @@ const FunnelDesigner = () => {
   const [showNewFunnel, setShowNewFunnel] = useState(false);
   const [funnelName, setFunnelName] = useState("");
   const [templateName, setTemplateName] = useState("");
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
   const [renamingFunnel, setRenamingFunnel] = useState(false);
   const nodeIdCounter = useRef(0);
+  const selectedNodeRef = useRef<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
 
@@ -182,6 +182,7 @@ const FunnelDesigner = () => {
         ]);
       } else {
         const el = FUNNEL_ELEMENTS.find((e) => e.type === type);
+        const actualRenderStyle = renderStyle || el?.renderStyle || "page";
         setNodes((nds) => [
           ...nds,
           {
@@ -194,10 +195,14 @@ const FunnelDesigner = () => {
               icon,
               color,
               isDecision: el?.isDecision ?? false,
-              renderStyle: renderStyle || el?.renderStyle || "page",
+              renderStyle: actualRenderStyle,
             },
           },
         ]);
+        // Auto-open details panel for notes/text elements
+        if (actualRenderStyle === "note" || actualRenderStyle === "text") {
+          setDetailsNodeId(id);
+        }
       }
       toast.success(t("funnelDesigner.nodeAdded"));
     },
@@ -316,22 +321,21 @@ const FunnelDesigner = () => {
     setNodes([]);
     setEdges([]);
     setCurrentFunnel(null);
-    setSelectedNodeId(null);
+    selectedNodeRef.current = null;
     setDetailsNodeId(null);
   }, [setNodes, setEdges]);
 
-  // Single click = select (visual highlight)
+  // Single click = select (visual highlight via CSS, no state re-render)
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    setSelectedNodeId(node.id);
+    selectedNodeRef.current = node.id;
   }, []);
 
-  // Double click = open details panel (only for funnelPage nodes)
+  // Double click = open details panel (for funnelPage nodes)
   const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (node.type === "funnelPage") {
       setDetailsNodeId(node.id);
     }
   }, []);
-
   const handleLinkAsset = useCallback(
     (assetId: string | null) => {
       if (!detailsNodeId) return;
@@ -358,22 +362,17 @@ const FunnelDesigner = () => {
     [detailsNodeId, setNodes]
   );
 
-  // Apply selected styling to nodes
-  const styledNodes = nodes.map((n) => ({
-    ...n,
-    selected: n.id === selectedNodeId,
-    style: n.id === selectedNodeId
-      ? { outline: "2px solid hsl(252, 100%, 64%)", outlineOffset: "2px", borderRadius: "12px" }
-      : undefined,
-  }));
-
-  // Apply selected styling to edges
-  const styledEdges = edges.map((e) => ({
-    ...e,
-    style: e.selected
-      ? { stroke: "hsl(252, 100%, 64%)", strokeWidth: 3 }
-      : defaultEdgeOptions.style,
-  }));
+  const handleNoteContentChange = useCallback(
+    (content: string) => {
+      if (!detailsNodeId) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === detailsNodeId ? { ...n, data: { ...n.data, noteContent: content } } : n
+        )
+      );
+    },
+    [detailsNodeId, setNodes]
+  );
 
   const detailsNode = nodes.find((n) => n.id === detailsNodeId);
 
@@ -457,14 +456,14 @@ const FunnelDesigner = () => {
         {/* Canvas */}
         <div className="flex-1 min-h-0" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={styledNodes}
-            edges={styledEdges}
+            nodes={nodes}
+            edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onNodeDoubleClick={onNodeDoubleClick}
-            onPaneClick={() => { setSelectedNodeId(null); }}
+            onPaneClick={() => { selectedNodeRef.current = null; }}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             onInit={setReactFlowInstance}
@@ -488,8 +487,11 @@ const FunnelDesigner = () => {
           nodeLabel={t((detailsNode.data as any).label)}
           customLabel={(detailsNode.data as any).customLabel || ""}
           linkedAssetId={(detailsNode.data as any).linkedAssetId || null}
+          noteContent={(detailsNode.data as any).noteContent || ""}
+          renderStyle={(detailsNode.data as any).renderStyle || "page"}
           onLinkAsset={handleLinkAsset}
           onRename={handleRenameNode}
+          onNoteContentChange={handleNoteContentChange}
           onClose={() => setDetailsNodeId(null)}
         />
       )}
