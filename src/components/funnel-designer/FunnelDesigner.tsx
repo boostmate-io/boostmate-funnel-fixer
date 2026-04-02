@@ -72,6 +72,7 @@ const FunnelDesigner = () => {
   const [funnelName, setFunnelName] = useState("");
   const [templateName, setTemplateName] = useState("");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
   const [renamingFunnel, setRenamingFunnel] = useState(false);
   const nodeIdCounter = useRef(0);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -109,7 +110,7 @@ const FunnelDesigner = () => {
     [setEdges]
   );
 
-  // Click-to-add (fallback, still works for accessibility)
+  // Click-to-add fallback
   const addNode = useCallback(
     (type: string, category: "traffic" | "page") => {
       nodeIdCounter.current += 1;
@@ -138,6 +139,7 @@ const FunnelDesigner = () => {
             icon: el.icon,
             color: el.color,
             isDecision: el.isDecision,
+            renderStyle: el.renderStyle,
           },
         };
         setNodes((nds) => [...nds, newNode]);
@@ -157,13 +159,12 @@ const FunnelDesigner = () => {
     (event: DragEvent) => {
       event.preventDefault();
       const raw = event.dataTransfer.getData("application/reactflow");
-      if (!raw || !reactFlowInstance || !reactFlowWrapper.current) return;
+      if (!raw || !reactFlowInstance) return;
 
-      const { type, category, label, icon, color } = JSON.parse(raw);
-      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      const { type, category, label, icon, color, renderStyle } = JSON.parse(raw);
       const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
+        x: event.clientX,
+        y: event.clientY,
       });
 
       nodeIdCounter.current += 1;
@@ -193,6 +194,7 @@ const FunnelDesigner = () => {
               icon,
               color,
               isDecision: el?.isDecision ?? false,
+              renderStyle: renderStyle || el?.renderStyle || "page",
             },
           },
         ]);
@@ -315,39 +317,65 @@ const FunnelDesigner = () => {
     setEdges([]);
     setCurrentFunnel(null);
     setSelectedNodeId(null);
+    setDetailsNodeId(null);
   }, [setNodes, setEdges]);
 
+  // Single click = select (visual highlight)
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    if (node.type === "funnelPage") setSelectedNodeId(node.id);
+    setSelectedNodeId(node.id);
+  }, []);
+
+  // Double click = open details panel (only for funnelPage nodes)
+  const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
+    if (node.type === "funnelPage") {
+      setDetailsNodeId(node.id);
+    }
   }, []);
 
   const handleLinkAsset = useCallback(
     (assetId: string | null) => {
-      if (!selectedNodeId) return;
+      if (!detailsNodeId) return;
       setNodes((nds) =>
         nds.map((n) =>
-          n.id === selectedNodeId ? { ...n, data: { ...n.data, linkedAssetId: assetId } } : n
+          n.id === detailsNodeId ? { ...n, data: { ...n.data, linkedAssetId: assetId } } : n
         )
       );
     },
-    [selectedNodeId, setNodes]
+    [detailsNodeId, setNodes]
   );
 
   const handleRenameNode = useCallback(
     (name: string) => {
-      if (!selectedNodeId) return;
+      if (!detailsNodeId) return;
       setNodes((nds) =>
         nds.map((n) =>
-          n.id === selectedNodeId
+          n.id === detailsNodeId
             ? { ...n, data: { ...n.data, customLabel: name || undefined } }
             : n
         )
       );
     },
-    [selectedNodeId, setNodes]
+    [detailsNodeId, setNodes]
   );
 
-  const selectedNode = nodes.find((n) => n.id === selectedNodeId);
+  // Apply selected styling to nodes
+  const styledNodes = nodes.map((n) => ({
+    ...n,
+    selected: n.id === selectedNodeId,
+    style: n.id === selectedNodeId
+      ? { outline: "2px solid hsl(252, 100%, 64%)", outlineOffset: "2px", borderRadius: "12px" }
+      : undefined,
+  }));
+
+  // Apply selected styling to edges
+  const styledEdges = edges.map((e) => ({
+    ...e,
+    style: e.selected
+      ? { stroke: "hsl(252, 100%, 64%)", strokeWidth: 3 }
+      : defaultEdgeOptions.style,
+  }));
+
+  const detailsNode = nodes.find((n) => n.id === detailsNodeId);
 
   return (
     <div className="flex h-full bg-background-dashboard overflow-hidden">
@@ -426,16 +454,17 @@ const FunnelDesigner = () => {
           </div>
         </div>
 
-        {/* Canvas - fills remaining space */}
+        {/* Canvas */}
         <div className="flex-1 min-h-0" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={nodes}
-            edges={edges}
+            nodes={styledNodes}
+            edges={styledEdges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
-            onPaneClick={() => setSelectedNodeId(null)}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onPaneClick={() => { setSelectedNodeId(null); }}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             onInit={setReactFlowInstance}
@@ -443,6 +472,9 @@ const FunnelDesigner = () => {
             onDrop={onDrop}
             fitView
             deleteKeyCode={["Backspace", "Delete"]}
+            edgesReconnectable
+            edgesFocusable
+            elementsSelectable
           >
             <Controls />
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
@@ -450,15 +482,15 @@ const FunnelDesigner = () => {
         </div>
       </div>
 
-      {selectedNode && selectedNode.type === "funnelPage" && (
+      {detailsNode && detailsNode.type === "funnelPage" && (
         <NodeDetailsPanel
-          nodeId={selectedNode.id}
-          nodeLabel={t((selectedNode.data as any).label)}
-          customLabel={(selectedNode.data as any).customLabel || ""}
-          linkedAssetId={(selectedNode.data as any).linkedAssetId || null}
+          nodeId={detailsNode.id}
+          nodeLabel={t((detailsNode.data as any).label)}
+          customLabel={(detailsNode.data as any).customLabel || ""}
+          linkedAssetId={(detailsNode.data as any).linkedAssetId || null}
           onLinkAsset={handleLinkAsset}
           onRename={handleRenameNode}
-          onClose={() => setSelectedNodeId(null)}
+          onClose={() => setDetailsNodeId(null)}
         />
       )}
 
