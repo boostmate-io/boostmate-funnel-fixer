@@ -15,9 +15,11 @@ interface DashboardSidebarProps {
 const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { isAgency, impersonatedUserId } = useAgency();
 
   const navItems = [
     { id: "overview", label: t("dashboard.sidebar.dashboard"), icon: LayoutDashboard },
+    ...(isAgency && !impersonatedUserId ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
     { id: "funnel-audit", label: t("dashboard.sidebar.funnelAudit"), icon: BarChart3 },
     { id: "funnel-designer", label: t("dashboard.sidebar.funnelDesigner"), icon: PenTool },
     { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: TrendingUp },

@@ -273,5 +273,37 @@
       "title": "Trends",
       "allSteps": "Alle stappen (totalen)"
     }
+  },
+  "agency": {
+    "clientsTitle": "Klanten",
+    "clientsDescription": "Beheer je klantaccounts en uitnodigingen.",
+    "inviteClient": "Klant Uitnodigen",
+    "inviteDescription": "Stuur een uitnodigingslink om een nieuwe klant te onboarden.",
+    "inviteEmailPlaceholder": "E-mailadres van klant...",
+    "sendInvite": "Uitnodiging Versturen",
+    "inviteSent": "Uitnodiging verstuurd!",
+    "inviteError": "Fout bij versturen uitnodiging",
+    "linkCopied": "Uitnodigingslink gekopieerd!",
+    "activeClients": "Actieve Klanten",
+    "noClients": "Nog geen klanten. Stuur je eerste uitnodiging om te beginnen.",
+    "unnamed": "Naamloze Klant",
+    "manage": "Beheren",
+    "pendingInvites": "Uitnodigingen",
+    "copyLink": "Link Kopiëren",
+    "viewingAs": "Bekijken als {{name}}",
+    "backToAgency": "Terug naar Agency",
+    "upgradeTitle": "Upgrade naar Agency",
+    "upgradeDescription": "Beheer klantaccounts en bekijk hun dashboards.",
+    "upgradeButton": "Word een Agency",
+    "upgraded": "Geüpgraded naar Agency account!",
+    "inviteExpired": "Uitnodiging niet gevonden",
+    "inviteExpiredDescription": "Deze uitnodigingslink is ongeldig of al gebruikt.",
+    "backToHome": "Terug naar home",
+    "joinTitle": "Maak je account aan",
+    "joinDescription": "Je bent uitgenodigd om lid te worden van Boostmate.",
+    "displayNamePlaceholder": "Je naam of bedrijfsnaam",
+    "sidebar": {
+      "clients": "Klanten"
+    }
   }
 }

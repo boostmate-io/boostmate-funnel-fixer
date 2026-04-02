@@ -273,5 +273,37 @@
       "title": "Trends",
       "allSteps": "All steps (totals)"
     }
+  },
+  "agency": {
+    "clientsTitle": "Clients",
+    "clientsDescription": "Manage your client accounts and invites.",
+    "inviteClient": "Invite Client",
+    "inviteDescription": "Send an invite link to onboard a new client.",
+    "inviteEmailPlaceholder": "Client email address...",
+    "sendInvite": "Send Invite",
+    "inviteSent": "Invite sent!",
+    "inviteError": "Error sending invite",
+    "linkCopied": "Invite link copied!",
+    "activeClients": "Active Clients",
+    "noClients": "No clients yet. Send your first invite to get started.",
+    "unnamed": "Unnamed Client",
+    "manage": "Manage",
+    "pendingInvites": "Invites",
+    "copyLink": "Copy Link",
+    "viewingAs": "Viewing as {{name}}",
+    "backToAgency": "Back to Agency",
+    "upgradeTitle": "Upgrade to Agency",
+    "upgradeDescription": "Manage client accounts and access their dashboards.",
+    "upgradeButton": "Become an Agency",
+    "upgraded": "Upgraded to Agency account!",
+    "inviteExpired": "Invite not found",
+    "inviteExpiredDescription": "This invite link is invalid or has already been used.",
+    "backToHome": "Back to home",
+    "joinTitle": "Create your account",
+    "joinDescription": "You've been invited to join Boostmate.",
+    "displayNamePlaceholder": "Your name or company name",
+    "sidebar": {
+      "clients": "Clients"
+    }
   }
 }
