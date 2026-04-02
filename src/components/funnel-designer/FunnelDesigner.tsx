@@ -182,6 +182,7 @@ const FunnelDesigner = () => {
         ]);
       } else {
         const el = FUNNEL_ELEMENTS.find((e) => e.type === type);
+        const actualRenderStyle = renderStyle || el?.renderStyle || "page";
         setNodes((nds) => [
           ...nds,
           {
@@ -194,10 +195,14 @@ const FunnelDesigner = () => {
               icon,
               color,
               isDecision: el?.isDecision ?? false,
-              renderStyle: renderStyle || el?.renderStyle || "page",
+              renderStyle: actualRenderStyle,
             },
           },
         ]);
+        // Auto-open details panel for notes/text elements
+        if (actualRenderStyle === "note" || actualRenderStyle === "text") {
+          setDetailsNodeId(id);
+        }
       }
       toast.success(t("funnelDesigner.nodeAdded"));
     },
