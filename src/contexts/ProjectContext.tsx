@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -33,51 +33,56 @@ export const useProject = () => {
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
     localStorage.getItem("activeProjectId")
   );
   const [loading, setLoading] = useState(true);
-
-  const loadProjects = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true });
-
-    const projectList = (data || []) as Project[];
-
-    // Auto-create default project only if none exist
-    if (projectList.length === 0) {
-      const { data: newProj } = await supabase
-        .from("projects")
-        .insert({ user_id: userId, name: t("projects.defaultName") })
-        .select()
-        .single();
-      if (newProj) {
-        const proj = newProj as Project;
-        projectList.push(proj);
-      }
-    }
-
-    return projectList;
-  }, [t]);
+  const loadedForUserRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setProjects([]);
       setActiveProjectId(null);
       localStorage.removeItem("activeProjectId");
       setLoading(false);
+      loadedForUserRef.current = null;
       return;
     }
+
+    // Don't re-load if we already loaded for this user
+    if (loadedForUserRef.current === userId) return;
 
     let cancelled = false;
     setLoading(true);
 
-    loadProjects(user.id).then((projectList) => {
+    (async () => {
+      const { data } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
+
       if (cancelled) return;
+
+      let projectList = (data || []) as Project[];
+
+      // Auto-create default project only if none exist
+      if (projectList.length === 0) {
+        const { data: newProj } = await supabase
+          .from("projects")
+          .insert({ user_id: userId, name: t("projects.defaultName") })
+          .select()
+          .single();
+        if (!cancelled && newProj) {
+          projectList = [newProj as Project];
+        }
+      }
+
+      if (cancelled) return;
+
+      loadedForUserRef.current = userId;
       setProjects(projectList);
 
       const stored = localStorage.getItem("activeProjectId");
@@ -89,22 +94,22 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem("activeProjectId", projectList[0].id);
       }
       setLoading(false);
-    }).catch(() => {
+    })().catch(() => {
       if (!cancelled) setLoading(false);
     });
 
     return () => { cancelled = true; };
-  }, [user, loadProjects]);
+  }, [userId, t]);
 
   useEffect(() => {
     if (activeProjectId) localStorage.setItem("activeProjectId", activeProjectId);
   }, [activeProjectId]);
 
   const createProject = useCallback(async (name: string) => {
-    if (!user) return;
+    if (!userId) return;
     const { data, error } = await supabase
       .from("projects")
-      .insert({ user_id: user.id, name })
+      .insert({ user_id: userId, name })
       .select()
       .single();
     if (error) { toast.error(t("projects.saveError")); return; }
@@ -112,7 +117,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setProjects((prev) => [...prev, proj]);
     setActiveProjectId(proj.id);
     toast.success(t("projects.created"));
-  }, [user, t]);
+  }, [userId, t]);
 
   const renameProject = useCallback(async (id: string, name: string) => {
     const { error } = await supabase.from("projects").update({ name }).eq("id", id);
