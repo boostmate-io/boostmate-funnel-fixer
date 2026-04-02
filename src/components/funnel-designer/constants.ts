@@ -14,8 +14,8 @@ export interface FunnelElement {
   color: string;
   group: string;
   isDecision: boolean;
-  /** Render style on canvas: "page" = wireframe thumbnail, "icon" = circle with icon */
-  renderStyle: "page" | "icon";
+  /** Render style on canvas: "page" = wireframe thumbnail, "icon" = circle with icon, "note" = sticky note, "text" = plain text */
+  renderStyle: "page" | "icon" | "note" | "text";
 }
 
 export const TRAFFIC_SOURCE_GROUPS = [
