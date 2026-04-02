@@ -1,187 +1,111 @@
 
-## Diagnosis
+## What I found
+Yes, I know the issue now.
 
-Do I know what the issue is? Yes.
+The redirect is not mainly caused by the route guard anymore. The real loop is in `ProjectContext`.
 
-This is still an auth/session bootstrapping problem, but the real issue is broader than the previous fix.
+- `AuthProvider` updates `user/session` on every token refresh.
+- `ProjectContext` currently depends on the full `user` object: `useEffect(..., [user, loadProjects])`.
+- Every token refresh gives a new `user` object reference, so that effect runs again.
+- Each rerun fetches `projects`.
+- Because the token is near expiry, each `projects` fetch triggers another refresh.
+- That creates the exact `refresh -> projects -> refresh -> projects` storm visible in the network logs.
+- Once auth becomes unstable, `ProtectedRoute` sees `!user` and redirects back to `/`.
 
-The evidence from the logs is consistent:
-- multiple refresh-token calls happen within ~1 second
-- backend auth starts returning `429 Request rate limit reached`
-- after that, requests to `profiles` / `projects` fall back to anonymous auth
-- then `Dashboard` sees `user = null` and redirects to `/`
-
-So the app is still creating a refresh storm during startup.
-
-## Actual root cause
-
-The main problem is that authenticated app providers are mounted too early and they start fetching immediately:
-
-```text
-App
-└── AuthProvider
-    └── BrowserRouter
-        └── AgencyProvider
-            └── ProjectProvider
-                └── ALL routes, including /
-```
-
-That means:
-- even on the public landing page, the agency/project providers are alive
-- right after login, they immediately fetch `profiles` and `projects`
-- some flows still do auth-dependent work during route transition
-- when the token is near expiry, these overlapping requests trigger repeated refreshes
-- once refresh gets rate-limited, the session collapses and the dashboard redirects back out
-
-There is also a secondary issue:
-- `ProjectContext` auto-creates a project inside the initial bootstrap load path
-- when auth is unstable, that insert runs with an invalid/anonymous session and causes RLS failures
-- this makes the startup path noisier and less reliable
+This matches the evidence:
+- repeated `POST /auth/v1/token?grant_type=refresh_token`
+- repeated `GET /projects`
+- session replay ending back on the public audit page
 
 ## Implementation plan
 
-### 1. Split public and protected route trees
-Refactor `App.tsx` so `AgencyProvider` and `ProjectProvider` are only mounted for protected dashboard routes, not for `/`.
+### 1. Fix the real loop in `ProjectContext`
+File: `src/contexts/ProjectContext.tsx`
 
-New structure:
+- Derive a stable `userId = user?.id ?? null`.
+- Change all effects/callbacks to depend on `userId`, not the full `user` object.
+- Make the bootstrap load run only when `userId` changes.
+- Add a cancel/in-flight guard so stale async loads cannot overwrite state.
 
-```text
-AuthProvider
-└── BrowserRouter
-    ├── Public routes
-    │   ├── /
-    │   └── /invite/:code
-    └── ProtectedRoute
-        └── AppProviders
-            ├── AgencyProvider
-            ├── ProjectProvider
-            └── /dashboard
-```
+### 2. Remove writes from dashboard bootstrap
+File: `src/contexts/ProjectContext.tsx`
 
-Files:
-- `src/App.tsx`
-- new protected wrapper component if needed
+- Remove the automatic project creation from `loadProjects()`.
+- Initial dashboard bootstrap should only read data.
+- If no project exists, handle that in a separate, guarded path after auth is stable.
 
-### 2. Add a real protected-route gate
-Create a dedicated route guard that:
-- waits for auth readiness
-- renders a loading state while auth is restoring
-- only mounts protected providers/components after auth is confirmed
-- redirects to `/` only when auth is definitively absent
-
-This prevents protected data loading during auth restoration.
-
-Files:
-- new `src/components/auth/ProtectedRoute.tsx` or similar
-- possibly reuse `useAuthReady`
-
-### 3. Make bootstrap paths read-only
-Refactor `ProjectContext.tsx` so initial load does not create a project automatically.
-
-Change:
-- initial bootstrap should only read projects
-- if there are no projects, handle that explicitly in UI or via a separate “ensure default project” action after auth is stable
-- no inserts during unstable startup
-
-Files:
-- `src/contexts/ProjectContext.tsx`
-- possibly `src/components/dashboard/ProjectSwitcher.tsx` / dashboard empty-state UI
-
-### 4. Harden provider effects against auth churn
-Update `AgencyContext.tsx` and `ProjectContext.tsx` to:
-- only run when `isReady && user?.id`
-- cancel/ignore stale async responses when user changes or logs out
-- clear state immediately on logout
-- avoid updating state from old requests after redirect/session loss
-- use safer profile loading (`maybeSingle` pattern) so missing/blocked rows do not create noisy failure paths
-
-Files:
-- `src/contexts/AgencyContext.tsx`
-- `src/contexts/ProjectContext.tsx`
-
-### 5. Stop using auth lookups as mount guards inside feature components
-Audit components that call `supabase.auth.getSession()`/`getUser()` just to decide whether to run.
-
-For dashboard modules, switch to:
-- auth from `AuthContext`
-- project from `ProjectContext`
-- only run data queries when both are available
-
-Priority files to fix first:
-- `src/components/assets/AssetsLibrary.tsx`
-- `src/components/funnel-designer/FunnelDesigner.tsx`
-- `src/components/funnel-designer/NodeDetailsPanel.tsx`
-- `src/pages/Index.tsx`
-- `src/components/audit/DashboardAuditWizard.tsx`
-
-This removes more hidden refresh triggers elsewhere in the app.
-
-### 6. Keep login navigation simple
-Refine the login success flow so it does not compete with auth restoration:
-- login should complete
-- auth context becomes ready
-- protected route mounts
-- then protected providers fetch once
-
-Avoid chaining extra authenticated writes during the exact login transition unless necessary.
-
+### 3. Harden login success flow
 Files:
 - `src/components/auth/AuthModal.tsx`
 - `src/pages/Index.tsx`
+
+- Avoid using the login success callback as the main source of truth for access.
+- Let redirect behavior follow the centralized auth state from `useAuth()`.
+- Where the page needs the current user, use context state instead of extra `supabase.auth.getUser()` calls when possible.
+
+### 4. Sweep dashboard modules for the same pattern
+Files:
+- `src/components/assets/AssetsLibrary.tsx`
+- `src/components/funnel-designer/FunnelDesigner.tsx`
+- `src/components/funnel-designer/NodeDetailsPanel.tsx`
+- `src/components/audit/DashboardAuditWizard.tsx`
+
+- Replace dependencies on the full `user` object with `userId`.
+- Gate queries on `!!userId` and `!!activeProject?.id`.
+- This prevents the same refresh loop from coming back in other modules.
+
+### 5. Keep `ProtectedRoute` simple
+File: `src/components/auth/ProtectedRoute.tsx`
+
+- Keep it as a pure access gate:
+  - loading while `!isReady`
+  - redirect only when `isReady && !user`
+- Do not rely on it to compensate for provider-side fetch loops.
 
 ## Technical details
 
-### Why the earlier fix did not fully solve it
-The previous fix centralized auth readiness, but the app still:
-- mounted protected data providers on public routes
-- performed protected reads immediately after sign-in
-- allowed bootstrap writes during startup
-- still had several component-level auth checks using `getSession()`
-
-So auth became “more centralized”, but protected data loading was still happening too early.
-
-### Key architectural correction
-The real fix is:
-
 ```text
-Do not mount protected data providers until auth is fully restored and confirmed.
+Current bad loop
+Auth refresh -> new user object -> ProjectContext effect reruns
+-> fetch projects -> token refresh -> new user object -> rerun again
+-> auth destabilizes -> ProtectedRoute redirects to "/"
 ```
 
-That is the change most likely to eliminate the refresh storm for good.
+```text
+Target flow
+Login -> auth becomes ready -> one project load
+-> dashboard stays mounted
+-> later token refreshes do NOT retrigger bootstrap effects
+```
 
 ## Files to update
-
-Core:
-- `src/App.tsx`
-- `src/contexts/AuthContext.tsx`
-- `src/contexts/AgencyContext.tsx`
-- `src/contexts/ProjectContext.tsx`
-- `src/pages/Dashboard.tsx`
-- `src/pages/Index.tsx`
+- `src/contexts/ProjectContext.tsx` (main fix)
 - `src/components/auth/AuthModal.tsx`
-
-Likely new:
-- `src/components/auth/ProtectedRoute.tsx`
-
-Follow-up hardening:
+- `src/pages/Index.tsx`
 - `src/components/assets/AssetsLibrary.tsx`
 - `src/components/funnel-designer/FunnelDesigner.tsx`
 - `src/components/funnel-designer/NodeDetailsPanel.tsx`
 - `src/components/audit/DashboardAuditWizard.tsx`
+- `src/components/auth/ProtectedRoute.tsx` (minor hardening)
+
+## Backend changes
+No database or policy change is needed for this bug. This is a frontend auth/bootstrap loop.
 
 ## Verification after implementation
+I will only consider this fixed if all of these pass:
 
-I will consider this fixed only if all of these pass:
 1. Login with `jensvannueten@gmail.com` stays on `/dashboard`
 2. Login with `support@boostmate.io` stays on `/dashboard`
-3. Manual refresh on `/dashboard` keeps the user logged in
-4. Backend auth logs no longer show rapid refresh bursts followed by `429`
-5. `profiles` and `projects` requests no longer fall back to anonymous auth during startup
+3. Manual refresh on `/dashboard` keeps the session
+4. Dashboard bootstrap produces one `projects` load, not a repeating stream
+5. Token refresh no longer chains repeatedly during dashboard load
+6. Opening assets/funnel designer/audit modules does not restart the loop
 
-## Expected outcome
+## Why this plan is different
+Earlier attempts focused on auth timing and provider placement. Those were reasonable, but the current code shows a more specific bug:
 
-After this refactor:
-- public pages remain public and lightweight
-- protected providers only run inside the authenticated app
-- startup becomes deterministic
-- the dashboard should stop briefly appearing and then kicking the user back out
+- `ProjectContext` is keyed to the full `user` object
+- token refresh changes that object
+- that retriggers dashboard bootstrap fetches over and over
+
+That is the issue I would fix now.
