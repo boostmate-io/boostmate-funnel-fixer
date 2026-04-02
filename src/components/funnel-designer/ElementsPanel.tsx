@@ -18,7 +18,13 @@ interface ElementsPanelProps {
 const ElementsPanel = ({ onAddNode }: ElementsPanelProps) => {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+  // All groups collapsed by default
+  const allGroups: Record<string, boolean> = {};
+  TRAFFIC_SOURCE_GROUPS.forEach((g) => { allGroups[`traffic-${g}`] = true; });
+  FUNNEL_ELEMENT_GROUPS.forEach((g) => { allGroups[`element-${g}`] = true; });
+
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(allGroups);
 
   const toggleGroup = (group: string) => {
     setCollapsedGroups((prev) => ({ ...prev, [group]: !prev[group] }));
@@ -38,17 +44,21 @@ const ElementsPanel = ({ onAddNode }: ElementsPanelProps) => {
       )
     : FUNNEL_ELEMENTS;
 
+  // When searching, expand all groups
+  const isCollapsed = (key: string) => search ? false : (collapsedGroups[key] ?? true);
+
   const onDragStart = (
     e: React.DragEvent,
     type: string,
     category: "traffic" | "page",
     label: string,
     icon: string,
-    color: string
+    color: string,
+    renderStyle?: string
   ) => {
     e.dataTransfer.setData(
       "application/reactflow",
-      JSON.stringify({ type, category, label, icon, color })
+      JSON.stringify({ type, category, label, icon, color, renderStyle })
     );
     e.dataTransfer.effectAllowed = "move";
   };
@@ -72,11 +82,15 @@ const ElementsPanel = ({ onAddNode }: ElementsPanelProps) => {
 
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-1">
-          {/* Traffic Sources */}
+          {/* Section header: Traffic Sources */}
+          <h4 className="text-[11px] font-bold text-foreground uppercase tracking-wider px-1 pt-1 pb-1">
+            Traffic Sources
+          </h4>
+
           {TRAFFIC_SOURCE_GROUPS.map((group) => {
             const items = filteredTraffic.filter((s) => s.group === group);
             if (items.length === 0) return null;
-            const isCollapsed = collapsedGroups[`traffic-${group}`];
+            const collapsed = isCollapsed(`traffic-${group}`);
 
             return (
               <div key={`traffic-${group}`}>
@@ -86,10 +100,10 @@ const ElementsPanel = ({ onAddNode }: ElementsPanelProps) => {
                 >
                   <span>{group}</span>
                   <ChevronDown
-                    className={`w-3 h-3 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
+                    className={`w-3 h-3 transition-transform ${collapsed ? "-rotate-90" : ""}`}
                   />
                 </button>
-                {!isCollapsed && (
+                {!collapsed && (
                   <div className="grid grid-cols-4 gap-1 pb-2">
                     {items.map((source) => {
                       const IconComponent = (Icons as any)[source.icon] || Icons.Globe;
@@ -124,11 +138,15 @@ const ElementsPanel = ({ onAddNode }: ElementsPanelProps) => {
           {/* Divider */}
           <div className="border-t border-border my-2" />
 
-          {/* Funnel Elements */}
+          {/* Section header: Funnel Elements */}
+          <h4 className="text-[11px] font-bold text-foreground uppercase tracking-wider px-1 pt-1 pb-1">
+            Funnel Elements
+          </h4>
+
           {FUNNEL_ELEMENT_GROUPS.map((group) => {
             const items = filteredElements.filter((e) => e.group === group);
             if (items.length === 0) return null;
-            const isCollapsed = collapsedGroups[`element-${group}`];
+            const collapsed = isCollapsed(`element-${group}`);
 
             return (
               <div key={`element-${group}`}>
@@ -138,10 +156,10 @@ const ElementsPanel = ({ onAddNode }: ElementsPanelProps) => {
                 >
                   <span>{group}</span>
                   <ChevronDown
-                    className={`w-3 h-3 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
+                    className={`w-3 h-3 transition-transform ${collapsed ? "-rotate-90" : ""}`}
                   />
                 </button>
-                {!isCollapsed && (
+                {!collapsed && (
                   <div className="space-y-0.5 pb-2">
                     {items.map((el) => {
                       const IconComponent = (Icons as any)[el.icon] || Icons.FileText;
@@ -150,7 +168,7 @@ const ElementsPanel = ({ onAddNode }: ElementsPanelProps) => {
                           key={el.type}
                           draggable
                           onDragStart={(e) =>
-                            onDragStart(e, el.type, "page", t(el.label), el.icon, el.color)
+                            onDragStart(e, el.type, "page", t(el.label), el.icon, el.color, el.renderStyle)
                           }
                           className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-accent transition-colors cursor-grab active:cursor-grabbing group"
                         >

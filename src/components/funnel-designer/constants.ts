@@ -14,112 +14,144 @@ export interface FunnelElement {
   color: string;
   group: string;
   isDecision: boolean;
+  /** Render style on canvas: "page" = wireframe thumbnail, "icon" = circle with icon */
+  renderStyle: "page" | "icon";
 }
 
 export const TRAFFIC_SOURCE_GROUPS = [
-  "Social Media",
-  "Search & SEO",
-  "Paid Advertising",
-  "Content & Media",
-  "Direct & Outreach",
-  "Partnerships",
+  "Paid Traffic",
+  "Organic Traffic",
+  "Owned Traffic",
+  "Referral & Partnerships",
+  "Direct & Other",
 ] as const;
 
 export const TRAFFIC_SOURCES: TrafficSource[] = [
-  // Social Media
-  { type: "facebook", label: "Facebook", icon: "Facebook", color: "#1877F2", group: "Social Media" },
-  { type: "instagram", label: "Instagram", icon: "Instagram", color: "#E1306C", group: "Social Media" },
-  { type: "tiktok", label: "TikTok", icon: "Music", color: "#000000", group: "Social Media" },
-  { type: "youtube", label: "YouTube", icon: "Youtube", color: "#FF0000", group: "Social Media" },
-  { type: "linkedin", label: "LinkedIn", icon: "Linkedin", color: "#0A66C2", group: "Social Media" },
-  { type: "twitter", label: "X / Twitter", icon: "Twitter", color: "#1DA1F2", group: "Social Media" },
-  { type: "pinterest", label: "Pinterest", icon: "Pin", color: "#E60023", group: "Social Media" },
-  { type: "snapchat", label: "Snapchat", icon: "Ghost", color: "#FFFC00", group: "Social Media" },
-  // Search & SEO
-  { type: "google-organic", label: "Google Organic", icon: "Search", color: "#4285F4", group: "Search & SEO" },
-  { type: "bing", label: "Bing", icon: "Search", color: "#008373", group: "Search & SEO" },
-  { type: "seo-blog", label: "SEO Blog", icon: "FileText", color: "#34A853", group: "Search & SEO" },
-  // Paid Advertising
-  { type: "facebook-ads", label: "Facebook Ads", icon: "Facebook", color: "#1877F2", group: "Paid Advertising" },
-  { type: "google-ads", label: "Google Ads", icon: "Search", color: "#FBBC05", group: "Paid Advertising" },
-  { type: "instagram-ads", label: "Instagram Ads", icon: "Instagram", color: "#E1306C", group: "Paid Advertising" },
-  { type: "tiktok-ads", label: "TikTok Ads", icon: "Music", color: "#000000", group: "Paid Advertising" },
-  { type: "youtube-ads", label: "YouTube Ads", icon: "Youtube", color: "#FF0000", group: "Paid Advertising" },
-  { type: "linkedin-ads", label: "LinkedIn Ads", icon: "Linkedin", color: "#0A66C2", group: "Paid Advertising" },
-  { type: "pinterest-ads", label: "Pinterest Ads", icon: "Pin", color: "#E60023", group: "Paid Advertising" },
-  { type: "native-ads", label: "Native Ads", icon: "Newspaper", color: "#6B7280", group: "Paid Advertising" },
-  // Content & Media
-  { type: "podcast", label: "Podcast", icon: "Podcast", color: "#8B5CF6", group: "Content & Media" },
-  { type: "blog", label: "Blog", icon: "BookOpen", color: "#10B981", group: "Content & Media" },
-  { type: "webinar-traffic", label: "Webinar", icon: "Video", color: "#EC4899", group: "Content & Media" },
-  { type: "live-event", label: "Live Event", icon: "Radio", color: "#F59E0B", group: "Content & Media" },
-  { type: "video-content", label: "Video Content", icon: "PlayCircle", color: "#EF4444", group: "Content & Media" },
-  // Direct & Outreach
-  { type: "email", label: "Email", icon: "Mail", color: "#34A853", group: "Direct & Outreach" },
-  { type: "sms", label: "SMS", icon: "MessageSquare", color: "#06B6D4", group: "Direct & Outreach" },
-  { type: "direct-traffic", label: "Direct Traffic", icon: "Globe", color: "#6366F1", group: "Direct & Outreach" },
-  { type: "qr-code", label: "QR Code", icon: "QrCode", color: "#1F2937", group: "Direct & Outreach" },
-  { type: "cold-outreach", label: "Cold Outreach", icon: "Send", color: "#F97316", group: "Direct & Outreach" },
-  { type: "dm", label: "DM / Chat", icon: "MessageCircle", color: "#8B5CF6", group: "Direct & Outreach" },
-  // Partnerships
-  { type: "affiliate", label: "Affiliate", icon: "Users", color: "#F59E0B", group: "Partnerships" },
-  { type: "referral", label: "Referral", icon: "UserPlus", color: "#10B981", group: "Partnerships" },
-  { type: "jv-partner", label: "JV Partner", icon: "Handshake", color: "#6366F1", group: "Partnerships" },
-  { type: "influencer", label: "Influencer", icon: "Star", color: "#EC4899", group: "Partnerships" },
+  // Paid Traffic
+  { type: "facebook-ads", label: "Facebook Ads", icon: "Facebook", color: "#1877F2", group: "Paid Traffic" },
+  { type: "instagram-ads", label: "Instagram Ads", icon: "Instagram", color: "#E1306C", group: "Paid Traffic" },
+  { type: "google-ads", label: "Google Ads", icon: "Search", color: "#FBBC05", group: "Paid Traffic" },
+  { type: "youtube-ads", label: "YouTube Ads", icon: "Youtube", color: "#FF0000", group: "Paid Traffic" },
+  { type: "tiktok-ads", label: "TikTok Ads", icon: "Music", color: "#000000", group: "Paid Traffic" },
+  { type: "linkedin-ads", label: "LinkedIn Ads", icon: "Linkedin", color: "#0A66C2", group: "Paid Traffic" },
+  { type: "twitter-ads", label: "Twitter Ads", icon: "Twitter", color: "#1DA1F2", group: "Paid Traffic" },
+  { type: "snapchat-ads", label: "Snapchat Ads", icon: "Ghost", color: "#FFFC00", group: "Paid Traffic" },
+  { type: "pinterest-ads", label: "Pinterest Ads", icon: "Pin", color: "#E60023", group: "Paid Traffic" },
+  { type: "bing-ads", label: "Bing Ads", icon: "Search", color: "#008373", group: "Paid Traffic" },
+  { type: "yandex-ads", label: "Yandex Ads", icon: "Search", color: "#FF0000", group: "Paid Traffic" },
+  { type: "taboola-ads", label: "Taboola Ads", icon: "Newspaper", color: "#0052CC", group: "Paid Traffic" },
+  { type: "outbrain-ads", label: "Outbrain Ads", icon: "Newspaper", color: "#FF6600", group: "Paid Traffic" },
+  { type: "email-ads", label: "Email Ads", icon: "Mail", color: "#34A853", group: "Paid Traffic" },
+  { type: "podcast-ads", label: "Podcast Ads", icon: "Podcast", color: "#8B5CF6", group: "Paid Traffic" },
+  { type: "spotify-ads", label: "Spotify Ads", icon: "Music", color: "#1DB954", group: "Paid Traffic" },
+  { type: "radio-ads", label: "Radio Ads", icon: "Radio", color: "#F59E0B", group: "Paid Traffic" },
+  { type: "television-ads", label: "Television Ads", icon: "Monitor", color: "#6366F1", group: "Paid Traffic" },
+  { type: "magazine-ads", label: "Magazine Ads", icon: "BookOpen", color: "#EC4899", group: "Paid Traffic" },
+  { type: "newspaper-ads", label: "Newspaper Ads", icon: "Newspaper", color: "#6B7280", group: "Paid Traffic" },
+
+  // Organic Traffic
+  { type: "google-seo", label: "Google SEO", icon: "Search", color: "#4285F4", group: "Organic Traffic" },
+  { type: "youtube-organic", label: "YouTube Organic", icon: "Youtube", color: "#FF0000", group: "Organic Traffic" },
+  { type: "facebook-organic", label: "Facebook Organic", icon: "Facebook", color: "#1877F2", group: "Organic Traffic" },
+  { type: "instagram-organic", label: "Instagram Organic", icon: "Instagram", color: "#E1306C", group: "Organic Traffic" },
+  { type: "tiktok-organic", label: "TikTok Organic", icon: "Music", color: "#000000", group: "Organic Traffic" },
+  { type: "linkedin-organic", label: "LinkedIn Organic", icon: "Linkedin", color: "#0A66C2", group: "Organic Traffic" },
+  { type: "twitter-organic", label: "Twitter Organic", icon: "Twitter", color: "#1DA1F2", group: "Organic Traffic" },
+  { type: "pinterest-organic", label: "Pinterest Organic", icon: "Pin", color: "#E60023", group: "Organic Traffic" },
+  { type: "blog-articles", label: "Blog / Articles", icon: "BookOpen", color: "#10B981", group: "Organic Traffic" },
+  { type: "podcast-own", label: "Podcast (Own Show)", icon: "Podcast", color: "#8B5CF6", group: "Organic Traffic" },
+
+  // Owned Traffic
+  { type: "email-owned", label: "Email", icon: "Mail", color: "#34A853", group: "Owned Traffic" },
+  { type: "whatsapp", label: "WhatsApp", icon: "MessageCircle", color: "#25D366", group: "Owned Traffic" },
+  { type: "telegram", label: "Telegram", icon: "Send", color: "#0088CC", group: "Owned Traffic" },
+  { type: "facebook-messenger", label: "Facebook Messenger", icon: "MessageSquare", color: "#0084FF", group: "Owned Traffic" },
+  { type: "sms-owned", label: "SMS", icon: "MessageSquare", color: "#06B6D4", group: "Owned Traffic" },
+  { type: "discord", label: "Discord", icon: "MessageCircle", color: "#5865F2", group: "Owned Traffic" },
+  { type: "slack", label: "Slack", icon: "Hash", color: "#4A154B", group: "Owned Traffic" },
+  { type: "skool", label: "Skool", icon: "GraduationCap", color: "#000000", group: "Owned Traffic" },
+  { type: "facebook-group", label: "Facebook Group", icon: "Users", color: "#1877F2", group: "Owned Traffic" },
+
+  // Referral & Partnerships
+  { type: "affiliates", label: "Affiliates", icon: "Users", color: "#F59E0B", group: "Referral & Partnerships" },
+  { type: "jv-partners", label: "JV Partners", icon: "Handshake", color: "#6366F1", group: "Referral & Partnerships" },
+  { type: "influencers", label: "Influencers", icon: "Star", color: "#EC4899", group: "Referral & Partnerships" },
+  { type: "ugc-creators", label: "UGC Creators", icon: "Camera", color: "#F97316", group: "Referral & Partnerships" },
+  { type: "customer-referrals", label: "Customer Referrals", icon: "UserPlus", color: "#10B981", group: "Referral & Partnerships" },
+  { type: "partner-referrals", label: "Partner Referrals", icon: "UserPlus", color: "#3B82F6", group: "Referral & Partnerships" },
+
+  // Direct & Other
+  { type: "direct-traffic", label: "Direct Traffic", icon: "Globe", color: "#6366F1", group: "Direct & Other" },
+  { type: "retargeting", label: "Retargeting", icon: "RefreshCw", color: "#EF4444", group: "Direct & Other" },
+  { type: "webinars-traffic", label: "Webinars", icon: "Video", color: "#EC4899", group: "Direct & Other" },
+  { type: "live-events", label: "Live Events", icon: "Radio", color: "#F59E0B", group: "Direct & Other" },
+  { type: "workshops", label: "Workshops", icon: "Presentation", color: "#8B5CF6", group: "Direct & Other" },
+  { type: "conferences", label: "Conferences", icon: "Building", color: "#0EA5E9", group: "Direct & Other" },
+  { type: "cpa-network", label: "CPA Network", icon: "Network", color: "#14B8A6", group: "Direct & Other" },
+  { type: "marketplaces", label: "Marketplaces", icon: "Store", color: "#F97316", group: "Direct & Other" },
+  { type: "cold-outreach", label: "Cold Outreach", icon: "Send", color: "#F97316", group: "Direct & Other" },
+  { type: "dm-outreach", label: "DM Outreach", icon: "MessageCircle", color: "#8B5CF6", group: "Direct & Other" },
+  { type: "custom-traffic", label: "Custom Traffic Source", icon: "Settings", color: "#6B7280", group: "Direct & Other" },
 ];
 
 export const FUNNEL_ELEMENT_GROUPS = [
-  "Lead Capture",
-  "Sales & Conversion",
-  "Checkout & Payment",
-  "Post-Purchase",
-  "Content & Engagement",
-  "Qualification",
-  "Automation",
+  "Pages",
+  "Communication",
+  "Actions",
+  "Sales Flow",
+  "Utility",
 ] as const;
 
 export const FUNNEL_ELEMENTS: FunnelElement[] = [
-  // Lead Capture
-  { type: "opt-in", label: "funnelDesigner.elements.optIn", description: "funnelDesigner.elements.optInDesc", icon: "FileText", color: "#3B82F6", group: "Lead Capture", isDecision: false },
-  { type: "squeeze", label: "funnelDesigner.elements.squeeze", description: "funnelDesigner.elements.squeezeDesc", icon: "Zap", color: "#8B5CF6", group: "Lead Capture", isDecision: false },
-  { type: "lead-magnet", label: "funnelDesigner.elements.leadMagnet", description: "funnelDesigner.elements.leadMagnetDesc", icon: "Gift", color: "#10B981", group: "Lead Capture", isDecision: false },
-  { type: "quiz-survey", label: "funnelDesigner.elements.quizSurvey", description: "funnelDesigner.elements.quizSurveyDesc", icon: "HelpCircle", color: "#F59E0B", group: "Lead Capture", isDecision: false },
-  { type: "popup", label: "funnelDesigner.elements.popup", description: "funnelDesigner.elements.popupDesc", icon: "Maximize2", color: "#EF4444", group: "Lead Capture", isDecision: false },
-  // Sales & Conversion
-  { type: "sales", label: "funnelDesigner.elements.sales", description: "funnelDesigner.elements.salesDesc", icon: "FileText", color: "#F59E0B", group: "Sales & Conversion", isDecision: true },
-  { type: "vsl", label: "funnelDesigner.elements.vsl", description: "funnelDesigner.elements.vslDesc", icon: "PlayCircle", color: "#EF4444", group: "Sales & Conversion", isDecision: true },
-  { type: "webinar", label: "funnelDesigner.elements.webinar", description: "funnelDesigner.elements.webinarDesc", icon: "Video", color: "#EC4899", group: "Sales & Conversion", isDecision: true },
-  { type: "bridge", label: "funnelDesigner.elements.bridge", description: "funnelDesigner.elements.bridgeDesc", icon: "ArrowRight", color: "#10B981", group: "Sales & Conversion", isDecision: false },
-  { type: "tripwire", label: "funnelDesigner.elements.tripwire", description: "funnelDesigner.elements.tripwireDesc", icon: "Zap", color: "#F43F5E", group: "Sales & Conversion", isDecision: true },
-  { type: "challenge", label: "funnelDesigner.elements.challenge", description: "funnelDesigner.elements.challengeDesc", icon: "Trophy", color: "#8B5CF6", group: "Sales & Conversion", isDecision: true },
-  { type: "upsell", label: "funnelDesigner.elements.upsell", description: "funnelDesigner.elements.upsellDesc", icon: "TrendingUp", color: "#22C55E", group: "Sales & Conversion", isDecision: true },
-  { type: "downsell", label: "funnelDesigner.elements.downsell", description: "funnelDesigner.elements.downsellDesc", icon: "TrendingDown", color: "#F97316", group: "Sales & Conversion", isDecision: true },
-  // Checkout & Payment
-  { type: "order-form", label: "funnelDesigner.elements.orderForm", description: "funnelDesigner.elements.orderFormDesc", icon: "ShoppingCart", color: "#14B8A6", group: "Checkout & Payment", isDecision: true },
-  { type: "checkout", label: "funnelDesigner.elements.checkout", description: "funnelDesigner.elements.checkoutDesc", icon: "CreditCard", color: "#0EA5E9", group: "Checkout & Payment", isDecision: true },
-  { type: "order-bump", label: "funnelDesigner.elements.orderBump", description: "funnelDesigner.elements.orderBumpDesc", icon: "PlusCircle", color: "#6366F1", group: "Checkout & Payment", isDecision: true },
-  { type: "payment-plan", label: "funnelDesigner.elements.paymentPlan", description: "funnelDesigner.elements.paymentPlanDesc", icon: "Wallet", color: "#8B5CF6", group: "Checkout & Payment", isDecision: false },
-  // Post-Purchase
-  { type: "thank-you", label: "funnelDesigner.elements.thankYou", description: "funnelDesigner.elements.thankYouDesc", icon: "Heart", color: "#EC4899", group: "Post-Purchase", isDecision: false },
-  { type: "confirmation", label: "funnelDesigner.elements.confirmation", description: "funnelDesigner.elements.confirmationDesc", icon: "CheckCircle", color: "#10B981", group: "Post-Purchase", isDecision: false },
-  { type: "membership", label: "funnelDesigner.elements.membership", description: "funnelDesigner.elements.membershipDesc", icon: "Users", color: "#6366F1", group: "Post-Purchase", isDecision: false },
-  { type: "onboarding", label: "funnelDesigner.elements.onboarding", description: "funnelDesigner.elements.onboardingDesc", icon: "Rocket", color: "#3B82F6", group: "Post-Purchase", isDecision: false },
-  // Content & Engagement
-  { type: "content-page", label: "funnelDesigner.elements.contentPage", description: "funnelDesigner.elements.contentPageDesc", icon: "BookOpen", color: "#10B981", group: "Content & Engagement", isDecision: false },
-  { type: "blog-post", label: "funnelDesigner.elements.blogPost", description: "funnelDesigner.elements.blogPostDesc", icon: "Newspaper", color: "#6B7280", group: "Content & Engagement", isDecision: false },
-  { type: "video-page", label: "funnelDesigner.elements.videoPage", description: "funnelDesigner.elements.videoPageDesc", icon: "PlayCircle", color: "#EF4444", group: "Content & Engagement", isDecision: false },
-  { type: "social-proof", label: "funnelDesigner.elements.socialProof", description: "funnelDesigner.elements.socialProofDesc", icon: "ThumbsUp", color: "#F59E0B", group: "Content & Engagement", isDecision: false },
-  // Qualification
-  { type: "application", label: "funnelDesigner.elements.application", description: "funnelDesigner.elements.applicationDesc", icon: "ClipboardList", color: "#EF4444", group: "Qualification", isDecision: true },
-  { type: "calendar", label: "funnelDesigner.elements.calendar", description: "funnelDesigner.elements.calendarDesc", icon: "Calendar", color: "#6366F1", group: "Qualification", isDecision: false },
-  { type: "survey", label: "funnelDesigner.elements.survey", description: "funnelDesigner.elements.surveyDesc", icon: "ListChecks", color: "#14B8A6", group: "Qualification", isDecision: false },
-  { type: "booking", label: "funnelDesigner.elements.booking", description: "funnelDesigner.elements.bookingDesc", icon: "CalendarCheck", color: "#8B5CF6", group: "Qualification", isDecision: false },
-  // Automation
-  { type: "email-sequence", label: "funnelDesigner.elements.emailSequence", description: "funnelDesigner.elements.emailSequenceDesc", icon: "Mail", color: "#34A853", group: "Automation", isDecision: false },
-  { type: "wait", label: "funnelDesigner.elements.wait", description: "funnelDesigner.elements.waitDesc", icon: "Clock", color: "#6B7280", group: "Automation", isDecision: false },
-  { type: "webhook", label: "funnelDesigner.elements.webhook", description: "funnelDesigner.elements.webhookDesc", icon: "Webhook", color: "#1F2937", group: "Automation", isDecision: false },
-  { type: "tag", label: "funnelDesigner.elements.tag", description: "funnelDesigner.elements.tagDesc", icon: "Tag", color: "#F97316", group: "Automation", isDecision: false },
-  { type: "split-test", label: "funnelDesigner.elements.splitTest", description: "funnelDesigner.elements.splitTestDesc", icon: "GitBranch", color: "#EC4899", group: "Automation", isDecision: true },
+  // Pages
+  { type: "opt-in", label: "funnelDesigner.elements.optIn", description: "", icon: "FileText", color: "#3B82F6", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "squeeze", label: "funnelDesigner.elements.squeeze", description: "", icon: "Zap", color: "#8B5CF6", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "bridge", label: "funnelDesigner.elements.bridge", description: "", icon: "ArrowRight", color: "#10B981", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "content-page", label: "funnelDesigner.elements.contentPage", description: "", icon: "BookOpen", color: "#10B981", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "sales", label: "funnelDesigner.elements.sales", description: "", icon: "FileText", color: "#F59E0B", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "vsl", label: "funnelDesigner.elements.vsl", description: "", icon: "PlayCircle", color: "#EF4444", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "order-form", label: "funnelDesigner.elements.orderForm", description: "", icon: "ShoppingCart", color: "#14B8A6", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "checkout", label: "funnelDesigner.elements.checkout", description: "", icon: "CreditCard", color: "#0EA5E9", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "2step-order", label: "funnelDesigner.elements.twoStepOrder", description: "", icon: "ListOrdered", color: "#6366F1", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "upsell", label: "funnelDesigner.elements.upsell", description: "", icon: "TrendingUp", color: "#22C55E", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "downsell", label: "funnelDesigner.elements.downsell", description: "", icon: "TrendingDown", color: "#F97316", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "oto", label: "funnelDesigner.elements.oto", description: "", icon: "Zap", color: "#EF4444", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "tripwire", label: "funnelDesigner.elements.tripwire", description: "", icon: "Zap", color: "#F43F5E", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "application", label: "funnelDesigner.elements.application", description: "", icon: "ClipboardList", color: "#EF4444", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "survey", label: "funnelDesigner.elements.survey", description: "", icon: "ListChecks", color: "#14B8A6", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "booking", label: "funnelDesigner.elements.booking", description: "", icon: "CalendarCheck", color: "#8B5CF6", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "calendar", label: "funnelDesigner.elements.calendar", description: "", icon: "Calendar", color: "#6366F1", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "thank-you", label: "funnelDesigner.elements.thankYou", description: "", icon: "Heart", color: "#EC4899", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "confirmation", label: "funnelDesigner.elements.confirmation", description: "", icon: "CheckCircle", color: "#10B981", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "lead-magnet", label: "funnelDesigner.elements.leadMagnet", description: "", icon: "Gift", color: "#10B981", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "webinar-register", label: "funnelDesigner.elements.webinarRegister", description: "", icon: "Video", color: "#EC4899", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "webinar-live", label: "funnelDesigner.elements.webinarLive", description: "", icon: "Radio", color: "#EF4444", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "webinar-replay", label: "funnelDesigner.elements.webinarReplay", description: "", icon: "PlayCircle", color: "#F59E0B", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "webinar-sales", label: "funnelDesigner.elements.webinarSales", description: "", icon: "FileText", color: "#F97316", group: "Pages", isDecision: true, renderStyle: "page" },
+  { type: "membership", label: "funnelDesigner.elements.membership", description: "", icon: "Users", color: "#6366F1", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "course-dashboard", label: "funnelDesigner.elements.courseDashboard", description: "", icon: "GraduationCap", color: "#3B82F6", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "community", label: "funnelDesigner.elements.community", description: "", icon: "Users", color: "#8B5CF6", group: "Pages", isDecision: false, renderStyle: "page" },
+  { type: "custom-page", label: "funnelDesigner.elements.customPage", description: "", icon: "FileText", color: "#6B7280", group: "Pages", isDecision: false, renderStyle: "page" },
+
+  // Communication
+  { type: "email", label: "funnelDesigner.elements.email", description: "", icon: "Mail", color: "#34A853", group: "Communication", isDecision: false, renderStyle: "icon" },
+  { type: "broadcast-email", label: "funnelDesigner.elements.broadcastEmail", description: "", icon: "Mails", color: "#3B82F6", group: "Communication", isDecision: false, renderStyle: "icon" },
+  { type: "sms", label: "funnelDesigner.elements.sms", description: "", icon: "MessageSquare", color: "#06B6D4", group: "Communication", isDecision: false, renderStyle: "icon" },
+  { type: "phone-call", label: "funnelDesigner.elements.phoneCall", description: "", icon: "Phone", color: "#10B981", group: "Communication", isDecision: false, renderStyle: "icon" },
+  { type: "phone-order", label: "funnelDesigner.elements.phoneOrder", description: "", icon: "PhoneCall", color: "#F59E0B", group: "Communication", isDecision: true, renderStyle: "icon" },
+  { type: "chatbot", label: "funnelDesigner.elements.chatbot", description: "", icon: "Bot", color: "#8B5CF6", group: "Communication", isDecision: false, renderStyle: "icon" },
+  { type: "chatbot-optin", label: "funnelDesigner.elements.chatbotOptIn", description: "", icon: "Bot", color: "#3B82F6", group: "Communication", isDecision: false, renderStyle: "icon" },
+  { type: "fb-messenger", label: "funnelDesigner.elements.fbMessenger", description: "", icon: "MessageCircle", color: "#0084FF", group: "Communication", isDecision: false, renderStyle: "icon" },
+
+  // Actions
+  { type: "wait", label: "funnelDesigner.elements.wait", description: "", icon: "Clock", color: "#6B7280", group: "Actions", isDecision: false, renderStyle: "icon" },
+
+  // Sales Flow
+  { type: "popup", label: "funnelDesigner.elements.popup", description: "", icon: "Maximize2", color: "#EF4444", group: "Sales Flow", isDecision: false, renderStyle: "page" },
+
+  // Utility
+  { type: "notes", label: "funnelDesigner.elements.notes", description: "", icon: "StickyNote", color: "#F59E0B", group: "Utility", isDecision: false, renderStyle: "icon" },
+  { type: "text", label: "funnelDesigner.elements.text", description: "", icon: "Type", color: "#6B7280", group: "Utility", isDecision: false, renderStyle: "icon" },
 ];
 
 // Keep backward compat alias
