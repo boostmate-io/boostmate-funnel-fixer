@@ -240,7 +240,7 @@ const FunnelNode = memo(({ data }: NodeProps) => {
 
   // Delegate to icon style for communication/action elements
   if (renderStyle === "icon") {
-    return <IconStyleNode data={data} />;
+    return <IconStyleRender nodeData={nodeData} />;
   }
 
   const WireframeComponent = getWireframeForType(nodeData.pageType);
