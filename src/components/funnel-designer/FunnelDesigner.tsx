@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ReactFlow,
@@ -12,6 +12,7 @@ import {
   type Edge,
   type Node,
   MarkerType,
+  ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +33,7 @@ import ElementsPanel from "./ElementsPanel";
 import FunnelNode from "./FunnelNode";
 import TrafficSourceNode from "./TrafficSourceNode";
 import NodeDetailsPanel from "./NodeDetailsPanel";
-import { TRAFFIC_SOURCES, FUNNEL_PAGES } from "./constants";
+import { TRAFFIC_SOURCES, FUNNEL_ELEMENTS } from "./constants";
 
 const nodeTypes = {
   funnelPage: FunnelNode,
@@ -58,6 +59,7 @@ const FunnelDesigner = () => {
   const { t } = useTranslation();
   const { activeProject } = useProject();
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [currentFunnel, setCurrentFunnel] = useState<Funnel | null>(null);
@@ -72,20 +74,20 @@ const FunnelDesigner = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [renamingFunnel, setRenamingFunnel] = useState(false);
   const nodeIdCounter = useRef(0);
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
 
   const loadFunnels = useCallback(async () => {
-    if (!user || !activeProject) return;
-
+    if (!userId || !activeProject) return;
     const { data } = await supabase
       .from("funnels")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("is_template", false)
       .eq("project_id", activeProject.id)
       .order("updated_at", { ascending: false });
-
     if (data) setFunnels(data as unknown as Funnel[]);
-  }, [user, activeProject]);
+  }, [userId, activeProject]);
 
   const loadTemplates = useCallback(async () => {
     const { data } = await supabase
@@ -93,7 +95,6 @@ const FunnelDesigner = () => {
       .select("*")
       .eq("is_template", true)
       .order("name", { ascending: true });
-
     if (data) setTemplates(data as unknown as Funnel[]);
   }, []);
 
@@ -108,6 +109,7 @@ const FunnelDesigner = () => {
     [setEdges]
   );
 
+  // Click-to-add (fallback, still works for accessibility)
   const addNode = useCallback(
     (type: string, category: "traffic" | "page") => {
       nodeIdCounter.current += 1;
@@ -124,34 +126,92 @@ const FunnelDesigner = () => {
         };
         setNodes((nds) => [...nds, newNode]);
       } else {
-        const page = FUNNEL_PAGES.find((p) => p.type === type);
-        if (!page) return;
+        const el = FUNNEL_ELEMENTS.find((p) => p.type === type);
+        if (!el) return;
         const newNode: Node = {
           id,
           type: "funnelPage",
           position: { x: 300 + nodes.length * 200, y: 150 },
-          data: { label: page.label, pageType: page.type, icon: page.icon, color: page.color },
+          data: {
+            label: el.label,
+            pageType: el.type,
+            icon: el.icon,
+            color: el.color,
+            isDecision: el.isDecision,
+          },
         };
         setNodes((nds) => [...nds, newNode]);
       }
-
       toast.success(t("funnelDesigner.nodeAdded"));
     },
     [nodes.length, setNodes, t]
   );
 
-  const saveFunnel = useCallback(async () => {
-    if (!user || !activeProject) return;
+  // Drag-and-drop from panel to canvas
+  const onDragOver = useCallback((event: DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
 
+  const onDrop = useCallback(
+    (event: DragEvent) => {
+      event.preventDefault();
+      const raw = event.dataTransfer.getData("application/reactflow");
+      if (!raw || !reactFlowInstance || !reactFlowWrapper.current) return;
+
+      const { type, category, label, icon, color } = JSON.parse(raw);
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+      });
+
+      nodeIdCounter.current += 1;
+      const id = `node_${Date.now()}_${nodeIdCounter.current}`;
+
+      if (category === "traffic") {
+        setNodes((nds) => [
+          ...nds,
+          {
+            id,
+            type: "trafficSource",
+            position,
+            data: { label, icon, color },
+          },
+        ]);
+      } else {
+        const el = FUNNEL_ELEMENTS.find((e) => e.type === type);
+        setNodes((nds) => [
+          ...nds,
+          {
+            id,
+            type: "funnelPage",
+            position,
+            data: {
+              label,
+              pageType: type,
+              icon,
+              color,
+              isDecision: el?.isDecision ?? false,
+            },
+          },
+        ]);
+      }
+      toast.success(t("funnelDesigner.nodeAdded"));
+    },
+    [reactFlowInstance, setNodes, t]
+  );
+
+  const saveFunnel = useCallback(async () => {
+    if (!userId || !activeProject) return;
     const payload = {
-      user_id: user.id,
+      user_id: userId,
       name: currentFunnel?.name || "Untitled Funnel",
       nodes: JSON.parse(JSON.stringify(nodes)),
       edges: JSON.parse(JSON.stringify(edges)),
       is_template: false,
       project_id: activeProject.id,
     };
-
     if (currentFunnel?.id) {
       const { error } = await supabase
         .from("funnels")
@@ -160,11 +220,7 @@ const FunnelDesigner = () => {
       if (error) toast.error(t("funnelDesigner.saveError"));
       else toast.success(t("funnelDesigner.saved"));
     } else {
-      const { data, error } = await supabase
-        .from("funnels")
-        .insert(payload)
-        .select()
-        .single();
+      const { data, error } = await supabase.from("funnels").insert(payload).select().single();
       if (error) toast.error(t("funnelDesigner.saveError"));
       else {
         setCurrentFunnel(data as unknown as Funnel);
@@ -172,20 +228,18 @@ const FunnelDesigner = () => {
       }
     }
     loadFunnels();
-  }, [currentFunnel, nodes, edges, t, loadFunnels, user, activeProject]);
+  }, [currentFunnel, nodes, edges, t, loadFunnels, userId, activeProject]);
 
   const saveAsTemplate = useCallback(async () => {
-    if (!user || !activeProject) return;
-
+    if (!userId || !activeProject) return;
     const { error } = await supabase.from("funnels").insert({
-      user_id: user.id,
+      user_id: userId,
       name: templateName || "Untitled Template",
       nodes: JSON.parse(JSON.stringify(nodes)),
       edges: JSON.parse(JSON.stringify(edges)),
       is_template: true,
       project_id: activeProject.id,
     });
-
     if (error) toast.error(t("funnelDesigner.saveError"));
     else {
       toast.success(t("funnelDesigner.templateSaved"));
@@ -193,37 +247,45 @@ const FunnelDesigner = () => {
       setTemplateName("");
       loadTemplates();
     }
-  }, [templateName, nodes, edges, t, loadTemplates, user, activeProject]);
+  }, [templateName, nodes, edges, t, loadTemplates, userId, activeProject]);
 
-  const loadFunnel = useCallback((funnel: Funnel) => {
-    setNodes(funnel.nodes || []);
-    setEdges(funnel.edges || []);
-    setCurrentFunnel(funnel);
-    setShowFunnelList(false);
-    toast.success(t("funnelDesigner.loaded"));
-  }, [setNodes, setEdges, t]);
+  const loadFunnel = useCallback(
+    (funnel: Funnel) => {
+      setNodes(funnel.nodes || []);
+      setEdges(funnel.edges || []);
+      setCurrentFunnel(funnel);
+      setShowFunnelList(false);
+      toast.success(t("funnelDesigner.loaded"));
+    },
+    [setNodes, setEdges, t]
+  );
 
-  const createFromTemplate = useCallback((template: Funnel) => {
-    setNodes(template.nodes || []);
-    setEdges(template.edges || []);
-    setCurrentFunnel(null);
-    setFunnelName(template.name + " (copy)");
-    setShowTemplates(false);
-    setShowNewFunnel(true);
-  }, [setNodes, setEdges]);
+  const createFromTemplate = useCallback(
+    (template: Funnel) => {
+      setNodes(template.nodes || []);
+      setEdges(template.edges || []);
+      setCurrentFunnel(null);
+      setFunnelName(template.name + " (copy)");
+      setShowTemplates(false);
+      setShowNewFunnel(true);
+    },
+    [setNodes, setEdges]
+  );
 
   const createNewFunnel = useCallback(async () => {
-    if (!user || !activeProject) return;
-
-    const { data, error } = await supabase.from("funnels").insert({
-      user_id: user.id,
-      name: funnelName || "Untitled Funnel",
-      nodes: JSON.parse(JSON.stringify(nodes)),
-      edges: JSON.parse(JSON.stringify(edges)),
-      is_template: false,
-      project_id: activeProject.id,
-    }).select().single();
-
+    if (!userId || !activeProject) return;
+    const { data, error } = await supabase
+      .from("funnels")
+      .insert({
+        user_id: userId,
+        name: funnelName || "Untitled Funnel",
+        nodes: JSON.parse(JSON.stringify(nodes)),
+        edges: JSON.parse(JSON.stringify(edges)),
+        is_template: false,
+        project_id: activeProject.id,
+      })
+      .select()
+      .single();
     if (error) toast.error(t("funnelDesigner.saveError"));
     else {
       setCurrentFunnel(data as unknown as Funnel);
@@ -232,20 +294,21 @@ const FunnelDesigner = () => {
       toast.success(t("funnelDesigner.created"));
       loadFunnels();
     }
-  }, [funnelName, nodes, edges, t, loadFunnels, user, activeProject]);
+  }, [funnelName, nodes, edges, t, loadFunnels, userId, activeProject]);
 
-  const deleteFunnel = useCallback(async (id: string) => {
-    const { error } = await supabase.from("funnels").delete().eq("id", id);
-    if (error) toast.error(t("funnelDesigner.deleteError"));
-    else {
-      if (currentFunnel?.id === id) {
-        resetCanvas();
+  const deleteFunnel = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.from("funnels").delete().eq("id", id);
+      if (error) toast.error(t("funnelDesigner.deleteError"));
+      else {
+        if (currentFunnel?.id === id) resetCanvas();
+        toast.success(t("funnelDesigner.deleted"));
+        loadFunnels();
+        loadTemplates();
       }
-      toast.success(t("funnelDesigner.deleted"));
-      loadFunnels();
-      loadTemplates();
-    }
-  }, [currentFunnel, t, loadFunnels, loadTemplates]);
+    },
+    [currentFunnel, t, loadFunnels, loadTemplates]
+  );
 
   const resetCanvas = useCallback(() => {
     setNodes([]);
@@ -255,28 +318,34 @@ const FunnelDesigner = () => {
   }, [setNodes, setEdges]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    if (node.type === "funnelPage") {
-      setSelectedNodeId(node.id);
-    }
+    if (node.type === "funnelPage") setSelectedNodeId(node.id);
   }, []);
 
-  const handleLinkAsset = useCallback((assetId: string | null) => {
-    if (!selectedNodeId) return;
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.id === selectedNodeId ? { ...n, data: { ...n.data, linkedAssetId: assetId } } : n
-      )
-    );
-  }, [selectedNodeId, setNodes]);
+  const handleLinkAsset = useCallback(
+    (assetId: string | null) => {
+      if (!selectedNodeId) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === selectedNodeId ? { ...n, data: { ...n.data, linkedAssetId: assetId } } : n
+        )
+      );
+    },
+    [selectedNodeId, setNodes]
+  );
 
-  const handleRenameNode = useCallback((name: string) => {
-    if (!selectedNodeId) return;
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.id === selectedNodeId ? { ...n, data: { ...n.data, customLabel: name || undefined } } : n
-      )
-    );
-  }, [selectedNodeId, setNodes]);
+  const handleRenameNode = useCallback(
+    (name: string) => {
+      if (!selectedNodeId) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === selectedNodeId
+            ? { ...n, data: { ...n.data, customLabel: name || undefined } }
+            : n
+        )
+      );
+    },
+    [selectedNodeId, setNodes]
+  );
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
@@ -284,8 +353,9 @@ const FunnelDesigner = () => {
     <div className="flex h-full bg-background-dashboard overflow-hidden">
       <ElementsPanel onAddNode={addNode} />
 
-      <div className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-2">
             {currentFunnel && renamingFunnel ? (
               <Input
@@ -294,7 +364,9 @@ const FunnelDesigner = () => {
                 value={currentFunnel.name}
                 onChange={(e) => setCurrentFunnel({ ...currentFunnel, name: e.target.value })}
                 onBlur={() => setRenamingFunnel(false)}
-                onKeyDown={(e) => { if (e.key === "Enter") setRenamingFunnel(false); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setRenamingFunnel(false);
+                }}
               />
             ) : (
               <h2
@@ -303,18 +375,43 @@ const FunnelDesigner = () => {
                 title={currentFunnel ? t("funnelDesigner.renameFunnel") : undefined}
               >
                 {currentFunnel?.name || t("funnelDesigner.title")}
-                {currentFunnel && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+                {currentFunnel && (
+                  <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
               </h2>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => { setShowNewFunnel(true); setFunnelName(""); setNodes([]); setEdges([]); }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowNewFunnel(true);
+                setFunnelName("");
+                setNodes([]);
+                setEdges([]);
+              }}
+            >
               <Plus className="w-4 h-4 mr-1" /> {t("funnelDesigner.new")}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => { loadFunnels(); setShowFunnelList(true); }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                loadFunnels();
+                setShowFunnelList(true);
+              }}
+            >
               <FolderOpen className="w-4 h-4 mr-1" /> {t("funnelDesigner.myFunnels")}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => { loadTemplates(); setShowTemplates(true); }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                loadTemplates();
+                setShowTemplates(true);
+              }}
+            >
               <Download className="w-4 h-4 mr-1" /> {t("funnelDesigner.templates")}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowSaveTemplate(true)}>
@@ -329,7 +426,8 @@ const FunnelDesigner = () => {
           </div>
         </div>
 
-        <div className="flex-1">
+        {/* Canvas - fills remaining space */}
+        <div className="flex-1 min-h-0" ref={reactFlowWrapper}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -340,6 +438,9 @@ const FunnelDesigner = () => {
             onPaneClick={() => setSelectedNodeId(null)}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
+            onInit={setReactFlowInstance}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
             fitView
             deleteKeyCode={["Backspace", "Delete"]}
           >
@@ -361,6 +462,7 @@ const FunnelDesigner = () => {
         />
       )}
 
+      {/* Dialogs */}
       <Dialog open={showFunnelList} onOpenChange={setShowFunnelList}>
         <DialogContent>
           <DialogHeader>
@@ -368,13 +470,20 @@ const FunnelDesigner = () => {
           </DialogHeader>
           <div className="space-y-2 max-h-80 overflow-y-auto">
             {funnels.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">{t("funnelDesigner.noFunnels")}</p>
+              <p className="text-sm text-muted-foreground text-center py-4">
+                {t("funnelDesigner.noFunnels")}
+              </p>
             )}
             {funnels.map((f) => (
-              <div key={f.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
+              <div
+                key={f.id}
+                className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors"
+              >
                 <button onClick={() => loadFunnel(f)} className="text-left flex-1">
                   <p className="text-sm font-medium text-foreground">{f.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{new Date(f.created_at).toLocaleDateString()}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date(f.created_at).toLocaleDateString()}
+                  </p>
                 </button>
                 <Button variant="ghost" size="icon" onClick={() => deleteFunnel(f.id)}>
                   <Trash2 className="w-4 h-4 text-destructive" />
@@ -392,10 +501,15 @@ const FunnelDesigner = () => {
           </DialogHeader>
           <div className="space-y-2 max-h-80 overflow-y-auto">
             {templates.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">{t("funnelDesigner.noTemplates")}</p>
+              <p className="text-sm text-muted-foreground text-center py-4">
+                {t("funnelDesigner.noTemplates")}
+              </p>
             )}
             {templates.map((tmpl) => (
-              <div key={tmpl.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
+              <div
+                key={tmpl.id}
+                className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors"
+              >
                 <button onClick={() => createFromTemplate(tmpl)} className="text-left flex-1">
                   <p className="text-sm font-medium text-foreground">{tmpl.name}</p>
                 </button>
@@ -435,7 +549,14 @@ const FunnelDesigner = () => {
             placeholder={t("funnelDesigner.funnelNamePlaceholder")}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => { loadTemplates(); setShowNewFunnel(false); setShowTemplates(true); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                loadTemplates();
+                setShowNewFunnel(false);
+                setShowTemplates(true);
+              }}
+            >
               {t("funnelDesigner.startFromTemplate")}
             </Button>
             <Button onClick={createNewFunnel}>{t("funnelDesigner.create")}</Button>

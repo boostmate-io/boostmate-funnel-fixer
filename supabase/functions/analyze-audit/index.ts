@@ -32,21 +32,21 @@ const AVAILABLE_TRAFFIC_TYPES = [
 ];
 
 const PAGE_META: Record<string, { label: string; icon: string; color: string }> = {
-  "opt-in": { label: "funnelDesigner.pages.optIn", icon: "FileText", color: "#3B82F6" },
-  "squeeze": { label: "funnelDesigner.pages.squeeze", icon: "Zap", color: "#8B5CF6" },
-  "bridge": { label: "funnelDesigner.pages.bridge", icon: "ArrowRight", color: "#10B981" },
-  "sales": { label: "funnelDesigner.pages.sales", icon: "FileText", color: "#F59E0B" },
-  "webinar": { label: "funnelDesigner.pages.webinar", icon: "Video", color: "#EC4899" },
-  "application": { label: "funnelDesigner.pages.application", icon: "ClipboardList", color: "#EF4444" },
-  "calendar": { label: "funnelDesigner.pages.calendar", icon: "Calendar", color: "#6366F1" },
-  "tripwire": { label: "funnelDesigner.pages.tripwire", icon: "Zap", color: "#F43F5E" },
-  "order-form": { label: "funnelDesigner.pages.orderForm", icon: "ShoppingCart", color: "#14B8A6" },
-  "checkout": { label: "funnelDesigner.pages.checkout", icon: "CreditCard", color: "#0EA5E9" },
-  "upsell": { label: "funnelDesigner.pages.upsell", icon: "TrendingUp", color: "#22C55E" },
-  "downsell": { label: "funnelDesigner.pages.downsell", icon: "TrendingDown", color: "#F97316" },
-  "confirmation": { label: "funnelDesigner.pages.confirmation", icon: "CheckCircle", color: "#10B981" },
-  "thank-you": { label: "funnelDesigner.pages.thankYou", icon: "Heart", color: "#EC4899" },
-  "membership": { label: "funnelDesigner.pages.membership", icon: "Users", color: "#6366F1" },
+  "opt-in": { label: "funnelDesigner.elements.optIn", icon: "FileText", color: "#3B82F6" },
+  "squeeze": { label: "funnelDesigner.elements.squeeze", icon: "Zap", color: "#8B5CF6" },
+  "bridge": { label: "funnelDesigner.elements.bridge", icon: "ArrowRight", color: "#10B981" },
+  "sales": { label: "funnelDesigner.elements.sales", icon: "FileText", color: "#F59E0B" },
+  "webinar": { label: "funnelDesigner.elements.webinar", icon: "Video", color: "#EC4899" },
+  "application": { label: "funnelDesigner.elements.application", icon: "ClipboardList", color: "#EF4444" },
+  "calendar": { label: "funnelDesigner.elements.calendar", icon: "Calendar", color: "#6366F1" },
+  "tripwire": { label: "funnelDesigner.elements.tripwire", icon: "Zap", color: "#F43F5E" },
+  "order-form": { label: "funnelDesigner.elements.orderForm", icon: "ShoppingCart", color: "#14B8A6" },
+  "checkout": { label: "funnelDesigner.elements.checkout", icon: "CreditCard", color: "#0EA5E9" },
+  "upsell": { label: "funnelDesigner.elements.upsell", icon: "TrendingUp", color: "#22C55E" },
+  "downsell": { label: "funnelDesigner.elements.downsell", icon: "TrendingDown", color: "#F97316" },
+  "confirmation": { label: "funnelDesigner.elements.confirmation", icon: "CheckCircle", color: "#10B981" },
+  "thank-you": { label: "funnelDesigner.elements.thankYou", icon: "Heart", color: "#EC4899" },
+  "membership": { label: "funnelDesigner.elements.membership", icon: "Users", color: "#6366F1" },
 };
 
 const TRAFFIC_META: Record<string, { label: string; icon: string; color: string }> = {

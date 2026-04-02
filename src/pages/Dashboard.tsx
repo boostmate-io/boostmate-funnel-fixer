@@ -74,7 +74,7 @@ const Dashboard = () => {
           {activeModule === "clients" && <ClientManagement />}
           {activeModule === "funnel-audit" && <AuditModule />}
           {activeModule === "funnel-designer" && (
-            <div className="h-[calc(100vh-64px)]">
+            <div className="h-full">
               <FunnelDesigner />
             </div>
           )}
