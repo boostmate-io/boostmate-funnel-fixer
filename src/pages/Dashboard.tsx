@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuthReady } from "@/hooks/useAuthReady";
+import { Navigate, useSearchParams } from "react-router-dom";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
@@ -14,7 +13,7 @@ import { BarChart3, PenTool, Library, TrendingUp } from "lucide-react";
 import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
-import { useAgency } from "@/contexts/AgencyContext";
+import { useAuthReady } from "@/hooks/useAuthReady";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -22,13 +21,9 @@ const Dashboard = () => {
   const initialModule = searchParams.get("module") || "overview";
   const [activeModule, setActiveModule] = useState(initialModule);
   const { user, isReady } = useAuthReady();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isReady && !user) navigate("/");
-  }, [isReady, user, navigate]);
-
-  if (!isReady || !user) return null;
+  if (!isReady) return null;
+  if (!user) return <Navigate to="/" replace />;
 
   return (
     <div className="flex flex-col h-screen bg-background-dashboard">
