@@ -257,22 +257,23 @@ const TextStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => (
 );
 
 /* ── Page-style node (wireframe thumbnail) ── */
-const FunnelNode = memo(({ data }: NodeProps) => {
+const FunnelNode = memo(({ data, id }: NodeProps) => {
   const { t } = useTranslation();
   const nodeData = data as unknown as FunnelNodeData;
   const displayName = nodeData.customLabel || t(nodeData.label);
   const isDecision = nodeData.isDecision ?? false;
   const renderStyle = nodeData.renderStyle ?? "page";
 
+  const handleDoubleClick = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("funnel-node-dblclick", { detail: { nodeId: id } }));
+  }, [id]);
+
   // Delegate to special styles
   if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} />;
-  if (renderStyle === "note") return <NoteStyleRender nodeData={nodeData} />;
-  if (renderStyle === "text") return <TextStyleRender nodeData={nodeData} />;
+  if (renderStyle === "note") return <div onDoubleClick={handleDoubleClick}><NoteStyleRender nodeData={nodeData} /></div>;
+  if (renderStyle === "text") return <div onDoubleClick={handleDoubleClick}><TextStyleRender nodeData={nodeData} /></div>;
 
   const WireframeComponent = getWireframeForType(nodeData.pageType);
-
-  return (
-    <div className="bg-card rounded-xl border border-border shadow-card w-[180px] group hover:shadow-card-hover transition-shadow relative overflow-visible">
       <div className="h-1.5 w-full rounded-t-xl" style={{ backgroundColor: nodeData.color }} />
 
       {/* Wireframe thumbnail */}
