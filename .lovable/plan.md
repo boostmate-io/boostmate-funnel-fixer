@@ -1,100 +1,39 @@
 
 
-# Agency/Client Account System
+# Agency Upgrade: Bestaand Account als Eerste Client
 
-## Overview
-Add a multi-tenant agency/client structure where agency accounts can manage multiple client accounts, similar to GoHighLevel. Agencies can create clients, impersonate them, and clients can also self-register via invite links.
+## Probleem
+Bij upgrade van `personal` → `agency` blijft alle data (projecten, funnels, audits, assets) op het agency-account staan. Er wordt geen apart client-account aangemaakt.
 
-## Architecture
+## Oplossing
+Bij de upgrade flow wordt automatisch een nieuw client-account aangemaakt dat de bestaande data overneemt, of — eenvoudiger — wordt het bestaande account conceptueel het eerste client-account van de agency.
 
-```text
-agency (user)
-  ├── client_1 (user) ── projects, funnels, assets, audits
-  ├── client_2 (user) ── projects, funnels, assets, audits
-  └── client_3 (user) ── projects, funnels, assets, audits
-```
+### Aanpak: "Self-client" patroon
+Wanneer een user upgradet naar agency:
 
-## Database Changes
+1. **Behoud het huidige account als agency** (`account_type = 'agency'`)
+2. **Maak een `agency_clients` record aan** waar `agency_user_id = client_user_id = auth.uid()` — een self-referentie die aangeeft dat de agency ook een eigen client-account heeft
+3. **Alle bestaande data** (projecten, funnels, etc.) blijft gekoppeld aan dezelfde `user_id` en is toegankelijk via de self-client relatie
+4. **Toekomstige nieuwe clients** worden aparte accounts
 
-### 1. New enum: `account_type`
-Values: `personal`, `agency`, `client`
+### Benodigde wijzigingen
 
-### 2. New table: `agency_clients`
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | PK |
-| agency_user_id | uuid | The agency user |
-| client_user_id | uuid | The client user |
-| invite_code | text | Unique invite code for self-registration |
-| invite_status | text | `pending`, `accepted` |
-| created_at | timestamptz | |
+**1. `AgencyContext.tsx` — `upgradeToAgency` functie**
+- Na het updaten van `account_type` naar `agency`, een `agency_clients` record inserten met `agency_user_id = client_user_id = currentUserId`
+- De display_name van het bestaande profiel gebruiken als eerste client-naam
 
-RLS: Agency can manage rows where `agency_user_id = auth.uid()`. Clients can read rows where `client_user_id = auth.uid()`.
+**2. `ClientManagement.tsx` — UI aanpassing**
+- De self-client herkennen en markeren als "My Account" of "Mijn bedrijf"
+- Eventueel een andere styling geven dan externe clients
 
-### 3. New table: `profiles`
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | PK, FK to auth.users |
-| account_type | account_type | `personal`, `agency`, or `client` |
-| display_name | text | User/company name |
-| created_at | timestamptz | |
-| updated_at | timestamptz | |
+**3. `is_agency_of` security function**
+- Werkt al correct: checkt `agency_user_id` en `client_user_id` in `agency_clients` — een self-referentie row past hier gewoon in
 
-RLS: Users can read/update own profile. Agencies can read their clients' profiles.
+**4. Geen database migratie nodig**
+- Het `agency_clients` tabel ondersteunt al de self-referentie (geen unique constraint die dit blokkeert)
 
-Auto-created via trigger on auth.users INSERT (default: `personal`).
-
-### 4. New table: `agency_invites`
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | PK |
-| agency_user_id | uuid | Inviting agency |
-| email | text | Invited email |
-| invite_code | text | Unique code |
-| status | text | `pending`, `accepted`, `expired` |
-| created_at | timestamptz | |
-
-RLS: Agency manages own invites. Public read by invite_code for registration flow.
-
-## Frontend Changes
-
-### 1. Account Type Selection
-- After signup, or in settings, users can upgrade to "Agency" account type
-- Agency dashboard gets a "Clients" section in sidebar
-
-### 2. Agency Client Management Page
-- List all clients with status
-- Create client manually (name + email, sends invite)
-- Generate invite link for self-registration
-- Impersonate button per client
-
-### 3. Impersonation
-- Agency clicks "Manage" on a client → app context switches to that client's data
-- Top banner shows "Viewing as [Client Name] — Back to Agency"
-- All queries filter by the impersonated client's user_id
-- Implemented via React context (no actual auth session switch — agency's JWT stays active, queries use client's user_id via a security definer function)
-
-### 4. Client Self-Registration
-- Client visits invite link → signup form with agency pre-linked
-- On registration, `agency_clients` row is created automatically
-- Client sees their own dashboard (no agency controls)
-
-### 5. Sidebar Updates
-- Agency accounts: show "Clients" nav item
-- When impersonating: show client name + "Back" button in header
-
-## Security Considerations
-- Impersonation uses a `get_client_data()` security definer function that verifies the agency-client relationship before returning data
-- RLS policies on all tables updated to allow agency access to their clients' data via security definer functions
-- Agencies cannot modify client auth credentials
-
-## Implementation Order
-1. Database migrations (profiles, agency_clients, agency_invites)
-2. Profile auto-creation trigger
-3. Security definer functions for impersonation
-4. Update RLS policies on existing tables
-5. Agency dashboard UI (client list, invite flow)
-6. Impersonation context + banner
-7. Client self-registration flow
-8. Update sidebar navigation
+### Files te wijzigen
+- `src/contexts/AgencyContext.tsx` — upgrade functie uitbreiden
+- `src/components/agency/ClientManagement.tsx` — self-client markering
+- `src/components/agency/AgencySettings.tsx` — eventueel bevestigingsdialoog toevoegen
 
