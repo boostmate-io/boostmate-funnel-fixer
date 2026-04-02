@@ -487,8 +487,11 @@ const FunnelDesigner = () => {
           nodeLabel={t((detailsNode.data as any).label)}
           customLabel={(detailsNode.data as any).customLabel || ""}
           linkedAssetId={(detailsNode.data as any).linkedAssetId || null}
+          noteContent={(detailsNode.data as any).noteContent || ""}
+          renderStyle={(detailsNode.data as any).renderStyle || "page"}
           onLinkAsset={handleLinkAsset}
           onRename={handleRenameNode}
+          onNoteContentChange={handleNoteContentChange}
           onClose={() => setDetailsNodeId(null)}
         />
       )}
