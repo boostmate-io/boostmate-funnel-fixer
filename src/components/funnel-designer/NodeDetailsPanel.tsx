@@ -57,6 +57,8 @@ const NodeDetailsPanel = ({ nodeId, nodeLabel, customLabel, linkedAssetId, noteC
     onLinkAsset(null);
   };
 
+  const isNoteOrText = renderStyle === "note" || renderStyle === "text";
+
   return (
     <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-border">
@@ -66,49 +68,73 @@ const NodeDetailsPanel = ({ nodeId, nodeLabel, customLabel, linkedAssetId, noteC
         </Button>
       </div>
 
-      <div className="p-4 border-b border-border space-y-3">
-        <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.customName")}</label>
-        <Input
-          value={customLabel || ""}
-          onChange={(e) => onRename(e.target.value)}
-          placeholder={nodeLabel}
-          className="text-sm h-8"
-        />
-      </div>
+      {/* Note/Text content editor */}
+      {isNoteOrText && (
+        <div className="p-4 border-b border-border space-y-3">
+          <label className="text-xs font-medium text-muted-foreground">
+            {renderStyle === "note" ? t("funnelDesigner.noteContent") : t("funnelDesigner.textContent")}
+          </label>
+          <Textarea
+            autoFocus
+            value={noteContent || ""}
+            onChange={(e) => onNoteContentChange?.(e.target.value)}
+            placeholder={renderStyle === "note" ? t("funnelDesigner.notePlaceholder") : t("funnelDesigner.textPlaceholder")}
+            className="text-sm min-h-[100px] resize-y"
+          />
+        </div>
+      )}
 
-      <div className="p-4 border-b border-border space-y-3">
-        <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.linkAsset")}</label>
-        <div className="flex gap-2">
-          <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
-            <SelectTrigger className="text-xs h-8">
-              <SelectValue placeholder={t("funnelDesigner.selectAsset")} />
-            </SelectTrigger>
-            <SelectContent>
-              {assets.map((a) => (
-                <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedAssetId && selectedAssetId !== linkedAssetId && (
-            <Button size="sm" className="h-8 px-2" onClick={handleLink}>
-              <Link2 className="w-3.5 h-3.5" />
-            </Button>
-          )}
-          {linkedAssetId && (
-            <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleUnlink}>
-              <Unlink className="w-3.5 h-3.5 text-destructive" />
-            </Button>
+      {/* Custom name - for non-note/text elements */}
+      {!isNoteOrText && (
+        <div className="p-4 border-b border-border space-y-3">
+          <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.customName")}</label>
+          <Input
+            value={customLabel || ""}
+            onChange={(e) => onRename(e.target.value)}
+            placeholder={nodeLabel}
+            className="text-sm h-8"
+          />
+        </div>
+      )}
+
+      {/* Asset linking - only for non-note/text elements */}
+      {!isNoteOrText && (
+        <div className="p-4 border-b border-border space-y-3">
+          <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.linkAsset")}</label>
+          <div className="flex gap-2">
+            <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
+              <SelectTrigger className="text-xs h-8">
+                <SelectValue placeholder={t("funnelDesigner.selectAsset")} />
+              </SelectTrigger>
+              <SelectContent>
+                {assets.map((a) => (
+                  <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedAssetId && selectedAssetId !== linkedAssetId && (
+              <Button size="sm" className="h-8 px-2" onClick={handleLink}>
+                <Link2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
+            {linkedAssetId && (
+              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleUnlink}>
+                <Unlink className="w-3.5 h-3.5 text-destructive" />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!isNoteOrText && (
+        <div className="flex-1 overflow-auto p-4">
+          {linkedAssetId ? (
+            <AssetSectionsList assetId={linkedAssetId} />
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-8">{t("funnelDesigner.noAssetLinked")}</p>
           )}
         </div>
-      </div>
-
-      <div className="flex-1 overflow-auto p-4">
-        {linkedAssetId ? (
-          <AssetSectionsList assetId={linkedAssetId} />
-        ) : (
-          <p className="text-xs text-muted-foreground text-center py-8">{t("funnelDesigner.noAssetLinked")}</p>
-        )}
-      </div>
+      )}
     </div>
   );
 };
