@@ -336,6 +336,16 @@ const FunnelDesigner = () => {
       setDetailsNodeId(node.id);
     }
   }, []);
+
+  // Also listen for custom double-click events from nodes (fallback)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const nodeId = (e as CustomEvent).detail?.nodeId;
+      if (nodeId) setDetailsNodeId(nodeId);
+    };
+    window.addEventListener("funnel-node-dblclick", handler);
+    return () => window.removeEventListener("funnel-node-dblclick", handler);
+  }, []);
   const handleLinkAsset = useCallback(
     (assetId: string | null) => {
       if (!detailsNodeId) return;
