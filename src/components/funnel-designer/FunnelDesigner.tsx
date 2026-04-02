@@ -320,60 +320,17 @@ const FunnelDesigner = () => {
     setDetailsNodeId(null);
   }, [setNodes, setEdges]);
 
-  // Single click = select (visual highlight)
+  // Single click = select (visual highlight via CSS, no state re-render)
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    setSelectedNodeId(node.id);
+    selectedNodeRef.current = node.id;
   }, []);
 
-  // Double click = open details panel (only for funnelPage nodes)
+  // Double click = open details panel (for funnelPage nodes)
   const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (node.type === "funnelPage") {
       setDetailsNodeId(node.id);
     }
   }, []);
-
-  const handleLinkAsset = useCallback(
-    (assetId: string | null) => {
-      if (!detailsNodeId) return;
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === detailsNodeId ? { ...n, data: { ...n.data, linkedAssetId: assetId } } : n
-        )
-      );
-    },
-    [detailsNodeId, setNodes]
-  );
-
-  const handleRenameNode = useCallback(
-    (name: string) => {
-      if (!detailsNodeId) return;
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === detailsNodeId
-            ? { ...n, data: { ...n.data, customLabel: name || undefined } }
-            : n
-        )
-      );
-    },
-    [detailsNodeId, setNodes]
-  );
-
-  // Apply selected styling to nodes
-  const styledNodes = nodes.map((n) => ({
-    ...n,
-    selected: n.id === selectedNodeId,
-    style: n.id === selectedNodeId
-      ? { outline: "2px solid hsl(252, 100%, 64%)", outlineOffset: "2px", borderRadius: "12px" }
-      : undefined,
-  }));
-
-  // Apply selected styling to edges
-  const styledEdges = edges.map((e) => ({
-    ...e,
-    style: e.selected
-      ? { stroke: "hsl(252, 100%, 64%)", strokeWidth: 3 }
-      : defaultEdgeOptions.style,
-  }));
 
   const detailsNode = nodes.find((n) => n.id === detailsNodeId);
 
