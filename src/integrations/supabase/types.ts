@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      agency_clients: {
+        Row: {
+          agency_user_id: string
+          client_user_id: string
+          created_at: string
+          id: string
+          status: string
+        }
+        Insert: {
+          agency_user_id: string
+          client_user_id: string
+          created_at?: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          agency_user_id?: string
+          client_user_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      agency_invites: {
+        Row: {
+          agency_user_id: string
+          created_at: string
+          email: string
+          id: string
+          invite_code: string
+          status: string
+        }
+        Insert: {
+          agency_user_id: string
+          created_at?: string
+          email?: string
+          id?: string
+          invite_code?: string
+          status?: string
+        }
+        Update: {
+          agency_user_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invite_code?: string
+          status?: string
+        }
+        Relationships: []
+      }
       asset_sections: {
         Row: {
           asset_id: string
@@ -313,6 +364,30 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          created_at: string
+          display_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          created_at?: string
+          display_name?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          created_at?: string
+          display_name?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           created_at: string
@@ -370,8 +445,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_agency_of: {
+        Args: { _agency_id: string; _client_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      account_type: "personal" | "agency" | "client"
       app_role: "admin" | "user"
     }
     CompositeTypes: {
@@ -500,6 +580,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: ["personal", "agency", "client"],
       app_role: ["admin", "user"],
     },
   },
