@@ -1,5 +1,5 @@
-import { memo } from "react";
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { memo, useCallback } from "react";
+import { Handle, Position, type NodeProps, useNodeId } from "@xyflow/react";
 import { useTranslation } from "react-i18next";
 import * as Icons from "lucide-react";
 
@@ -188,14 +188,14 @@ const getWireframeForType = (pageType: string) => {
   }
 };
 
-const IconStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => {
+const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData; onDoubleClick?: () => void }) => {
   const { t } = useTranslation();
   const IconComponent = (Icons as any)[nodeData.icon] || Icons.FileText;
   const displayName = nodeData.customLabel || t(nodeData.label);
   const isDecision = nodeData.isDecision ?? false;
 
   return (
-    <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible">
+    <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClick={onDoubleClick}>
       <div
         className="w-12 h-12 rounded-full flex items-center justify-center border-2 bg-card shadow-sm"
         style={{ borderColor: nodeData.color }}
@@ -242,9 +242,6 @@ const NoteStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => (
         {nodeData.noteContent || "Double-click to edit..."}
       </p>
     </div>
-    <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-    <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-    <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" />
   </div>
 );
 
@@ -256,29 +253,30 @@ const TextStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => (
         {nodeData.noteContent || "Double-click to edit..."}
       </p>
     </div>
-    <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-    <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-    <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" />
   </div>
 );
 
 /* ── Page-style node (wireframe thumbnail) ── */
-const FunnelNode = memo(({ data }: NodeProps) => {
+const FunnelNode = memo(({ data, id }: NodeProps) => {
   const { t } = useTranslation();
   const nodeData = data as unknown as FunnelNodeData;
   const displayName = nodeData.customLabel || t(nodeData.label);
   const isDecision = nodeData.isDecision ?? false;
   const renderStyle = nodeData.renderStyle ?? "page";
 
+  const handleDoubleClick = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("funnel-node-dblclick", { detail: { nodeId: id } }));
+  }, [id]);
+
   // Delegate to special styles
-  if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} />;
-  if (renderStyle === "note") return <NoteStyleRender nodeData={nodeData} />;
-  if (renderStyle === "text") return <TextStyleRender nodeData={nodeData} />;
+  if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} />;
+  if (renderStyle === "note") return <div onDoubleClick={handleDoubleClick}><NoteStyleRender nodeData={nodeData} /></div>;
+  if (renderStyle === "text") return <div onDoubleClick={handleDoubleClick}><TextStyleRender nodeData={nodeData} /></div>;
 
   const WireframeComponent = getWireframeForType(nodeData.pageType);
 
   return (
-    <div className="bg-card rounded-xl border border-border shadow-card w-[180px] group hover:shadow-card-hover transition-shadow relative overflow-visible">
+    <div className="bg-card rounded-xl border border-border shadow-card w-[180px] group hover:shadow-card-hover transition-shadow relative overflow-visible" onDoubleClick={handleDoubleClick}>
       <div className="h-1.5 w-full rounded-t-xl" style={{ backgroundColor: nodeData.color }} />
 
       {/* Wireframe thumbnail */}
