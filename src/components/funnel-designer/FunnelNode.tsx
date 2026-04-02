@@ -242,9 +242,6 @@ const NoteStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => (
         {nodeData.noteContent || "Double-click to edit..."}
       </p>
     </div>
-    <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-    <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-    <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" />
   </div>
 );
 
@@ -256,9 +253,6 @@ const TextStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => (
         {nodeData.noteContent || "Double-click to edit..."}
       </p>
     </div>
-    <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-    <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-    <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" />
   </div>
 );
 
