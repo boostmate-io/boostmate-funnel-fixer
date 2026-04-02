@@ -1,51 +1,187 @@
 
+## Diagnosis
 
-# Fix: Auth Race Condition Causing Logout
+Do I know what the issue is? Yes.
 
-## Problem
-After login, the user briefly sees the dashboard then gets kicked back to the public site. Root cause: a token refresh storm.
+This is still an auth/session bootstrapping problem, but the real issue is broader than the previous fix.
 
-Three independent `onAuthStateChange` listeners (Dashboard, AgencyContext, ProjectContext) plus the Index page all fire simultaneously. The `INITIAL_SESSION` event arrives with `session = null` before the session is restored from storage. Dashboard immediately calls `navigate("/")`, and the parallel `getSession()` calls from the contexts create dozens of simultaneous token refreshes that hit the 429 rate limit, causing session loss.
+The evidence from the logs is consistent:
+- multiple refresh-token calls happen within ~1 second
+- backend auth starts returning `429 Request rate limit reached`
+- after that, requests to `profiles` / `projects` fall back to anonymous auth
+- then `Dashboard` sees `user = null` and redirects to `/`
 
-## Solution
-Create a centralized `useAuthReady` hook and use it as the single source of truth.
+So the app is still creating a refresh storm during startup.
 
-### 1. Create `src/hooks/useAuthReady.ts`
-- Calls `supabase.auth.getSession()` once to restore session from storage
-- Sets `isReady = true` only after that completes
-- Listens to `onAuthStateChange` for subsequent events
-- Returns `{ user, isReady }`
+## Actual root cause
 
-### 2. Update `src/pages/Dashboard.tsx`
-- Replace the inline `onAuthStateChange` + `getSession` logic with `useAuthReady`
-- Show a loading state while `!isReady`
-- Only redirect to "/" when `isReady && !user` (not on initial null)
-- Remove the `if (!user) return null` guard (replaced by isReady check)
+The main problem is that authenticated app providers are mounted too early and they start fetching immediately:
 
-### 3. Update `src/pages/Index.tsx`
-- Replace inline `onAuthStateChange` with `useAuthReady`
-- Only redirect to "/dashboard" when `isReady && user`
+```text
+App
+└── AuthProvider
+    └── BrowserRouter
+        └── AgencyProvider
+            └── ProjectProvider
+                └── ALL routes, including /
+```
 
-### 4. Update `src/contexts/AgencyContext.tsx`
-- Remove the separate `getSession()` call inside `loadProfile`
-- Instead, listen to `onAuthStateChange` only (no parallel getSession)
-- Guard against calling `loadProfile` when event is `INITIAL_SESSION` with null session
+That means:
+- even on the public landing page, the agency/project providers are alive
+- right after login, they immediately fetch `profiles` and `projects`
+- some flows still do auth-dependent work during route transition
+- when the token is near expiry, these overlapping requests trigger repeated refreshes
+- once refresh gets rate-limited, the session collapses and the dashboard redirects back out
 
-### 5. Update `src/contexts/ProjectContext.tsx`
-- Same pattern: remove redundant `getSession()` call
-- React to auth state changes from the single subscription
+There is also a secondary issue:
+- `ProjectContext` auto-creates a project inside the initial bootstrap load path
+- when auth is unstable, that insert runs with an invalid/anonymous session and causes RLS failures
+- this makes the startup path noisier and less reliable
 
-## Technical Details
-- The key fix is ensuring `getSession()` completes before any navigation decision
-- The `INITIAL_SESSION` event with null session must NOT trigger a redirect
-- Reducing from 4+ `onAuthStateChange` listeners to a centralized hook eliminates the token refresh storm
+## Implementation plan
 
-## Files Changed
-| File | Change |
-|------|--------|
-| `src/hooks/useAuthReady.ts` | New hook |
-| `src/pages/Dashboard.tsx` | Use hook, fix redirect logic |
-| `src/pages/Index.tsx` | Use hook, fix redirect logic |
-| `src/contexts/AgencyContext.tsx` | Remove redundant getSession |
-| `src/contexts/ProjectContext.tsx` | Remove redundant getSession |
+### 1. Split public and protected route trees
+Refactor `App.tsx` so `AgencyProvider` and `ProjectProvider` are only mounted for protected dashboard routes, not for `/`.
 
+New structure:
+
+```text
+AuthProvider
+└── BrowserRouter
+    ├── Public routes
+    │   ├── /
+    │   └── /invite/:code
+    └── ProtectedRoute
+        └── AppProviders
+            ├── AgencyProvider
+            ├── ProjectProvider
+            └── /dashboard
+```
+
+Files:
+- `src/App.tsx`
+- new protected wrapper component if needed
+
+### 2. Add a real protected-route gate
+Create a dedicated route guard that:
+- waits for auth readiness
+- renders a loading state while auth is restoring
+- only mounts protected providers/components after auth is confirmed
+- redirects to `/` only when auth is definitively absent
+
+This prevents protected data loading during auth restoration.
+
+Files:
+- new `src/components/auth/ProtectedRoute.tsx` or similar
+- possibly reuse `useAuthReady`
+
+### 3. Make bootstrap paths read-only
+Refactor `ProjectContext.tsx` so initial load does not create a project automatically.
+
+Change:
+- initial bootstrap should only read projects
+- if there are no projects, handle that explicitly in UI or via a separate “ensure default project” action after auth is stable
+- no inserts during unstable startup
+
+Files:
+- `src/contexts/ProjectContext.tsx`
+- possibly `src/components/dashboard/ProjectSwitcher.tsx` / dashboard empty-state UI
+
+### 4. Harden provider effects against auth churn
+Update `AgencyContext.tsx` and `ProjectContext.tsx` to:
+- only run when `isReady && user?.id`
+- cancel/ignore stale async responses when user changes or logs out
+- clear state immediately on logout
+- avoid updating state from old requests after redirect/session loss
+- use safer profile loading (`maybeSingle` pattern) so missing/blocked rows do not create noisy failure paths
+
+Files:
+- `src/contexts/AgencyContext.tsx`
+- `src/contexts/ProjectContext.tsx`
+
+### 5. Stop using auth lookups as mount guards inside feature components
+Audit components that call `supabase.auth.getSession()`/`getUser()` just to decide whether to run.
+
+For dashboard modules, switch to:
+- auth from `AuthContext`
+- project from `ProjectContext`
+- only run data queries when both are available
+
+Priority files to fix first:
+- `src/components/assets/AssetsLibrary.tsx`
+- `src/components/funnel-designer/FunnelDesigner.tsx`
+- `src/components/funnel-designer/NodeDetailsPanel.tsx`
+- `src/pages/Index.tsx`
+- `src/components/audit/DashboardAuditWizard.tsx`
+
+This removes more hidden refresh triggers elsewhere in the app.
+
+### 6. Keep login navigation simple
+Refine the login success flow so it does not compete with auth restoration:
+- login should complete
+- auth context becomes ready
+- protected route mounts
+- then protected providers fetch once
+
+Avoid chaining extra authenticated writes during the exact login transition unless necessary.
+
+Files:
+- `src/components/auth/AuthModal.tsx`
+- `src/pages/Index.tsx`
+
+## Technical details
+
+### Why the earlier fix did not fully solve it
+The previous fix centralized auth readiness, but the app still:
+- mounted protected data providers on public routes
+- performed protected reads immediately after sign-in
+- allowed bootstrap writes during startup
+- still had several component-level auth checks using `getSession()`
+
+So auth became “more centralized”, but protected data loading was still happening too early.
+
+### Key architectural correction
+The real fix is:
+
+```text
+Do not mount protected data providers until auth is fully restored and confirmed.
+```
+
+That is the change most likely to eliminate the refresh storm for good.
+
+## Files to update
+
+Core:
+- `src/App.tsx`
+- `src/contexts/AuthContext.tsx`
+- `src/contexts/AgencyContext.tsx`
+- `src/contexts/ProjectContext.tsx`
+- `src/pages/Dashboard.tsx`
+- `src/pages/Index.tsx`
+- `src/components/auth/AuthModal.tsx`
+
+Likely new:
+- `src/components/auth/ProtectedRoute.tsx`
+
+Follow-up hardening:
+- `src/components/assets/AssetsLibrary.tsx`
+- `src/components/funnel-designer/FunnelDesigner.tsx`
+- `src/components/funnel-designer/NodeDetailsPanel.tsx`
+- `src/components/audit/DashboardAuditWizard.tsx`
+
+## Verification after implementation
+
+I will consider this fixed only if all of these pass:
+1. Login with `jensvannueten@gmail.com` stays on `/dashboard`
+2. Login with `support@boostmate.io` stays on `/dashboard`
+3. Manual refresh on `/dashboard` keeps the user logged in
+4. Backend auth logs no longer show rapid refresh bursts followed by `429`
+5. `profiles` and `projects` requests no longer fall back to anonymous auth during startup
+
+## Expected outcome
+
+After this refactor:
+- public pages remain public and lightweight
+- protected providers only run inside the authenticated app
+- startup becomes deterministic
+- the dashboard should stop briefly appearing and then kicking the user back out
