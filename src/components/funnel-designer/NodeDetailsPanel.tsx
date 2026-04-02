@@ -28,7 +28,7 @@ interface NodeDetailsPanelProps {
   onClose: () => void;
 }
 
-const NodeDetailsPanel = ({ nodeId, nodeLabel, customLabel, linkedAssetId, onLinkAsset, onRename, onClose }: NodeDetailsPanelProps) => {
+const NodeDetailsPanel = ({ nodeId, nodeLabel, customLabel, linkedAssetId, noteContent, renderStyle, onLinkAsset, onRename, onNoteContentChange, onClose }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const userId = user?.id ?? null;
