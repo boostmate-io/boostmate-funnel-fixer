@@ -150,8 +150,8 @@ export const FUNNEL_ELEMENTS: FunnelElement[] = [
   { type: "popup", label: "funnelDesigner.elements.popup", description: "", icon: "Maximize2", color: "#EF4444", group: "Sales Flow", isDecision: false, renderStyle: "page" },
 
   // Utility
-  { type: "notes", label: "funnelDesigner.elements.notes", description: "", icon: "StickyNote", color: "#F59E0B", group: "Utility", isDecision: false, renderStyle: "icon" },
-  { type: "text", label: "funnelDesigner.elements.text", description: "", icon: "Type", color: "#6B7280", group: "Utility", isDecision: false, renderStyle: "icon" },
+  { type: "notes", label: "funnelDesigner.elements.notes", description: "", icon: "StickyNote", color: "#F59E0B", group: "Utility", isDecision: false, renderStyle: "note" },
+  { type: "text", label: "funnelDesigner.elements.text", description: "", icon: "Type", color: "#6B7280", group: "Utility", isDecision: false, renderStyle: "text" },
 ];
 
 // Keep backward compat alias
