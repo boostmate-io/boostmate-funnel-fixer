@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuthReady } from "@/hooks/useAuthReady";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Profile {
   id: string;
@@ -53,35 +53,29 @@ export const useAgency = () => {
 };
 
 export const AgencyProvider = ({ children }: { children: ReactNode }) => {
-  const { user, isReady } = useAuthReady();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [clients, setClients] = useState<AgencyClient[]>([]);
   const [invites, setInvites] = useState<AgencyInvite[]>([]);
   const [impersonatedUserId, setImpersonatedUserId] = useState<string | null>(null);
   const [impersonatedName, setImpersonatedName] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const currentUserId = user?.id ?? null;
 
   const loadProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
-    setProfile((data as unknown as Profile) || null);
-    setLoading(false);
+    return (data as unknown as Profile) || null;
   }, []);
 
   useEffect(() => {
-    if (!isReady) {
-      setLoading(true);
-      return;
-    }
-
-    if (!user) {
+    if (!currentUserId) {
       setProfile(null);
-      setCurrentUserId(null);
       setClients([]);
       setInvites([]);
       setImpersonatedUserId(null);
@@ -90,12 +84,21 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    let cancelled = false;
     setLoading(true);
-    setCurrentUserId(user.id);
     setImpersonatedUserId(null);
     setImpersonatedName(null);
-    void loadProfile(user.id);
-  }, [isReady, user, loadProfile]);
+
+    loadProfile(currentUserId).then((p) => {
+      if (cancelled) return;
+      setProfile(p);
+      setLoading(false);
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [currentUserId, loadProfile]);
 
   const isAgency = profile?.account_type === "agency";
   const isClient = profile?.account_type === "client";

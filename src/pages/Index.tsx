@@ -12,13 +12,13 @@ import { mockResult } from "@/components/audit/mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
 import { analyzeAudit, createSalesCopyAsset, createFunnelFromAnalysis } from "@/lib/api/auditAnalysis";
 import { AuditResult } from "@/types/audit";
-import { useAuthReady } from "@/hooks/useAuthReady";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Phase = "wizard" | "analyzing" | "results";
 
 const Index = () => {
   const { t } = useTranslation();
-  const { user, isReady } = useAuthReady();
+  const { user, isReady } = useAuth();
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>("wizard");
   const [formData, setFormData] = useState<AuditFormData | null>(null);

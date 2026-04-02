@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { useAuthReady } from "@/hooks/useAuthReady";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Project {
   id: string;
@@ -32,7 +32,7 @@ export const useProject = () => {
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
-  const { user, isReady } = useAuthReady();
+  const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
     localStorage.getItem("activeProjectId")
@@ -48,6 +48,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
     const projectList = (data || []) as Project[];
 
+    // Auto-create default project only if none exist
     if (projectList.length === 0) {
       const { data: newProj } = await supabase
         .from("projects")
@@ -60,26 +61,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    setProjects(projectList);
-
-    const stored = localStorage.getItem("activeProjectId");
-    const match = projectList.find((p) => p.id === stored);
-    if (match) {
-      setActiveProjectId(match.id);
-    } else if (projectList.length > 0) {
-      setActiveProjectId(projectList[0].id);
-      localStorage.setItem("activeProjectId", projectList[0].id);
-    }
-
-    setLoading(false);
+    return projectList;
   }, [t]);
 
   useEffect(() => {
-    if (!isReady) {
-      setLoading(true);
-      return;
-    }
-
     if (!user) {
       setProjects([]);
       setActiveProjectId(null);
@@ -88,9 +73,28 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    let cancelled = false;
     setLoading(true);
-    void loadProjects(user.id);
-  }, [isReady, user, loadProjects]);
+
+    loadProjects(user.id).then((projectList) => {
+      if (cancelled) return;
+      setProjects(projectList);
+
+      const stored = localStorage.getItem("activeProjectId");
+      const match = projectList.find((p) => p.id === stored);
+      if (match) {
+        setActiveProjectId(match.id);
+      } else if (projectList.length > 0) {
+        setActiveProjectId(projectList[0].id);
+        localStorage.setItem("activeProjectId", projectList[0].id);
+      }
+      setLoading(false);
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [user, loadProjects]);
 
   useEffect(() => {
     if (activeProjectId) localStorage.setItem("activeProjectId", activeProjectId);
