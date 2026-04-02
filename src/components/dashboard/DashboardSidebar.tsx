@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
-import { BarChart3, LayoutDashboard, LogOut, PenTool, Settings, Library, TrendingUp } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, PenTool, Settings, Library, TrendingUp, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import ProjectSwitcher from "./ProjectSwitcher";
+import { useAgency } from "@/contexts/AgencyContext";
 
 interface DashboardSidebarProps {
   activeModule: string;
