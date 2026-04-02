@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo-boostmate.svg";
 import AuditWizard from "@/components/audit/AuditWizard";
@@ -19,6 +19,7 @@ type Phase = "wizard" | "analyzing" | "results";
 const Index = () => {
   const { t } = useTranslation();
   const { user, isReady } = useAuthReady();
+  const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>("wizard");
   const [formData, setFormData] = useState<AuditFormData | null>(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -49,7 +50,7 @@ const Index = () => {
 
   const saveAuditAndRedirect = async () => {
     if (!formData) {
-      window.location.href = "/dashboard";
+      navigate("/dashboard", { replace: true });
       return;
     }
 
@@ -99,7 +100,7 @@ const Index = () => {
       );
     }
 
-    window.location.href = "/dashboard?module=funnel-audit";
+    navigate("/dashboard?module=funnel-audit", { replace: true });
   };
 
   const handleAuthSuccess = async () => {
