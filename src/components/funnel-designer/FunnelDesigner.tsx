@@ -16,6 +16,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { supabase } from "@/integrations/supabase/client";
 import { useProject } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Save, RotateCcw, Download, FolderOpen, Plus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ interface Funnel {
 const FunnelDesigner = () => {
   const { t } = useTranslation();
   const { activeProject } = useProject();
+  const { user } = useAuth();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [currentFunnel, setCurrentFunnel] = useState<Funnel | null>(null);
@@ -71,23 +73,19 @@ const FunnelDesigner = () => {
   const [renamingFunnel, setRenamingFunnel] = useState(false);
   const nodeIdCounter = useRef(0);
 
-  // Load funnels
   const loadFunnels = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !activeProject) return;
+    if (!user || !activeProject) return;
 
-    let query = supabase
+    const { data } = await supabase
       .from("funnels")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("is_template", false)
+      .eq("project_id", activeProject.id)
       .order("updated_at", { ascending: false });
-    
-    query = query.eq("project_id", activeProject.id);
 
-    const { data } = await query;
     if (data) setFunnels(data as unknown as Funnel[]);
-  }, [activeProject]);
+  }, [user, activeProject]);
 
   const loadTemplates = useCallback(async () => {
     const { data } = await supabase
@@ -143,11 +141,10 @@ const FunnelDesigner = () => {
   );
 
   const saveFunnel = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !activeProject) return;
+    if (!user || !activeProject) return;
 
     const payload = {
-      user_id: session.user.id,
+      user_id: user.id,
       name: currentFunnel?.name || "Untitled Funnel",
       nodes: JSON.parse(JSON.stringify(nodes)),
       edges: JSON.parse(JSON.stringify(edges)),
@@ -175,14 +172,13 @@ const FunnelDesigner = () => {
       }
     }
     loadFunnels();
-  }, [currentFunnel, nodes, edges, t, loadFunnels, activeProject]);
+  }, [currentFunnel, nodes, edges, t, loadFunnels, user, activeProject]);
 
   const saveAsTemplate = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !activeProject) return;
+    if (!user || !activeProject) return;
 
     const { error } = await supabase.from("funnels").insert({
-      user_id: session.user.id,
+      user_id: user.id,
       name: templateName || "Untitled Template",
       nodes: JSON.parse(JSON.stringify(nodes)),
       edges: JSON.parse(JSON.stringify(edges)),
@@ -197,7 +193,7 @@ const FunnelDesigner = () => {
       setTemplateName("");
       loadTemplates();
     }
-  }, [templateName, nodes, edges, t, loadTemplates, activeProject]);
+  }, [templateName, nodes, edges, t, loadTemplates, user, activeProject]);
 
   const loadFunnel = useCallback((funnel: Funnel) => {
     setNodes(funnel.nodes || []);
@@ -217,11 +213,10 @@ const FunnelDesigner = () => {
   }, [setNodes, setEdges]);
 
   const createNewFunnel = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !activeProject) return;
+    if (!user || !activeProject) return;
 
     const { data, error } = await supabase.from("funnels").insert({
-      user_id: session.user.id,
+      user_id: user.id,
       name: funnelName || "Untitled Funnel",
       nodes: JSON.parse(JSON.stringify(nodes)),
       edges: JSON.parse(JSON.stringify(edges)),
@@ -237,7 +232,7 @@ const FunnelDesigner = () => {
       toast.success(t("funnelDesigner.created"));
       loadFunnels();
     }
-  }, [funnelName, nodes, edges, t, loadFunnels, activeProject]);
+  }, [funnelName, nodes, edges, t, loadFunnels, user, activeProject]);
 
   const deleteFunnel = useCallback(async (id: string) => {
     const { error } = await supabase.from("funnels").delete().eq("id", id);
@@ -290,7 +285,6 @@ const FunnelDesigner = () => {
       <ElementsPanel onAddNode={addNode} />
 
       <div className="flex-1 flex flex-col">
-        {/* Toolbar */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
           <div className="flex items-center gap-2">
             {currentFunnel && renamingFunnel ? (
@@ -335,7 +329,6 @@ const FunnelDesigner = () => {
           </div>
         </div>
 
-        {/* Canvas */}
         <div className="flex-1">
           <ReactFlow
             nodes={nodes}
@@ -356,7 +349,6 @@ const FunnelDesigner = () => {
         </div>
       </div>
 
-      {/* Node Details Panel */}
       {selectedNode && selectedNode.type === "funnelPage" && (
         <NodeDetailsPanel
           nodeId={selectedNode.id}
@@ -369,7 +361,6 @@ const FunnelDesigner = () => {
         />
       )}
 
-      {/* My Funnels Dialog */}
       <Dialog open={showFunnelList} onOpenChange={setShowFunnelList}>
         <DialogContent>
           <DialogHeader>
@@ -394,7 +385,6 @@ const FunnelDesigner = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Templates Dialog */}
       <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
         <DialogContent>
           <DialogHeader>
@@ -418,7 +408,6 @@ const FunnelDesigner = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Save as Template Dialog */}
       <Dialog open={showSaveTemplate} onOpenChange={setShowSaveTemplate}>
         <DialogContent>
           <DialogHeader>
@@ -435,7 +424,6 @@ const FunnelDesigner = () => {
         </DialogContent>
       </Dialog>
 
-      {/* New Funnel Dialog */}
       <Dialog open={showNewFunnel} onOpenChange={setShowNewFunnel}>
         <DialogContent>
           <DialogHeader>

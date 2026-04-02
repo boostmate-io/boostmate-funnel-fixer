@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { X, Link2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,20 +26,20 @@ interface NodeDetailsPanelProps {
 
 const NodeDetailsPanel = ({ nodeId, nodeLabel, customLabel, linkedAssetId, onLinkAsset, onRename, onClose }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAssetId, setSelectedAssetId] = useState<string>(linkedAssetId || "");
 
   const loadAssets = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!user) return;
     const { data } = await supabase
       .from("assets")
       .select("id, name, type")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("type", "sales_copy")
       .order("name");
     if (data) setAssets(data as Asset[]);
-  }, []);
+  }, [user]);
 
   useEffect(() => { loadAssets(); }, [loadAssets]);
 

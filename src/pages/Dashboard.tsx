@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
@@ -13,17 +14,13 @@ import { BarChart3, PenTool, Library, TrendingUp } from "lucide-react";
 import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
-import { useAuthReady } from "@/hooks/useAuthReady";
 
 const Dashboard = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const initialModule = searchParams.get("module") || "overview";
   const [activeModule, setActiveModule] = useState(initialModule);
-  const { user, isReady } = useAuthReady();
-
-  if (!isReady) return null;
-  if (!user) return <Navigate to="/" replace />;
+  const { user } = useAuth();
 
   return (
     <div className="flex flex-col h-screen bg-background-dashboard">
@@ -37,7 +34,7 @@ const Dashboard = () => {
                 {activeModule === "overview" && t("dashboard.title")}
                 {activeModule === "settings" && t("dashboard.settings.title")}
               </h1>
-              <p className="text-muted-foreground text-sm mt-1">{t("dashboard.welcomeBack", { email: user.email })}</p>
+              <p className="text-muted-foreground text-sm mt-1">{t("dashboard.welcomeBack", { email: user?.email })}</p>
             </div>
           )}
 
@@ -99,7 +96,7 @@ const Dashboard = () => {
               <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-6">
                 <div>
                   <h3 className="font-display font-bold text-foreground mb-2">{t("dashboard.settings.account")}</h3>
-                  <p className="text-sm text-muted-foreground">{t("dashboard.settings.email")}: {user.email}</p>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.settings.email")}: {user?.email}</p>
                 </div>
                 <div className="border-t border-border pt-6">
                   <LanguageSwitcher />
