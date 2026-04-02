@@ -75,7 +75,7 @@ const FunnelDesigner = () => {
   const [renamingFunnel, setRenamingFunnel] = useState(false);
   const nodeIdCounter = useRef(0);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
 
   const loadFunnels = useCallback(async () => {
     if (!userId || !activeProject) return;
