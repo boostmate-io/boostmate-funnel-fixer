@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logo from "@/assets/logo-boostmate.svg";
@@ -13,27 +13,21 @@ import { mockResult } from "@/components/audit/mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
 import { analyzeAudit, createSalesCopyAsset, createFunnelFromAnalysis } from "@/lib/api/auditAnalysis";
 import { AuditResult } from "@/types/audit";
+import { useAuthReady } from "@/hooks/useAuthReady";
 
 type Phase = "wizard" | "analyzing" | "results";
 
 const Index = () => {
   const { t } = useTranslation();
+  const { user, isReady } = useAuthReady();
   const [phase, setPhase] = useState<Phase>("wizard");
   const [formData, setFormData] = useState<AuditFormData | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [screenshot, setScreenshot] = useState("");
   const [pageContent, setPageContent] = useState("");
   const [analysisResult, setAnalysisResult] = useState<Awaited<ReturnType<typeof analyzeAudit>> | null>(null);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  if (isReady && user) return <Navigate to="/dashboard" replace />;
 
   const handleWizardComplete = async (data: AuditFormData) => {
     setFormData(data);
@@ -43,7 +37,6 @@ const Index = () => {
     setScreenshot(scrapeResult.screenshot);
     setPageContent(scrapeResult.markdown);
 
-    // AI analysis
     const analysis = await analyzeAudit(
       scrapeResult.screenshot,
       scrapeResult.markdown,
@@ -81,7 +74,6 @@ const Index = () => {
       landing_page_content: pageContent,
     });
 
-    // Create sales copy asset + funnel from analysis
     const projectId = project?.id || null;
     const domain = formData.landingPageUrl.replace(/^https?:\/\//, "").split("/")[0];
 
@@ -103,7 +95,8 @@ const Index = () => {
       );
     }
 
-    navigate("/dashboard?module=funnel-audit");
+    // Navigation will happen automatically via useAuthReady detecting the session
+    window.location.href = "/dashboard?module=funnel-audit";
   };
 
   const handleAuthSuccess = async () => {

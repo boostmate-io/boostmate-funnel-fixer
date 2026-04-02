@@ -33,7 +33,7 @@ interface AgencyContextType {
   invites: AgencyInvite[];
   impersonatedUserId: string | null;
   impersonatedName: string | null;
-  effectiveUserId: string | null; // The user_id to use for queries (impersonated or own)
+  effectiveUserId: string | null;
   startImpersonation: (clientUserId: string, clientName: string) => void;
   stopImpersonation: () => void;
   upgradeToAgency: () => Promise<void>;
@@ -60,15 +60,11 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadProfile = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { setLoading(false); return; }
-    setCurrentUserId(session.user.id);
-
+  const loadProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", session.user.id)
+      .eq("id", userId)
       .single();
 
     if (data) {
@@ -77,13 +73,11 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadProfile(); }, [loadProfile]);
-
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setCurrentUserId(session.user.id);
-        loadProfile();
+        loadProfile(session.user.id);
       } else {
         setProfile(null);
         setCurrentUserId(null);
@@ -91,6 +85,7 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
         setInvites([]);
         setImpersonatedUserId(null);
         setImpersonatedName(null);
+        setLoading(false);
       }
     });
     return () => subscription.unsubscribe();
@@ -108,7 +103,6 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
       .eq("agency_user_id", currentUserId);
 
     if (data && data.length > 0) {
-      // Load profiles for each client
       const clientIds = data.map((c: any) => c.client_user_id);
       const { data: profiles } = await supabase
         .from("profiles")
@@ -160,7 +154,6 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
       .eq("id", currentUserId);
     if (!error) {
       setProfile((prev) => prev ? { ...prev, account_type: "agency" } : prev);
-      // Create self-client record so existing data is accessible via agency flows
       await supabase
         .from("agency_clients")
         .insert({ agency_user_id: currentUserId, client_user_id: currentUserId } as any);

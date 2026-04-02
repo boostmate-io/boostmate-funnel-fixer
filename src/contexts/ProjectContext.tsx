@@ -37,23 +37,19 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   );
   const [loading, setLoading] = useState(true);
 
-  const loadProjects = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { setLoading(false); return; }
-
+  const loadProjects = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("projects")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: true });
 
     const projectList = (data || []) as Project[];
 
-    // Auto-create a default project if none exist
     if (projectList.length === 0) {
       const { data: newProj } = await supabase
         .from("projects")
-        .insert({ user_id: session.user.id, name: t("projects.defaultName") })
+        .insert({ user_id: userId, name: t("projects.defaultName") })
         .select()
         .single();
       if (newProj) {
@@ -64,7 +60,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
     setProjects(projectList);
 
-    // Set active project
     const stored = localStorage.getItem("activeProjectId");
     const match = projectList.find((p) => p.id === stored);
     if (match) {
@@ -76,7 +71,17 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, [t]);
 
-  useEffect(() => { loadProjects(); }, [loadProjects]);
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        loadProjects(session.user.id);
+      } else {
+        setProjects([]);
+        setLoading(false);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [loadProjects]);
 
   useEffect(() => {
     if (activeProjectId) localStorage.setItem("activeProjectId", activeProjectId);
