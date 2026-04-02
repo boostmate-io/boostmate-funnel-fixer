@@ -10,7 +10,8 @@ type FunnelNodeData = {
   icon: string;
   color: string;
   isDecision?: boolean;
-  renderStyle?: "page" | "icon";
+  renderStyle?: "page" | "icon" | "note" | "text";
+  noteContent?: string;
 };
 
 /* ── Wireframe thumbnails per element type ── */
