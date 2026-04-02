@@ -1,5 +1,5 @@
-import { memo } from "react";
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { memo, useCallback } from "react";
+import { Handle, Position, type NodeProps, useNodeId } from "@xyflow/react";
 import { useTranslation } from "react-i18next";
 import * as Icons from "lucide-react";
 
