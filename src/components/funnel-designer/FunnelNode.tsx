@@ -188,14 +188,14 @@ const getWireframeForType = (pageType: string) => {
   }
 };
 
-const IconStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => {
+const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData; onDoubleClick?: () => void }) => {
   const { t } = useTranslation();
   const IconComponent = (Icons as any)[nodeData.icon] || Icons.FileText;
   const displayName = nodeData.customLabel || t(nodeData.label);
   const isDecision = nodeData.isDecision ?? false;
 
   return (
-    <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible">
+    <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClick={onDoubleClick}>
       <div
         className="w-12 h-12 rounded-full flex items-center justify-center border-2 bg-card shadow-sm"
         style={{ borderColor: nodeData.color }}
