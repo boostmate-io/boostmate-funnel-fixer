@@ -4,8 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ProjectProvider } from "@/contexts/ProjectContext";
-import { AgencyProvider } from "@/contexts/AgencyContext";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import InviteRegistration from "./pages/InviteRegistration.tsx";
@@ -20,16 +19,16 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <BrowserRouter>
-          <AgencyProvider>
-            <ProjectProvider>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/invite/:code" element={<InviteRegistration />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </ProjectProvider>
-          </AgencyProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/invite/:code" element={<InviteRegistration />} />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
