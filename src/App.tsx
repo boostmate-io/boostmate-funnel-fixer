@@ -30,8 +30,8 @@ const App = () => (
               </Routes>
             </ProjectProvider>
           </AgencyProvider>
-        </AuthProvider>
-      </BrowserRouter>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
