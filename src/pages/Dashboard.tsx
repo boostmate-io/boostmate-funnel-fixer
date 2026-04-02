@@ -7,10 +7,14 @@ import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
 import KnowledgeCenter from "@/components/dashboard/KnowledgeCenter";
 import AuditModule from "@/components/audit/AuditModule";
+import ImpersonationBanner from "@/components/agency/ImpersonationBanner";
+import ClientManagement from "@/components/agency/ClientManagement";
+import AgencySettings from "@/components/agency/AgencySettings";
 import { BarChart3, PenTool, Library, TrendingUp } from "lucide-react";
 import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
+import { useAgency } from "@/contexts/AgencyContext";
 
 const Dashboard = () => {
   const { t } = useTranslation();
