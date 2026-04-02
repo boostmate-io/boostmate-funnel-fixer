@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
@@ -21,22 +21,14 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const initialModule = searchParams.get("module") || "overview";
   const [activeModule, setActiveModule] = useState(initialModule);
-  const [user, setUser] = useState<any>(null);
+  const { user, isReady } = useAuthReady();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) navigate("/");
-      else setUser(session.user);
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) navigate("/");
-      else setUser(session.user);
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (isReady && !user) navigate("/");
+  }, [isReady, user, navigate]);
 
-  if (!user) return null;
+  if (!isReady || !user) return null;
 
   return (
     <div className="flex flex-col h-screen bg-background-dashboard">
@@ -88,27 +80,22 @@ const Dashboard = () => {
           )}
 
           {activeModule === "clients" && <ClientManagement />}
-
           {activeModule === "funnel-audit" && <AuditModule />}
-
           {activeModule === "funnel-designer" && (
             <div className="h-[calc(100vh-64px)]">
               <FunnelDesigner />
             </div>
           )}
-
           {activeModule === "analytics" && (
             <div className="h-full">
               <AnalyticsModule />
             </div>
           )}
-
           {activeModule === "assets-library" && (
             <div className="h-full">
               <AssetsLibrary />
             </div>
           )}
-
           {activeModule === "settings" && (
             <div className="space-y-6">
               <div className="bg-card rounded-xl border border-border p-6 shadow-card">
