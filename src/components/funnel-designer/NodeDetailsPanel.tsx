@@ -20,8 +20,11 @@ interface NodeDetailsPanelProps {
   nodeLabel: string;
   customLabel?: string;
   linkedAssetId: string | null;
+  noteContent?: string;
+  renderStyle?: "page" | "icon" | "note" | "text";
   onLinkAsset: (assetId: string | null) => void;
   onRename: (name: string) => void;
+  onNoteContentChange?: (content: string) => void;
   onClose: () => void;
 }
 
