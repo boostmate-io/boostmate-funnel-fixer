@@ -269,7 +269,7 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
   }, [id]);
 
   // Delegate to special styles
-  if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} />;
+  if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} />;
   if (renderStyle === "note") return <div onDoubleClick={handleDoubleClick}><NoteStyleRender nodeData={nodeData} /></div>;
   if (renderStyle === "text") return <div onDoubleClick={handleDoubleClick}><TextStyleRender nodeData={nodeData} /></div>;
 
