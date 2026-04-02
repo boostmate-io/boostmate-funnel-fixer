@@ -93,32 +93,36 @@ const ClientManagement = () => {
             <p className="text-muted-foreground text-sm">{t("agency.noClients")}</p>
           ) : (
             <div className="space-y-3">
-              {clients.map((client) => (
-                <div
-                  key={client.id}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border"
-                >
-                  <div>
-                    <p className="font-medium text-foreground">
-                      {client.profile?.display_name || t("agency.unnamed")}
-                    </p>
-                    <Badge variant="outline" className="text-xs mt-1">{client.status}</Badge>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      startImpersonation(
-                        client.client_user_id,
-                        client.profile?.display_name || t("agency.unnamed")
-                      )
-                    }
+              {clients.map((client) => {
+                const isSelf = client.agency_user_id === client.client_user_id;
+                return (
+                  <div
+                    key={client.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${isSelf ? "bg-primary/5 border-primary/20" : "bg-muted/50 border-border"}`}
                   >
-                    <Eye className="w-4 h-4 mr-1" />
-                    {t("agency.manage")}
-                  </Button>
-                </div>
-              ))}
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {isSelf ? t("agency.myAccount") : (client.profile?.display_name || t("agency.unnamed"))}
+                      </p>
+                      {isSelf && <Badge variant="secondary" className="text-xs mt-1">{t("agency.owner")}</Badge>}
+                      {!isSelf && <Badge variant="outline" className="text-xs mt-1">{client.status}</Badge>}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        startImpersonation(
+                          client.client_user_id,
+                          isSelf ? t("agency.myAccount") : (client.profile?.display_name || t("agency.unnamed"))
+                        )
+                      }
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      {t("agency.manage")}
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

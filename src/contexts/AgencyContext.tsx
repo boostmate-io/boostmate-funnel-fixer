@@ -160,6 +160,10 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
       .eq("id", currentUserId);
     if (!error) {
       setProfile((prev) => prev ? { ...prev, account_type: "agency" } : prev);
+      // Create self-client record so existing data is accessible via agency flows
+      await supabase
+        .from("agency_clients")
+        .insert({ agency_user_id: currentUserId, client_user_id: currentUserId } as any);
     }
   }, [currentUserId]);
 

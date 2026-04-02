@@ -287,6 +287,8 @@
     "activeClients": "Active Clients",
     "noClients": "No clients yet. Send your first invite to get started.",
     "unnamed": "Unnamed Client",
+    "myAccount": "My Account",
+    "owner": "Owner",
     "manage": "Manage",
     "pendingInvites": "Invites",
     "copyLink": "Copy Link",
