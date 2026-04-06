@@ -104,6 +104,7 @@ const Dashboard = () => {
               </div>
               <AgencySettings />
               <KnowledgeCenter />
+              <DeleteAccountSection />
             </div>
           )}
         </main>
