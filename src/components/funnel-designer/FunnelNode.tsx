@@ -187,14 +187,12 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
           <div className="space-y-2">
             <WireframeComponent color={nodeData.color} />
             {!isImageMode && copySections.length > 0 && (
-              <div className="border-t border-border px-1 pt-2">
-                <ul className="space-y-1 text-left">
-                  {copySections.map((section, index) => (
-                    <li key={section.id || `${section.title}-${index}`} className="text-[9px] leading-tight text-muted-foreground break-words">
-                      {section.title}
-                    </li>
-                  ))}
-                </ul>
+              <div className="border-t border-border px-1 pt-2 space-y-1">
+                {copySections.map((section, index) => (
+                  <div key={section.id || `${section.title}-${index}`} className="text-[9px] leading-tight text-muted-foreground break-words border border-border rounded px-1.5 py-1">
+                    {section.title}
+                  </div>
+                ))}
               </div>
             )}
           </div>

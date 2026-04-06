@@ -106,6 +106,83 @@ const NodeDetailsPanel = ({
   const pageName = customLabel || nodeLabel;
   const defaultAssetName = `${funnelName || "Funnel"} ${pageName} Copy`;
 
+  // Read-only: render a clean, text-based panel
+  if (readOnly) {
+    const displayName = customLabel || nodeLabel;
+    const hasNotes = isNoteOrText && !!noteContent;
+    const hasNodeNotes = isPageOrEmail && !!nodeNotes;
+    const hasUrl = isPageOrEmail && !!nodeUrl;
+    const hasImage = isPageOrEmail && !!nodeImage;
+    const hasCopySections = copySections && copySections.length > 0;
+
+    return (
+      <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h3 className="text-sm font-display font-bold text-foreground truncate">{displayName}</h3>
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="flex-1 overflow-auto">
+          {/* Note/Text content */}
+          {hasNotes && (
+            <div className="p-4 border-b border-border">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                {renderStyle === "note" ? t("funnelDesigner.noteContent") : t("funnelDesigner.textContent")}
+              </label>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{noteContent}</p>
+            </div>
+          )}
+
+          {/* Notes */}
+          {hasNodeNotes && (
+            <div className="p-4 border-b border-border">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("funnelDesigner.nodeNotes")}</label>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{nodeNotes}</p>
+            </div>
+          )}
+
+          {/* Copy sections */}
+          {hasCopySections && (
+            <div className="p-4 border-b border-border space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.copySections")}</label>
+              {copySections!.map((s, i) => (
+                <div key={i} className="text-xs text-foreground border border-border rounded p-2">
+                  <p className="font-medium">{s.title}</p>
+                  {s.description && <p className="text-muted-foreground mt-0.5">{s.description}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* URL */}
+          {hasUrl && (
+            <div className="p-4 border-b border-border">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("funnelDesigner.nodeUrl")}</label>
+              <a href={nodeUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                {nodeUrl} <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
+
+          {/* Image */}
+          {hasImage && (
+            <div className="p-4 border-b border-border">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("funnelDesigner.nodeImage")}</label>
+              <img src={nodeImage} alt="Screenshot" className="w-full rounded border border-border" />
+              <Button variant="outline" size="sm" className="h-7 text-xs mt-2 w-full" asChild>
+                <a href={nodeImage} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-3 h-3 mr-1" /> {t("funnelDesigner.viewImage")}
+                </a>
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Edit mode (existing)
   return (
     <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-border">
@@ -123,12 +200,11 @@ const NodeDetailsPanel = ({
               {renderStyle === "note" ? t("funnelDesigner.noteContent") : t("funnelDesigner.textContent")}
             </label>
             <Textarea
-              autoFocus={!readOnly}
+              autoFocus
               value={noteContent || ""}
               onChange={(e) => onNoteContentChange?.(e.target.value)}
               placeholder={renderStyle === "note" ? t("funnelDesigner.notePlaceholder") : t("funnelDesigner.textPlaceholder")}
               className="text-sm min-h-[100px] resize-y"
-              disabled={readOnly}
             />
           </div>
         )}
@@ -137,7 +213,7 @@ const NodeDetailsPanel = ({
         {isWait && (
           <div className="p-4 border-b border-border space-y-3">
             <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.waitType")}</label>
-            <Select value={waitType || "days"} onValueChange={(v) => onDataChange?.("waitType", v)} disabled={readOnly}>
+            <Select value={waitType || "days"} onValueChange={(v) => onDataChange?.("waitType", v)}>
               <SelectTrigger className="text-xs h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -155,7 +231,6 @@ const NodeDetailsPanel = ({
               onChange={(e) => onDataChange?.("waitDuration", e.target.value ? Number(e.target.value) : undefined)}
               placeholder="1"
               className="text-sm h-8"
-              disabled={readOnly}
             />
           </div>
         )}
@@ -169,7 +244,6 @@ const NodeDetailsPanel = ({
               onChange={(e) => onRename(e.target.value)}
               placeholder={nodeLabel}
               className="text-sm h-8"
-              disabled={readOnly}
             />
           </div>
         )}
@@ -183,13 +257,12 @@ const NodeDetailsPanel = ({
               onChange={(e) => onDataChange?.("nodeNotes", e.target.value)}
               placeholder={t("funnelDesigner.nodeNotesPlaceholder")}
               className="text-sm min-h-[80px] resize-y"
-              disabled={readOnly}
             />
           </div>
         )}
 
         {/* 3. Copy sections */}
-        {!readOnly && (renderStyle === "page" || pageType === "email") && (
+        {(renderStyle === "page" || pageType === "email") && (
           <div className="p-4 border-b border-border">
             <CopySections
               linkedAssetId={linkedAssetId}
@@ -204,21 +277,8 @@ const NodeDetailsPanel = ({
           </div>
         )}
 
-        {/* Read-only copy sections display */}
-        {readOnly && copySections && copySections.length > 0 && (
-          <div className="p-4 border-b border-border space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.copySections")}</label>
-            {copySections.map((s, i) => (
-              <div key={i} className="text-xs text-foreground border border-border rounded p-2">
-                <p className="font-medium">{s.title}</p>
-                {s.description && <p className="text-muted-foreground mt-0.5">{s.description}</p>}
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* 4. Link Sales Copy asset */}
-        {!readOnly && isPageOrEmail && renderStyle === "page" && (
+        {isPageOrEmail && renderStyle === "page" && (
           <div className="p-4 border-b border-border space-y-3">
             <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.linkAsset")}</label>
             <div className="flex gap-2">
@@ -256,7 +316,6 @@ const NodeDetailsPanel = ({
                 onChange={(e) => onDataChange?.("nodeUrl", e.target.value)}
                 placeholder={t("funnelDesigner.nodeUrlPlaceholder")}
                 className="text-sm h-8 flex-1"
-                disabled={readOnly}
               />
               {nodeUrl && (
                 <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
@@ -282,14 +341,12 @@ const NodeDetailsPanel = ({
                       <ExternalLink className="w-3 h-3 mr-1" /> {t("funnelDesigner.viewImage")}
                     </a>
                   </Button>
-                  {!readOnly && (
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleRemoveImage}>
-                      <Trash2 className="w-3 h-3 mr-1 text-destructive" /> {t("funnelDesigner.removeImage")}
-                    </Button>
-                  )}
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleRemoveImage}>
+                    <Trash2 className="w-3 h-3 mr-1 text-destructive" /> {t("funnelDesigner.removeImage")}
+                  </Button>
                 </div>
               </div>
-            ) : !readOnly ? (
+            ) : (
               <>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                 <Button
@@ -303,8 +360,6 @@ const NodeDetailsPanel = ({
                   {uploading ? t("funnelDesigner.uploading") : t("funnelDesigner.uploadImage")}
                 </Button>
               </>
-            ) : (
-              <p className="text-xs text-muted-foreground">No screenshot</p>
             )}
           </div>
         )}
