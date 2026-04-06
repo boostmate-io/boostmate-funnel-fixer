@@ -1040,12 +1040,24 @@ const FunnelDesigner = () => {
             {templates.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">{t("funnelDesigner.noTemplates")}</p>}
             {templates.map((tmpl) => (
               <div key={tmpl.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
-                <button onClick={() => createFromTemplate(tmpl)} className="text-left flex-1">
+                <div className="text-left flex-1">
                   <p className="text-sm font-medium text-foreground">{tmpl.name}</p>
-                </button>
-                <Button variant="ghost" size="icon" onClick={() => deleteFunnel(tmpl.id)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Tooltip><TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => createFromTemplate(tmpl)}>
+                      <Plus className="w-3 h-3 mr-1" /> Use
+                    </Button>
+                  </TooltipTrigger><TooltipContent>Use as template for new funnel</TooltipContent></Tooltip>
+                  <Tooltip><TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => editTemplate(tmpl)}>
+                      <Pencil className="w-3 h-3 mr-1" /> Edit
+                    </Button>
+                  </TooltipTrigger><TooltipContent>Edit this template</TooltipContent></Tooltip>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteFunnel(tmpl.id)}>
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
