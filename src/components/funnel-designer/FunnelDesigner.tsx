@@ -384,6 +384,18 @@ const FunnelDesigner = () => {
     [detailsNodeId, setNodes]
   );
 
+  const handleDataChange = useCallback(
+    (key: string, value: any) => {
+      if (!detailsNodeId) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === detailsNodeId ? { ...n, data: { ...n.data, [key]: value } } : n
+        )
+      );
+    },
+    [detailsNodeId, setNodes]
+  );
+
   const detailsNode = nodes.find((n) => n.id === detailsNodeId);
 
   return (
