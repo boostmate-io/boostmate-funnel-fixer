@@ -384,7 +384,7 @@ const FunnelDesigner = () => {
           id, type: "funnelPage", position,
           data: { label, pageType: type, icon, color, isDecision: el?.isDecision ?? false, renderStyle: actualRenderStyle },
         }]);
-        if (actualRenderStyle === "note" || actualRenderStyle === "text") setDetailsNodeId(id);
+        if (actualRenderStyle === "note" || actualRenderStyle === "text" || actualRenderStyle === "shape") setDetailsNodeId(id);
       }
       toast.success(t("funnelDesigner.nodeAdded"));
     },
