@@ -16,19 +16,22 @@ interface CopySection {
 
 interface CopySectionsProps {
   linkedAssetId: string | null;
-  /** Local sections stored in node data when no asset is linked */
   localSections: CopySection[];
   onLocalSectionsChange: (sections: CopySection[]) => void;
   onLinkAsset: (assetId: string) => void;
+  /** Default name for the asset when converting */
+  defaultAssetName?: string;
 }
 
-const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onLinkAsset }: CopySectionsProps) => {
+const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onLinkAsset, defaultAssetName }: CopySectionsProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { activeProject } = useProject();
   const [assetSections, setAssetSections] = useState<CopySection[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [converting, setConverting] = useState(false);
+  const [showConvertInput, setShowConvertInput] = useState(false);
+  const [assetName, setAssetName] = useState("");
 
   // Load sections from linked asset
   useEffect(() => {
@@ -69,6 +72,11 @@ const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onL
     if (expandedId === id) setExpandedId(null);
   };
 
+  const handleStartConvert = () => {
+    setAssetName(defaultAssetName || "Sales Copy");
+    setShowConvertInput(true);
+  };
+
   const convertToAsset = async () => {
     if (!user || localSections.length === 0) return;
     setConverting(true);
@@ -78,7 +86,7 @@ const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onL
         .insert({
           user_id: user.id,
           type: "sales_copy",
-          name: "Sales Copy",
+          name: assetName || "Sales Copy",
           project_id: activeProject?.id || null,
         })
         .select("id")
@@ -96,6 +104,7 @@ const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onL
 
       await supabase.from("asset_sections").insert(rows);
       onLinkAsset(asset.id);
+      setShowConvertInput(false);
       toast.success(t("funnelDesigner.convertedToAsset"));
     } catch {
       toast.error(t("funnelDesigner.convertError"));
@@ -168,16 +177,45 @@ const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onL
           <Button variant="outline" size="sm" onClick={addSection} className="w-full text-xs h-7">
             <Plus className="w-3.5 h-3.5 mr-1" /> {t("funnelDesigner.addCopySection")}
           </Button>
-          {localSections.length > 0 && (
+          {localSections.length > 0 && !showConvertInput && (
             <Button
               variant="secondary"
               size="sm"
-              onClick={convertToAsset}
-              disabled={converting}
+              onClick={handleStartConvert}
               className="w-full text-xs h-7"
             >
               <FileDown className="w-3.5 h-3.5 mr-1" /> {t("funnelDesigner.convertToAsset")}
             </Button>
+          )}
+          {showConvertInput && (
+            <div className="space-y-2">
+              <Input
+                value={assetName}
+                onChange={(e) => setAssetName(e.target.value)}
+                placeholder={t("funnelDesigner.assetNamePlaceholder")}
+                className="text-xs h-8"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={convertToAsset}
+                  disabled={converting}
+                  className="flex-1 text-xs h-7"
+                >
+                  <FileDown className="w-3.5 h-3.5 mr-1" /> {t("funnelDesigner.convertToAsset")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowConvertInput(false)}
+                  className="text-xs h-7"
+                >
+                  {t("funnelDesigner.cancel")}
+                </Button>
+              </div>
+            </div>
           )}
         </>
       )}

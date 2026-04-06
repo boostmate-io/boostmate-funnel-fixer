@@ -23,15 +23,13 @@ interface NodeDetailsPanelProps {
   noteContent?: string;
   renderStyle?: "page" | "icon" | "note" | "text";
   pageType?: string;
-  // generic fields for pages/email
   nodeNotes?: string;
   nodeUrl?: string;
   nodeImage?: string;
-  // wait fields
   waitType?: "days" | "hours" | "minutes";
   waitDuration?: number;
-  // copy sections (stored in node data when no asset linked)
   copySections?: Array<{ id: string; title: string; description: string }>;
+  funnelName?: string;
   onLinkAsset: (assetId: string | null) => void;
   onRename: (name: string) => void;
   onNoteContentChange?: (content: string) => void;
@@ -41,7 +39,7 @@ interface NodeDetailsPanelProps {
 
 const NodeDetailsPanel = ({
   nodeId, nodeLabel, customLabel, linkedAssetId, noteContent, renderStyle, pageType,
-  nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copySections,
+  nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copySections, funnelName,
   onLinkAsset, onRename, onNoteContentChange, onDataChange, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
@@ -51,6 +49,11 @@ const NodeDetailsPanel = ({
   const [selectedAssetId, setSelectedAssetId] = useState<string>(linkedAssetId || "");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync selectedAssetId when linkedAssetId changes (e.g. after convert)
+  useEffect(() => {
+    setSelectedAssetId(linkedAssetId || "");
+  }, [linkedAssetId]);
 
   const loadAssets = useCallback(async () => {
     if (!userId) return;
@@ -88,10 +91,12 @@ const NodeDetailsPanel = ({
 
   const handleRemoveImage = () => { onDataChange?.("nodeImage", ""); };
 
-  // Wait duration label
   const waitDurationLabel = waitType === "days" ? t("funnelDesigner.waitDays")
     : waitType === "hours" ? t("funnelDesigner.waitHours")
     : t("funnelDesigner.waitMinutes");
+
+  const pageName = customLabel || nodeLabel;
+  const defaultAssetName = `${funnelName || "Funnel"} ${pageName} Copy`;
 
   return (
     <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
@@ -145,7 +150,7 @@ const NodeDetailsPanel = ({
           </div>
         )}
 
-        {/* Custom name - for non-note/text/wait elements */}
+        {/* 1. Custom name */}
         {isPageOrEmail && (
           <div className="p-4 border-b border-border space-y-3">
             <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.customName")}</label>
@@ -158,7 +163,7 @@ const NodeDetailsPanel = ({
           </div>
         )}
 
-        {/* Notes field - for pages and email */}
+        {/* 2. Notes field */}
         {isPageOrEmail && (
           <div className="p-4 border-b border-border space-y-3">
             <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.nodeNotes")}</label>
@@ -171,7 +176,53 @@ const NodeDetailsPanel = ({
           </div>
         )}
 
-        {/* URL field - for pages and email */}
+        {/* 3. Copy sections */}
+        {(renderStyle === "page" || pageType === "email") && (
+          <div className="p-4 border-b border-border">
+            <CopySections
+              linkedAssetId={linkedAssetId}
+              localSections={copySections || []}
+              onLocalSectionsChange={(sections) => onDataChange?.("copySections", sections)}
+              onLinkAsset={(assetId) => {
+                onLinkAsset(assetId);
+                // Reload assets list so the newly created asset shows in dropdown
+                loadAssets();
+              }}
+              defaultAssetName={defaultAssetName}
+            />
+          </div>
+        )}
+
+        {/* 4. Link Sales Copy asset */}
+        {isPageOrEmail && renderStyle === "page" && (
+          <div className="p-4 border-b border-border space-y-3">
+            <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.linkAsset")}</label>
+            <div className="flex gap-2">
+              <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
+                <SelectTrigger className="text-xs h-8">
+                  <SelectValue placeholder={t("funnelDesigner.selectAsset")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {assets.map((a) => (
+                    <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedAssetId && selectedAssetId !== linkedAssetId && (
+                <Button size="sm" className="h-8 px-2" onClick={handleLink}>
+                  <Link2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
+              {linkedAssetId && (
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleUnlink}>
+                  <Unlink className="w-3.5 h-3.5 text-destructive" />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 5. URL field */}
         {isPageOrEmail && (
           <div className="p-4 border-b border-border space-y-3">
             <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.nodeUrl")}</label>
@@ -193,7 +244,7 @@ const NodeDetailsPanel = ({
           </div>
         )}
 
-        {/* Image / screenshot - for pages and email */}
+        {/* 6. Image / screenshot */}
         {isPageOrEmail && (
           <div className="p-4 border-b border-border space-y-3">
             <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.nodeImage")}</label>
@@ -226,46 +277,6 @@ const NodeDetailsPanel = ({
                 </Button>
               </>
             )}
-          </div>
-        )}
-
-        {/* Asset linking - only for page elements (not email/wait/note/text) */}
-        {isPageOrEmail && renderStyle === "page" && (
-          <div className="p-4 border-b border-border space-y-3">
-            <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.linkAsset")}</label>
-            <div className="flex gap-2">
-              <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
-                <SelectTrigger className="text-xs h-8">
-                  <SelectValue placeholder={t("funnelDesigner.selectAsset")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {assets.map((a) => (
-                    <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedAssetId && selectedAssetId !== linkedAssetId && (
-                <Button size="sm" className="h-8 px-2" onClick={handleLink}>
-                  <Link2 className="w-3.5 h-3.5" />
-                </Button>
-              )}
-              {linkedAssetId && (
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleUnlink}>
-                  <Unlink className="w-3.5 h-3.5 text-destructive" />
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {(renderStyle === "page" || pageType === "email") && (
-          <div className="p-4">
-            <CopySections
-              linkedAssetId={linkedAssetId}
-              localSections={copySections || []}
-              onLocalSectionsChange={(sections) => onDataChange?.("copySections", sections)}
-              onLinkAsset={(assetId) => onLinkAsset(assetId)}
-            />
           </div>
         )}
       </div>
