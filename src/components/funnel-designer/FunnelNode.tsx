@@ -342,7 +342,7 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
 
   const copySections = nodeData.copySections ?? [];
 
-  if (renderStyle === "shape") return <div onDoubleClickCapture={handleDoubleClick}><ShapeStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} /></div>;
+  if (renderStyle === "shape") return <div onDoubleClickCapture={handleDoubleClick}><ShapeStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} nodeId={id} /></div>;
   if (renderStyle === "note") return <div onDoubleClickCapture={handleDoubleClick}><NoteStyleRender nodeData={nodeData} /></div>;
   if (renderStyle === "text") return <div onDoubleClickCapture={handleDoubleClick}><TextStyleRender nodeData={nodeData} /></div>;
 
