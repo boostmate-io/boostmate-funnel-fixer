@@ -239,10 +239,31 @@ const FunnelDesigner = () => {
 
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeProject) return;
+    // Clean nodes for template: remove linked assets, urls, images but keep notes and copy sections (as local)
+    const cleanedNodes = JSON.parse(JSON.stringify(nodes)).map((node: any) => {
+      if (node.type === "funnelPage" && node.data) {
+        const d = node.data;
+        // If there's a linked asset, fetch its sections into local copySections
+        // (sections are already in copySections or we keep them from local)
+        // Remove asset link, url, image
+        const localSections = d.copySections || [];
+        return {
+          ...node,
+          data: {
+            ...d,
+            linkedAssetId: undefined,
+            nodeUrl: undefined,
+            nodeImage: undefined,
+            copySections: localSections,
+          },
+        };
+      }
+      return node;
+    });
     const { error } = await supabase.from("funnels").insert({
       user_id: userId,
       name: templateName || "Untitled Template",
-      nodes: JSON.parse(JSON.stringify(nodes)),
+      nodes: cleanedNodes,
       edges: JSON.parse(JSON.stringify(edges)),
       is_template: true,
       project_id: activeProject.id,
