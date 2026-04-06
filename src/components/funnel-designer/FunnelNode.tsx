@@ -15,6 +15,8 @@ type FunnelNodeData = {
   noteContent?: string;
   waitType?: "days" | "hours" | "minutes";
   waitDuration?: number;
+  nodeImage?: string;
+  showImages?: boolean;
 };
 
 /* ── helper: build wait label ── */
