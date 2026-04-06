@@ -766,6 +766,20 @@ const FunnelDesigner = () => {
       <ElementsPanel onAddNode={addNode} />
 
       <div className="flex-1 flex flex-col min-h-0">
+        {/* Template editing banner */}
+        {(editingTemplate || editingSeedTemplate) && (
+          <div className={`flex items-center justify-between px-4 py-2 text-sm font-medium shrink-0 ${editingSeedTemplate ? 'bg-amber-100 text-amber-900 border-b border-amber-300' : 'bg-blue-100 text-blue-900 border-b border-blue-300'}`}>
+            <span>
+              {editingSeedTemplate
+                ? `⚙️ Editing Seed Template: ${editingSeedTemplate.name}`
+                : `📝 Editing Template: ${editingTemplate!.name}`}
+            </span>
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={resetCanvas}>
+              Exit template editing
+            </Button>
+          </div>
+        )}
+
         {/* Top Toolbar */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-2">
@@ -786,12 +800,15 @@ const FunnelDesigner = () => {
                   else if (editingSeedTemplate) {
                     const newName = prompt("Rename seed template:", editingSeedTemplate.name);
                     if (newName) setEditingSeedTemplate({ ...editingSeedTemplate, name: newName });
+                  } else if (editingTemplate) {
+                    const newName = prompt("Rename template:", editingTemplate.name);
+                    if (newName) setEditingTemplate({ ...editingTemplate, name: newName });
                   }
                 }}
-                title={currentFunnel ? t("funnelDesigner.renameFunnel") : editingSeedTemplate ? "Rename seed template" : undefined}
+                title={currentFunnel ? t("funnelDesigner.renameFunnel") : editingSeedTemplate ? "Rename seed template" : editingTemplate ? "Rename template" : undefined}
               >
-                {currentFunnel?.name || editingSeedTemplate?.name || t("funnelDesigner.title")}
-                {(currentFunnel || editingSeedTemplate) && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+                {currentFunnel?.name || editingSeedTemplate?.name || editingTemplate?.name || t("funnelDesigner.title")}
+                {(currentFunnel || editingSeedTemplate || editingTemplate) && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
               </h2>
             )}
           </div>
