@@ -89,7 +89,7 @@ const FunnelDesigner = () => {
   const [templateName, setTemplateName] = useState("");
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
   const [renamingFunnel, setRenamingFunnel] = useState(false);
-  const [interactionMode, setInteractionMode] = useState<"pointer" | "hand">("pointer");
+  const [interactionMode, setInteractionMode] = useState<"pointer" | "hand">("hand");
   const [showImages, setShowImages] = useState(false);
   const nodeIdCounter = useRef(0);
   const selectedNodeRef = useRef<string | null>(null);
