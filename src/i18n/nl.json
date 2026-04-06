@@ -247,6 +247,7 @@
     "newSection": "Nieuwe Sectie",
     "sectionTitle": "Sectietitel...",
     "sectionContentPlaceholder": "Begin hier met schrijven...",
+    "sectionDescription": "Beschrijving van de sectie...",
     "addSection": "Sectie toevoegen",
     "types": {
       "salesCopy": "Sales Copy",

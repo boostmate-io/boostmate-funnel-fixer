@@ -247,6 +247,7 @@
     "newSection": "New Section",
     "sectionTitle": "Section title...",
     "sectionContentPlaceholder": "Start writing your content here...",
+    "sectionDescription": "Section description...",
     "addSection": "Add Section",
     "types": {
       "salesCopy": "Sales Copy",
