@@ -94,7 +94,9 @@ const SharedFunnelInner = () => {
     event.preventDefault();
     event.stopPropagation();
     setSelectedNodeId(node.id);
-    if (node.type === "funnelPage") setDetailsNodeId(node.id);
+    // Block details panel for wait elements and non-funnel nodes in read-only
+    const pageType = (node.data as any)?.pageType;
+    if (node.type === "funnelPage" && pageType !== "wait") setDetailsNodeId(node.id);
   }, []);
 
   const handleDownloadPng = useCallback(() => {
