@@ -43,12 +43,20 @@ const NodeDetailsPanel = ({
   readOnly, onLinkAsset, onRename, onNoteContentChange, onDataChange, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const userId = user?.id ?? null;
+  // userId is only needed for non-readOnly mode
+  const [userId, setUserId] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAssetId, setSelectedAssetId] = useState<string>(linkedAssetId || "");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load user id only when not read-only
+  useEffect(() => {
+    if (readOnly) return;
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setUserId(data.user.id);
+    });
+  }, [readOnly]);
 
   // Sync selectedAssetId when linkedAssetId changes (e.g. after convert)
   useEffect(() => {
