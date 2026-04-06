@@ -90,14 +90,32 @@ const SharedFunnelInner = () => {
     setSelectedNodeId(null);
   }, []);
 
+  const canOpenReadOnlyDetails = useCallback((node: Node | undefined) => {
+    if (!node || node.type !== "funnelPage") return false;
+
+    const nodeData = node.data as any;
+    const renderStyle = nodeData.renderStyle ?? "page";
+
+    if (nodeData.pageType === "wait") return false;
+
+    if (renderStyle === "note" || renderStyle === "text") {
+      return Boolean(nodeData.noteContent?.trim());
+    }
+
+    return Boolean(
+      nodeData.nodeNotes?.trim() ||
+      nodeData.nodeUrl?.trim() ||
+      nodeData.nodeImage?.trim() ||
+      ((nodeData.copySections ?? []) as Array<unknown>).length > 0
+    );
+  }, []);
+
   const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
     event.stopPropagation();
     setSelectedNodeId(node.id);
-    // Block details panel for wait elements and non-funnel nodes in read-only
-    const pageType = (node.data as any)?.pageType;
-    if (node.type === "funnelPage" && pageType !== "wait") setDetailsNodeId(node.id);
-  }, []);
+    if (canOpenReadOnlyDetails(node)) setDetailsNodeId(node.id);
+  }, [canOpenReadOnlyDetails]);
 
   const handleDownloadPng = useCallback(() => {
     const viewport = flowRef.current?.querySelector(".react-flow__viewport") as HTMLElement | null;
