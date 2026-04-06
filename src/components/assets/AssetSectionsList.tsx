@@ -11,6 +11,7 @@ interface Section {
   id: string;
   asset_id: string;
   title: string;
+  description: string;
   content: string;
   sort_order: number;
 }
