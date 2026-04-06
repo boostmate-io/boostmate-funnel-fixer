@@ -11,7 +11,7 @@ type FunnelNodeData = {
   icon: string;
   color: string;
   isDecision?: boolean;
-  renderStyle?: "page" | "icon" | "note" | "text";
+  renderStyle?: "page" | "icon" | "note" | "text" | "shape";
   noteContent?: string;
   waitType?: "days" | "hours" | "minutes";
   waitDuration?: number;
@@ -21,6 +21,31 @@ type FunnelNodeData = {
   showImages?: boolean;
   readOnly?: boolean;
   copySections?: Array<{ id?: string; title: string; description?: string }>;
+  // Text styling
+  textSize?: number;
+  textBold?: boolean;
+  textItalic?: boolean;
+  textUnderline?: boolean;
+  textColor?: string;
+  // Notes theme
+  themeColor?: string;
+  // Shape props
+  shapeType?: "circle" | "square" | "triangle";
+  shapeBorderStyle?: "solid" | "dashed" | "dotted";
+  shapeTransparent?: boolean;
+  shapeWidth?: number;
+  shapeHeight?: number;
+};
+
+/* helper to determine if a color is dark */
+const isColorDark = (hex: string): boolean => {
+  const c = hex.replace("#", "");
+  if (c.length < 6) return false;
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance < 0.5;
 };
 
 /* ── helper: build wait label ── */
@@ -30,7 +55,6 @@ const getWaitLabel = (data: FunnelNodeData, t: (k: string) => string): string =>
     const unitKey = n === 1
       ? `funnelDesigner.wait${data.waitType.charAt(0).toUpperCase() + data.waitType.slice(1, -1)}`
       : `funnelDesigner.wait${data.waitType.charAt(0).toUpperCase() + data.waitType.slice(1)}`;
-    // waitDay/waitDays, waitHour/waitHours, waitMinute/waitMinutes
     return `Wait ${n} ${t(unitKey)}`;
   }
   return t(data.label);
@@ -43,7 +67,7 @@ const EmailStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeDat
   const displayName = nodeData.customLabel || t(nodeData.label);
 
   return (
-      <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
+    <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
       <IconComponent className="w-10 h-10" style={{ color: nodeData.color }} />
       <span className="text-[10px] font-semibold text-foreground text-center leading-tight w-full">
         {displayName}
@@ -51,15 +75,9 @@ const EmailStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeDat
       {nodeData.customLabel && (
         <span className="text-[8px] text-muted-foreground text-center -mt-1">{t(nodeData.label)}</span>
       )}
-
       <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
       <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="yes"
-        className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white"
-      />
+      <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" />
     </div>
   );
 };
@@ -73,7 +91,7 @@ const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData
   const isDecision = nodeData.isDecision ?? false;
 
   return (
-      <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
+    <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
       <div
         className="w-12 h-12 rounded-full flex items-center justify-center border-2 bg-card shadow-sm"
         style={{ borderColor: nodeData.color }}
@@ -86,16 +104,9 @@ const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData
       {!isWait && nodeData.customLabel && (
         <span className="text-[8px] text-muted-foreground text-center -mt-1">{t(nodeData.label)}</span>
       )}
-
       <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
       <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="yes"
-        className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white"
-        title={isDecision ? "Yes" : undefined}
-      />
+      <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" title={isDecision ? "Yes" : undefined} />
       {isDecision && (
         <Handle type="source" position={Position.Bottom} id="no" className="!w-3 !h-3 !bg-red-500 !border-2 !border-white" title="No" />
       )}
@@ -109,30 +120,107 @@ const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData
   );
 };
 
-/* ── Note-style node (sticky note) ── */
-const NoteStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => (
-  <div className="relative overflow-visible">
-    <div
-      className="min-w-[140px] max-w-[260px] rounded-md px-3 py-2 shadow-sm border border-border/50"
-      style={{ backgroundColor: `${nodeData.color}CC` }}
-    >
-      <p className="text-xs text-white whitespace-pre-wrap break-words leading-relaxed">
-        {nodeData.noteContent || "Double-click to edit..."}
-      </p>
-    </div>
-  </div>
-);
+/* ── Note-style node (sticky note with theme color) ── */
+const NoteStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => {
+  const themeColor = nodeData.themeColor || nodeData.color || "#F59E0B";
+  const textColor = isColorDark(themeColor) ? "#ffffff" : "#1a1a1a";
 
-/* ── Text-style node (plain text label) ── */
-const TextStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => (
-  <div className="relative overflow-visible">
-    <div className="min-w-[80px] max-w-[260px] px-2 py-1">
-      <p className="text-xs font-medium whitespace-pre-wrap break-words leading-relaxed" style={{ color: nodeData.color }}>
-        {nodeData.noteContent || "Double-click to edit..."}
-      </p>
+  return (
+    <div className="relative overflow-visible">
+      <div
+        className="min-w-[140px] max-w-[260px] rounded-md px-3 py-2 shadow-sm border border-border/50"
+        style={{ backgroundColor: `${themeColor}CC` }}
+      >
+        <p className="text-xs whitespace-pre-wrap break-words leading-relaxed" style={{ color: textColor }}>
+          {nodeData.noteContent || "Double-click to edit..."}
+        </p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+/* ── Text-style node (plain text label with styling) ── */
+const TextStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => {
+  const fontSize = nodeData.textSize || 12;
+  const textColor = nodeData.textColor || nodeData.color || "#6B7280";
+
+  return (
+    <div className="relative overflow-visible">
+      <div className="min-w-[80px] max-w-[260px] px-2 py-1">
+        <p
+          className="whitespace-pre-wrap break-words leading-relaxed"
+          style={{
+            color: textColor,
+            fontSize: `${fontSize}px`,
+            fontWeight: nodeData.textBold ? "bold" : "normal",
+            fontStyle: nodeData.textItalic ? "italic" : "normal",
+            textDecoration: nodeData.textUnderline ? "underline" : "none",
+          }}
+        >
+          {nodeData.noteContent || "Double-click to edit..."}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/* ── Shape-style node ── */
+const ShapeStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData; onDoubleClick?: () => void }) => {
+  const shapeType = nodeData.shapeType || "square";
+  const borderStyle = nodeData.shapeBorderStyle || "solid";
+  const isTransparent = nodeData.shapeTransparent ?? false;
+  const width = nodeData.shapeWidth || 120;
+  const height = nodeData.shapeHeight || 120;
+  const color = nodeData.color || "#9CA3AF";
+
+  if (shapeType === "circle") {
+    const diameter = Math.min(width, height);
+    return (
+      <div className="relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
+        <div
+          style={{
+            width: diameter,
+            height: diameter,
+            borderRadius: "50%",
+            border: `3px ${borderStyle} ${color}`,
+            backgroundColor: isTransparent ? "transparent" : `${color}10`,
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (shapeType === "triangle") {
+    return (
+      <div className="relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
+        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+          <polygon
+            points={`${width / 2},4 ${width - 4},${height - 4} 4,${height - 4}`}
+            fill={isTransparent ? "none" : `${color}10`}
+            stroke={color}
+            strokeWidth="3"
+            strokeDasharray={borderStyle === "dashed" ? "8,6" : borderStyle === "dotted" ? "3,3" : "none"}
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  // Default: square/rectangle
+  return (
+    <div className="relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
+      <div
+        style={{
+          width,
+          height,
+          border: `3px ${borderStyle} ${color}`,
+          borderRadius: 4,
+          backgroundColor: isTransparent ? "transparent" : `${color}10`,
+        }}
+      />
+    </div>
+  );
+};
 
 /* ── determine if element is "email-like" (no circle icon) ── */
 const EMAIL_STYLE_TYPES = ["email", "broadcast-email", "sms", "fb-messenger", "chatbot", "chatbot-optin", "phone-call", "phone-order"];
@@ -151,6 +239,7 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
 
   const copySections = nodeData.copySections ?? [];
 
+  if (renderStyle === "shape") return <div onDoubleClickCapture={handleDoubleClick}><ShapeStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} /></div>;
   if (renderStyle === "note") return <div onDoubleClickCapture={handleDoubleClick}><NoteStyleRender nodeData={nodeData} /></div>;
   if (renderStyle === "text") return <div onDoubleClickCapture={handleDoubleClick}><TextStyleRender nodeData={nodeData} /></div>;
 

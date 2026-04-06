@@ -354,7 +354,7 @@ const FunnelDesigner = () => {
             isDecision: el.isDecision, renderStyle: el.renderStyle,
           },
         }]);
-        if (el.renderStyle === "note" || el.renderStyle === "text") setDetailsNodeId(id);
+        if (el.renderStyle === "note" || el.renderStyle === "text" || el.renderStyle === "shape") setDetailsNodeId(id);
       }
       toast.success(t("funnelDesigner.nodeAdded"));
     },
@@ -384,7 +384,7 @@ const FunnelDesigner = () => {
           id, type: "funnelPage", position,
           data: { label, pageType: type, icon, color, isDecision: el?.isDecision ?? false, renderStyle: actualRenderStyle },
         }]);
-        if (actualRenderStyle === "note" || actualRenderStyle === "text") setDetailsNodeId(id);
+        if (actualRenderStyle === "note" || actualRenderStyle === "text" || actualRenderStyle === "shape") setDetailsNodeId(id);
       }
       toast.success(t("funnelDesigner.nodeAdded"));
     },
@@ -885,16 +885,23 @@ const FunnelDesigner = () => {
         {/* Canvas */}
         <div className="flex-1 min-h-0 relative" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={nodes.map((n) => n.type === "funnelPage"
-              ? {
-                  ...n,
-                  data: {
-                    ...n.data,
-                    showImages,
-                    copySections: resolveNodeCopySections(n),
-                  },
-                }
-              : n)}
+            nodes={nodes.map((n) => {
+              const d = n.data as any;
+              const isShape = d?.renderStyle === "shape";
+              const base = n.type === "funnelPage"
+                ? {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      showImages,
+                      copySections: resolveNodeCopySections(n),
+                    },
+                  }
+                : n;
+              // Shapes always behind other elements
+              if (isShape) return { ...base, zIndex: -1 };
+              return base;
+            })}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
@@ -1004,6 +1011,18 @@ const FunnelDesigner = () => {
           waitDuration={(detailsNode.data as any).waitDuration}
           copySections={resolveNodeCopySections(detailsNode)}
           funnelName={currentFunnel?.name || ""}
+          textSize={(detailsNode.data as any).textSize}
+          textBold={(detailsNode.data as any).textBold}
+          textItalic={(detailsNode.data as any).textItalic}
+          textUnderline={(detailsNode.data as any).textUnderline}
+          textColor={(detailsNode.data as any).textColor}
+          themeColor={(detailsNode.data as any).themeColor}
+          shapeType={(detailsNode.data as any).shapeType}
+          shapeBorderStyle={(detailsNode.data as any).shapeBorderStyle}
+          shapeTransparent={(detailsNode.data as any).shapeTransparent}
+          shapeWidth={(detailsNode.data as any).shapeWidth}
+          shapeHeight={(detailsNode.data as any).shapeHeight}
+          shapeColor={(detailsNode.data as any).color}
           onLinkAsset={handleLinkAsset}
           onRename={handleRenameNode}
           onNoteContentChange={handleNoteContentChange}
