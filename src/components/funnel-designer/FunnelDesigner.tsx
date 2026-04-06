@@ -239,14 +239,35 @@ const FunnelDesigner = () => {
 
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeProject) return;
-    // Clean nodes for template: remove linked assets, urls, images but keep notes and copy sections (as local)
-    const cleanedNodes = JSON.parse(JSON.stringify(nodes)).map((node: any) => {
+    // Clean nodes for template: remove linked assets, urls, images but keep notes and copy sections
+    const rawNodes = JSON.parse(JSON.stringify(nodes));
+    // Collect linked asset IDs to fetch their sections
+    const linkedAssetIds = rawNodes
+      .filter((n: any) => n.type === "funnelPage" && n.data?.linkedAssetId)
+      .map((n: any) => n.data.linkedAssetId) as string[];
+
+    let assetSectionsMap: Record<string, Array<{ id: string; title: string; description: string }>> = {};
+    if (linkedAssetIds.length > 0) {
+      const { data: sections } = await supabase
+        .from("asset_sections")
+        .select("id, asset_id, title, description")
+        .in("asset_id", linkedAssetIds)
+        .order("sort_order", { ascending: true });
+      if (sections) {
+        for (const s of sections) {
+          if (!assetSectionsMap[s.asset_id]) assetSectionsMap[s.asset_id] = [];
+          assetSectionsMap[s.asset_id].push({ id: s.id, title: s.title, description: s.description });
+        }
+      }
+    }
+
+    const cleanedNodes = rawNodes.map((node: any) => {
       if (node.type === "funnelPage" && node.data) {
         const d = node.data;
-        // If there's a linked asset, fetch its sections into local copySections
-        // (sections are already in copySections or we keep them from local)
-        // Remove asset link, url, image
-        const localSections = d.copySections || [];
+        // Use asset sections if linked, otherwise keep local sections
+        const localSections = d.linkedAssetId && assetSectionsMap[d.linkedAssetId]
+          ? assetSectionsMap[d.linkedAssetId]
+          : (d.copySections || []);
         return {
           ...node,
           data: {
