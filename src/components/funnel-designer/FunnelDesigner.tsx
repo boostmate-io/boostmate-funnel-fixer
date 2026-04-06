@@ -109,6 +109,69 @@ const FunnelDesigner = () => {
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
   const [linkedAssetSections, setLinkedAssetSections] = useState<Record<string, Array<{ id: string; title: string; description: string }>>>({});
 
+  // Admin state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showSeedTemplates, setShowSeedTemplates] = useState(false);
+  const [showSaveSeed, setShowSaveSeed] = useState(false);
+  const [seedTemplateName, setSeedTemplateName] = useState("");
+  const [seedTemplates, setSeedTemplates] = useState<Array<{ id: string; name: string; description: string; created_at: string; nodes: any[]; edges: any[] }>>([]);
+  const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
+
+  // Check admin role
+  useEffect(() => {
+    if (!userId) { setIsAdmin(false); return; }
+    supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle()
+      .then(({ data }) => setIsAdmin(!!data));
+  }, [userId]);
+
+  const loadSeedTemplates = useCallback(async () => {
+    const { data } = await supabase.from("seed_templates").select("*").order("name", { ascending: true });
+    if (data) setSeedTemplates(data);
+  }, []);
+
+  const saveAsSeedTemplate = useCallback(async () => {
+    if (!isAdmin) return;
+    const rawNodes = JSON.parse(JSON.stringify(nodes));
+    // Clean nodes for template (remove user-specific data)
+    const cleanedNodes = rawNodes.map((node: any) => {
+      if (node.type === "funnelPage" && node.data) {
+        const d = node.data;
+        return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+      }
+      return node;
+    });
+    const { error } = await supabase.from("seed_templates").insert({
+      name: seedTemplateName || "Untitled Seed Template",
+      nodes: cleanedNodes,
+      edges: JSON.parse(JSON.stringify(edges)),
+    });
+    if (error) toast.error("Error saving seed template");
+    else {
+      toast.success("Seed template saved");
+      setShowSaveSeed(false);
+      setSeedTemplateName("");
+      loadSeedTemplates();
+    }
+  }, [seedTemplateName, nodes, edges, isAdmin, loadSeedTemplates]);
+
+  const deleteSeedTemplate = useCallback(async (id: string) => {
+    const { error } = await supabase.from("seed_templates").delete().eq("id", id);
+    if (error) toast.error("Error deleting seed template");
+    else {
+      toast.success("Seed template deleted");
+      loadSeedTemplates();
+    }
+    setDeletingSeedId(null);
+  }, [loadSeedTemplates]);
+
+  const previewSeedTemplate = useCallback((tmpl: { nodes: any[]; edges: any[] }) => {
+    setNodes(tmpl.nodes || []);
+    setEdges(tmpl.edges || []);
+    setCurrentFunnel(null);
+    setShowSeedTemplates(false);
+    toast.success("Seed template loaded on canvas (preview only)");
+  }, [setNodes, setEdges]);
+
   // Undo/Redo
   const undoStack = useRef<HistoryEntry[]>([]);
   const redoStack = useRef<HistoryEntry[]>([]);
