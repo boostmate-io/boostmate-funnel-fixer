@@ -506,10 +506,24 @@ const FunnelDesigner = () => {
     setNodes(template.nodes || []);
     setEdges(template.edges || []);
     setCurrentFunnel(null);
+    setEditingTemplate(null);
+    setEditingSeedTemplate(null);
     setFunnelName(template.name + " (copy)");
     setShowTemplates(false);
     setShowNewFunnel(true);
   }, [setNodes, setEdges]);
+
+  const editTemplate = useCallback((template: Funnel) => {
+    setNodes(template.nodes || []);
+    setEdges(template.edges || []);
+    setCurrentFunnel(null);
+    setEditingSeedTemplate(null);
+    setEditingTemplate({ id: template.id, name: template.name });
+    setShowTemplates(false);
+    undoStack.current = [];
+    redoStack.current = [];
+    toast.success(t("funnelDesigner.loaded"));
+  }, [setNodes, setEdges, t]);
 
   const createNewFunnel = useCallback(async () => {
     if (!userId || !activeProject) return;
