@@ -126,7 +126,7 @@ const FunnelDesigner = () => {
 
   const loadSeedTemplates = useCallback(async () => {
     const { data } = await supabase.from("seed_templates").select("*").order("name", { ascending: true });
-    if (data) setSeedTemplates(data);
+    if (data) setSeedTemplates(data as any);
   }, []);
 
   const saveAsSeedTemplate = useCallback(async () => {
