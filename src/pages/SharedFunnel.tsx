@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import {
   ReactFlow,
@@ -47,6 +47,7 @@ const SharedFunnelInner = () => {
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
   const [showImages, setShowImages] = useState(false);
   const [rfInstance, setRfInstance] = useState<any>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const flowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,6 +67,11 @@ const SharedFunnelInner = () => {
     })();
   }, [token]);
 
+  useEffect(() => {
+    setSelectedNodeId(null);
+    setDetailsNodeId(null);
+  }, [token]);
+
   // Double-click via custom event from FunnelNode
   useEffect(() => {
     const handler = (e: Event) => {
@@ -76,7 +82,18 @@ const SharedFunnelInner = () => {
     return () => window.removeEventListener("funnel-node-dblclick", handler);
   }, []);
 
-  const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    setSelectedNodeId(node.id);
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+  }, []);
+
+  const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedNodeId(node.id);
     if (node.type === "funnelPage") setDetailsNodeId(node.id);
   }, []);
 
@@ -90,6 +107,17 @@ const SharedFunnelInner = () => {
       a.click();
     });
   }, [funnel?.name]);
+
+  const readOnlyNodes = useMemo(
+    () => (funnel?.nodes ?? []).map((n) => ({
+      ...n,
+      selected: n.id === selectedNodeId,
+      draggable: false,
+      connectable: false,
+      data: { ...n.data, showImages },
+    })),
+    [funnel?.nodes, selectedNodeId, showImages]
+  );
 
   if (loading) {
     return (
@@ -107,13 +135,6 @@ const SharedFunnelInner = () => {
       </div>
     );
   }
-
-  const readOnlyNodes = funnel.nodes.map((n) => ({
-    ...n,
-    draggable: false,
-    connectable: false,
-    data: { ...n.data, showImages },
-  }));
 
   const detailsNode = readOnlyNodes.find((n) => n.id === detailsNodeId);
 
@@ -137,13 +158,16 @@ const SharedFunnelInner = () => {
             defaultEdgeOptions={defaultEdgeOptions}
             nodesDraggable={false}
             nodesConnectable={false}
+            onNodeClick={onNodeClick}
             onNodeDoubleClick={onNodeDoubleClick}
+            onPaneClick={onPaneClick}
+            onSelectionChange={({ nodes: selectedNodes }) => setSelectedNodeId(selectedNodes[0]?.id ?? null)}
             onInit={setRfInstance}
             fitView
-            fitViewOptions={{ padding: 0.3 }}
+            fitViewOptions={{ padding: 0.45 }}
             deleteKeyCode={[]}
             proOptions={{ hideAttribution: true }}
-            elementsSelectable={false}
+            elementsSelectable
             panOnDrag
             zoomOnScroll
             zoomOnDoubleClick={false}

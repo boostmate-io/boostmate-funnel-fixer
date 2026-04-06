@@ -17,6 +17,7 @@ type FunnelNodeData = {
   waitDuration?: number;
   nodeImage?: string;
   showImages?: boolean;
+  copySections?: Array<{ id?: string; title: string; description?: string }>;
 };
 
 /* ── helper: build wait label ── */
@@ -39,7 +40,7 @@ const EmailStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeDat
   const displayName = nodeData.customLabel || t(nodeData.label);
 
   return (
-    <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClick={onDoubleClick}>
+      <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
       <IconComponent className="w-10 h-10" style={{ color: nodeData.color }} />
       <span className="text-[10px] font-semibold text-foreground text-center leading-tight w-full">
         {displayName}
@@ -69,7 +70,7 @@ const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData
   const isDecision = nodeData.isDecision ?? false;
 
   return (
-    <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClick={onDoubleClick}>
+      <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
       <div
         className="w-12 h-12 rounded-full flex items-center justify-center border-2 bg-card shadow-sm"
         style={{ borderColor: nodeData.color }}
@@ -145,8 +146,10 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
     window.dispatchEvent(new CustomEvent("funnel-node-dblclick", { detail: { nodeId: id } }));
   }, [id]);
 
-  if (renderStyle === "note") return <div onDoubleClick={handleDoubleClick}><NoteStyleRender nodeData={nodeData} /></div>;
-  if (renderStyle === "text") return <div onDoubleClick={handleDoubleClick}><TextStyleRender nodeData={nodeData} /></div>;
+  const copySections = nodeData.copySections ?? [];
+
+  if (renderStyle === "note") return <div onDoubleClickCapture={handleDoubleClick}><NoteStyleRender nodeData={nodeData} /></div>;
+  if (renderStyle === "text") return <div onDoubleClickCapture={handleDoubleClick}><TextStyleRender nodeData={nodeData} /></div>;
 
   // Email-like elements: large icon without circle
   if (renderStyle === "icon" && EMAIL_STYLE_TYPES.includes(nodeData.pageType)) {
@@ -157,30 +160,46 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
   if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} />;
 
   const WireframeComponent = getWireframeForType(nodeData.pageType);
-  const showImage = nodeData.showImages && nodeData.nodeImage;
+  const isImageMode = Boolean(nodeData.showImages);
+  const showImage = isImageMode && nodeData.nodeImage;
 
   return (
-    <div className="bg-card rounded-xl border border-border shadow-card w-[160px] group hover:shadow-card-hover transition-shadow relative overflow-visible" onDoubleClick={handleDoubleClick}>
+    <div className="bg-card rounded-xl border border-border shadow-card w-[160px] group hover:shadow-card-hover transition-shadow relative overflow-visible" onDoubleClickCapture={handleDoubleClick}>
       <div className="h-1.5 w-full rounded-t-xl" style={{ backgroundColor: nodeData.color }} />
 
-      {/* Wireframe or image thumbnail */}
-      <div className="px-2 pt-2 pb-1 min-h-[80px]">
-        {showImage ? (
-          <img src={nodeData.nodeImage} alt={displayName} className="w-full h-[80px] object-cover rounded" />
-        ) : (
-          <WireframeComponent color={nodeData.color} />
+      <div className="px-3 pt-2 pb-1 text-center">
+        <span className="text-[10px] font-semibold text-foreground block leading-tight">{displayName}</span>
+        {nodeData.customLabel && (
+          <span className="text-[9px] text-muted-foreground block mt-0.5">{t(nodeData.label)}</span>
         )}
       </div>
 
-      {/* Label */}
-      <div className="px-3 pb-2 pt-1 text-center">
-        <span className="text-[10px] font-semibold text-foreground">{displayName}</span>
+      {/* Wireframe or image thumbnail */}
+      <div className="px-2 pt-1 pb-2">
+        {showImage ? (
+          <img
+            src={nodeData.nodeImage}
+            alt={displayName}
+            loading="lazy"
+            className="w-full h-[240px] object-cover object-top rounded"
+          />
+        ) : (
+          <div className="space-y-2">
+            <WireframeComponent color={nodeData.color} />
+            {!isImageMode && copySections.length > 0 && (
+              <div className="border-t border-border px-1 pt-2">
+                <ul className="space-y-1 text-left">
+                  {copySections.map((section, index) => (
+                    <li key={section.id || `${section.title}-${index}`} className="text-[9px] leading-tight text-muted-foreground break-words">
+                      {section.title}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      {nodeData.customLabel && (
-        <div className="px-3 pb-2 -mt-1 text-center">
-          <span className="text-[9px] text-muted-foreground">{t(nodeData.label)}</span>
-        </div>
-      )}
 
       {/* Handles */}
       <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
