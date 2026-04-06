@@ -165,12 +165,13 @@ const FunnelDesigner = () => {
     setDeletingSeedId(null);
   }, [loadSeedTemplates]);
 
-  const previewSeedTemplate = useCallback((tmpl: { nodes: any[]; edges: any[] }) => {
+  const previewSeedTemplate = useCallback((tmpl: { id: string; name: string; nodes: any[]; edges: any[] }) => {
     setNodes(tmpl.nodes || []);
     setEdges(tmpl.edges || []);
     setCurrentFunnel(null);
+    setEditingSeedTemplate({ id: tmpl.id, name: tmpl.name });
     setShowSeedTemplates(false);
-    toast.success("Seed template loaded on canvas (preview only)");
+    toast.success("Seed template loaded for editing");
   }, [setNodes, setEdges]);
 
   // Undo/Redo
