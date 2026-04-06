@@ -885,16 +885,23 @@ const FunnelDesigner = () => {
         {/* Canvas */}
         <div className="flex-1 min-h-0 relative" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={nodes.map((n) => n.type === "funnelPage"
-              ? {
-                  ...n,
-                  data: {
-                    ...n.data,
-                    showImages,
-                    copySections: resolveNodeCopySections(n),
-                  },
-                }
-              : n)}
+            nodes={nodes.map((n) => {
+              const d = n.data as any;
+              const isShape = d?.renderStyle === "shape";
+              const base = n.type === "funnelPage"
+                ? {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      showImages,
+                      copySections: resolveNodeCopySections(n),
+                    },
+                  }
+                : n;
+              // Shapes always behind other elements
+              if (isShape) return { ...base, zIndex: -1 };
+              return base;
+            })
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
