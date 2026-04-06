@@ -123,7 +123,19 @@ const AssetSectionsList = ({ assetId }: AssetSectionsListProps) => {
             </Button>
           </div>
           {expandedId === section.id && (
-            <div className="px-3 pb-3">
+            <div className="px-3 pb-3 space-y-2">
+              <textarea
+                value={section.description || ""}
+                onChange={(e) => updateSection(section.id, { description: e.target.value })}
+                placeholder={t("assets.sectionDescription")}
+                className="w-full text-xs text-muted-foreground bg-transparent border border-border rounded-md px-2 py-1.5 resize-none overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                rows={1}
+                onInput={(e) => {
+                  const el = e.currentTarget;
+                  el.style.height = "auto";
+                  el.style.height = el.scrollHeight + "px";
+                }}
+              />
               <RichTextEditor
                 content={section.content}
                 onChange={(content) => updateSection(section.id, { content })}
