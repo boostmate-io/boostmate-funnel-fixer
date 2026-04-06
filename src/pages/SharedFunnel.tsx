@@ -4,17 +4,21 @@ import {
   ReactFlow,
   Background,
   BackgroundVariant,
-  Controls,
   type Node,
   type Edge,
   MarkerType,
   ReactFlowProvider,
+  Panel,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { supabase } from "@/integrations/supabase/client";
 import FunnelNode from "@/components/funnel-designer/FunnelNode";
 import TrafficSourceNode from "@/components/funnel-designer/TrafficSourceNode";
 import NodeDetailsPanel from "@/components/funnel-designer/NodeDetailsPanel";
+import { Toggle } from "@/components/ui/toggle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Image, Monitor, ZoomIn, ZoomOut, Hand, MousePointer2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo-boostmate.svg";
 
 const nodeTypes = {
@@ -40,6 +44,9 @@ const SharedFunnelInner = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
+  const [showImages, setShowImages] = useState(false);
+  const [interactionMode, setInteractionMode] = useState<"pointer" | "hand">("hand");
+  const [rfInstance, setRfInstance] = useState<any>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -58,7 +65,7 @@ const SharedFunnelInner = () => {
     })();
   }, [token]);
 
-  // Double-click to open read-only details
+  // Double-click via custom event from FunnelNode
   useEffect(() => {
     const handler = (e: Event) => {
       const nodeId = (e as CustomEvent).detail?.nodeId;
@@ -93,6 +100,7 @@ const SharedFunnelInner = () => {
     ...n,
     draggable: false,
     connectable: false,
+    data: { ...n.data, showImages },
   }));
 
   const detailsNode = readOnlyNodes.find((n) => n.id === detailsNodeId);
@@ -118,12 +126,54 @@ const SharedFunnelInner = () => {
             nodesDraggable={false}
             nodesConnectable={false}
             onNodeDoubleClick={onNodeDoubleClick}
+            onInit={setRfInstance}
             fitView
             deleteKeyCode={[]}
             proOptions={{ hideAttribution: true }}
+            elementsSelectable
+            panOnDrag={interactionMode === "hand"}
+            selectionOnDrag={interactionMode === "pointer"}
+            zoomOnScroll
           >
-            <Controls />
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+
+            <Panel position="bottom-left" className="!m-3">
+              <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 shadow-sm">
+                <Tooltip><TooltipTrigger asChild>
+                  <Toggle size="sm" pressed={interactionMode === "hand"} onPressedChange={() => setInteractionMode("hand")} className="h-8 w-8 p-0">
+                    <Hand className="w-4 h-4" />
+                  </Toggle>
+                </TooltipTrigger><TooltipContent>Pan</TooltipContent></Tooltip>
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Toggle size="sm" pressed={interactionMode === "pointer"} onPressedChange={() => setInteractionMode("pointer")} className="h-8 w-8 p-0">
+                    <MousePointer2 className="w-4 h-4" />
+                  </Toggle>
+                </TooltipTrigger><TooltipContent>Select</TooltipContent></Tooltip>
+
+                <div className="w-px h-5 bg-border mx-0.5" />
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Toggle size="sm" pressed={showImages} onPressedChange={setShowImages} className="h-8 w-8 p-0">
+                    {showImages ? <Image className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
+                  </Toggle>
+                </TooltipTrigger><TooltipContent>{showImages ? "Show wireframes" : "Show images"}</TooltipContent></Tooltip>
+
+                <div className="w-px h-5 bg-border mx-0.5" />
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => rfInstance?.zoomIn()}>
+                    <ZoomIn className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Zoom In</TooltipContent></Tooltip>
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => rfInstance?.zoomOut()}>
+                    <ZoomOut className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Zoom Out</TooltipContent></Tooltip>
+              </div>
+            </Panel>
           </ReactFlow>
         </div>
 
