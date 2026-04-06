@@ -93,6 +93,7 @@ const FunnelDesigner = () => {
   const [currentFunnel, setCurrentFunnel] = useState<Funnel | null>(null);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [templates, setTemplates] = useState<Funnel[]>([]);
+  const [editingTemplate, setEditingTemplate] = useState<{ id: string; name: string } | null>(null);
   const [showFunnelList, setShowFunnelList] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
@@ -419,6 +420,28 @@ const FunnelDesigner = () => {
       return;
     }
 
+    // If editing a user template, save to funnels table as template
+    if (editingTemplate) {
+      const rawNodes = JSON.parse(JSON.stringify(persistedNodes));
+      const cleanedNodes = rawNodes.map((node: any) => {
+        if (node.type === "funnelPage" && node.data) {
+          const d = node.data;
+          return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+        }
+        return node;
+      });
+      const { error } = await supabase
+        .from("funnels")
+        .update({ nodes: cleanedNodes, edges: JSON.parse(JSON.stringify(edges)), name: editingTemplate.name })
+        .eq("id", editingTemplate.id);
+      if (error) toast.error(t("funnelDesigner.saveError"));
+      else {
+        toast.success(t("funnelDesigner.saved"));
+        loadTemplates();
+      }
+      return;
+    }
+
     if (!activeProject) return;
 
     const payload = {
@@ -445,7 +468,7 @@ const FunnelDesigner = () => {
       }
     }
     loadFunnels();
-  }, [currentFunnel, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections, editingSeedTemplate, loadSeedTemplates]);
+  }, [currentFunnel, nodes, edges, t, loadFunnels, loadTemplates, userId, activeProject, resolveNodeCopySections, editingSeedTemplate, editingTemplate, loadSeedTemplates]);
 
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeProject) return;
@@ -495,6 +518,7 @@ const FunnelDesigner = () => {
     setEdges(funnel.edges || []);
     setCurrentFunnel(funnel);
     setEditingSeedTemplate(null);
+    setEditingTemplate(null);
     setShowFunnelList(false);
     undoStack.current = [];
     redoStack.current = [];
@@ -505,10 +529,24 @@ const FunnelDesigner = () => {
     setNodes(template.nodes || []);
     setEdges(template.edges || []);
     setCurrentFunnel(null);
+    setEditingTemplate(null);
+    setEditingSeedTemplate(null);
     setFunnelName(template.name + " (copy)");
     setShowTemplates(false);
     setShowNewFunnel(true);
   }, [setNodes, setEdges]);
+
+  const editTemplate = useCallback((template: Funnel) => {
+    setNodes(template.nodes || []);
+    setEdges(template.edges || []);
+    setCurrentFunnel(null);
+    setEditingSeedTemplate(null);
+    setEditingTemplate({ id: template.id, name: template.name });
+    setShowTemplates(false);
+    undoStack.current = [];
+    redoStack.current = [];
+    toast.success(t("funnelDesigner.loaded"));
+  }, [setNodes, setEdges, t]);
 
   const createNewFunnel = useCallback(async () => {
     if (!userId || !activeProject) return;
@@ -548,6 +586,7 @@ const FunnelDesigner = () => {
     setEdges([]);
     setCurrentFunnel(null);
     setEditingSeedTemplate(null);
+    setEditingTemplate(null);
     selectedNodeRef.current = null;
     setDetailsNodeId(null);
     undoStack.current = [];
@@ -727,6 +766,20 @@ const FunnelDesigner = () => {
       <ElementsPanel onAddNode={addNode} />
 
       <div className="flex-1 flex flex-col min-h-0">
+        {/* Template editing banner */}
+        {(editingTemplate || editingSeedTemplate) && (
+          <div className={`flex items-center justify-between px-4 py-2 text-sm font-medium shrink-0 ${editingSeedTemplate ? 'bg-amber-100 text-amber-900 border-b border-amber-300' : 'bg-blue-100 text-blue-900 border-b border-blue-300'}`}>
+            <span>
+              {editingSeedTemplate
+                ? `⚙️ Editing Seed Template: ${editingSeedTemplate.name}`
+                : `📝 Editing Template: ${editingTemplate!.name}`}
+            </span>
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={resetCanvas}>
+              Exit template editing
+            </Button>
+          </div>
+        )}
+
         {/* Top Toolbar */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-2">
@@ -747,12 +800,15 @@ const FunnelDesigner = () => {
                   else if (editingSeedTemplate) {
                     const newName = prompt("Rename seed template:", editingSeedTemplate.name);
                     if (newName) setEditingSeedTemplate({ ...editingSeedTemplate, name: newName });
+                  } else if (editingTemplate) {
+                    const newName = prompt("Rename template:", editingTemplate.name);
+                    if (newName) setEditingTemplate({ ...editingTemplate, name: newName });
                   }
                 }}
-                title={currentFunnel ? t("funnelDesigner.renameFunnel") : editingSeedTemplate ? "Rename seed template" : undefined}
+                title={currentFunnel ? t("funnelDesigner.renameFunnel") : editingSeedTemplate ? "Rename seed template" : editingTemplate ? "Rename template" : undefined}
               >
-                {currentFunnel?.name || editingSeedTemplate?.name || t("funnelDesigner.title")}
-                {(currentFunnel || editingSeedTemplate) && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+                {currentFunnel?.name || editingSeedTemplate?.name || editingTemplate?.name || t("funnelDesigner.title")}
+                {(currentFunnel || editingSeedTemplate || editingTemplate) && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
               </h2>
             )}
           </div>
@@ -984,12 +1040,24 @@ const FunnelDesigner = () => {
             {templates.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">{t("funnelDesigner.noTemplates")}</p>}
             {templates.map((tmpl) => (
               <div key={tmpl.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
-                <button onClick={() => createFromTemplate(tmpl)} className="text-left flex-1">
+                <div className="text-left flex-1">
                   <p className="text-sm font-medium text-foreground">{tmpl.name}</p>
-                </button>
-                <Button variant="ghost" size="icon" onClick={() => deleteFunnel(tmpl.id)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Tooltip><TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => createFromTemplate(tmpl)}>
+                      <Plus className="w-3 h-3 mr-1" /> Use
+                    </Button>
+                  </TooltipTrigger><TooltipContent>Use as template for new funnel</TooltipContent></Tooltip>
+                  <Tooltip><TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => editTemplate(tmpl)}>
+                      <Pencil className="w-3 h-3 mr-1" /> Edit
+                    </Button>
+                  </TooltipTrigger><TooltipContent>Edit this template</TooltipContent></Tooltip>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteFunnel(tmpl.id)}>
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
