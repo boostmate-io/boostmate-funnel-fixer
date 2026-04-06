@@ -604,7 +604,7 @@ const FunnelDesigner = () => {
         {/* Canvas */}
         <div className="flex-1 min-h-0 relative" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={nodes}
+            nodes={nodes.map(n => n.type === "funnelPage" ? { ...n, data: { ...n.data, showImages } } : n)}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
@@ -621,12 +621,11 @@ const FunnelDesigner = () => {
             deleteKeyCode={["Backspace", "Delete"]}
             edgesReconnectable
             edgesFocusable
-            elementsSelectable={interactionMode === "pointer"}
+            elementsSelectable
             panOnDrag={interactionMode === "hand"}
             selectionOnDrag={interactionMode === "pointer"}
-            panOnScroll={interactionMode === "hand"}
+            zoomOnScroll
           >
-            <Controls showInteractive={false} />
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
 
             {/* Bottom-left canvas toolbar */}
