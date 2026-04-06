@@ -746,6 +746,23 @@ const FunnelDesigner = () => {
               </Button>
             </TooltipTrigger><TooltipContent>{t("funnelDesigner.saveTemplate")}</TooltipContent></Tooltip>
 
+            {isAdmin && (
+              <>
+                <div className="w-px h-6 bg-border mx-1" />
+                <Tooltip><TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => setShowSaveSeed(true)} className="text-amber-600 border-amber-300 hover:bg-amber-50">
+                    <Sprout className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Save as Seed Template</TooltipContent></Tooltip>
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => { loadSeedTemplates(); setShowSeedTemplates(true); }} className="text-amber-600 border-amber-300 hover:bg-amber-50">
+                    <ShieldCheck className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Manage Seed Templates</TooltipContent></Tooltip>
+              </>
+            )}
+
             <div className="w-px h-6 bg-border mx-1" />
 
             <Tooltip><TooltipTrigger asChild>
