@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useTranslation } from "react-i18next";
 import * as Icons from "lucide-react";
@@ -164,8 +164,102 @@ const TextStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => {
   );
 };
 
+/* ── Shape resize handle helper ── */
+const HANDLE_SIZE = 8;
+type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+
+const cursorMap: Record<ResizeDir, string> = {
+  n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize",
+  ne: "nesw-resize", sw: "nesw-resize", nw: "nwse-resize", se: "nwse-resize",
+};
+
+const useShapeResize = (
+  width: number,
+  height: number,
+  onResize: (w: number, h: number) => void,
+) => {
+  const startRef = useRef<{ x: number; y: number; w: number; h: number; dir: ResizeDir } | null>(null);
+
+  const onMouseDown = useCallback((dir: ResizeDir, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    startRef.current = { x: e.clientX, y: e.clientY, w: width, h: height, dir };
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!startRef.current) return;
+      const { x, y, w, h, dir: d } = startRef.current;
+      let dx = ev.clientX - x;
+      let dy = ev.clientY - y;
+      let nw = w, nh = h;
+      if (d.includes("e")) nw = Math.max(40, w + dx);
+      if (d.includes("w")) nw = Math.max(40, w - dx);
+      if (d.includes("s")) nh = Math.max(40, h + dy);
+      if (d.includes("n")) nh = Math.max(40, h - dy);
+      onResize(Math.round(nw), Math.round(nh));
+    };
+
+    const onMouseUp = () => {
+      startRef.current = null;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  }, [width, height, onResize]);
+
+  return onMouseDown;
+};
+
+const ResizeHandles = ({ width, height, onMouseDown }: {
+  width: number; height: number;
+  onMouseDown: (dir: ResizeDir, e: React.MouseEvent) => void;
+}) => {
+  const hs = HANDLE_SIZE;
+  const handles: { dir: ResizeDir; style: React.CSSProperties }[] = [
+    { dir: "n", style: { top: -hs / 2, left: hs, right: hs, height: hs, cursor: cursorMap.n } },
+    { dir: "s", style: { bottom: -hs / 2, left: hs, right: hs, height: hs, cursor: cursorMap.s } },
+    { dir: "e", style: { right: -hs / 2, top: hs, bottom: hs, width: hs, cursor: cursorMap.e } },
+    { dir: "w", style: { left: -hs / 2, top: hs, bottom: hs, width: hs, cursor: cursorMap.w } },
+    { dir: "nw", style: { top: -hs / 2, left: -hs / 2, width: hs * 2, height: hs * 2, cursor: cursorMap.nw } },
+    { dir: "ne", style: { top: -hs / 2, right: -hs / 2, width: hs * 2, height: hs * 2, cursor: cursorMap.ne } },
+    { dir: "sw", style: { bottom: -hs / 2, left: -hs / 2, width: hs * 2, height: hs * 2, cursor: cursorMap.sw } },
+    { dir: "se", style: { bottom: -hs / 2, right: -hs / 2, width: hs * 2, height: hs * 2, cursor: cursorMap.se } },
+  ];
+
+  return (
+    <>
+      {handles.map(({ dir, style }) => (
+        <div
+          key={dir}
+          className="absolute z-10"
+          style={{ ...style, position: "absolute" }}
+          onMouseDown={(e) => onMouseDown(dir, e)}
+        />
+      ))}
+      {/* Corner dots */}
+      {(["nw", "ne", "sw", "se"] as ResizeDir[]).map((dir) => {
+        const isTop = dir.includes("n");
+        const isLeft = dir.includes("w");
+        return (
+          <div
+            key={`dot-${dir}`}
+            className="absolute w-2 h-2 rounded-full bg-primary border border-primary-foreground pointer-events-none z-20"
+            style={{
+              top: isTop ? -4 : undefined,
+              bottom: isTop ? undefined : -4,
+              left: isLeft ? -4 : undefined,
+              right: isLeft ? undefined : -4,
+            }}
+          />
+        );
+      })}
+    </>
+  );
+};
+
 /* ── Shape-style node ── */
-const ShapeStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData; onDoubleClick?: () => void }) => {
+const ShapeStyleRender = ({ nodeData, onDoubleClick, nodeId }: { nodeData: FunnelNodeData; onDoubleClick?: () => void; nodeId: string }) => {
   const shapeType = nodeData.shapeType || "square";
   const borderStyle = nodeData.shapeBorderStyle || "solid";
   const isTransparent = nodeData.shapeTransparent ?? false;
@@ -173,10 +267,16 @@ const ShapeStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeDat
   const height = nodeData.shapeHeight || 120;
   const color = nodeData.color || "#9CA3AF";
 
+  const handleResize = useCallback((w: number, h: number) => {
+    window.dispatchEvent(new CustomEvent("funnel-node-resize", { detail: { nodeId, width: w, height: h } }));
+  }, [nodeId]);
+
+  const onHandleMouseDown = useShapeResize(width, height, handleResize);
+
   if (shapeType === "circle") {
     const diameter = Math.min(width, height);
     return (
-      <div className="relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
+      <div className="relative" style={{ width: diameter, height: diameter }} onDoubleClickCapture={onDoubleClick}>
         <div
           style={{
             width: diameter,
@@ -186,13 +286,14 @@ const ShapeStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeDat
             backgroundColor: isTransparent ? "transparent" : `${color}10`,
           }}
         />
+        <ResizeHandles width={diameter} height={diameter} onMouseDown={onHandleMouseDown} />
       </div>
     );
   }
 
   if (shapeType === "triangle") {
     return (
-      <div className="relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
+      <div className="relative" style={{ width, height }} onDoubleClickCapture={onDoubleClick}>
         <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
           <polygon
             points={`${width / 2},4 ${width - 4},${height - 4} 4,${height - 4}`}
@@ -202,13 +303,14 @@ const ShapeStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeDat
             strokeDasharray={borderStyle === "dashed" ? "8,6" : borderStyle === "dotted" ? "3,3" : "none"}
           />
         </svg>
+        <ResizeHandles width={width} height={height} onMouseDown={onHandleMouseDown} />
       </div>
     );
   }
 
   // Default: square/rectangle
   return (
-    <div className="relative overflow-visible" onDoubleClickCapture={onDoubleClick}>
+    <div className="relative" style={{ width, height }} onDoubleClickCapture={onDoubleClick}>
       <div
         style={{
           width,
@@ -218,6 +320,7 @@ const ShapeStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeDat
           backgroundColor: isTransparent ? "transparent" : `${color}10`,
         }}
       />
+      <ResizeHandles width={width} height={height} onMouseDown={onHandleMouseDown} />
     </div>
   );
 };
@@ -239,7 +342,7 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
 
   const copySections = nodeData.copySections ?? [];
 
-  if (renderStyle === "shape") return <div onDoubleClickCapture={handleDoubleClick}><ShapeStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} /></div>;
+  if (renderStyle === "shape") return <div onDoubleClickCapture={handleDoubleClick}><ShapeStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} nodeId={id} /></div>;
   if (renderStyle === "note") return <div onDoubleClickCapture={handleDoubleClick}><NoteStyleRender nodeData={nodeData} /></div>;
   if (renderStyle === "text") return <div onDoubleClickCapture={handleDoubleClick}><TextStyleRender nodeData={nodeData} /></div>;
 
