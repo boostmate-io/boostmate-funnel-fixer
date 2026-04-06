@@ -606,9 +606,22 @@ const FunnelDesigner = () => {
       const nodeId = (e as CustomEvent).detail?.nodeId;
       if (nodeId) setDetailsNodeId(nodeId);
     };
+    const resizeHandler = (e: Event) => {
+      const { nodeId, width, height } = (e as CustomEvent).detail;
+      if (nodeId) {
+        setNodes((nds) => nds.map((n) => n.id === nodeId
+          ? { ...n, data: { ...n.data, shapeWidth: width, shapeHeight: height } }
+          : n
+        ));
+      }
+    };
     window.addEventListener("funnel-node-dblclick", handler);
-    return () => window.removeEventListener("funnel-node-dblclick", handler);
-  }, []);
+    window.addEventListener("funnel-node-resize", resizeHandler);
+    return () => {
+      window.removeEventListener("funnel-node-dblclick", handler);
+      window.removeEventListener("funnel-node-resize", resizeHandler);
+    };
+  }, [setNodes]);
 
   const handleLinkAsset = useCallback((assetId: string | null) => {
     if (!detailsNodeId) return;
