@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import {
   ReactFlow,
@@ -11,13 +11,14 @@ import {
   Panel,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { toPng } from "html-to-image";
 import { supabase } from "@/integrations/supabase/client";
 import FunnelNode from "@/components/funnel-designer/FunnelNode";
 import TrafficSourceNode from "@/components/funnel-designer/TrafficSourceNode";
 import NodeDetailsPanel from "@/components/funnel-designer/NodeDetailsPanel";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Image, Monitor, ZoomIn, ZoomOut, Hand, MousePointer2 } from "lucide-react";
+import { Image, Monitor, ZoomIn, ZoomOut, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo-boostmate.svg";
 
@@ -45,8 +46,8 @@ const SharedFunnelInner = () => {
   const [error, setError] = useState(false);
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
   const [showImages, setShowImages] = useState(false);
-  const [interactionMode, setInteractionMode] = useState<"pointer" | "hand">("hand");
   const [rfInstance, setRfInstance] = useState<any>(null);
+  const flowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -78,6 +79,17 @@ const SharedFunnelInner = () => {
   const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (node.type === "funnelPage") setDetailsNodeId(node.id);
   }, []);
+
+  const handleDownloadPng = useCallback(() => {
+    const viewport = flowRef.current?.querySelector(".react-flow__viewport") as HTMLElement | null;
+    if (!viewport) return;
+    toPng(viewport, { backgroundColor: "#09090b", cacheBust: true }).then((dataUrl) => {
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `${funnel?.name || "funnel"}.png`;
+      a.click();
+    });
+  }, [funnel?.name]);
 
   if (loading) {
     return (
@@ -117,7 +129,7 @@ const SharedFunnelInner = () => {
       </div>
 
       <div className="flex flex-1 min-h-0">
-        <div className="flex-1">
+        <div className="flex-1" ref={flowRef}>
           <ReactFlow
             nodes={readOnlyNodes}
             edges={funnel.edges}
@@ -128,31 +140,18 @@ const SharedFunnelInner = () => {
             onNodeDoubleClick={onNodeDoubleClick}
             onInit={setRfInstance}
             fitView
+            fitViewOptions={{ padding: 0.3 }}
             deleteKeyCode={[]}
             proOptions={{ hideAttribution: true }}
-            elementsSelectable
-            panOnDrag={interactionMode === "hand"}
-            selectionOnDrag={interactionMode === "pointer"}
+            elementsSelectable={false}
+            panOnDrag
             zoomOnScroll
+            zoomOnDoubleClick={false}
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
 
             <Panel position="bottom-left" className="!m-3">
               <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 shadow-sm">
-                <Tooltip><TooltipTrigger asChild>
-                  <Toggle size="sm" pressed={interactionMode === "hand"} onPressedChange={() => setInteractionMode("hand")} className="h-8 w-8 p-0">
-                    <Hand className="w-4 h-4" />
-                  </Toggle>
-                </TooltipTrigger><TooltipContent>Pan</TooltipContent></Tooltip>
-
-                <Tooltip><TooltipTrigger asChild>
-                  <Toggle size="sm" pressed={interactionMode === "pointer"} onPressedChange={() => setInteractionMode("pointer")} className="h-8 w-8 p-0">
-                    <MousePointer2 className="w-4 h-4" />
-                  </Toggle>
-                </TooltipTrigger><TooltipContent>Select</TooltipContent></Tooltip>
-
-                <div className="w-px h-5 bg-border mx-0.5" />
-
                 <Tooltip><TooltipTrigger asChild>
                   <Toggle size="sm" pressed={showImages} onPressedChange={setShowImages} className="h-8 w-8 p-0">
                     {showImages ? <Image className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
@@ -172,6 +171,14 @@ const SharedFunnelInner = () => {
                     <ZoomOut className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger><TooltipContent>Zoom Out</TooltipContent></Tooltip>
+
+                <div className="w-px h-5 bg-border mx-0.5" />
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleDownloadPng}>
+                    <Camera className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Download PNG</TooltipContent></Tooltip>
               </div>
             </Panel>
           </ReactFlow>
