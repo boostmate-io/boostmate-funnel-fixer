@@ -108,6 +108,17 @@ const SharedFunnelInner = () => {
     });
   }, [funnel?.name]);
 
+  const readOnlyNodes = useMemo(
+    () => (funnel?.nodes ?? []).map((n) => ({
+      ...n,
+      selected: n.id === selectedNodeId,
+      draggable: false,
+      connectable: false,
+      data: { ...n.data, showImages },
+    })),
+    [funnel?.nodes, selectedNodeId, showImages]
+  );
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -124,17 +135,6 @@ const SharedFunnelInner = () => {
       </div>
     );
   }
-
-  const readOnlyNodes = useMemo(
-    () => funnel.nodes.map((n) => ({
-      ...n,
-      selected: n.id === selectedNodeId,
-      draggable: false,
-      connectable: false,
-      data: { ...n.data, showImages },
-    })),
-    [funnel.nodes, selectedNodeId, showImages]
-  );
 
   const detailsNode = readOnlyNodes.find((n) => n.id === detailsNodeId);
 
@@ -161,6 +161,7 @@ const SharedFunnelInner = () => {
             onNodeClick={onNodeClick}
             onNodeDoubleClick={onNodeDoubleClick}
             onPaneClick={onPaneClick}
+            onSelectionChange={({ nodes: selectedNodes }) => setSelectedNodeId(selectedNodes[0]?.id ?? null)}
             onInit={setRfInstance}
             fitView
             fitViewOptions={{ padding: 0.45 }}

@@ -160,7 +160,8 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
   if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} />;
 
   const WireframeComponent = getWireframeForType(nodeData.pageType);
-  const showImage = nodeData.showImages && nodeData.nodeImage;
+  const isImageMode = Boolean(nodeData.showImages);
+  const showImage = isImageMode && nodeData.nodeImage;
 
   return (
     <div className="bg-card rounded-xl border border-border shadow-card w-[160px] group hover:shadow-card-hover transition-shadow relative overflow-visible" onDoubleClickCapture={handleDoubleClick}>
@@ -185,7 +186,7 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
         ) : (
           <div className="space-y-2">
             <WireframeComponent color={nodeData.color} />
-            {copySections.length > 0 && (
+            {!isImageMode && copySections.length > 0 && (
               <div className="border-t border-border px-1 pt-2">
                 <ul className="space-y-1 text-left">
                   {copySections.map((section, index) => (
