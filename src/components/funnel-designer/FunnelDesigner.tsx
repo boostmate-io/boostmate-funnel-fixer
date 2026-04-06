@@ -391,10 +391,35 @@ const FunnelDesigner = () => {
   );
 
   const saveFunnel = useCallback(async () => {
-    if (!userId || !activeProject) return;
+    if (!userId) return;
+
     const persistedNodes = nodes.map((node) => node.type === "funnelPage"
       ? { ...node, data: { ...node.data, copySections: resolveNodeCopySections(node) } }
       : node);
+
+    // If editing a seed template, save to seed_templates table
+    if (editingSeedTemplate) {
+      const rawNodes = JSON.parse(JSON.stringify(persistedNodes));
+      const cleanedNodes = rawNodes.map((node: any) => {
+        if (node.type === "funnelPage" && node.data) {
+          const d = node.data;
+          return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+        }
+        return node;
+      });
+      const { error } = await supabase
+        .from("seed_templates")
+        .update({ nodes: cleanedNodes, edges: JSON.parse(JSON.stringify(edges)), name: editingSeedTemplate.name })
+        .eq("id", editingSeedTemplate.id);
+      if (error) toast.error("Error saving seed template");
+      else {
+        toast.success("Seed template saved");
+        loadSeedTemplates();
+      }
+      return;
+    }
+
+    if (!activeProject) return;
 
     const payload = {
       user_id: userId,
@@ -420,7 +445,7 @@ const FunnelDesigner = () => {
       }
     }
     loadFunnels();
-  }, [currentFunnel, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections]);
+  }, [currentFunnel, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections, editingSeedTemplate, loadSeedTemplates]);
 
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeProject) return;
