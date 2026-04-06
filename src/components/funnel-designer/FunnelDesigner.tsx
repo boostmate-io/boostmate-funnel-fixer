@@ -585,6 +585,7 @@ const FunnelDesigner = () => {
     setEdges([]);
     setCurrentFunnel(null);
     setEditingSeedTemplate(null);
+    setEditingTemplate(null);
     selectedNodeRef.current = null;
     setDetailsNodeId(null);
     undoStack.current = [];
