@@ -420,6 +420,28 @@ const FunnelDesigner = () => {
       return;
     }
 
+    // If editing a user template, save to funnels table as template
+    if (editingTemplate) {
+      const rawNodes = JSON.parse(JSON.stringify(persistedNodes));
+      const cleanedNodes = rawNodes.map((node: any) => {
+        if (node.type === "funnelPage" && node.data) {
+          const d = node.data;
+          return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+        }
+        return node;
+      });
+      const { error } = await supabase
+        .from("funnels")
+        .update({ nodes: cleanedNodes, edges: JSON.parse(JSON.stringify(edges)), name: editingTemplate.name })
+        .eq("id", editingTemplate.id);
+      if (error) toast.error(t("funnelDesigner.saveError"));
+      else {
+        toast.success(t("funnelDesigner.saved"));
+        loadTemplates();
+      }
+      return;
+    }
+
     if (!activeProject) return;
 
     const payload = {
