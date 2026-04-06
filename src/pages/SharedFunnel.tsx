@@ -72,16 +72,6 @@ const SharedFunnelInner = () => {
     setDetailsNodeId(null);
   }, [token]);
 
-  // Double-click via custom event from FunnelNode
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const nodeId = (e as CustomEvent).detail?.nodeId;
-      if (nodeId) setDetailsNodeId(nodeId);
-    };
-    window.addEventListener("funnel-node-dblclick", handler);
-    return () => window.removeEventListener("funnel-node-dblclick", handler);
-  }, []);
-
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.id);
   }, []);
@@ -90,14 +80,48 @@ const SharedFunnelInner = () => {
     setSelectedNodeId(null);
   }, []);
 
+  const canOpenReadOnlyDetails = useCallback((node: Node | undefined) => {
+    if (!node || node.type !== "funnelPage") return false;
+
+    const nodeData = node.data as any;
+    const renderStyle = nodeData.renderStyle ?? "page";
+
+    if (nodeData.pageType === "wait") return false;
+
+    if (renderStyle === "note" || renderStyle === "text") {
+      return Boolean(nodeData.noteContent?.trim());
+    }
+
+    return Boolean(
+      nodeData.nodeNotes?.trim() ||
+      nodeData.nodeUrl?.trim() ||
+      nodeData.nodeImage?.trim() ||
+      ((nodeData.copySections ?? []) as Array<unknown>).length > 0
+    );
+  }, []);
+
+  // Double-click via custom event from FunnelNode
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const nodeId = (e as CustomEvent).detail?.nodeId;
+      if (!nodeId) return;
+
+      const node = (funnel?.nodes ?? []).find((item) => item.id === nodeId);
+      if (!canOpenReadOnlyDetails(node)) return;
+
+      setSelectedNodeId(nodeId);
+      setDetailsNodeId(nodeId);
+    };
+    window.addEventListener("funnel-node-dblclick", handler);
+    return () => window.removeEventListener("funnel-node-dblclick", handler);
+  }, [funnel?.nodes, canOpenReadOnlyDetails]);
+
   const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
     event.stopPropagation();
     setSelectedNodeId(node.id);
-    // Block details panel for wait elements and non-funnel nodes in read-only
-    const pageType = (node.data as any)?.pageType;
-    if (node.type === "funnelPage" && pageType !== "wait") setDetailsNodeId(node.id);
-  }, []);
+    if (canOpenReadOnlyDetails(node)) setDetailsNodeId(node.id);
+  }, [canOpenReadOnlyDetails]);
 
   const handleDownloadPng = useCallback(() => {
     const viewport = flowRef.current?.querySelector(".react-flow__viewport") as HTMLElement | null;

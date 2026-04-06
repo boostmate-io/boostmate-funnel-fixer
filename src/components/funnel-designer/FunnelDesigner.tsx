@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, DragEvent } from "react";
+import { useState, useCallback, useRef, useEffect, DragEvent, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ReactFlow,
@@ -95,6 +95,7 @@ const FunnelDesigner = () => {
   const selectedNodeRef = useRef<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
+  const [linkedAssetSections, setLinkedAssetSections] = useState<Record<string, Array<{ id: string; title: string; description: string }>>>({});
 
   // Undo/Redo
   const undoStack = useRef<HistoryEntry[]>([]);
@@ -188,6 +189,65 @@ const FunnelDesigner = () => {
     resetCanvas();
   }, [loadFunnels, loadTemplates, activeProject]);
 
+  const linkedAssetIds = useMemo(
+    () => Array.from(new Set(
+      nodes.flatMap((node) =>
+        node.type === "funnelPage" && (node.data as any)?.linkedAssetId
+          ? [String((node.data as any).linkedAssetId)]
+          : []
+      )
+    )).sort(),
+    [nodes]
+  );
+
+  useEffect(() => {
+    if (linkedAssetIds.length === 0) {
+      setLinkedAssetSections({});
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const { data } = await supabase
+        .from("asset_sections")
+        .select("id, asset_id, title, description")
+        .in("asset_id", linkedAssetIds)
+        .order("sort_order", { ascending: true });
+
+      if (cancelled) return;
+
+      const nextSections: Record<string, Array<{ id: string; title: string; description: string }>> = Object.fromEntries(
+        linkedAssetIds.map((assetId) => [assetId, []])
+      );
+
+      for (const section of data ?? []) {
+        nextSections[section.asset_id]?.push({
+          id: section.id,
+          title: section.title,
+          description: section.description,
+        });
+      }
+
+      setLinkedAssetSections(nextSections);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [linkedAssetIds]);
+
+  const resolveNodeCopySections = useCallback((node: Node) => {
+    if (node.type !== "funnelPage") return [] as Array<{ id: string; title: string; description: string }>;
+
+    const nodeData = node.data as any;
+    if (nodeData.linkedAssetId) {
+      return linkedAssetSections[String(nodeData.linkedAssetId)] ?? [];
+    }
+
+    return nodeData.copySections ?? [];
+  }, [linkedAssetSections]);
+
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
@@ -255,10 +315,14 @@ const FunnelDesigner = () => {
 
   const saveFunnel = useCallback(async () => {
     if (!userId || !activeProject) return;
+    const persistedNodes = nodes.map((node) => node.type === "funnelPage"
+      ? { ...node, data: { ...node.data, copySections: resolveNodeCopySections(node) } }
+      : node);
+
     const payload = {
       user_id: userId,
       name: currentFunnel?.name || "Untitled Funnel",
-      nodes: JSON.parse(JSON.stringify(nodes)),
+      nodes: JSON.parse(JSON.stringify(persistedNodes)),
       edges: JSON.parse(JSON.stringify(edges)),
       is_template: false,
       project_id: activeProject.id,
@@ -279,7 +343,7 @@ const FunnelDesigner = () => {
       }
     }
     loadFunnels();
-  }, [currentFunnel, nodes, edges, t, loadFunnels, userId, activeProject]);
+  }, [currentFunnel, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections]);
 
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeProject) return;
@@ -345,9 +409,13 @@ const FunnelDesigner = () => {
 
   const createNewFunnel = useCallback(async () => {
     if (!userId || !activeProject) return;
+    const persistedNodes = nodes.map((node) => node.type === "funnelPage"
+      ? { ...node, data: { ...node.data, copySections: resolveNodeCopySections(node) } }
+      : node);
+
     const { data, error } = await supabase.from("funnels").insert({
       user_id: userId, name: funnelName || "Untitled Funnel",
-      nodes: JSON.parse(JSON.stringify(nodes)),
+      nodes: JSON.parse(JSON.stringify(persistedNodes)),
       edges: JSON.parse(JSON.stringify(edges)),
       is_template: false, project_id: activeProject.id,
     }).select().single();
@@ -359,7 +427,7 @@ const FunnelDesigner = () => {
       toast.success(t("funnelDesigner.created"));
       loadFunnels();
     }
-  }, [funnelName, nodes, edges, t, loadFunnels, userId, activeProject]);
+  }, [funnelName, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections]);
 
   const deleteFunnel = useCallback(async (id: string) => {
     const { error } = await supabase.from("funnels").delete().eq("id", id);
@@ -604,7 +672,16 @@ const FunnelDesigner = () => {
         {/* Canvas */}
         <div className="flex-1 min-h-0 relative" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={nodes.map(n => n.type === "funnelPage" ? { ...n, data: { ...n.data, showImages } } : n)}
+            nodes={nodes.map((n) => n.type === "funnelPage"
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    showImages,
+                    copySections: resolveNodeCopySections(n),
+                  },
+                }
+              : n)}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
@@ -712,7 +789,7 @@ const FunnelDesigner = () => {
           nodeImage={(detailsNode.data as any).nodeImage || ""}
           waitType={(detailsNode.data as any).waitType || "days"}
           waitDuration={(detailsNode.data as any).waitDuration}
-          copySections={(detailsNode.data as any).copySections || []}
+          copySections={resolveNodeCopySections(detailsNode)}
           funnelName={currentFunnel?.name || ""}
           onLinkAsset={handleLinkAsset}
           onRename={handleRenameNode}
