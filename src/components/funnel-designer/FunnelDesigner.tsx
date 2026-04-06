@@ -239,10 +239,52 @@ const FunnelDesigner = () => {
 
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeProject) return;
+    // Clean nodes for template: remove linked assets, urls, images but keep notes and copy sections
+    const rawNodes = JSON.parse(JSON.stringify(nodes));
+    // Collect linked asset IDs to fetch their sections
+    const linkedAssetIds = rawNodes
+      .filter((n: any) => n.type === "funnelPage" && n.data?.linkedAssetId)
+      .map((n: any) => n.data.linkedAssetId) as string[];
+
+    let assetSectionsMap: Record<string, Array<{ id: string; title: string; description: string }>> = {};
+    if (linkedAssetIds.length > 0) {
+      const { data: sections } = await supabase
+        .from("asset_sections")
+        .select("id, asset_id, title, description")
+        .in("asset_id", linkedAssetIds)
+        .order("sort_order", { ascending: true });
+      if (sections) {
+        for (const s of sections) {
+          if (!assetSectionsMap[s.asset_id]) assetSectionsMap[s.asset_id] = [];
+          assetSectionsMap[s.asset_id].push({ id: s.id, title: s.title, description: s.description });
+        }
+      }
+    }
+
+    const cleanedNodes = rawNodes.map((node: any) => {
+      if (node.type === "funnelPage" && node.data) {
+        const d = node.data;
+        // Use asset sections if linked, otherwise keep local sections
+        const localSections = d.linkedAssetId && assetSectionsMap[d.linkedAssetId]
+          ? assetSectionsMap[d.linkedAssetId]
+          : (d.copySections || []);
+        return {
+          ...node,
+          data: {
+            ...d,
+            linkedAssetId: undefined,
+            nodeUrl: undefined,
+            nodeImage: undefined,
+            copySections: localSections,
+          },
+        };
+      }
+      return node;
+    });
     const { error } = await supabase.from("funnels").insert({
       user_id: userId,
       name: templateName || "Untitled Template",
-      nodes: JSON.parse(JSON.stringify(nodes)),
+      nodes: cleanedNodes,
       edges: JSON.parse(JSON.stringify(edges)),
       is_template: true,
       project_id: activeProject.id,
@@ -518,6 +560,7 @@ const FunnelDesigner = () => {
           waitType={(detailsNode.data as any).waitType || "days"}
           waitDuration={(detailsNode.data as any).waitDuration}
           copySections={(detailsNode.data as any).copySections || []}
+          funnelName={currentFunnel?.name || ""}
           onLinkAsset={handleLinkAsset}
           onRename={handleRenameNode}
           onNoteContentChange={handleNoteContentChange}

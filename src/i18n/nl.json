@@ -164,6 +164,8 @@
     "convertToAsset": "Omzetten naar Sales Copy Asset",
     "convertedToAsset": "Sales copy asset aangemaakt en gekoppeld!",
     "convertError": "Fout bij aanmaken asset",
+    "assetNamePlaceholder": "Naam van het asset...",
+    "cancel": "Annuleren",
     "noteContent": "Notitie Inhoud",
     "textContent": "Tekst Inhoud",
     "notePlaceholder": "Voer je notitie in...",
