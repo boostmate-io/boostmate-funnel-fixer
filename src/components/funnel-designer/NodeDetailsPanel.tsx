@@ -258,13 +258,14 @@ const NodeDetailsPanel = ({
           </div>
         )}
 
-        {renderStyle === "page" && (
+        {(renderStyle === "page" || pageType === "email") && (
           <div className="p-4">
-            {linkedAssetId ? (
-              <AssetSectionsList assetId={linkedAssetId} />
-            ) : (
-              <p className="text-xs text-muted-foreground text-center py-8">{t("funnelDesigner.noAssetLinked")}</p>
-            )}
+            <CopySections
+              linkedAssetId={linkedAssetId}
+              localSections={copySections || []}
+              onLocalSectionsChange={(sections) => onDataChange?.("copySections", sections)}
+              onLinkAsset={(assetId) => onLinkAsset(assetId)}
+            />
           </div>
         )}
       </div>
