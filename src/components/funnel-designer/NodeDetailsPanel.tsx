@@ -41,7 +41,7 @@ interface NodeDetailsPanelProps {
 const NodeDetailsPanel = ({
   nodeId, nodeLabel, customLabel, linkedAssetId, noteContent, renderStyle, pageType,
   nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copySections, funnelName,
-  onLinkAsset, onRename, onNoteContentChange, onDataChange, onClose,
+  readOnly, onLinkAsset, onRename, onNoteContentChange, onDataChange, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
