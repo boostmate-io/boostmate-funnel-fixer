@@ -16,7 +16,10 @@ type FunnelNodeData = {
   waitType?: "days" | "hours" | "minutes";
   waitDuration?: number;
   nodeImage?: string;
+  nodeImageThumb?: string;
+  nodeUrl?: string;
   showImages?: boolean;
+  readOnly?: boolean;
   copySections?: Array<{ id?: string; title: string; description?: string }>;
 };
 
