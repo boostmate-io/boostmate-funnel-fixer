@@ -740,11 +740,17 @@ const FunnelDesigner = () => {
             ) : (
               <h2
                 className="font-display font-bold text-foreground text-sm cursor-pointer group flex items-center gap-1.5"
-                onClick={() => currentFunnel && setRenamingFunnel(true)}
-                title={currentFunnel ? t("funnelDesigner.renameFunnel") : undefined}
+                onClick={() => {
+                  if (currentFunnel) setRenamingFunnel(true);
+                  else if (editingSeedTemplate) {
+                    const newName = prompt("Rename seed template:", editingSeedTemplate.name);
+                    if (newName) setEditingSeedTemplate({ ...editingSeedTemplate, name: newName });
+                  }
+                }}
+                title={currentFunnel ? t("funnelDesigner.renameFunnel") : editingSeedTemplate ? "Rename seed template" : undefined}
               >
-                {currentFunnel?.name || t("funnelDesigner.title")}
-                {currentFunnel && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+                {currentFunnel?.name || editingSeedTemplate?.name || t("funnelDesigner.title")}
+                {(currentFunnel || editingSeedTemplate) && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
               </h2>
             )}
           </div>
