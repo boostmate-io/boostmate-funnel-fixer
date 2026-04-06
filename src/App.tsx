@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import InviteRegistration from "./pages/InviteRegistration.tsx";
+import SharedFunnel from "./pages/SharedFunnel.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/invite/:code" element={<InviteRegistration />} />
+            <Route path="/shared/:token" element={<SharedFunnel />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />

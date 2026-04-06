@@ -79,7 +79,9 @@
       "assetsLibrary": "Assets Library",
       "analytics": "Analytics",
       "settings": "Instellingen",
-      "logout": "Uitloggen"
+      "logout": "Uitloggen",
+      "collapse": "Menu inklappen",
+      "expand": "Menu uitklappen"
     },
     "logoutSuccess": "Uitgelogd",
     "funnelAudit": {
@@ -187,6 +189,20 @@
     "waitDay": "dag",
     "waitHour": "uur",
     "waitMinute": "minuut",
+    "share": "Delen",
+    "shareCopied": "Deellink gekopieerd naar klembord!",
+    "shareError": "Fout bij aanmaken deellink",
+    "saveFirst": "Sla de funnel eerst op voor je deelt",
+    "downloadPng": "Downloaden als PNG",
+    "clone": "Klonen",
+    "cloned": "Element gekloond!",
+    "selectToClone": "Selecteer eerst een element",
+    "pointerMode": "Selectiemodus",
+    "handMode": "Panmodus",
+    "autoLayout": "Auto Layout",
+    "autoLayoutDone": "Layout toegepast!",
+    "showImages": "Wissel naar afbeeldingsmodus",
+    "showWireframes": "Wissel naar wireframe modus",
     "elements": {
       "optIn": "Opt-in Pagina",
       "squeeze": "Squeeze Pagina",

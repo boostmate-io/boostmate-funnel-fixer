@@ -79,7 +79,9 @@
       "assetsLibrary": "Assets Library",
       "analytics": "Analytics",
       "settings": "Settings",
-      "logout": "Log out"
+      "logout": "Log out",
+      "collapse": "Collapse menu",
+      "expand": "Expand menu"
     },
     "logoutSuccess": "Logged out",
     "funnelAudit": {
@@ -187,6 +189,20 @@
     "waitDay": "day",
     "waitHour": "hour",
     "waitMinute": "minute",
+    "share": "Share",
+    "shareCopied": "Share link copied to clipboard!",
+    "shareError": "Error creating share link",
+    "saveFirst": "Save the funnel first before sharing",
+    "downloadPng": "Download as PNG",
+    "clone": "Clone",
+    "cloned": "Element cloned!",
+    "selectToClone": "Select an element first",
+    "pointerMode": "Selection mode",
+    "handMode": "Pan mode",
+    "autoLayout": "Auto Layout",
+    "autoLayoutDone": "Layout applied!",
+    "showImages": "Switch to image mode",
+    "showWireframes": "Switch to wireframe mode",
     "elements": {
       "optIn": "Opt-in Page",
       "squeeze": "Squeeze Page",
