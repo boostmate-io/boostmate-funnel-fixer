@@ -116,6 +116,7 @@ const FunnelDesigner = () => {
   const [seedTemplateName, setSeedTemplateName] = useState("");
   const [seedTemplates, setSeedTemplates] = useState<Array<{ id: string; name: string; description: string; created_at: string; nodes: any[]; edges: any[] }>>([]);
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
+  const [editingSeedTemplate, setEditingSeedTemplate] = useState<{ id: string; name: string } | null>(null);
 
   // Check admin role
   useEffect(() => {
@@ -164,12 +165,13 @@ const FunnelDesigner = () => {
     setDeletingSeedId(null);
   }, [loadSeedTemplates]);
 
-  const previewSeedTemplate = useCallback((tmpl: { nodes: any[]; edges: any[] }) => {
+  const previewSeedTemplate = useCallback((tmpl: { id: string; name: string; nodes: any[]; edges: any[] }) => {
     setNodes(tmpl.nodes || []);
     setEdges(tmpl.edges || []);
     setCurrentFunnel(null);
+    setEditingSeedTemplate({ id: tmpl.id, name: tmpl.name });
     setShowSeedTemplates(false);
-    toast.success("Seed template loaded on canvas (preview only)");
+    toast.success("Seed template loaded for editing");
   }, [setNodes, setEdges]);
 
   // Undo/Redo
@@ -389,10 +391,35 @@ const FunnelDesigner = () => {
   );
 
   const saveFunnel = useCallback(async () => {
-    if (!userId || !activeProject) return;
+    if (!userId) return;
+
     const persistedNodes = nodes.map((node) => node.type === "funnelPage"
       ? { ...node, data: { ...node.data, copySections: resolveNodeCopySections(node) } }
       : node);
+
+    // If editing a seed template, save to seed_templates table
+    if (editingSeedTemplate) {
+      const rawNodes = JSON.parse(JSON.stringify(persistedNodes));
+      const cleanedNodes = rawNodes.map((node: any) => {
+        if (node.type === "funnelPage" && node.data) {
+          const d = node.data;
+          return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+        }
+        return node;
+      });
+      const { error } = await supabase
+        .from("seed_templates")
+        .update({ nodes: cleanedNodes, edges: JSON.parse(JSON.stringify(edges)), name: editingSeedTemplate.name })
+        .eq("id", editingSeedTemplate.id);
+      if (error) toast.error("Error saving seed template");
+      else {
+        toast.success("Seed template saved");
+        loadSeedTemplates();
+      }
+      return;
+    }
+
+    if (!activeProject) return;
 
     const payload = {
       user_id: userId,
@@ -418,7 +445,7 @@ const FunnelDesigner = () => {
       }
     }
     loadFunnels();
-  }, [currentFunnel, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections]);
+  }, [currentFunnel, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections, editingSeedTemplate, loadSeedTemplates]);
 
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeProject) return;
@@ -467,6 +494,7 @@ const FunnelDesigner = () => {
     setNodes(funnel.nodes || []);
     setEdges(funnel.edges || []);
     setCurrentFunnel(funnel);
+    setEditingSeedTemplate(null);
     setShowFunnelList(false);
     undoStack.current = [];
     redoStack.current = [];
@@ -519,6 +547,7 @@ const FunnelDesigner = () => {
     setNodes([]);
     setEdges([]);
     setCurrentFunnel(null);
+    setEditingSeedTemplate(null);
     selectedNodeRef.current = null;
     setDetailsNodeId(null);
     undoStack.current = [];
@@ -713,11 +742,17 @@ const FunnelDesigner = () => {
             ) : (
               <h2
                 className="font-display font-bold text-foreground text-sm cursor-pointer group flex items-center gap-1.5"
-                onClick={() => currentFunnel && setRenamingFunnel(true)}
-                title={currentFunnel ? t("funnelDesigner.renameFunnel") : undefined}
+                onClick={() => {
+                  if (currentFunnel) setRenamingFunnel(true);
+                  else if (editingSeedTemplate) {
+                    const newName = prompt("Rename seed template:", editingSeedTemplate.name);
+                    if (newName) setEditingSeedTemplate({ ...editingSeedTemplate, name: newName });
+                  }
+                }}
+                title={currentFunnel ? t("funnelDesigner.renameFunnel") : editingSeedTemplate ? "Rename seed template" : undefined}
               >
-                {currentFunnel?.name || t("funnelDesigner.title")}
-                {currentFunnel && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+                {currentFunnel?.name || editingSeedTemplate?.name || t("funnelDesigner.title")}
+                {(currentFunnel || editingSeedTemplate) && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
               </h2>
             )}
           </div>
