@@ -11,6 +11,7 @@ interface Section {
   id: string;
   asset_id: string;
   title: string;
+  description: string;
   content: string;
   sort_order: number;
 }
@@ -109,18 +110,32 @@ const AssetSectionsList = ({ assetId }: AssetSectionsListProps) => {
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               )}
             </button>
-            <Input
-              value={section.title}
-              onChange={(e) => updateSection(section.id, { title: e.target.value })}
-              className="border-0 bg-transparent p-0 h-auto text-sm font-medium focus-visible:ring-0"
-              placeholder={t("assets.sectionTitle")}
-            />
+            <div className="flex-1 min-w-0">
+              <Input
+                value={section.title}
+                onChange={(e) => updateSection(section.id, { title: e.target.value })}
+                className="border-0 bg-transparent p-0 h-auto text-sm font-medium focus-visible:ring-0"
+                placeholder={t("assets.sectionTitle")}
+              />
+            </div>
             <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => deleteSection(section.id)}>
               <Trash2 className="w-3.5 h-3.5 text-destructive" />
             </Button>
           </div>
           {expandedId === section.id && (
-            <div className="px-3 pb-3">
+            <div className="px-3 pb-3 space-y-2">
+              <textarea
+                value={section.description || ""}
+                onChange={(e) => updateSection(section.id, { description: e.target.value })}
+                placeholder={t("assets.sectionDescription")}
+                className="w-full text-xs text-muted-foreground bg-transparent border border-border rounded-md px-2 py-1.5 resize-none overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                rows={1}
+                onInput={(e) => {
+                  const el = e.currentTarget;
+                  el.style.height = "auto";
+                  el.style.height = el.scrollHeight + "px";
+                }}
+              />
               <RichTextEditor
                 content={section.content}
                 onChange={(content) => updateSection(section.id, { content })}

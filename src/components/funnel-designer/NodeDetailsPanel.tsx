@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import AssetSectionsList from "../assets/AssetSectionsList";
+import CopySections from "./CopySections";
 
 interface Asset {
   id: string;
@@ -30,6 +30,8 @@ interface NodeDetailsPanelProps {
   // wait fields
   waitType?: "days" | "hours" | "minutes";
   waitDuration?: number;
+  // copy sections (stored in node data when no asset linked)
+  copySections?: Array<{ id: string; title: string; description: string }>;
   onLinkAsset: (assetId: string | null) => void;
   onRename: (name: string) => void;
   onNoteContentChange?: (content: string) => void;
@@ -39,7 +41,7 @@ interface NodeDetailsPanelProps {
 
 const NodeDetailsPanel = ({
   nodeId, nodeLabel, customLabel, linkedAssetId, noteContent, renderStyle, pageType,
-  nodeNotes, nodeUrl, nodeImage, waitType, waitDuration,
+  nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copySections,
   onLinkAsset, onRename, onNoteContentChange, onDataChange, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
@@ -256,13 +258,14 @@ const NodeDetailsPanel = ({
           </div>
         )}
 
-        {renderStyle === "page" && (
+        {(renderStyle === "page" || pageType === "email") && (
           <div className="p-4">
-            {linkedAssetId ? (
-              <AssetSectionsList assetId={linkedAssetId} />
-            ) : (
-              <p className="text-xs text-muted-foreground text-center py-8">{t("funnelDesigner.noAssetLinked")}</p>
-            )}
+            <CopySections
+              linkedAssetId={linkedAssetId}
+              localSections={copySections || []}
+              onLocalSectionsChange={(sections) => onDataChange?.("copySections", sections)}
+              onLinkAsset={(assetId) => onLinkAsset(assetId)}
+            />
           </div>
         )}
       </div>

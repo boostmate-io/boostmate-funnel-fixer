@@ -1,0 +1,1 @@
+ALTER TABLE public.asset_sections ADD COLUMN description text DEFAULT '' NOT NULL;

@@ -70,6 +70,7 @@ export type Database = {
           asset_id: string
           content: string | null
           created_at: string
+          description: string
           id: string
           sort_order: number
           title: string
@@ -79,6 +80,7 @@ export type Database = {
           asset_id: string
           content?: string | null
           created_at?: string
+          description?: string
           id?: string
           sort_order?: number
           title?: string
@@ -88,6 +90,7 @@ export type Database = {
           asset_id?: string
           content?: string | null
           created_at?: string
+          description?: string
           id?: string
           sort_order?: number
           title?: string
