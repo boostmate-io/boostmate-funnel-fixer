@@ -107,7 +107,18 @@
       "account": "Account",
       "email": "Email",
       "language": "Language",
-      "languageDescription": "Choose your preferred language"
+      "languageDescription": "Choose your preferred language",
+      "deleteAccount": {
+        "title": "Delete Account",
+        "description": "Permanently delete your account and all associated data. This action cannot be undone.",
+        "button": "Delete Account",
+        "confirmTitle": "Are you sure?",
+        "confirmDescription": "This will permanently delete your account, all projects, funnels, assets, and data. This cannot be undone.",
+        "typeConfirm": "Type DELETE to confirm:",
+        "cancel": "Cancel",
+        "confirmButton": "Delete my account",
+        "deleting": "Deleting..."
+      }
     }
   },
   "projects": {
