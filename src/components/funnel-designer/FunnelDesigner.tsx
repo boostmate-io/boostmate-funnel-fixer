@@ -550,9 +550,9 @@ const FunnelDesigner = () => {
     if (roots.length === 0) return;
 
     const X_GAP = 250;
-    const Y_GAP = 140;
+    const Y_GAP = 160;
 
-    /* Estimate node height for vertical centering */
+    /* Estimate node height so we can compute the center anchor */
     const getNodeHeight = (id: string): number => {
       const n = nodeMap.get(id);
       if (!n) return 80;
@@ -560,65 +560,53 @@ const FunnelDesigner = () => {
       const rs = d?.renderStyle ?? "page";
       if (rs === "note" || rs === "text") return 60;
       if (rs === "icon") return 80;
-      return 200; // page-style with wireframe
+      return 220;
     };
 
-    const visited = new Set<string>();
+    const visitedLayout = new Set<string>();
     const positions: Record<string, { x: number; y: number }> = {};
 
-    /* First pass: compute subtree heights */
-    const subtreeHeight = (nodeId: string): number => {
-      const kids = (children[nodeId] || []).filter((k) => !visited.has(k));
-      if (kids.length === 0) return getNodeHeight(nodeId);
-      // Mark to avoid cycles
-      const childHeights = kids.map((k) => subtreeHeight(k));
-      return Math.max(getNodeHeight(nodeId), childHeights.reduce((a, b) => a + b, 0) + (kids.length - 1) * Y_GAP);
-    };
-
-    /* Second pass: place nodes centered in their subtree band */
-    const visitedLayout = new Set<string>();
-    const layoutCentered = (nodeId: string, col: number, bandTop: number, bandHeight: number) => {
+    /*
+     * Strategy: walk from each root left→right.
+     * - For a node with 1 child the child gets the SAME centerY as the parent → straight line.
+     * - For a node with N children they fan out symmetrically around the parent's centerY.
+     * centerY is the vertical midpoint of the node (position.y + height/2).
+     */
+    const layoutNode = (nodeId: string, col: number, centerY: number) => {
       if (visitedLayout.has(nodeId)) return;
       visitedLayout.add(nodeId);
       const nh = getNodeHeight(nodeId);
+      positions[nodeId] = { x: col * X_GAP, y: centerY - nh / 2 };
+
       const kids = (children[nodeId] || []).filter((k) => !visitedLayout.has(k));
+      if (kids.length === 0) return;
 
-      if (kids.length === 0) {
-        positions[nodeId] = { x: col * X_GAP, y: bandTop + (bandHeight - nh) / 2 };
-        return;
+      if (kids.length === 1) {
+        // Single child → same centerY → produces a straight horizontal line
+        layoutNode(kids[0], col + 1, centerY);
+      } else {
+        // Multiple children → fan out symmetrically
+        const totalSpan = (kids.length - 1) * Y_GAP;
+        let childCenterY = centerY - totalSpan / 2;
+        kids.forEach((kid) => {
+          layoutNode(kid, col + 1, childCenterY);
+          childCenterY += Y_GAP;
+        });
       }
-
-      // Compute child subtree heights
-      const childSubHeights = kids.map((k) => subtreeHeight(k));
-      const totalChildrenH = childSubHeights.reduce((a, b) => a + b, 0) + (kids.length - 1) * Y_GAP;
-
-      // Center this node vertically in its band
-      positions[nodeId] = { x: col * X_GAP, y: bandTop + (bandHeight - nh) / 2 };
-
-      // Distribute children within band
-      let childY = bandTop + (bandHeight - totalChildrenH) / 2;
-      kids.forEach((kid, i) => {
-        const ch = childSubHeights[i];
-        layoutCentered(kid, col + 1, childY, ch);
-        childY += ch + Y_GAP;
-      });
     };
 
-    // Compute root subtree heights
-    const rootHeights = roots.map((r) => subtreeHeight(r.id));
-    const totalH = rootHeights.reduce((a, b) => a + b, 0) + (roots.length - 1) * Y_GAP;
-    let bandY = 0;
+    // Place roots, each spaced apart
+    let rootCenterY = 0;
     roots.forEach((r, i) => {
-      const rh = rootHeights[i];
-      layoutCentered(r.id, 0, bandY, rh);
-      bandY += rh + Y_GAP;
+      if (i > 0) rootCenterY += Y_GAP * 2;
+      layoutNode(r.id, 0, rootCenterY);
     });
 
-    // Orphan nodes
+    // Orphan nodes (no connections)
     nodes.forEach((n) => {
       if (!visitedLayout.has(n.id)) {
-        bandY += Y_GAP;
-        positions[n.id] = { x: 0, y: bandY };
+        rootCenterY += Y_GAP;
+        positions[n.id] = { x: 0, y: rootCenterY };
       }
     });
 
