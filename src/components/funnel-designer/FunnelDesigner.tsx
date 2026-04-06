@@ -563,7 +563,7 @@ const FunnelDesigner = () => {
 
             <Tooltip><TooltipTrigger asChild>
               <Button variant="outline" size="sm" onClick={() => { loadTemplates(); setShowTemplates(true); }}>
-                <Download className="w-4 h-4" />
+                <Library className="w-4 h-4" />
               </Button>
             </TooltipTrigger><TooltipContent>{t("funnelDesigner.templates")}</TooltipContent></Tooltip>
 
