@@ -511,9 +511,16 @@ const FunnelDesigner = () => {
           linkedAssetId={(detailsNode.data as any).linkedAssetId || null}
           noteContent={(detailsNode.data as any).noteContent || ""}
           renderStyle={(detailsNode.data as any).renderStyle || "page"}
+          pageType={(detailsNode.data as any).pageType || ""}
+          nodeNotes={(detailsNode.data as any).nodeNotes || ""}
+          nodeUrl={(detailsNode.data as any).nodeUrl || ""}
+          nodeImage={(detailsNode.data as any).nodeImage || ""}
+          waitType={(detailsNode.data as any).waitType || "days"}
+          waitDuration={(detailsNode.data as any).waitDuration}
           onLinkAsset={handleLinkAsset}
           onRename={handleRenameNode}
           onNoteContentChange={handleNoteContentChange}
+          onDataChange={handleDataChange}
           onClose={() => setDetailsNodeId(null)}
         />
       )}
