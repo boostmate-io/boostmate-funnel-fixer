@@ -140,7 +140,7 @@ const SharedFunnelInner = () => {
       selected: n.id === selectedNodeId,
       draggable: false,
       connectable: false,
-      data: { ...n.data, showImages },
+      data: { ...n.data, showImages, readOnly: true },
     })),
     [funnel?.nodes, selectedNodeId, showImages]
   );

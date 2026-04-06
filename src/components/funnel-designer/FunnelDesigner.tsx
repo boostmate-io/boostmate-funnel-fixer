@@ -538,7 +538,7 @@ const FunnelDesigner = () => {
   /* ── Auto Layout ── */
   const autoLayout = useCallback(() => {
     if (nodes.length === 0) return;
-    // Build adjacency from edges
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
     const children: Record<string, string[]> = {};
     const parents: Record<string, string[]> = {};
     nodes.forEach((n) => { children[n.id] = []; parents[n.id] = []; });
@@ -546,41 +546,83 @@ const FunnelDesigner = () => {
       if (children[e.source]) children[e.source].push(e.target);
       if (parents[e.target]) parents[e.target].push(e.source);
     });
-    // Find roots (no parents)
     const roots = nodes.filter((n) => parents[n.id].length === 0);
     if (roots.length === 0) return;
 
     const X_GAP = 250;
     const Y_GAP = 140;
+
+    /* Estimate node height for vertical centering */
+    const getNodeHeight = (id: string): number => {
+      const n = nodeMap.get(id);
+      if (!n) return 80;
+      const d = n.data as any;
+      const rs = d?.renderStyle ?? "page";
+      if (rs === "note" || rs === "text") return 60;
+      if (rs === "icon") return 80;
+      return 200; // page-style with wireframe
+    };
+
     const visited = new Set<string>();
     const positions: Record<string, { x: number; y: number }> = {};
-    let currentY = 0;
 
-    const layout = (nodeId: string, col: number) => {
-      if (visited.has(nodeId)) return;
-      visited.add(nodeId);
-      positions[nodeId] = { x: col * X_GAP, y: currentY };
-      const kids = children[nodeId] || [];
+    /* First pass: compute subtree heights */
+    const subtreeHeight = (nodeId: string): number => {
+      const kids = (children[nodeId] || []).filter((k) => !visited.has(k));
+      if (kids.length === 0) return getNodeHeight(nodeId);
+      // Mark to avoid cycles
+      const childHeights = kids.map((k) => subtreeHeight(k));
+      return Math.max(getNodeHeight(nodeId), childHeights.reduce((a, b) => a + b, 0) + (kids.length - 1) * Y_GAP);
+    };
+
+    /* Second pass: place nodes centered in their subtree band */
+    const visitedLayout = new Set<string>();
+    const layoutCentered = (nodeId: string, col: number, bandTop: number, bandHeight: number) => {
+      if (visitedLayout.has(nodeId)) return;
+      visitedLayout.add(nodeId);
+      const nh = getNodeHeight(nodeId);
+      const kids = (children[nodeId] || []).filter((k) => !visitedLayout.has(k));
+
+      if (kids.length === 0) {
+        positions[nodeId] = { x: col * X_GAP, y: bandTop + (bandHeight - nh) / 2 };
+        return;
+      }
+
+      // Compute child subtree heights
+      const childSubHeights = kids.map((k) => subtreeHeight(k));
+      const totalChildrenH = childSubHeights.reduce((a, b) => a + b, 0) + (kids.length - 1) * Y_GAP;
+
+      // Center this node vertically in its band
+      positions[nodeId] = { x: col * X_GAP, y: bandTop + (bandHeight - nh) / 2 };
+
+      // Distribute children within band
+      let childY = bandTop + (bandHeight - totalChildrenH) / 2;
       kids.forEach((kid, i) => {
-        if (i > 0) currentY += Y_GAP;
-        layout(kid, col + 1);
+        const ch = childSubHeights[i];
+        layoutCentered(kid, col + 1, childY, ch);
+        childY += ch + Y_GAP;
       });
     };
 
+    // Compute root subtree heights
+    const rootHeights = roots.map((r) => subtreeHeight(r.id));
+    const totalH = rootHeights.reduce((a, b) => a + b, 0) + (roots.length - 1) * Y_GAP;
+    let bandY = 0;
     roots.forEach((r, i) => {
-      if (i > 0) currentY += Y_GAP;
-      layout(r.id, 0);
+      const rh = rootHeights[i];
+      layoutCentered(r.id, 0, bandY, rh);
+      bandY += rh + Y_GAP;
     });
-    // Nodes without edges
+
+    // Orphan nodes
     nodes.forEach((n) => {
-      if (!visited.has(n.id)) {
-        currentY += Y_GAP;
-        positions[n.id] = { x: 0, y: currentY };
+      if (!visitedLayout.has(n.id)) {
+        bandY += Y_GAP;
+        positions[n.id] = { x: 0, y: bandY };
       }
     });
 
     setNodes((nds) => nds.map((n) => positions[n.id] ? { ...n, position: positions[n.id] } : n));
-    // Straighten edges by making them non-animated temporarily
     setEdges((eds) => eds.map((e) => ({ ...e, animated: true })));
     setTimeout(() => reactFlowInstance?.fitView({ padding: 0.2 }), 100);
     toast.success(t("funnelDesigner.autoLayoutDone"));
