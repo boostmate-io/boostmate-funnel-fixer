@@ -152,6 +152,7 @@ export const FUNNEL_ELEMENTS: FunnelElement[] = [
   // Utility
   { type: "notes", label: "funnelDesigner.elements.notes", description: "", icon: "StickyNote", color: "#F59E0B", group: "Utility", isDecision: false, renderStyle: "note" },
   { type: "text", label: "funnelDesigner.elements.text", description: "", icon: "Type", color: "#6B7280", group: "Utility", isDecision: false, renderStyle: "text" },
+  { type: "shape", label: "funnelDesigner.elements.shape", description: "", icon: "Shapes", color: "#9CA3AF", group: "Utility", isDecision: false, renderStyle: "shape" },
 ];
 
 // Keep backward compat alias
