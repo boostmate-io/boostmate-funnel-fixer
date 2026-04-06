@@ -79,7 +79,9 @@
       "assetsLibrary": "Assets Library",
       "analytics": "Analytics",
       "settings": "Instellingen",
-      "logout": "Uitloggen"
+      "logout": "Uitloggen",
+      "collapse": "Menu inklappen",
+      "expand": "Menu uitklappen"
     },
     "logoutSuccess": "Uitgelogd",
     "funnelAudit": {
