@@ -517,6 +517,7 @@ const FunnelDesigner = () => {
           nodeImage={(detailsNode.data as any).nodeImage || ""}
           waitType={(detailsNode.data as any).waitType || "days"}
           waitDuration={(detailsNode.data as any).waitDuration}
+          copySections={(detailsNode.data as any).copySections || []}
           onLinkAsset={handleLinkAsset}
           onRename={handleRenameNode}
           onNoteContentChange={handleNoteContentChange}
