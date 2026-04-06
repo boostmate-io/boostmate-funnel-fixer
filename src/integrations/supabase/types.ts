@@ -287,6 +287,7 @@ export type Database = {
           name: string
           nodes: Json
           project_id: string | null
+          share_token: string | null
           template_id: string | null
           updated_at: string
           user_id: string
@@ -300,6 +301,7 @@ export type Database = {
           name?: string
           nodes?: Json
           project_id?: string | null
+          share_token?: string | null
           template_id?: string | null
           updated_at?: string
           user_id: string
@@ -313,6 +315,7 @@ export type Database = {
           name?: string
           nodes?: Json
           project_id?: string | null
+          share_token?: string | null
           template_id?: string | null
           updated_at?: string
           user_id?: string
