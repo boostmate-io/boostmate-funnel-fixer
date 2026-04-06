@@ -232,7 +232,7 @@ const ResizeHandles = ({ width, height, onMouseDown }: {
       {handles.map(({ dir, style }) => (
         <div
           key={dir}
-          className="absolute z-10"
+          className="absolute z-10 nodrag nopan"
           style={{ ...style, position: "absolute" }}
           onMouseDown={(e) => onMouseDown(dir, e)}
         />
