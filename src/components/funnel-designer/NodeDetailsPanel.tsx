@@ -83,15 +83,48 @@ const NodeDetailsPanel = ({
   const isWait = pageType === "wait";
   const isPageOrEmail = !isNoteOrText && !isWait;
 
+  const resizeImage = (file: File, maxWidth: number): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => resolve(blob!), "image/webp", 0.8);
+      };
+      img.src = url;
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !userId) return;
     setUploading(true);
-    const path = `${userId}/${nodeId}_${Date.now()}.${file.name.split('.').pop()}`;
-    const { error } = await supabase.storage.from("funnel-screenshots").upload(path, file);
+    const ts = Date.now();
+    const ext = file.name.split('.').pop();
+
+    // Upload full-size image
+    const fullPath = `${userId}/${nodeId}_${ts}.${ext}`;
+    const { error } = await supabase.storage.from("funnel-screenshots").upload(fullPath, file);
     if (!error) {
-      const { data: urlData } = supabase.storage.from("funnel-screenshots").getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("funnel-screenshots").getPublicUrl(fullPath);
       onDataChange?.("nodeImage", urlData.publicUrl);
+
+      // Generate and upload thumbnail (400px wide)
+      try {
+        const thumbBlob = await resizeImage(file, 400);
+        const thumbPath = `${userId}/${nodeId}_${ts}_thumb.webp`;
+        const { error: thumbErr } = await supabase.storage.from("funnel-screenshots").upload(thumbPath, thumbBlob, { contentType: "image/webp" });
+        if (!thumbErr) {
+          const { data: thumbUrl } = supabase.storage.from("funnel-screenshots").getPublicUrl(thumbPath);
+          onDataChange?.("nodeImageThumb", thumbUrl.publicUrl);
+        }
+      } catch { /* thumbnail generation failed, full image will be used */ }
     }
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
