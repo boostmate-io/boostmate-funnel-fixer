@@ -354,7 +354,7 @@ const FunnelDesigner = () => {
             isDecision: el.isDecision, renderStyle: el.renderStyle,
           },
         }]);
-        if (el.renderStyle === "note" || el.renderStyle === "text") setDetailsNodeId(id);
+        if (el.renderStyle === "note" || el.renderStyle === "text" || el.renderStyle === "shape") setDetailsNodeId(id);
       }
       toast.success(t("funnelDesigner.nodeAdded"));
     },
