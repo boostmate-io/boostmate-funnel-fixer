@@ -16,7 +16,10 @@ type FunnelNodeData = {
   waitType?: "days" | "hours" | "minutes";
   waitDuration?: number;
   nodeImage?: string;
+  nodeImageThumb?: string;
+  nodeUrl?: string;
   showImages?: boolean;
+  readOnly?: boolean;
   copySections?: Array<{ id?: string; title: string; description?: string }>;
 };
 
@@ -161,7 +164,10 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
 
   const WireframeComponent = getWireframeForType(nodeData.pageType);
   const isImageMode = Boolean(nodeData.showImages);
-  const showImage = isImageMode && nodeData.nodeImage;
+  const imgSrc = nodeData.nodeImageThumb || nodeData.nodeImage;
+  const showImage = isImageMode && imgSrc;
+  const isReadOnly = Boolean(nodeData.readOnly);
+  const hasUrl = Boolean(nodeData.nodeUrl);
 
   return (
     <div className="bg-card rounded-xl border border-border shadow-card w-[160px] group hover:shadow-card-hover transition-shadow relative overflow-visible" onDoubleClickCapture={handleDoubleClick}>
@@ -178,7 +184,7 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
       <div className="px-2 pt-1 pb-2">
         {showImage ? (
           <img
-            src={nodeData.nodeImage}
+            src={imgSrc}
             alt={displayName}
             loading="lazy"
             className="w-full h-[240px] object-cover object-top rounded"
@@ -198,6 +204,21 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
           </div>
         )}
       </div>
+
+      {/* View page button in read-only mode */}
+      {isReadOnly && hasUrl && (
+        <div className="px-2 pb-2">
+          <a
+            href={nodeData.nodeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1 w-full text-[9px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded py-1 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Visit page
+          </a>
+        </div>
+      )}
 
       {/* Handles */}
       <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
