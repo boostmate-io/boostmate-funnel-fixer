@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
@@ -14,6 +14,7 @@ import { BarChart3, PenTool, Library, TrendingUp } from "lucide-react";
 import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
+import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -104,6 +105,7 @@ const Dashboard = () => {
               </div>
               <AgencySettings />
               <KnowledgeCenter />
+              <DeleteAccountSection />
             </div>
           )}
         </main>

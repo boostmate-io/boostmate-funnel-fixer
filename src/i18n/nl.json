@@ -107,7 +107,18 @@
       "account": "Account",
       "email": "E-mail",
       "language": "Taal",
-      "languageDescription": "Kies je voorkeurstaal"
+      "languageDescription": "Kies je voorkeurstaal",
+      "deleteAccount": {
+        "title": "Account Verwijderen",
+        "description": "Verwijder je account en alle bijbehorende data permanent. Deze actie kan niet ongedaan gemaakt worden.",
+        "button": "Account Verwijderen",
+        "confirmTitle": "Weet je het zeker?",
+        "confirmDescription": "Dit verwijdert permanent je account, alle projecten, funnels, assets en data. Dit kan niet ongedaan gemaakt worden.",
+        "typeConfirm": "Typ DELETE om te bevestigen:",
+        "cancel": "Annuleren",
+        "confirmButton": "Verwijder mijn account",
+        "deleting": "Verwijderen..."
+      }
     }
   },
   "projects": {
