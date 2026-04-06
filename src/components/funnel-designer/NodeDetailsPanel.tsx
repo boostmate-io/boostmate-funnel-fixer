@@ -30,6 +30,7 @@ interface NodeDetailsPanelProps {
   waitDuration?: number;
   copySections?: Array<{ id: string; title: string; description: string }>;
   funnelName?: string;
+  readOnly?: boolean;
   onLinkAsset: (assetId: string | null) => void;
   onRename: (name: string) => void;
   onNoteContentChange?: (content: string) => void;
