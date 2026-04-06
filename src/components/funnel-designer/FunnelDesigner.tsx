@@ -632,26 +632,16 @@ const FunnelDesigner = () => {
             <Panel position="bottom-left" className="!m-3">
               <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 shadow-sm">
                 <Tooltip><TooltipTrigger asChild>
-                  <Toggle
-                    size="sm"
-                    pressed={interactionMode === "pointer"}
-                    onPressedChange={() => setInteractionMode("pointer")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <MousePointer2 className="w-4 h-4" />
-                  </Toggle>
-                </TooltipTrigger><TooltipContent>{t("funnelDesigner.pointerMode")}</TooltipContent></Tooltip>
-
-                <Tooltip><TooltipTrigger asChild>
-                  <Toggle
-                    size="sm"
-                    pressed={interactionMode === "hand"}
-                    onPressedChange={() => setInteractionMode("hand")}
-                    className="h-8 w-8 p-0"
-                  >
+                  <Toggle size="sm" pressed={interactionMode === "hand"} onPressedChange={() => setInteractionMode("hand")} className="h-8 w-8 p-0">
                     <Hand className="w-4 h-4" />
                   </Toggle>
                 </TooltipTrigger><TooltipContent>{t("funnelDesigner.handMode")}</TooltipContent></Tooltip>
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Toggle size="sm" pressed={interactionMode === "pointer"} onPressedChange={() => setInteractionMode("pointer")} className="h-8 w-8 p-0">
+                    <MousePointer2 className="w-4 h-4" />
+                  </Toggle>
+                </TooltipTrigger><TooltipContent>{t("funnelDesigner.pointerMode")}</TooltipContent></Tooltip>
 
                 <div className="w-px h-5 bg-border mx-0.5" />
 
@@ -684,15 +674,24 @@ const FunnelDesigner = () => {
                 <div className="w-px h-5 bg-border mx-0.5" />
 
                 <Tooltip><TooltipTrigger asChild>
-                  <Toggle
-                    size="sm"
-                    pressed={showImages}
-                    onPressedChange={setShowImages}
-                    className="h-8 w-8 p-0"
-                  >
+                  <Toggle size="sm" pressed={showImages} onPressedChange={setShowImages} className="h-8 w-8 p-0">
                     {showImages ? <Image className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
                   </Toggle>
                 </TooltipTrigger><TooltipContent>{showImages ? t("funnelDesigner.showWireframes") : t("funnelDesigner.showImages")}</TooltipContent></Tooltip>
+
+                <div className="w-px h-5 bg-border mx-0.5" />
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => reactFlowInstance?.zoomIn()}>
+                    <ZoomIn className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Zoom In</TooltipContent></Tooltip>
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => reactFlowInstance?.zoomOut()}>
+                    <ZoomOut className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Zoom Out</TooltipContent></Tooltip>
               </div>
             </Panel>
           </ReactFlow>
