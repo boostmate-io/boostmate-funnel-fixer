@@ -384,6 +384,18 @@ const FunnelDesigner = () => {
     [detailsNodeId, setNodes]
   );
 
+  const handleDataChange = useCallback(
+    (key: string, value: any) => {
+      if (!detailsNodeId) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === detailsNodeId ? { ...n, data: { ...n.data, [key]: value } } : n
+        )
+      );
+    },
+    [detailsNodeId, setNodes]
+  );
+
   const detailsNode = nodes.find((n) => n.id === detailsNodeId);
 
   return (
@@ -499,9 +511,16 @@ const FunnelDesigner = () => {
           linkedAssetId={(detailsNode.data as any).linkedAssetId || null}
           noteContent={(detailsNode.data as any).noteContent || ""}
           renderStyle={(detailsNode.data as any).renderStyle || "page"}
+          pageType={(detailsNode.data as any).pageType || ""}
+          nodeNotes={(detailsNode.data as any).nodeNotes || ""}
+          nodeUrl={(detailsNode.data as any).nodeUrl || ""}
+          nodeImage={(detailsNode.data as any).nodeImage || ""}
+          waitType={(detailsNode.data as any).waitType || "days"}
+          waitDuration={(detailsNode.data as any).waitDuration}
           onLinkAsset={handleLinkAsset}
           onRename={handleRenameNode}
           onNoteContentChange={handleNoteContentChange}
+          onDataChange={handleDataChange}
           onClose={() => setDetailsNodeId(null)}
         />
       )}

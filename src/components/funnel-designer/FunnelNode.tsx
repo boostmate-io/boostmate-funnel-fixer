@@ -13,13 +13,57 @@ type FunnelNodeData = {
   isDecision?: boolean;
   renderStyle?: "page" | "icon" | "note" | "text";
   noteContent?: string;
+  waitType?: "days" | "hours" | "minutes";
+  waitDuration?: number;
 };
 
-/* ── Icon-style node (email, delay, etc.) ── */
-const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData; onDoubleClick?: () => void }) => {
+/* ── helper: build wait label ── */
+const getWaitLabel = (data: FunnelNodeData, t: (k: string) => string): string => {
+  if (data.waitDuration && data.waitType) {
+    const n = data.waitDuration;
+    const unitKey = n === 1
+      ? `funnelDesigner.wait${data.waitType.charAt(0).toUpperCase() + data.waitType.slice(1, -1)}`
+      : `funnelDesigner.wait${data.waitType.charAt(0).toUpperCase() + data.waitType.slice(1)}`;
+    // waitDay/waitDays, waitHour/waitHours, waitMinute/waitMinutes
+    return `Wait ${n} ${t(unitKey)}`;
+  }
+  return t(data.label);
+};
+
+/* ── Email-style node (no circle, just a large icon) ── */
+const EmailStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData; onDoubleClick?: () => void }) => {
   const { t } = useTranslation();
   const IconComponent = (Icons as any)[nodeData.icon] || Icons.FileText;
   const displayName = nodeData.customLabel || t(nodeData.label);
+
+  return (
+    <div className="flex flex-col items-center gap-1.5 w-[100px] relative overflow-visible" onDoubleClick={onDoubleClick}>
+      <IconComponent className="w-10 h-10" style={{ color: nodeData.color }} />
+      <span className="text-[10px] font-semibold text-foreground text-center leading-tight w-full">
+        {displayName}
+      </span>
+      {nodeData.customLabel && (
+        <span className="text-[8px] text-muted-foreground text-center -mt-1">{t(nodeData.label)}</span>
+      )}
+
+      <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
+      <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="yes"
+        className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white"
+      />
+    </div>
+  );
+};
+
+/* ── Icon-style node (wait element with circle) ── */
+const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData; onDoubleClick?: () => void }) => {
+  const { t } = useTranslation();
+  const IconComponent = (Icons as any)[nodeData.icon] || Icons.FileText;
+  const isWait = nodeData.pageType === "wait";
+  const displayName = isWait ? getWaitLabel(nodeData, t) : (nodeData.customLabel || t(nodeData.label));
   const isDecision = nodeData.isDecision ?? false;
 
   return (
@@ -33,7 +77,7 @@ const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData
       <span className="text-[10px] font-semibold text-foreground text-center leading-tight w-full">
         {displayName}
       </span>
-      {nodeData.customLabel && (
+      {!isWait && nodeData.customLabel && (
         <span className="text-[8px] text-muted-foreground text-center -mt-1">{t(nodeData.label)}</span>
       )}
 
@@ -84,6 +128,9 @@ const TextStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => (
   </div>
 );
 
+/* ── determine if element is "email-like" (no circle icon) ── */
+const EMAIL_STYLE_TYPES = ["email", "broadcast-email", "sms", "fb-messenger", "chatbot", "chatbot-optin", "phone-call", "phone-order"];
+
 /* ── Page-style node (wireframe thumbnail) ── */
 const FunnelNode = memo(({ data, id }: NodeProps) => {
   const { t } = useTranslation();
@@ -96,9 +143,16 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
     window.dispatchEvent(new CustomEvent("funnel-node-dblclick", { detail: { nodeId: id } }));
   }, [id]);
 
-  if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} />;
   if (renderStyle === "note") return <div onDoubleClick={handleDoubleClick}><NoteStyleRender nodeData={nodeData} /></div>;
   if (renderStyle === "text") return <div onDoubleClick={handleDoubleClick}><TextStyleRender nodeData={nodeData} /></div>;
+
+  // Email-like elements: large icon without circle
+  if (renderStyle === "icon" && EMAIL_STYLE_TYPES.includes(nodeData.pageType)) {
+    return <EmailStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} />;
+  }
+
+  // Other icon elements (wait)
+  if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} />;
 
   const WireframeComponent = getWireframeForType(nodeData.pageType);
 
@@ -106,7 +160,7 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
     <div className="bg-card rounded-xl border border-border shadow-card w-[160px] group hover:shadow-card-hover transition-shadow relative overflow-visible" onDoubleClick={handleDoubleClick}>
       <div className="h-1.5 w-full rounded-t-xl" style={{ backgroundColor: nodeData.color }} />
 
-      {/* Wireframe thumbnail — taller aspect ratio */}
+      {/* Wireframe thumbnail */}
       <div className="px-2 pt-2 pb-1 min-h-[80px]">
         <WireframeComponent color={nodeData.color} />
       </div>
