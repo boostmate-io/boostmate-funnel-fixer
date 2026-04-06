@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import {
   Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil,
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
-  LayoutGrid, Image, Monitor, Download,
+  LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
