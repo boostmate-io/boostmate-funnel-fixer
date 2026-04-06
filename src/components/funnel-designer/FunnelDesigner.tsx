@@ -901,7 +901,7 @@ const FunnelDesigner = () => {
               // Shapes always behind other elements
               if (isShape) return { ...base, zIndex: -1 };
               return base;
-            })
+            })}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
