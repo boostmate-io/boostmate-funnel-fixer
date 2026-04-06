@@ -30,6 +30,8 @@ interface NodeDetailsPanelProps {
   // wait fields
   waitType?: "days" | "hours" | "minutes";
   waitDuration?: number;
+  // copy sections (stored in node data when no asset linked)
+  copySections?: Array<{ id: string; title: string; description: string }>;
   onLinkAsset: (assetId: string | null) => void;
   onRename: (name: string) => void;
   onNoteContentChange?: (content: string) => void;
