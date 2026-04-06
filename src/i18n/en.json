@@ -164,6 +164,8 @@
     "convertToAsset": "Convert to Sales Copy Asset",
     "convertedToAsset": "Sales copy asset created and linked!",
     "convertError": "Error creating asset",
+    "assetNamePlaceholder": "Asset name...",
+    "cancel": "Cancel",
     "noteContent": "Note Content",
     "textContent": "Text Content",
     "notePlaceholder": "Enter your note here...",
