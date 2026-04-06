@@ -93,6 +93,7 @@ const FunnelDesigner = () => {
   const [currentFunnel, setCurrentFunnel] = useState<Funnel | null>(null);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [templates, setTemplates] = useState<Funnel[]>([]);
+  const [editingTemplate, setEditingTemplate] = useState<{ id: string; name: string } | null>(null);
   const [showFunnelList, setShowFunnelList] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
