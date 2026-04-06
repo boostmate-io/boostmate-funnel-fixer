@@ -76,11 +76,17 @@ const SharedFunnelInner = () => {
   useEffect(() => {
     const handler = (e: Event) => {
       const nodeId = (e as CustomEvent).detail?.nodeId;
-      if (nodeId) setDetailsNodeId(nodeId);
+      if (!nodeId) return;
+
+      const node = (funnel?.nodes ?? []).find((item) => item.id === nodeId);
+      if (!canOpenReadOnlyDetails(node)) return;
+
+      setSelectedNodeId(nodeId);
+      setDetailsNodeId(nodeId);
     };
     window.addEventListener("funnel-node-dblclick", handler);
     return () => window.removeEventListener("funnel-node-dblclick", handler);
-  }, []);
+  }, [funnel?.nodes, canOpenReadOnlyDetails]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.id);
