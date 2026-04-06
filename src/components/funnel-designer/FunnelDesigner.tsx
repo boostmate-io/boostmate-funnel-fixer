@@ -981,6 +981,54 @@ const FunnelDesigner = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Seed Template Dialogs (Admin only) */}
+      <Dialog open={showSaveSeed} onOpenChange={setShowSaveSeed}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as Seed Template</DialogTitle>
+            <DialogDescription>This template will be automatically copied to every new user account.</DialogDescription>
+          </DialogHeader>
+          <Input value={seedTemplateName} onChange={(e) => setSeedTemplateName(e.target.value)} placeholder="Seed template name..." />
+          <DialogFooter><Button onClick={saveAsSeedTemplate}>Save Seed Template</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSeedTemplates} onOpenChange={setShowSeedTemplates}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Manage Seed Templates</DialogTitle>
+            <DialogDescription>These templates are automatically copied to new user accounts.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {seedTemplates.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No seed templates yet.</p>}
+            {seedTemplates.map((st) => (
+              <div key={st.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
+                <button onClick={() => previewSeedTemplate(st)} className="text-left flex-1">
+                  <p className="text-sm font-medium text-foreground">{st.name}</p>
+                  <p className="text-[11px] text-muted-foreground">{new Date(st.created_at).toLocaleDateString()}</p>
+                </button>
+                <Button variant="ghost" size="icon" onClick={() => setDeletingSeedId(st.id)}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deletingSeedId} onOpenChange={(open) => { if (!open) setDeletingSeedId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Seed Template?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently remove this seed template. Existing user copies won't be affected.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deletingSeedId && deleteSeedTemplate(deletingSeedId)}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
