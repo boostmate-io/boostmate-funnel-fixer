@@ -157,14 +157,19 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
   if (renderStyle === "icon") return <IconStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} />;
 
   const WireframeComponent = getWireframeForType(nodeData.pageType);
+  const showImage = nodeData.showImages && nodeData.nodeImage;
 
   return (
     <div className="bg-card rounded-xl border border-border shadow-card w-[160px] group hover:shadow-card-hover transition-shadow relative overflow-visible" onDoubleClick={handleDoubleClick}>
       <div className="h-1.5 w-full rounded-t-xl" style={{ backgroundColor: nodeData.color }} />
 
-      {/* Wireframe thumbnail */}
+      {/* Wireframe or image thumbnail */}
       <div className="px-2 pt-2 pb-1 min-h-[80px]">
-        <WireframeComponent color={nodeData.color} />
+        {showImage ? (
+          <img src={nodeData.nodeImage} alt={displayName} className="w-full h-[80px] object-cover rounded" />
+        ) : (
+          <WireframeComponent color={nodeData.color} />
+        )}
       </div>
 
       {/* Label */}
