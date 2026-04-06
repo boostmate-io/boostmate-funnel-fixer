@@ -254,7 +254,8 @@
       "wait": "Wait",
       "popup": "Popup",
       "notes": "Notes",
-      "text": "Text"
+      "text": "Text",
+      "shape": "Shape"
     }
   },
   "knowledge": {
