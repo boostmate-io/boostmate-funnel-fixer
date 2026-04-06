@@ -25,6 +25,7 @@ import {
   Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil,
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
+  Sprout, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import ElementsPanel from "./ElementsPanel";
 import FunnelNode from "./FunnelNode";
 import TrafficSourceNode from "./TrafficSourceNode";
@@ -96,6 +108,69 @@ const FunnelDesigner = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
   const [linkedAssetSections, setLinkedAssetSections] = useState<Record<string, Array<{ id: string; title: string; description: string }>>>({});
+
+  // Admin state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showSeedTemplates, setShowSeedTemplates] = useState(false);
+  const [showSaveSeed, setShowSaveSeed] = useState(false);
+  const [seedTemplateName, setSeedTemplateName] = useState("");
+  const [seedTemplates, setSeedTemplates] = useState<Array<{ id: string; name: string; description: string; created_at: string; nodes: any[]; edges: any[] }>>([]);
+  const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
+
+  // Check admin role
+  useEffect(() => {
+    if (!userId) { setIsAdmin(false); return; }
+    supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle()
+      .then(({ data }) => setIsAdmin(!!data));
+  }, [userId]);
+
+  const loadSeedTemplates = useCallback(async () => {
+    const { data } = await supabase.from("seed_templates").select("*").order("name", { ascending: true });
+    if (data) setSeedTemplates(data as any);
+  }, []);
+
+  const saveAsSeedTemplate = useCallback(async () => {
+    if (!isAdmin) return;
+    const rawNodes = JSON.parse(JSON.stringify(nodes));
+    // Clean nodes for template (remove user-specific data)
+    const cleanedNodes = rawNodes.map((node: any) => {
+      if (node.type === "funnelPage" && node.data) {
+        const d = node.data;
+        return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+      }
+      return node;
+    });
+    const { error } = await supabase.from("seed_templates").insert({
+      name: seedTemplateName || "Untitled Seed Template",
+      nodes: cleanedNodes,
+      edges: JSON.parse(JSON.stringify(edges)),
+    });
+    if (error) toast.error("Error saving seed template");
+    else {
+      toast.success("Seed template saved");
+      setShowSaveSeed(false);
+      setSeedTemplateName("");
+      loadSeedTemplates();
+    }
+  }, [seedTemplateName, nodes, edges, isAdmin, loadSeedTemplates]);
+
+  const deleteSeedTemplate = useCallback(async (id: string) => {
+    const { error } = await supabase.from("seed_templates").delete().eq("id", id);
+    if (error) toast.error("Error deleting seed template");
+    else {
+      toast.success("Seed template deleted");
+      loadSeedTemplates();
+    }
+    setDeletingSeedId(null);
+  }, [loadSeedTemplates]);
+
+  const previewSeedTemplate = useCallback((tmpl: { nodes: any[]; edges: any[] }) => {
+    setNodes(tmpl.nodes || []);
+    setEdges(tmpl.edges || []);
+    setCurrentFunnel(null);
+    setShowSeedTemplates(false);
+    toast.success("Seed template loaded on canvas (preview only)");
+  }, [setNodes, setEdges]);
 
   // Undo/Redo
   const undoStack = useRef<HistoryEntry[]>([]);
@@ -671,6 +746,23 @@ const FunnelDesigner = () => {
               </Button>
             </TooltipTrigger><TooltipContent>{t("funnelDesigner.saveTemplate")}</TooltipContent></Tooltip>
 
+            {isAdmin && (
+              <>
+                <div className="w-px h-6 bg-border mx-1" />
+                <Tooltip><TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => setShowSaveSeed(true)} className="text-amber-600 border-amber-300 hover:bg-amber-50">
+                    <Sprout className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Save as Seed Template</TooltipContent></Tooltip>
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => { loadSeedTemplates(); setShowSeedTemplates(true); }} className="text-amber-600 border-amber-300 hover:bg-amber-50">
+                    <ShieldCheck className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Manage Seed Templates</TooltipContent></Tooltip>
+              </>
+            )}
+
             <div className="w-px h-6 bg-border mx-1" />
 
             <Tooltip><TooltipTrigger asChild>
@@ -889,6 +981,54 @@ const FunnelDesigner = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Seed Template Dialogs (Admin only) */}
+      <Dialog open={showSaveSeed} onOpenChange={setShowSaveSeed}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as Seed Template</DialogTitle>
+            <DialogDescription>This template will be automatically copied to every new user account.</DialogDescription>
+          </DialogHeader>
+          <Input value={seedTemplateName} onChange={(e) => setSeedTemplateName(e.target.value)} placeholder="Seed template name..." />
+          <DialogFooter><Button onClick={saveAsSeedTemplate}>Save Seed Template</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSeedTemplates} onOpenChange={setShowSeedTemplates}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Manage Seed Templates</DialogTitle>
+            <DialogDescription>These templates are automatically copied to new user accounts.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {seedTemplates.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No seed templates yet.</p>}
+            {seedTemplates.map((st) => (
+              <div key={st.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
+                <button onClick={() => previewSeedTemplate(st)} className="text-left flex-1">
+                  <p className="text-sm font-medium text-foreground">{st.name}</p>
+                  <p className="text-[11px] text-muted-foreground">{new Date(st.created_at).toLocaleDateString()}</p>
+                </button>
+                <Button variant="ghost" size="icon" onClick={() => setDeletingSeedId(st.id)}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deletingSeedId} onOpenChange={(open) => { if (!open) setDeletingSeedId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Seed Template?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently remove this seed template. Existing user copies won't be affected.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deletingSeedId && deleteSeedTemplate(deletingSeedId)}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
