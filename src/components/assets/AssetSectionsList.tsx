@@ -110,12 +110,14 @@ const AssetSectionsList = ({ assetId }: AssetSectionsListProps) => {
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               )}
             </button>
-            <Input
-              value={section.title}
-              onChange={(e) => updateSection(section.id, { title: e.target.value })}
-              className="border-0 bg-transparent p-0 h-auto text-sm font-medium focus-visible:ring-0"
-              placeholder={t("assets.sectionTitle")}
-            />
+            <div className="flex-1 min-w-0">
+              <Input
+                value={section.title}
+                onChange={(e) => updateSection(section.id, { title: e.target.value })}
+                className="border-0 bg-transparent p-0 h-auto text-sm font-medium focus-visible:ring-0"
+                placeholder={t("assets.sectionTitle")}
+              />
+            </div>
             <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => deleteSection(section.id)}>
               <Trash2 className="w-3.5 h-3.5 text-destructive" />
             </Button>
