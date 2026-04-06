@@ -468,7 +468,7 @@ const FunnelDesigner = () => {
       }
     }
     loadFunnels();
-  }, [currentFunnel, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections, editingSeedTemplate, loadSeedTemplates]);
+  }, [currentFunnel, nodes, edges, t, loadFunnels, loadTemplates, userId, activeProject, resolveNodeCopySections, editingSeedTemplate, editingTemplate, loadSeedTemplates]);
 
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeProject) return;
