@@ -211,7 +211,7 @@ const NodeDetailsPanel = ({
               {copySections!.map((s, i) => (
                 <div key={i} className="text-xs text-foreground border border-border rounded p-2">
                   <p className="font-medium">{s.title}</p>
-                  {s.description && <p className="text-muted-foreground mt-0.5">{s.description}</p>}
+                  {s.description && <p className="text-muted-foreground mt-0.5 whitespace-pre-wrap">{s.description}</p>}
                 </div>
               ))}
             </div>

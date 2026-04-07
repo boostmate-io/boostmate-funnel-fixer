@@ -146,7 +146,7 @@ const TextStyleRender = ({ nodeData }: { nodeData: FunnelNodeData }) => {
 
   return (
     <div className="relative overflow-visible">
-      <div className="min-w-[80px] max-w-[260px] px-2 py-1">
+      <div className="px-2 py-1" style={{ whiteSpace: "nowrap" }}>
         <p
           className="whitespace-pre-wrap break-words leading-relaxed"
           style={{

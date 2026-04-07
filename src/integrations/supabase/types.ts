@@ -424,6 +424,7 @@ export type Database = {
           description: string | null
           edges: Json
           id: string
+          is_active: boolean
           name: string
           nodes: Json
           updated_at: string
@@ -433,6 +434,7 @@ export type Database = {
           description?: string | null
           edges?: Json
           id?: string
+          is_active?: boolean
           name?: string
           nodes?: Json
           updated_at?: string
@@ -442,6 +444,7 @@ export type Database = {
           description?: string | null
           edges?: Json
           id?: string
+          is_active?: boolean
           name?: string
           nodes?: Json
           updated_at?: string

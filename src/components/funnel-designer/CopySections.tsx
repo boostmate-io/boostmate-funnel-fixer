@@ -159,11 +159,17 @@ const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onL
                   onChange={(e) => updateLocalSection(section.id, { description: e.target.value })}
                   placeholder={t("funnelDesigner.copySectionDescription")}
                   className="w-full text-xs text-muted-foreground bg-transparent border border-border rounded-md px-2 py-1.5 resize-none overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  rows={1}
+                  rows={3}
+                  ref={(el) => {
+                    if (el) {
+                      el.style.height = "auto";
+                      el.style.height = Math.max(el.scrollHeight, 56) + "px";
+                    }
+                  }}
                   onInput={(e) => {
                     const el = e.currentTarget;
                     el.style.height = "auto";
-                    el.style.height = el.scrollHeight + "px";
+                    el.style.height = Math.max(el.scrollHeight, 56) + "px";
                   }}
                 />
               )}
