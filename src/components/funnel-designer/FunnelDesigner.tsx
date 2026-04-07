@@ -55,6 +55,7 @@ import TrafficSourceNode from "./TrafficSourceNode";
 import NodeDetailsPanel from "./NodeDetailsPanel";
 import { TRAFFIC_SOURCES, FUNNEL_ELEMENTS } from "./constants";
 import { toPng } from "html-to-image";
+import { Switch } from "@/components/ui/switch";
 
 const nodeTypes = {
   funnelPage: FunnelNode,
