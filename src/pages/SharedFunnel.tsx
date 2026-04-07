@@ -47,6 +47,7 @@ const SharedFunnelInner = () => {
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
   const [showImages, setShowImages] = useState(false);
   const [rfInstance, setRfInstance] = useState<any>(null);
+  const initDone = useRef(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const flowRef = useRef<HTMLDivElement>(null);
 
