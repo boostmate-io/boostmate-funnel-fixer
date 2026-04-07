@@ -1140,13 +1140,29 @@ const FunnelDesigner = () => {
             {seedTemplates.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No seed templates yet.</p>}
             {seedTemplates.map((st) => (
               <div key={st.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
-                <button onClick={() => previewSeedTemplate(st)} className="text-left flex-1">
-                  <p className="text-sm font-medium text-foreground">{st.name}</p>
+                <button onClick={() => previewSeedTemplate(st)} className="text-left flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{st.name}</p>
                   <p className="text-[11px] text-muted-foreground">{new Date(st.created_at).toLocaleDateString()}</p>
                 </button>
-                <Button variant="ghost" size="icon" onClick={() => setDeletingSeedId(st.id)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Switch
+                          checked={st.is_active}
+                          onCheckedChange={async (checked) => {
+                            await supabase.from("seed_templates").update({ is_active: checked }).eq("id", st.id);
+                            setSeedTemplates((prev) => prev.map((t) => t.id === st.id ? { ...t, is_active: checked } : t));
+                          }}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>{st.is_active ? "Active – will be copied to new accounts" : "Inactive – won't be copied to new accounts"}</TooltipContent>
+                  </Tooltip>
+                  <Button variant="ghost" size="icon" onClick={() => setDeletingSeedId(st.id)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
