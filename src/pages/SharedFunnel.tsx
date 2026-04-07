@@ -189,9 +189,33 @@ const SharedFunnelInner = () => {
             onNodeDoubleClick={onNodeDoubleClick}
             onPaneClick={onPaneClick}
             onSelectionChange={({ nodes: selectedNodes }) => setSelectedNodeId(selectedNodes[0]?.id ?? null)}
-            onInit={setRfInstance}
-            fitView
-            fitViewOptions={{ padding: 0.45 }}
+            onInit={(instance) => {
+              setRfInstance(instance);
+              // After fitView, adjust so the left side of the funnel is visible
+              setTimeout(() => {
+                if (initDone.current) return;
+                initDone.current = true;
+                instance.fitView({ padding: 0.45 });
+                // After fitting, check if funnel is wider than viewport
+                setTimeout(() => {
+                  const nodes = instance.getNodes();
+                  if (!nodes.length) return;
+                  const minX = Math.min(...nodes.map((n: any) => n.position.x));
+                  const viewport = instance.getViewport();
+                  // Shift viewport so the left-most node is visible with some padding
+                  const paddingPx = 40;
+                  const leftEdgeInScreen = minX * viewport.zoom + viewport.x;
+                  if (leftEdgeInScreen < paddingPx) {
+                    instance.setViewport({
+                      x: -minX * viewport.zoom + paddingPx,
+                      y: viewport.y,
+                      zoom: viewport.zoom,
+                    });
+                  }
+                }, 50);
+              }, 50);
+            }}
+            fitView={false}
             deleteKeyCode={[]}
             proOptions={{ hideAttribution: true }}
             elementsSelectable
