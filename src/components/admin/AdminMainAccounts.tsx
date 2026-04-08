@@ -45,9 +45,14 @@ const AdminMainAccounts = () => {
   useEffect(() => { load(); }, []);
 
   const handleDelete = async (id: string) => {
+    const isDeletingActive = mainAccount?.id === id;
     const { error } = await supabase.from("main_accounts").delete().eq("id", id);
     if (error) { toast.error("Failed to delete: " + error.message); return; }
     toast.success("Main account deleted");
+    if (isDeletingActive) {
+      localStorage.removeItem("activeMainAccountId");
+      localStorage.removeItem("activeSubAccountId");
+    }
     await refreshWorkspace();
     load();
   };
