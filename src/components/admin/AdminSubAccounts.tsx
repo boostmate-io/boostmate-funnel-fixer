@@ -158,7 +158,7 @@ const AdminSubAccounts = () => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => { switchSubAccount(sub.id); toast.success("Switched to workspace"); }}
+                        onClick={async () => { await switchMainAccount(sub.main_account_id); switchSubAccount(sub.id); toast.success("Switched to workspace"); }}
                         title="Manage this workspace"
                       >
                         <Eye className="w-4 h-4" />
