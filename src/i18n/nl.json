@@ -384,9 +384,12 @@
     "inviteExpired": "Uitnodiging niet gevonden",
     "inviteExpiredDescription": "Deze uitnodigingslink is ongeldig of al gebruikt.",
     "backToHome": "Terug naar home",
-    "joinTitle": "Maak je account aan",
-    "joinDescription": "Je bent uitgenodigd om lid te worden van Boostmate.",
-    "displayNamePlaceholder": "Je naam of bedrijfsnaam",
+    "joinTitle": "Word lid van je team",
+    "joinDescription": "Je bent uitgenodigd om lid te worden van een workspace op Boostmate.",
+    "joinDescriptionWithAccount": "Je bent uitgenodigd om lid te worden van {{account}} op Boostmate.",
+    "yourName": "Je naam",
+    "joinButton": "Account aanmaken & deelnemen",
+    "displayNamePlaceholder": "Je naam",
     "sidebar": {
       "clients": "Klanten"
     }

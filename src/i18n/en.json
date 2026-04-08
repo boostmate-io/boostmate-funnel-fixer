@@ -384,9 +384,12 @@
     "inviteExpired": "Invite not found",
     "inviteExpiredDescription": "This invite link is invalid or has already been used.",
     "backToHome": "Back to home",
-    "joinTitle": "Create your account",
-    "joinDescription": "You've been invited to join Boostmate.",
-    "displayNamePlaceholder": "Your name or company name",
+    "joinTitle": "Join your team",
+    "joinDescription": "You've been invited to join a workspace on Boostmate.",
+    "joinDescriptionWithAccount": "You've been invited to join {{account}} on Boostmate.",
+    "yourName": "Your name",
+    "joinButton": "Create account & join",
+    "displayNamePlaceholder": "Your name",
     "sidebar": {
       "clients": "Clients"
     }
