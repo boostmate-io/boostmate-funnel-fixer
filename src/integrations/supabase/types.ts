@@ -438,6 +438,7 @@ export type Database = {
           id: string
           name: string
           project_id: string | null
+          share_token: string | null
           status: string
           updated_at: string
           user_id: string
@@ -449,6 +450,7 @@ export type Database = {
           id?: string
           name?: string
           project_id?: string | null
+          share_token?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -460,6 +462,7 @@ export type Database = {
           id?: string
           name?: string
           project_id?: string | null
+          share_token?: string | null
           status?: string
           updated_at?: string
           user_id?: string

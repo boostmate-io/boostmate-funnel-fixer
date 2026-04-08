@@ -22,7 +22,7 @@ import { useProject } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
-  Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil,
+  Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil, ArrowLeft,
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
   Sprout, ShieldCheck, ClipboardList, Gem,
@@ -89,9 +89,11 @@ interface HistoryEntry {
 
 interface FunnelDesignerProps {
   onNavigateToOffer?: (offerId: string) => void;
+  initialFunnel?: any;
+  onBackToList?: () => void;
 }
 
-const FunnelDesigner = ({ onNavigateToOffer }: FunnelDesignerProps = {}) => {
+const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: FunnelDesignerProps = {}) => {
   const { t } = useTranslation();
   const { activeProject } = useProject();
   const { user } = useAuth();
@@ -282,10 +284,14 @@ const FunnelDesigner = ({ onNavigateToOffer }: FunnelDesignerProps = {}) => {
   }, []);
 
   useEffect(() => {
-    loadFunnels();
-    loadTemplates();
-    resetCanvas();
-  }, [loadFunnels, loadTemplates, activeProject]);
+    if (initialFunnel) {
+      loadFunnel(initialFunnel);
+    } else {
+      loadFunnels();
+      loadTemplates();
+      resetCanvas();
+    }
+  }, [activeProject]);
 
   const linkedAssetIds = useMemo(
     () => Array.from(new Set(
@@ -835,6 +841,11 @@ const FunnelDesigner = ({ onNavigateToOffer }: FunnelDesignerProps = {}) => {
         {/* Top Toolbar */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-2">
+            {onBackToList && (
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onBackToList}>
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            )}
             {currentFunnel && renamingFunnel ? (
               <Input
                 autoFocus

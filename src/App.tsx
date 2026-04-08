@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard.tsx";
 import InviteRegistration from "./pages/InviteRegistration.tsx";
 import SharedFunnel from "./pages/SharedFunnel.tsx";
 import SharedBrief from "./pages/SharedBrief.tsx";
+import SharedOffer from "./pages/SharedOffer.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/invite/:code" element={<InviteRegistration />} />
             <Route path="/shared/:token" element={<SharedFunnel />} />
             <Route path="/brief/:token" element={<SharedBrief />} />
+            <Route path="/offer/:token" element={<SharedOffer />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />

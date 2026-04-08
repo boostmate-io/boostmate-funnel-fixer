@@ -250,7 +250,7 @@ const SharedFunnelInner = () => {
               Offer
             </Button>
           )}
-          {briefData && (
+          {briefData && briefData.structure?.sections?.length > 0 && (
             <Button
               variant={showBrief ? "default" : "outline"}
               size="sm"

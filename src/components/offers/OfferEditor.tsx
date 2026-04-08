@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Save, CheckCircle2, Circle, Gem, Star, AlertTriangle,
   Lightbulb, Package, TrendingUp, Award, DollarSign, Shield, HelpCircle,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import {
   OFFER_SECTIONS, OfferSection, OfferField, OfferData, OfferStatus,
   computeOfferCompletion, STATUS_LABELS, STATUS_COLORS,
 } from "./offerFramework";
+import OfferShareDialog from "./OfferShareDialog";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Gem, Star, AlertTriangle, Lightbulb, Package, TrendingUp, Award, DollarSign, Shield, HelpCircle,
@@ -34,6 +36,8 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
   const [status, setStatus] = useState<OfferStatus>("draft");
   const [data, setData] = useState<OfferData>({});
   const [activeSection, setActiveSection] = useState(OFFER_SECTIONS[0].id);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const isDirty = useRef(false);
 
   useEffect(() => {
@@ -49,6 +53,7 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
         setName(r.name);
         setStatus(r.status as OfferStatus);
         setData(r.data || {});
+        setShareToken(r.share_token || null);
       }
       setLoading(false);
     })();
@@ -109,11 +114,10 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
     return (
       <div key={field.id} className="space-y-1.5">
         <label className="text-xs font-medium text-foreground">{field.label}</label>
-        {field.description && <p className="text-[10px] text-muted-foreground">{field.description}</p>}
         {field.type === "select" ? (
           <Select value={value} onValueChange={(v) => updateField(field.id, v)}>
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder={field.placeholder || "Select..."} />
+              <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
               {field.options?.map((opt) => (
@@ -125,16 +129,17 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
           <Textarea
             value={value}
             onChange={(e) => updateField(field.id, e.target.value)}
-            placeholder={field.placeholder}
             className="min-h-[80px] text-sm resize-y"
           />
         ) : (
           <Input
             value={value}
             onChange={(e) => updateField(field.id, e.target.value)}
-            placeholder={field.placeholder}
             className="h-9 text-sm"
           />
+        )}
+        {field.placeholder && (
+          <p className="text-[10px] text-muted-foreground leading-relaxed">{field.placeholder}</p>
         )}
       </div>
     );
@@ -185,6 +190,9 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
                   <SelectItem value="approved">Approved</SelectItem>
                 </SelectContent>
               </Select>
+              <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setShowShareDialog(true)}>
+                <Share2 className="w-3.5 h-3.5" /> Share
+              </Button>
               <Button size="sm" onClick={saveOffer} disabled={saving} className="h-8 gap-1.5">
                 <Save className="w-3.5 h-3.5" /> {saving ? "Saving..." : "Save"}
               </Button>
@@ -293,6 +301,17 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
           </div>
         </div>
       </div>
+
+      {!readOnly && (
+        <OfferShareDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          offerId={offerId}
+          offerName={name}
+          shareToken={shareToken}
+          onShareTokenChange={setShareToken}
+        />
+      )}
     </div>
   );
 };
