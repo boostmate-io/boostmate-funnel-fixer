@@ -39,6 +39,8 @@ interface WorkspaceContextType {
   effectiveUserId: string | null;
   loading: boolean;
   renameSubAccount: (id: string, name: string) => Promise<void>;
+  renameMainAccount: (name: string) => Promise<boolean>;
+  updateMainAccountType: (type: "standard" | "agency") => Promise<boolean>;
   createClientSubAccount: (name: string) => Promise<SubAccount | null>;
   // Admin: all main accounts for switching
   allMainAccounts: MainAccount[];
@@ -54,7 +56,7 @@ export const useWorkspace = () => {
 };
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, isReady } = useAuth();
   const userId = user?.id ?? null;
 
   const [mainAccount, setMainAccount] = useState<MainAccount | null>(null);
@@ -67,25 +69,53 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [allMainAccounts, setAllMainAccounts] = useState<MainAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const loadedForUserRef = useRef<string | null>(null);
+  const pendingWorkspaceResetRef = useRef<number | null>(null);
 
   // Load user's own main account id for reference
   const ownMainAccountIdRef = useRef<string | null>(null);
 
+  const clearPendingWorkspaceReset = () => {
+    if (pendingWorkspaceResetRef.current) {
+      window.clearTimeout(pendingWorkspaceResetRef.current);
+      pendingWorkspaceResetRef.current = null;
+    }
+  };
+
+  const resetWorkspaceState = () => {
+    setMainAccount(null);
+    setSubAccounts([]);
+    setMemberships([]);
+    setActiveSubAccountId(null);
+    setIsAppAdmin(false);
+    setAllMainAccounts([]);
+    setLoading(false);
+    loadedForUserRef.current = null;
+    ownMainAccountIdRef.current = null;
+    localStorage.removeItem("activeSubAccountId");
+    localStorage.removeItem("activeMainAccountId");
+  };
+
   useEffect(() => {
     if (!userId) {
-      setMainAccount(null);
-      setSubAccounts([]);
-      setMemberships([]);
-      setActiveSubAccountId(null);
-      setIsAppAdmin(false);
-      setAllMainAccounts([]);
-      setLoading(false);
-      loadedForUserRef.current = null;
-      ownMainAccountIdRef.current = null;
-      localStorage.removeItem("activeSubAccountId");
-      localStorage.removeItem("activeMainAccountId");
-      return;
+      if (!isReady) return;
+
+      clearPendingWorkspaceReset();
+
+      if (!loadedForUserRef.current) {
+        resetWorkspaceState();
+        return;
+      }
+
+      pendingWorkspaceResetRef.current = window.setTimeout(() => {
+        resetWorkspaceState();
+      }, 1500);
+
+      return () => {
+        clearPendingWorkspaceReset();
+      };
     }
+
+    clearPendingWorkspaceReset();
 
     if (loadedForUserRef.current === userId) return;
 
@@ -157,7 +187,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, isReady]);
+
+  useEffect(() => {
+    return () => {
+      clearPendingWorkspaceReset();
+    };
+  }, []);
 
   const loadSubAccountsForMain = async (
     mainId: string,
@@ -264,6 +300,45 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const renameMainAccount = useCallback(async (name: string) => {
+    if (!mainAccount) return false;
+
+    const trimmedName = name.trim();
+    if (!trimmedName) return false;
+
+    const { error } = await supabase
+      .from("main_accounts")
+      .update({ name: trimmedName })
+      .eq("id", mainAccount.id);
+
+    if (error) return false;
+
+    setMainAccount((prev) => prev ? { ...prev, name: trimmedName } : prev);
+    setAllMainAccounts((prev) => prev.map((account) => (
+      account.id === mainAccount.id ? { ...account, name: trimmedName } : account
+    )));
+
+    return true;
+  }, [mainAccount]);
+
+  const updateMainAccountType = useCallback(async (type: "standard" | "agency") => {
+    if (!mainAccount) return false;
+
+    const { error } = await supabase
+      .from("main_accounts")
+      .update({ type })
+      .eq("id", mainAccount.id);
+
+    if (error) return false;
+
+    setMainAccount((prev) => prev ? { ...prev, type } : prev);
+    setAllMainAccounts((prev) => prev.map((account) => (
+      account.id === mainAccount.id ? { ...account, type } : account
+    )));
+
+    return true;
+  }, [mainAccount]);
+
   const createClientSubAccount = useCallback(async (name: string): Promise<SubAccount | null> => {
     if (!mainAccount) return null;
     const { data, error } = await supabase
@@ -290,6 +365,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       effectiveUserId: userId,
       loading,
       renameSubAccount,
+      renameMainAccount,
+      updateMainAccountType,
       createClientSubAccount,
       allMainAccounts,
       switchMainAccount,
