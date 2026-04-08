@@ -925,6 +925,12 @@ const FunnelDesigner = ({ onNavigateToOffer }: FunnelDesignerProps = {}) => {
               </Button>
             </TooltipTrigger><TooltipContent>Funnel Brief</TooltipContent></Tooltip>
 
+            <Tooltip><TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => { setShowOfferPanel(!showOfferPanel); if (showBriefPanel) setShowBriefPanel(false); }} className={showOfferPanel ? "bg-primary/10 border-primary" : ""}>
+                <Gem className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger><TooltipContent>Linked Offer</TooltipContent></Tooltip>
+
             <div className="w-px h-6 bg-border mx-1" />
 
             <Tooltip><TooltipTrigger asChild>
