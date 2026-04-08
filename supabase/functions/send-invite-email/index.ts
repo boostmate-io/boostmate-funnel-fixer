@@ -23,43 +23,43 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // Build the invite link
-    const appUrl = Deno.env.get("APP_URL") || supabaseUrl.replace(".supabase.co", ".lovable.app");
-    // Use the published URL pattern
-    const inviteLink = `https://boostmate-funnel-fixer.lovable.app/invite/${invite_code}`;
-
-    // Send email using Supabase Auth admin API (generateLink approach)
-    // Since we don't have a dedicated email service, we'll use the admin client
-    // to send a simple invite notification
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Check if user already exists
-    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(
-      (u: any) => u.email?.toLowerCase() === email.toLowerCase()
-    );
+    const inviteLink = `https://boostmate-funnel-fixer.lovable.app/invite/${invite_code}`;
 
-    if (existingUser) {
-      // User exists - send magic link so they can accept the invite
-      const { error: otpError } = await adminClient.auth.admin.generateLink({
-        type: "magiclink",
-        email: email,
-        options: {
-          redirectTo: inviteLink,
-        },
+    // Try to send an auth invite email via Supabase Auth
+    // This uses Supabase's built-in email sending
+    const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
+      redirectTo: inviteLink,
+      data: {
+        invite_code,
+        account_name: account_name || "workspace",
+      },
+    });
+
+    if (error) {
+      // User might already exist - that's OK, invite record is created
+      // They can use the invite link directly
+      console.log("Auth invite error (may be expected for existing users):", error.message);
+      return new Response(JSON.stringify({ 
+        success: true, 
+        invite_link: inviteLink,
+        email_sent: false,
+        note: "Invite created. User can use the invite link to join."
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      // Even if magic link fails, the invite record exists and user can use it
     }
 
-    // For new users, they'll need to register via the invite link
-    // The invite link page handles both existing and new users
-
-    return new Response(JSON.stringify({ success: true, invite_link: inviteLink }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      invite_link: inviteLink,
+      email_sent: true 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error sending invite email:", error);
+    console.error("Error sending invite:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
