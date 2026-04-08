@@ -241,6 +241,7 @@ export type Database = {
       }
       funnel_briefs: {
         Row: {
+          approved_fields: Json
           created_at: string
           funnel_id: string
           id: string
@@ -253,6 +254,7 @@ export type Database = {
           values: Json
         }
         Insert: {
+          approved_fields?: Json
           created_at?: string
           funnel_id: string
           id?: string
@@ -265,6 +267,7 @@ export type Database = {
           values?: Json
         }
         Update: {
+          approved_fields?: Json
           created_at?: string
           funnel_id?: string
           id?: string
