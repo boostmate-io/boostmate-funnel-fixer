@@ -67,7 +67,7 @@ const FunnelShareDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md overflow-hidden">
         <DialogHeader>
           <DialogTitle>Share Funnel</DialogTitle>
           <DialogDescription>
@@ -82,7 +82,7 @@ const FunnelShareDialog = ({
                 <label className="text-xs font-semibold text-foreground">Share Link</label>
                 <div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border border-border">
                   <Link2 className="w-4 h-4 text-primary shrink-0" />
-                  <span className="text-xs text-foreground truncate flex-1 font-mono">
+                  <span className="text-xs text-foreground flex-1 font-mono break-all">
                     {shareUrl}
                   </span>
                   <Button
