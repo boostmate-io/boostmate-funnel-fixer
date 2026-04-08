@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   X, Save, Share2, Link2, Copy, Settings2, FileEdit, Eye,
-  ClipboardList, ExternalLink,
+  ClipboardList, ExternalLink, CheckCircle2, Circle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,6 +30,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
   const [structure, setStructure] = useState<BriefStructure>({ sections: [] });
   const [values, setValues] = useState<BriefValues>({});
   const [activeTab, setActiveTab] = useState<string>("fill");
+  const [isApproved, setIsApproved] = useState(false);
   const isDirty = useRef(false);
 
   // Load brief for current funnel or seed template
@@ -68,6 +69,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
           setBrief(b);
           setStructure(b.structure || { sections: [] });
           setValues(b.values || {});
+          setIsApproved(!!(data as any).is_approved);
         } else {
           setBrief(null);
           setStructure({ sections: [] });
@@ -190,6 +192,20 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
     }
   }, [brief]);
 
+  const toggleApproval = useCallback(async () => {
+    if (!brief?.id) return;
+    const newVal = !isApproved;
+    const { error } = await supabase
+      .from("funnel_briefs")
+      .update({ is_approved: newVal } as any)
+      .eq("id", brief.id);
+    if (error) toast.error("Error updating approval status");
+    else {
+      setIsApproved(newVal);
+      toast.success(newVal ? "Brief marked as approved" : "Brief approval removed");
+    }
+  }, [brief, isApproved]);
+
   if (!funnelId) {
     return (
       <div className="w-80 border-l border-border bg-card flex flex-col h-full">
@@ -251,11 +267,32 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
 
             <div className="flex-1 overflow-auto">
               <TabsContent value="fill" className="px-4 pb-4 mt-0">
+                {/* Approval status */}
+                {brief?.id && !isSeedTemplate && (
+                  <div className={`flex items-center justify-between p-2.5 rounded-lg border mb-3 mt-2 ${isApproved ? "bg-emerald-500/10 border-emerald-500/30" : "bg-muted/30 border-border"}`}>
+                    <div className="flex items-center gap-2">
+                      {isApproved ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-muted-foreground" />}
+                      <span className={`text-xs font-medium ${isApproved ? "text-emerald-600" : "text-muted-foreground"}`}>
+                        {isApproved ? "Brief Approved" : "Pending Approval"}
+                      </span>
+                    </div>
+                    {!readOnly && (
+                      <Button
+                        variant={isApproved ? "outline" : "default"}
+                        size="sm"
+                        className="h-6 text-[10px] px-2"
+                        onClick={toggleApproval}
+                      >
+                        {isApproved ? "Revoke" : "Approve"}
+                      </Button>
+                    )}
+                  </div>
+                )}
                 <BriefFiller
                   structure={structure}
                   values={values}
                   onChange={handleValuesChange}
-                  readOnly={readOnly}
+                  readOnly={readOnly || isApproved}
                 />
               </TabsContent>
 

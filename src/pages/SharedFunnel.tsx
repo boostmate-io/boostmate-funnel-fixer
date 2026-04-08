@@ -16,10 +16,13 @@ import { supabase } from "@/integrations/supabase/client";
 import FunnelNode from "@/components/funnel-designer/FunnelNode";
 import TrafficSourceNode from "@/components/funnel-designer/TrafficSourceNode";
 import NodeDetailsPanel from "@/components/funnel-designer/NodeDetailsPanel";
+import BriefFiller from "@/components/funnel-brief/BriefFiller";
+import { BriefStructure, BriefValues } from "@/components/funnel-brief/types";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Image, Monitor, ZoomIn, ZoomOut, Camera } from "lucide-react";
+import { Image, Monitor, ZoomIn, ZoomOut, Camera, ClipboardList, CheckCircle2, Circle, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import logo from "@/assets/logo-boostmate.svg";
 
 const nodeTypes = {
@@ -37,6 +40,15 @@ interface FunnelData {
   name: string;
   nodes: Node[];
   edges: Edge[];
+  id?: string;
+}
+
+interface BriefData {
+  id: string;
+  structure: BriefStructure;
+  values: BriefValues;
+  is_approved: boolean;
+  share_permission: string;
 }
 
 const SharedFunnelInner = () => {
@@ -50,19 +62,42 @@ const SharedFunnelInner = () => {
   const initDone = useRef(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const flowRef = useRef<HTMLDivElement>(null);
+  const [briefData, setBriefData] = useState<BriefData | null>(null);
+  const [briefValues, setBriefValues] = useState<BriefValues>({});
+  const [showBrief, setShowBrief] = useState(false);
+  const [savingBrief, setSavingBrief] = useState(false);
 
   useEffect(() => {
     if (!token) return;
     (async () => {
       const { data, error: err } = await supabase
         .from("funnels")
-        .select("name, nodes, edges")
+        .select("id, name, nodes, edges")
         .eq("share_token", token)
         .single();
       if (err || !data) {
         setError(true);
       } else {
         setFunnel(data as unknown as FunnelData);
+        // Load brief for this funnel
+        if (data.id) {
+          const { data: briefRow } = await supabase
+            .from("funnel_briefs")
+            .select("id, structure, values, is_approved, share_permission")
+            .eq("funnel_id", data.id)
+            .maybeSingle();
+          if (briefRow) {
+            const bd = briefRow as any;
+            setBriefData({
+              id: bd.id,
+              structure: bd.structure || { sections: [] },
+              values: bd.values || {},
+              is_approved: !!bd.is_approved,
+              share_permission: bd.share_permission || "view",
+            });
+            setBriefValues(bd.values || {});
+          }
+        }
       }
       setLoading(false);
     })();
@@ -123,6 +158,21 @@ const SharedFunnelInner = () => {
     setSelectedNodeId(node.id);
     if (canOpenReadOnlyDetails(node)) setDetailsNodeId(node.id);
   }, [canOpenReadOnlyDetails]);
+
+  // Brief editing is allowed when not approved
+  const canEditBrief = briefData && !briefData.is_approved;
+
+  const saveBriefValues = useCallback(async () => {
+    if (!briefData?.id) return;
+    setSavingBrief(true);
+    const { error } = await supabase
+      .from("funnel_briefs")
+      .update({ values: briefValues as any, updated_at: new Date().toISOString() } as any)
+      .eq("id", briefData.id);
+    if (error) toast.error("Error saving brief");
+    else toast.success("Brief saved");
+    setSavingBrief(false);
+  }, [briefData, briefValues]);
 
   const handleDownloadPng = useCallback(() => {
     const viewport = flowRef.current?.querySelector(".react-flow__viewport") as HTMLElement | null;
@@ -189,7 +239,25 @@ const SharedFunnelInner = () => {
           <img src={logo} alt="Boostmate" className="h-5" />
           <span className="text-sm font-display font-bold text-foreground">{funnel.name}</span>
         </div>
-        <span className="text-xs text-muted-foreground">Read-only view</span>
+        <div className="flex items-center gap-2">
+          {briefData && (
+            <Button
+              variant={showBrief ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={() => { setShowBrief(!showBrief); if (!showBrief) setDetailsNodeId(null); }}
+            >
+              <ClipboardList className="w-3.5 h-3.5" />
+              Brief
+              {briefData.is_approved ? (
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+              ) : (
+                <Circle className="w-3 h-3 text-muted-foreground" />
+              )}
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground">Read-only view</span>
+        </div>
       </div>
 
       <div className="flex flex-1 min-h-0">
@@ -275,7 +343,7 @@ const SharedFunnelInner = () => {
           </ReactFlow>
         </div>
 
-        {detailsNode && detailsNode.type === "funnelPage" && (
+        {detailsNode && detailsNode.type === "funnelPage" && !showBrief && (
           <NodeDetailsPanel
             nodeId={detailsNode.id}
             nodeLabel={(detailsNode.data as any).label || ""}
@@ -295,6 +363,44 @@ const SharedFunnelInner = () => {
             onRename={() => {}}
             onClose={() => setDetailsNodeId(null)}
           />
+        )}
+
+        {showBrief && briefData && (
+          <div className="w-96 border-l border-border bg-card flex flex-col h-full overflow-hidden shrink-0">
+            <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <ClipboardList className="w-4 h-4 text-primary shrink-0" />
+                <h3 className="text-sm font-display font-bold text-foreground truncate">Funnel Brief</h3>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {canEditBrief && (
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={saveBriefValues} disabled={savingBrief}>
+                    <Save className="w-3 h-3 mr-1" /> {savingBrief ? "Saving..." : "Save"}
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowBrief(false)}>
+                  ✕
+                </Button>
+              </div>
+            </div>
+
+            {/* Approval status */}
+            <div className={`mx-4 mt-3 flex items-center gap-2 p-2.5 rounded-lg border ${briefData.is_approved ? "bg-emerald-500/10 border-emerald-500/30" : "bg-muted/30 border-border"}`}>
+              {briefData.is_approved ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-muted-foreground" />}
+              <span className={`text-xs font-medium ${briefData.is_approved ? "text-emerald-600" : "text-muted-foreground"}`}>
+                {briefData.is_approved ? "Brief Approved" : "Pending Approval"}
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4">
+              <BriefFiller
+                structure={briefData.structure}
+                values={briefValues}
+                onChange={canEditBrief ? setBriefValues : () => {}}
+                readOnly={!canEditBrief}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
