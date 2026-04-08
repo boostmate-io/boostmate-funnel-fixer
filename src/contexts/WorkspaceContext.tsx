@@ -196,7 +196,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       setMemberships(mems);
 
       const ownerMembership = mems.find((m) => m.role === "owner" && !m.sub_account_id) || null;
-      if (!ownerMembership && !adminStatus) {
+      // For invited users: find any main account they have membership to
+      const anyMainMembership = mems.find((m) => m.main_account_id) || null;
+      
+      if (!ownerMembership && !anyMainMembership && !adminStatus) {
         setAllMainAccounts([]);
         setMainAccount(null);
         setSubAccounts([]);
@@ -207,6 +210,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
 
       ownMainAccountIdRef.current = ownerMembership?.main_account_id ?? null;
+      // The primary main account: owner's account, or for invited users, any account they belong to
+      const primaryMainAccountId = ownerMembership?.main_account_id ?? anyMainMembership?.main_account_id ?? null;
 
       let availableMainAccounts: MainAccount[] = [];
       if (adminStatus) {
@@ -219,15 +224,28 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         availableMainAccounts = (allMains || []) as MainAccount[];
         setAllMainAccounts(availableMainAccounts);
       } else {
-        setAllMainAccounts([]);
+        // For non-admin users, load all main accounts they have membership to
+        const uniqueMainIds = [...new Set(mems.map(m => m.main_account_id))];
+        if (uniqueMainIds.length > 0) {
+          const { data: memberMains } = await supabase
+            .from("main_accounts")
+            .select("*")
+            .in("id", uniqueMainIds)
+            .order("name", { ascending: true });
+          if (cancelled) return;
+          availableMainAccounts = (memberMains || []) as MainAccount[];
+        }
+        setAllMainAccounts(availableMainAccounts);
       }
 
       const storedMainId = localStorage.getItem("activeMainAccountId");
       const preferredMainId = adminStatus
         ? (storedMainId && availableMainAccounts.some((account) => account.id === storedMainId)
             ? storedMainId
-            : availableMainAccounts.find((account) => account.id === ownerMembership?.main_account_id)?.id || availableMainAccounts[0]?.id || null)
-        : ownerMembership?.main_account_id || null;
+            : availableMainAccounts.find((account) => account.id === primaryMainAccountId)?.id || availableMainAccounts[0]?.id || null)
+        : (storedMainId && availableMainAccounts.some((account) => account.id === storedMainId)
+            ? storedMainId
+            : primaryMainAccountId || availableMainAccounts[0]?.id || null);
 
       const candidateMainIds = Array.from(new Set([
         preferredMainId,

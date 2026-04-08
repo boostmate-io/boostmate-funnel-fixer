@@ -12,6 +12,7 @@ const InviteRegistration = () => {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const [invite, setInvite] = useState<any>(null);
+  const [accountName, setAccountName] = useState("");
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -21,16 +22,18 @@ const InviteRegistration = () => {
   useEffect(() => {
     const loadInvite = async () => {
       if (!code) { setLoading(false); return; }
-      // Try new account_invites table first
       const { data } = await supabase
         .from("account_invites")
-        .select("*")
+        .select("*, sub_accounts!account_invites_sub_account_id_fkey(name)")
         .eq("invite_code", code)
         .eq("status", "pending")
         .single();
       if (data) {
         setInvite(data);
         setEmail((data as any).email || "");
+        // Get the account name from the linked sub_account
+        const subAccount = (data as any).sub_accounts;
+        setAccountName(subAccount?.name || "");
       }
       setLoading(false);
     };
@@ -105,14 +108,47 @@ const InviteRegistration = () => {
           {t("agency.joinTitle")}
         </h2>
         <p className="text-muted-foreground mb-6 text-sm text-center">
-          {t("agency.joinDescription")}
+          {accountName
+            ? t("agency.joinDescriptionWithAccount", { account: accountName })
+            : t("agency.joinDescription")}
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input placeholder={t("agency.displayNamePlaceholder")} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required className="h-11" />
-          <Input type="email" placeholder={t("auth.emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required className="h-11" />
-          <Input type="password" placeholder={t("auth.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="h-11" />
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1 block">{t("agency.yourName")}</label>
+            <Input
+              placeholder={t("agency.displayNamePlaceholder")}
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              required
+              className="h-11"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1 block">{t("auth.emailPlaceholder")}</label>
+            <Input
+              type="email"
+              placeholder={t("auth.emailPlaceholder")}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="h-11"
+              disabled={!!invite.email}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1 block">{t("auth.passwordPlaceholder")}</label>
+            <Input
+              type="password"
+              placeholder={t("auth.passwordPlaceholder")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="h-11"
+            />
+          </div>
           <Button type="submit" className="w-full" size="lg" disabled={submitting}>
-            {submitting ? t("auth.loading") : t("auth.signup")}
+            {submitting ? t("auth.loading") : t("agency.joinButton")}
           </Button>
         </form>
       </div>
