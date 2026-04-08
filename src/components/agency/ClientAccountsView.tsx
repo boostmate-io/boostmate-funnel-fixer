@@ -50,16 +50,48 @@ const ClientAccountsView = () => {
       });
     }
 
+    // Copy active seed templates as funnel templates for the new sub-account
+    if (user) {
+      const { data: activeSeeds } = await supabase
+        .from("seed_templates")
+        .select("*")
+        .eq("is_active", true);
+      if (activeSeeds && activeSeeds.length > 0) {
+        const templateFunnels = activeSeeds.map((seed: any) => ({
+          user_id: user.id,
+          sub_account_id: newSub.id,
+          name: seed.name,
+          nodes: seed.nodes,
+          edges: seed.edges,
+          is_template: true,
+          template_id: null,
+          description: seed.description || null,
+        }));
+        await supabase.from("funnels").insert(templateFunnels);
+      }
+    }
+
     const emails = newEmails.split(/[,;\n]/).map(e => e.trim()).filter(Boolean);
     if (emails.length > 0 && user && mainAccount) {
       for (const email of emails) {
-        await supabase.from("account_invites").insert({
+        const { data: inviteData } = await supabase.from("account_invites").insert({
           main_account_id: mainAccount.id,
           sub_account_id: newSub.id,
           email,
           invited_by: user.id,
           role: "workspace_member",
-        });
+        }).select().single();
+
+        // Send invite email via edge function
+        if (inviteData) {
+          await supabase.functions.invoke("send-invite-email", {
+            body: {
+              email,
+              invite_code: inviteData.invite_code,
+              account_name: newName.trim(),
+            },
+          });
+        }
       }
     }
 
