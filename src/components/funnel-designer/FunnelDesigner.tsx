@@ -57,6 +57,7 @@ import { TRAFFIC_SOURCES, FUNNEL_ELEMENTS } from "./constants";
 import { toPng } from "html-to-image";
 import { Switch } from "@/components/ui/switch";
 import FunnelBriefPanel from "@/components/funnel-brief/FunnelBriefPanel";
+import FunnelShareDialog from "./FunnelShareDialog";
 
 const nodeTypes = {
   funnelPage: FunnelNode,
@@ -121,6 +122,7 @@ const FunnelDesigner = () => {
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
   const [editingSeedTemplate, setEditingSeedTemplate] = useState<{ id: string; name: string } | null>(null);
   const [showBriefPanel, setShowBriefPanel] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const templateSourceRef = useRef<{ type: "funnel" | "seed"; id: string } | null>(null);
 
   // Check admin role
@@ -699,18 +701,9 @@ const FunnelDesigner = () => {
   }, [nodes, setNodes, t]);
 
   /* ── Share funnel ── */
-  const shareFunnel = useCallback(async () => {
+  const shareFunnel = useCallback(() => {
     if (!currentFunnel?.id) { toast.error(t("funnelDesigner.saveFirst")); return; }
-    let token = currentFunnel.share_token;
-    if (!token) {
-      token = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-      const { error } = await supabase.from("funnels").update({ share_token: token } as any).eq("id", currentFunnel.id);
-      if (error) { toast.error(t("funnelDesigner.shareError")); return; }
-      setCurrentFunnel({ ...currentFunnel, share_token: token });
-    }
-    const url = `${window.location.origin}/shared/${token}`;
-    await navigator.clipboard.writeText(url);
-    toast.success(t("funnelDesigner.shareCopied"));
+    setShowShareDialog(true);
   }, [currentFunnel, t]);
 
   /* ── Download as PNG ── */
