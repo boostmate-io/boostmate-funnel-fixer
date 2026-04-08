@@ -9,6 +9,7 @@ import { Search, ArrowRightLeft, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface SubAccount {
   id: string;
