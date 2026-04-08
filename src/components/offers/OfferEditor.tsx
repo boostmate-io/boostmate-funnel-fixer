@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Save, CheckCircle2, Circle, Gem, Star, AlertTriangle,
   Lightbulb, Package, TrendingUp, Award, DollarSign, Shield, HelpCircle,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import {
   OFFER_SECTIONS, OfferSection, OfferField, OfferData, OfferStatus,
   computeOfferCompletion, STATUS_LABELS, STATUS_COLORS,
 } from "./offerFramework";
+import OfferShareDialog from "./OfferShareDialog";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Gem, Star, AlertTriangle, Lightbulb, Package, TrendingUp, Award, DollarSign, Shield, HelpCircle,
@@ -34,6 +36,8 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
   const [status, setStatus] = useState<OfferStatus>("draft");
   const [data, setData] = useState<OfferData>({});
   const [activeSection, setActiveSection] = useState(OFFER_SECTIONS[0].id);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const isDirty = useRef(false);
 
   useEffect(() => {
@@ -49,6 +53,7 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
         setName(r.name);
         setStatus(r.status as OfferStatus);
         setData(r.data || {});
+        setShareToken(r.share_token || null);
       }
       setLoading(false);
     })();
