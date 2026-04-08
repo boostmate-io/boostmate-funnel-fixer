@@ -5,10 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Trash2 } from "lucide-react";
+import { Search, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface MainAccount {
   id: string;
@@ -24,13 +25,13 @@ const AdminMainAccounts = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const { switchSubAccount } = useWorkspace();
 
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase.from("main_accounts").select("*").order("created_at", { ascending: false });
     if (error) { toast.error("Failed to load accounts"); setLoading(false); return; }
 
-    // Enrich with counts
     const enriched: MainAccount[] = [];
     for (const acc of data || []) {
       const { count: subCount } = await supabase.from("sub_accounts").select("*", { count: "exact", head: true }).eq("main_account_id", acc.id);
@@ -48,6 +49,33 @@ const AdminMainAccounts = () => {
     if (error) { toast.error("Failed to delete: " + error.message); return; }
     toast.success("Main account deleted");
     load();
+  };
+
+  const handleManage = async (mainAccountId: string) => {
+    const { data } = await supabase
+      .from("sub_accounts")
+      .select("id")
+      .eq("main_account_id", mainAccountId)
+      .eq("is_default", true)
+      .single();
+    if (data) {
+      switchSubAccount(data.id);
+      toast.success("Switched to account's default workspace");
+    } else {
+      const { data: firstSub } = await supabase
+        .from("sub_accounts")
+        .select("id")
+        .eq("main_account_id", mainAccountId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .single();
+      if (firstSub) {
+        switchSubAccount(firstSub.id);
+        toast.success("Switched to account workspace");
+      } else {
+        toast.error("No workspaces found for this account");
+      }
+    }
   };
 
   const filtered = accounts.filter((a) => {
@@ -89,7 +117,7 @@ const AdminMainAccounts = () => {
                 <TableHead>Sub Accounts</TableHead>
                 <TableHead>Owners</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -103,23 +131,28 @@ const AdminMainAccounts = () => {
                   <TableCell>{acc.member_count}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">{format(new Date(acc.created_at), "dd MMM yyyy")}</TableCell>
                   <TableCell>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete main account?</AlertDialogTitle>
-                          <AlertDialogDescription>This will permanently delete "{acc.name}" and all associated data. This action cannot be undone.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(acc.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleManage(acc.id)} title="Manage this account">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete main account?</AlertDialogTitle>
+                            <AlertDialogDescription>This will permanently delete "{acc.name}" and all associated data. This action cannot be undone.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(acc.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
