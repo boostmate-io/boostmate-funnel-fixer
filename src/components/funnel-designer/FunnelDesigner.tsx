@@ -145,10 +145,17 @@ const FunnelDesigner = () => {
       }
       return node;
     });
+    // Get current brief structure if funnel has one
+    let briefStructure: any = { sections: [] };
+    if (currentFunnel?.id) {
+      const { data: briefData } = await supabase.from("funnel_briefs").select("structure").eq("funnel_id", currentFunnel.id).maybeSingle();
+      if (briefData?.structure) briefStructure = briefData.structure;
+    }
     const { error } = await supabase.from("seed_templates").insert({
       name: seedTemplateName || "Untitled Seed Template",
       nodes: cleanedNodes,
       edges: JSON.parse(JSON.stringify(edges)),
+      brief_structure: briefStructure,
     });
     if (error) toast.error("Error saving seed template");
     else {
@@ -157,7 +164,7 @@ const FunnelDesigner = () => {
       setSeedTemplateName("");
       loadSeedTemplates();
     }
-  }, [seedTemplateName, nodes, edges, isAdmin, loadSeedTemplates]);
+  }, [seedTemplateName, nodes, edges, isAdmin, loadSeedTemplates, currentFunnel]);
 
   const deleteSeedTemplate = useCallback(async (id: string) => {
     const { error } = await supabase.from("seed_templates").delete().eq("id", id);
