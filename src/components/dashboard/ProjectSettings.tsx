@@ -10,10 +10,12 @@ import { toast } from "sonner";
 
 const ProjectSettings = () => {
   const { t } = useTranslation();
-  const { activeSubAccount, renameSubAccount } = useWorkspace();
+  const { activeSubAccount, renameSubAccount, mainAccount, memberships } = useWorkspace();
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
+  const [editingMain, setEditingMain] = useState(false);
+  const [editMainName, setEditMainName] = useState("");
 
   // Profile name fields
   const [firstName, setFirstName] = useState("");
