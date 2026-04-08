@@ -23,6 +23,19 @@ interface ReadOnlyFunnelViewProps {
 }
 
 const ReadOnlyFunnelViewInner = ({ diagram, className = "" }: ReadOnlyFunnelViewProps) => {
+  const connectedHandlesMap = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    for (const e of diagram.edges) {
+      if (!map[e.source]) map[e.source] = new Set();
+      map[e.source].add(`source-${(e as any).sourceHandle || "right"}`);
+      if (!map[e.target]) map[e.target] = new Set();
+      map[e.target].add(`target-${(e as any).targetHandle || "left"}`);
+    }
+    const result: Record<string, string[]> = {};
+    for (const [id, s] of Object.entries(map)) result[id] = Array.from(s);
+    return result;
+  }, [diagram.edges]);
+
   const nodes: Node[] = useMemo(
     () =>
       diagram.nodes.map((n) => ({
@@ -30,8 +43,9 @@ const ReadOnlyFunnelViewInner = ({ diagram, className = "" }: ReadOnlyFunnelView
         draggable: false,
         connectable: false,
         selectable: false,
+        data: { ...n.data, readOnly: true, connectedHandles: connectedHandlesMap[n.id] || [] },
       })),
-    [diagram.nodes]
+    [diagram.nodes, connectedHandlesMap]
   );
 
   const edges: Edge[] = useMemo(

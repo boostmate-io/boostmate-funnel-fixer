@@ -6,11 +6,14 @@ type TrafficNodeData = {
   label: string;
   icon: string;
   color: string;
+  readOnly?: boolean;
+  connectedHandles?: string[];
 };
 
 const TrafficSourceNode = memo(({ data }: NodeProps) => {
   const nodeData = data as unknown as TrafficNodeData;
   const IconComponent = (Icons as any)[nodeData.icon] || Icons.Globe;
+  const showSource = !nodeData.readOnly || !nodeData.connectedHandles || nodeData.connectedHandles.includes("source-right");
 
   return (
     <div className="bg-card rounded-xl border border-border shadow-card w-[100px] overflow-hidden group hover:shadow-card-hover transition-shadow">
@@ -25,7 +28,7 @@ const TrafficSourceNode = memo(({ data }: NodeProps) => {
           {nodeData.label}
         </span>
       </div>
-      <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
+      {showSource && <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />}
     </div>
   );
 });

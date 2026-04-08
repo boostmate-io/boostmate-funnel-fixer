@@ -20,6 +20,7 @@ type FunnelNodeData = {
   nodeUrl?: string;
   showImages?: boolean;
   readOnly?: boolean;
+  connectedHandles?: string[]; // e.g. ["target-left","target-top","source-yes","source-no"]
   copySections?: Array<{ id?: string; title: string; description?: string }>;
   // Text styling
   textSize?: number;
@@ -37,6 +38,14 @@ type FunnelNodeData = {
   shapeHeight?: number;
 };
 
+/* helper: should a handle be rendered? */
+const shouldShowHandle = (data: FunnelNodeData, type: "target" | "source", handleId?: string): boolean => {
+  if (!data.readOnly) return true;
+  if (!data.connectedHandles) return true;
+  const key = `${type}-${handleId || (type === "target" ? "left" : "yes")}`;
+  return data.connectedHandles.includes(key);
+};
+
 /* helper to determine if a color is dark */
 const isColorDark = (hex: string): boolean => {
   const c = hex.replace("#", "");
@@ -50,6 +59,7 @@ const isColorDark = (hex: string): boolean => {
 
 /* ── helper: build wait label ── */
 const getWaitLabel = (data: FunnelNodeData, t: (k: string) => string): string => {
+  if (data.customLabel) return data.customLabel;
   if (data.waitDuration && data.waitType) {
     const n = data.waitDuration;
     const unitKey = n === 1
@@ -75,9 +85,9 @@ const EmailStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeDat
       {nodeData.customLabel && (
         <span className="text-[8px] text-muted-foreground text-center -mt-1">{t(nodeData.label)}</span>
       )}
-      <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-      <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-      <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" />
+      {shouldShowHandle(nodeData, "target") && <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />}
+      {shouldShowHandle(nodeData, "target", "top") && <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />}
+      {shouldShowHandle(nodeData, "source", "yes") && <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" />}
     </div>
   );
 };
@@ -104,10 +114,10 @@ const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData
       {!isWait && nodeData.customLabel && (
         <span className="text-[8px] text-muted-foreground text-center -mt-1">{t(nodeData.label)}</span>
       )}
-      <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-      <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-      <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" title={isDecision ? "Yes" : undefined} />
-      {isDecision && (
+      {shouldShowHandle(nodeData, "target") && <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />}
+      {shouldShowHandle(nodeData, "target", "top") && <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />}
+      {shouldShowHandle(nodeData, "source", "yes") && <Handle type="source" position={Position.Right} id="yes" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" title={isDecision ? "Yes" : undefined} />}
+      {isDecision && shouldShowHandle(nodeData, "source", "no") && (
         <Handle type="source" position={Position.Bottom} id="no" className="!w-3 !h-3 !bg-red-500 !border-2 !border-white" title="No" />
       )}
       {isDecision && (
@@ -413,16 +423,18 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
       )}
 
       {/* Handles */}
-      <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-      <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="yes"
-        className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white"
-        title={isDecision ? "Yes" : undefined}
-      />
-      {isDecision && (
+      {shouldShowHandle(nodeData, "target") && <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />}
+      {shouldShowHandle(nodeData, "target", "top") && <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />}
+      {shouldShowHandle(nodeData, "source", "yes") && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="yes"
+          className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white"
+          title={isDecision ? "Yes" : undefined}
+        />
+      )}
+      {isDecision && shouldShowHandle(nodeData, "source", "no") && (
         <Handle type="source" position={Position.Bottom} id="no" className="!w-3 !h-3 !bg-red-500 !border-2 !border-white" title="No" />
       )}
       {isDecision && (
