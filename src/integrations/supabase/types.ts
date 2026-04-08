@@ -334,6 +334,7 @@ export type Database = {
           edges: Json
           id: string
           is_template: boolean
+          linked_offer_id: string | null
           name: string
           nodes: Json
           project_id: string | null
@@ -348,6 +349,7 @@ export type Database = {
           edges?: Json
           id?: string
           is_template?: boolean
+          linked_offer_id?: string | null
           name?: string
           nodes?: Json
           project_id?: string | null
@@ -362,6 +364,7 @@ export type Database = {
           edges?: Json
           id?: string
           is_template?: boolean
+          linked_offer_id?: string | null
           name?: string
           nodes?: Json
           project_id?: string | null
@@ -371,6 +374,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "funnels_linked_offer_id_fkey"
+            columns: ["linked_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "funnels_project_id_fkey"
             columns: ["project_id"]
