@@ -69,7 +69,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [allMainAccounts, setAllMainAccounts] = useState<MainAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const loadedForUserRef = useRef<string | null>(null);
-  const pendingWorkspaceResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingWorkspaceResetRef = useRef<number | null>(null);
 
   // Load user's own main account id for reference
   const ownMainAccountIdRef = useRef<string | null>(null);

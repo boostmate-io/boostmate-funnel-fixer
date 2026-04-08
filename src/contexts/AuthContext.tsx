@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isReady, setIsReady] = useState(false);
   const lastStableSessionRef = useRef<Session | null>(null);
   const initialSessionResolvedRef = useRef(false);
-  const pendingSessionCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSessionCheckRef = useRef<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
