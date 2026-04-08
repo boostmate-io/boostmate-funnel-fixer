@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/AuthContext";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -21,7 +20,6 @@ import { toast } from "sonner";
 const DeleteAccountSection = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { session } = useAuth();
   const [showDialog, setShowDialog] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -29,14 +27,7 @@ const DeleteAccountSection = () => {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      if (!session) {
-        toast.error("Not authenticated");
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke("delete-account", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      const { data, error } = await supabase.functions.invoke("delete-account");
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
