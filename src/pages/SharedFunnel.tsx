@@ -239,7 +239,25 @@ const SharedFunnelInner = () => {
           <img src={logo} alt="Boostmate" className="h-5" />
           <span className="text-sm font-display font-bold text-foreground">{funnel.name}</span>
         </div>
-        <span className="text-xs text-muted-foreground">Read-only view</span>
+        <div className="flex items-center gap-2">
+          {briefData && (
+            <Button
+              variant={showBrief ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={() => { setShowBrief(!showBrief); if (!showBrief) setDetailsNodeId(null); }}
+            >
+              <ClipboardList className="w-3.5 h-3.5" />
+              Brief
+              {briefData.is_approved ? (
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+              ) : (
+                <Circle className="w-3 h-3 text-muted-foreground" />
+              )}
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground">Read-only view</span>
+        </div>
       </div>
 
       <div className="flex flex-1 min-h-0">
