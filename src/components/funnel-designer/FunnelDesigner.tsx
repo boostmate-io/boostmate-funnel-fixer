@@ -1094,13 +1094,25 @@ const FunnelDesigner = ({ onNavigateToOffer }: FunnelDesignerProps = {}) => {
         />
       )}
 
-      {showBriefPanel && !detailsNode && (
+      {showBriefPanel && !detailsNode && !showOfferPanel && (
         <FunnelBriefPanel
           funnelId={currentFunnel?.id || editingSeedTemplate?.id || null}
           userId={userId}
           funnelName={currentFunnel?.name || editingSeedTemplate?.name || ""}
           onClose={() => setShowBriefPanel(false)}
           isSeedTemplate={!!editingSeedTemplate}
+        />
+      )}
+
+      {showOfferPanel && !detailsNode && (
+        <OfferPanel
+          funnelId={currentFunnel?.id || null}
+          linkedOfferId={linkedOfferId}
+          onLinkedOfferChange={(id) => setLinkedOfferId(id)}
+          onNavigateToOffer={(id) => {
+            if (onNavigateToOffer) onNavigateToOffer(id);
+          }}
+          onClose={() => setShowOfferPanel(false)}
         />
       )}
 
