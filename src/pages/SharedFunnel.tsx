@@ -343,7 +343,7 @@ const SharedFunnelInner = () => {
           </ReactFlow>
         </div>
 
-        {detailsNode && detailsNode.type === "funnelPage" && (
+        {detailsNode && detailsNode.type === "funnelPage" && !showBrief && (
           <NodeDetailsPanel
             nodeId={detailsNode.id}
             nodeLabel={(detailsNode.data as any).label || ""}
@@ -363,6 +363,44 @@ const SharedFunnelInner = () => {
             onRename={() => {}}
             onClose={() => setDetailsNodeId(null)}
           />
+        )}
+
+        {showBrief && briefData && (
+          <div className="w-96 border-l border-border bg-card flex flex-col h-full overflow-hidden shrink-0">
+            <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <ClipboardList className="w-4 h-4 text-primary shrink-0" />
+                <h3 className="text-sm font-display font-bold text-foreground truncate">Funnel Brief</h3>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {canEditBrief && (
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={saveBriefValues} disabled={savingBrief}>
+                    <Save className="w-3 h-3 mr-1" /> {savingBrief ? "Saving..." : "Save"}
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowBrief(false)}>
+                  ✕
+                </Button>
+              </div>
+            </div>
+
+            {/* Approval status */}
+            <div className={`mx-4 mt-3 flex items-center gap-2 p-2.5 rounded-lg border ${briefData.is_approved ? "bg-emerald-500/10 border-emerald-500/30" : "bg-muted/30 border-border"}`}>
+              {briefData.is_approved ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-muted-foreground" />}
+              <span className={`text-xs font-medium ${briefData.is_approved ? "text-emerald-600" : "text-muted-foreground"}`}>
+                {briefData.is_approved ? "Brief Approved" : "Pending Approval"}
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4">
+              <BriefFiller
+                structure={briefData.structure}
+                values={briefValues}
+                onChange={canEditBrief ? setBriefValues : () => {}}
+                readOnly={!canEditBrief}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
