@@ -25,7 +25,7 @@ import {
   Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil,
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
-  Sprout, ShieldCheck, ClipboardList,
+  Sprout, ShieldCheck, ClipboardList, Gem,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,7 @@ import { toPng } from "html-to-image";
 import { Switch } from "@/components/ui/switch";
 import FunnelBriefPanel from "@/components/funnel-brief/FunnelBriefPanel";
 import FunnelShareDialog from "./FunnelShareDialog";
+import OfferPanel from "@/components/offers/OfferPanel";
 
 const nodeTypes = {
   funnelPage: FunnelNode,
@@ -86,7 +87,11 @@ interface HistoryEntry {
   edges: Edge[];
 }
 
-const FunnelDesigner = () => {
+interface FunnelDesignerProps {
+  onNavigateToOffer?: (offerId: string) => void;
+}
+
+const FunnelDesigner = ({ onNavigateToOffer }: FunnelDesignerProps = {}) => {
   const { t } = useTranslation();
   const { activeProject } = useProject();
   const { user } = useAuth();
@@ -123,6 +128,8 @@ const FunnelDesigner = () => {
   const [editingSeedTemplate, setEditingSeedTemplate] = useState<{ id: string; name: string } | null>(null);
   const [showBriefPanel, setShowBriefPanel] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showOfferPanel, setShowOfferPanel] = useState(false);
+  const [linkedOfferId, setLinkedOfferId] = useState<string | null>(null);
   const templateSourceRef = useRef<{ type: "funnel" | "seed"; id: string } | null>(null);
 
   // Check admin role
@@ -532,6 +539,7 @@ const FunnelDesigner = () => {
     setCurrentFunnel(funnel);
     setEditingSeedTemplate(null);
     setEditingTemplate(null);
+    setLinkedOfferId((funnel as any).linked_offer_id || null);
     setShowFunnelList(false);
     undoStack.current = [];
     redoStack.current = [];
@@ -626,6 +634,7 @@ const FunnelDesigner = () => {
     setCurrentFunnel(null);
     setEditingSeedTemplate(null);
     setEditingTemplate(null);
+    setLinkedOfferId(null);
     selectedNodeRef.current = null;
     setDetailsNodeId(null);
     undoStack.current = [];
@@ -917,6 +926,12 @@ const FunnelDesigner = () => {
               </Button>
             </TooltipTrigger><TooltipContent>Funnel Brief</TooltipContent></Tooltip>
 
+            <Tooltip><TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => { setShowOfferPanel(!showOfferPanel); if (showBriefPanel) setShowBriefPanel(false); }} className={showOfferPanel ? "bg-primary/10 border-primary" : ""}>
+                <Gem className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger><TooltipContent>Linked Offer</TooltipContent></Tooltip>
+
             <div className="w-px h-6 bg-border mx-1" />
 
             <Tooltip><TooltipTrigger asChild>
@@ -1080,13 +1095,25 @@ const FunnelDesigner = () => {
         />
       )}
 
-      {showBriefPanel && !detailsNode && (
+      {showBriefPanel && !detailsNode && !showOfferPanel && (
         <FunnelBriefPanel
           funnelId={currentFunnel?.id || editingSeedTemplate?.id || null}
           userId={userId}
           funnelName={currentFunnel?.name || editingSeedTemplate?.name || ""}
           onClose={() => setShowBriefPanel(false)}
           isSeedTemplate={!!editingSeedTemplate}
+        />
+      )}
+
+      {showOfferPanel && !detailsNode && (
+        <OfferPanel
+          funnelId={currentFunnel?.id || null}
+          linkedOfferId={linkedOfferId}
+          onLinkedOfferChange={(id) => setLinkedOfferId(id)}
+          onNavigateToOffer={(id) => {
+            if (onNavigateToOffer) onNavigateToOffer(id);
+          }}
+          onClose={() => setShowOfferPanel(false)}
         />
       )}
 

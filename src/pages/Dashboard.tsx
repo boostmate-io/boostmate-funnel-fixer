@@ -10,11 +10,12 @@ import AuditModule from "@/components/audit/AuditModule";
 import ImpersonationBanner from "@/components/agency/ImpersonationBanner";
 import ClientManagement from "@/components/agency/ClientManagement";
 import AgencySettings from "@/components/agency/AgencySettings";
-import { BarChart3, PenTool, Library, TrendingUp } from "lucide-react";
+import { BarChart3, PenTool, Library, TrendingUp, Gem } from "lucide-react";
 import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
 import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
+import OfferModule from "@/components/offers/OfferModule";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -28,8 +29,8 @@ const Dashboard = () => {
       <ImpersonationBanner />
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar activeModule={activeModule} onModuleChange={setActiveModule} />
-        <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" || activeModule === "assets-library" || activeModule === "funnel-audit" || activeModule === "analytics" || activeModule === "clients" ? "" : "p-8"}`}>
-          {activeModule !== "funnel-designer" && activeModule !== "assets-library" && activeModule !== "funnel-audit" && activeModule !== "analytics" && activeModule !== "clients" && (
+        <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" || activeModule === "assets-library" || activeModule === "funnel-audit" || activeModule === "analytics" || activeModule === "clients" || activeModule === "offers" ? "" : "p-8"}`}>
+          {activeModule !== "funnel-designer" && activeModule !== "assets-library" && activeModule !== "funnel-audit" && activeModule !== "analytics" && activeModule !== "clients" && activeModule !== "offers" && (
             <div className="mb-8">
               <h1 className="text-2xl font-display font-bold text-foreground">
                 {activeModule === "overview" && t("dashboard.title")}
@@ -62,6 +63,13 @@ const Dashboard = () => {
                 <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.analytics.title")}</h3>
                 <p className="text-sm text-muted-foreground">{t("dashboard.analytics.description")}</p>
               </button>
+              <button onClick={() => setActiveModule("offers")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+                <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
+                  <Gem className="w-6 h-6 text-primary-foreground" />
+                </div>
+                <h3 className="font-display font-bold text-foreground mb-1">Offers</h3>
+                <p className="text-sm text-muted-foreground">Create and manage strategic offers for your funnels.</p>
+              </button>
               <button onClick={() => setActiveModule("assets-library")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
                 <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
                   <Library className="w-6 h-6 text-primary-foreground" />
@@ -76,7 +84,12 @@ const Dashboard = () => {
           {activeModule === "funnel-audit" && <AuditModule />}
           {activeModule === "funnel-designer" && (
             <div className="h-full">
-              <FunnelDesigner />
+              <FunnelDesigner onNavigateToOffer={(id) => { setActiveModule("offers"); }} />
+            </div>
+          )}
+          {activeModule === "offers" && (
+            <div className="h-full">
+              <OfferModule />
             </div>
           )}
           {activeModule === "analytics" && (
