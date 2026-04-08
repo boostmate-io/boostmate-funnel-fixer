@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, Building2, User } from "lucide-react";
 
 interface AuthModalProps {
   open: boolean;
@@ -19,6 +19,7 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
   const [mode, setMode] = useState<"login" | "signup">(defaultMode);
   const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState("");
+  const [accountType, setAccountType] = useState<"standard" | "agency">("standard");
   const [loading, setLoading] = useState(false);
 
   if (!open) return null;
@@ -28,7 +29,14 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: { account_type: accountType },
+          },
+        });
         if (error) throw error;
         toast.success(t("auth.signupSuccess"));
         onSuccess();
@@ -60,6 +68,39 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input type="email" placeholder={t("auth.emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required className="h-11" />
           <Input type="password" placeholder={t("auth.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="h-11" />
+
+          {mode === "signup" && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Account type</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAccountType("standard")}
+                  className={`flex items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-colors ${
+                    accountType === "standard"
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  <User className="w-4 h-4" />
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccountType("agency")}
+                  className={`flex items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-colors ${
+                    accountType === "agency"
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  <Building2 className="w-4 h-4" />
+                  Agency
+                </button>
+              </div>
+            </div>
+          )}
+
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
             {loading ? t("auth.loading") : mode === "signup" ? t("auth.signup") : t("auth.login")}
           </Button>
