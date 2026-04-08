@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, PenTool, Settings, Library, TrendingUp, Users, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, PenTool, Settings, Library, TrendingUp, Users, PanelLeftClose, PanelLeftOpen, Gem } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
     ...(isAgency && !impersonatedUserId ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
     { id: "funnel-audit", label: t("dashboard.sidebar.funnelAudit"), icon: BarChart3 },
     { id: "funnel-designer", label: t("dashboard.sidebar.funnelDesigner"), icon: PenTool },
+    { id: "offers", label: "Offers", icon: Gem },
     { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: TrendingUp },
     { id: "assets-library", label: t("dashboard.sidebar.assetsLibrary"), icon: Library },
     { id: "settings", label: t("dashboard.sidebar.settings"), icon: Settings },
