@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem, ShieldCheck, ChevronDown, Building2 } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem, ShieldCheck, Building2, Building } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ interface DashboardSidebarProps {
 const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAgency, isAppAdmin, subAccounts, activeSubAccountId, switchSubAccount, activeSubAccount, mainAccount } = useWorkspace();
+  const { isAgency, isAppAdmin, subAccounts, activeSubAccountId, switchSubAccount, activeSubAccount, mainAccount, allMainAccounts, switchMainAccount } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
 
   const navItems = [
@@ -41,7 +41,8 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
   };
 
   // Show account switcher for agencies (multiple sub accounts) or app admins
-  const showAccountSwitcher = (isAgency || isAppAdmin) && subAccounts.length > 1;
+  const showSubSwitcher = (isAgency || isAppAdmin) && subAccounts.length > 1;
+  const showMainSwitcher = isAppAdmin && allMainAccounts.length > 1;
 
   const NavButton = ({ item }: { item: typeof navItems[0] }) => {
     const btn = (
@@ -79,14 +80,28 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
         )}
       </div>
 
-      {/* Account / workspace switcher */}
-      {showAccountSwitcher && !collapsed && (
-        <div className="px-3 py-2 border-b border-border space-y-1">
-          {mainAccount && (
-            <p className="text-[10px] text-muted-foreground font-medium px-1 truncate">
-              {mainAccount.name}
-            </p>
-          )}
+      {/* Admin: Main Account switcher */}
+      {showMainSwitcher && !collapsed && (
+        <div className="px-3 pt-2 pb-1">
+          <Select value={mainAccount?.id || ""} onValueChange={switchMainAccount}>
+            <SelectTrigger className="h-8 text-xs">
+              <Building className="w-3.5 h-3.5 shrink-0 mr-1" />
+              <SelectValue placeholder="Select account" />
+            </SelectTrigger>
+            <SelectContent>
+              {allMainAccounts.map((ma) => (
+                <SelectItem key={ma.id} value={ma.id} className="text-xs">
+                  {ma.name} {ma.type === "agency" ? " (Agency)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Sub Account / workspace switcher */}
+      {showSubSwitcher && !collapsed && (
+        <div className="px-3 py-1 border-b border-border">
           <Select value={activeSubAccountId || ""} onValueChange={switchSubAccount}>
             <SelectTrigger className="h-8 text-xs">
               <Building2 className="w-3.5 h-3.5 shrink-0 mr-1" />
@@ -103,7 +118,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
         </div>
       )}
 
-      {showAccountSwitcher && collapsed && (
+      {showMainSwitcher && collapsed && (
         <div className="px-2 py-2 border-b border-border">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -121,12 +136,20 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
         </div>
       )}
 
-      {/* Active workspace indicator when viewing non-default workspace */}
-      {activeSubAccount && !activeSubAccount.is_default && !collapsed && !showAccountSwitcher && (
-        <div className="mx-3 mt-2 px-2 py-1.5 bg-primary/10 rounded-md">
-          <p className="text-[10px] text-primary font-medium truncate">
-            Viewing: {activeSubAccount.name}
-          </p>
+      {showSubSwitcher && !showMainSwitcher && collapsed && (
+        <div className="px-2 py-2 border-b border-border">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-full flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                  {(activeSubAccount?.name || "?")[0]?.toUpperCase()}
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p className="font-medium">{activeSubAccount?.name}</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       )}
 
