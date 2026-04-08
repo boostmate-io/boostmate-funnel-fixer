@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
@@ -59,6 +60,7 @@ function getNodeType(node: FunnelNode): string {
 
 const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [date, setDate] = useState<Date>(new Date());
   const [metricsData, setMetricsData] = useState<Record<string, Record<string, number>>>({});
   const [saving, setSaving] = useState(false);
@@ -125,7 +127,6 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const dateStr = format(date, "yyyy-MM-dd");

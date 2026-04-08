@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { X, Link2, Unlink, Upload, ExternalLink, Trash2, Bold, Italic, Underline, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,18 +82,12 @@ const NodeDetailsPanel = ({
   onLinkAsset, onRename, onNoteContentChange, onDataChange, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAssetId, setSelectedAssetId] = useState<string>(linkedAssetId || "");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (readOnly) return;
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) setUserId(data.user.id);
-    });
-  }, [readOnly]);
 
   useEffect(() => {
     setSelectedAssetId(linkedAssetId || "");

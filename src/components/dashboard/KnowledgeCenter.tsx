@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2, FileText, Upload, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface KnowledgeDocument {
   id: string;
@@ -24,27 +25,18 @@ const formatFileSize = (bytes: number) => {
 
 const KnowledgeCenter = () => {
   const { t } = useTranslation();
+  const { isAppAdmin } = useWorkspace();
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    checkAdmin();
-  }, []);
-
-  useEffect(() => {
-    if (isAdmin) fetchDocuments();
-  }, [isAdmin]);
-
-  const checkAdmin = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-    setIsAdmin(!!data);
-    setLoading(false);
-  };
+    if (isAppAdmin) {
+      void fetchDocuments();
+    } else {
+      setDocuments([]);
+    }
+  }, [isAppAdmin]);
 
   const fetchDocuments = async () => {
     const { data, error } = await supabase
@@ -136,8 +128,7 @@ const KnowledgeCenter = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (loading) return null;
-  if (!isAdmin) return null;
+  if (!isAppAdmin) return null;
 
   return (
     <div className="bg-card rounded-xl border border-border p-6 shadow-card">
