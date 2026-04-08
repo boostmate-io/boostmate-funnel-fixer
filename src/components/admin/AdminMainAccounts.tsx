@@ -25,7 +25,7 @@ const AdminMainAccounts = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const { switchSubAccount } = useWorkspace();
+  const { switchMainAccount } = useWorkspace();
 
   const load = async () => {
     setLoading(true);
@@ -64,30 +64,8 @@ const AdminMainAccounts = () => {
   };
 
   const handleManage = async (mainAccountId: string) => {
-    const { data } = await supabase
-      .from("sub_accounts")
-      .select("id")
-      .eq("main_account_id", mainAccountId)
-      .eq("is_default", true)
-      .single();
-    if (data) {
-      switchSubAccount(data.id);
-      toast.success("Switched to account's default workspace");
-    } else {
-      const { data: firstSub } = await supabase
-        .from("sub_accounts")
-        .select("id")
-        .eq("main_account_id", mainAccountId)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .single();
-      if (firstSub) {
-        switchSubAccount(firstSub.id);
-        toast.success("Switched to account workspace");
-      } else {
-        toast.error("No workspaces found for this account");
-      }
-    }
+    await switchMainAccount(mainAccountId);
+    toast.success("Switched to account");
   };
 
   const filtered = accounts.filter((a) => {

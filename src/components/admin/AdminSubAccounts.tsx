@@ -33,7 +33,7 @@ const AdminSubAccounts = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterMainId, setFilterMainId] = useState("all");
-  const { switchSubAccount } = useWorkspace();
+  const { switchSubAccount, switchMainAccount } = useWorkspace();
 
   // Migration dialog
   const [migrateTarget, setMigrateTarget] = useState<SubAccount | null>(null);
@@ -158,7 +158,7 @@ const AdminSubAccounts = () => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => { switchSubAccount(sub.id); toast.success("Switched to workspace"); }}
+                        onClick={async () => { await switchMainAccount(sub.main_account_id); switchSubAccount(sub.id); toast.success("Switched to workspace"); }}
                         title="Manage this workspace"
                       >
                         <Eye className="w-4 h-4" />
