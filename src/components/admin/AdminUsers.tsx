@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface UserRow {
@@ -33,7 +32,6 @@ interface UserMembership {
 }
 
 const AdminUsers = () => {
-  const { session } = useAuth();
   const { refreshWorkspace } = useWorkspace();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,13 +160,7 @@ const AdminUsers = () => {
     if (!selectedUser) return;
     setIsDeleting(true);
     try {
-      if (!session) {
-        toast.error("Not authenticated");
-        return;
-      }
-
       const { data, error } = await supabase.functions.invoke("delete-account", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { target_user_id: selectedUser.id },
       });
 
@@ -193,7 +185,6 @@ const AdminUsers = () => {
     return u.email.toLowerCase().includes(q) || u.first_name.toLowerCase().includes(q) || u.last_name.toLowerCase().includes(q) || u.main_account_name?.toLowerCase().includes(q);
   });
 
-  // Detail view
   if (selectedUser) {
     const isAdmin = selectedUser.roles.includes("admin");
     return (
