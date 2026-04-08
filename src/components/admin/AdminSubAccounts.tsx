@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -40,7 +40,7 @@ const AdminSubAccounts = () => {
   const [newMainAccountId, setNewMainAccountId] = useState("");
   const [migrating, setMigrating] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     const [{ data: subData }, { data: mainData }] = await Promise.all([
       supabase.from("sub_accounts").select("*").order("created_at", { ascending: false }),
@@ -61,9 +61,9 @@ const AdminSubAccounts = () => {
     }
 
     setLoading(false);
-  };
+  }, [filterMainId]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   const handleMigrate = async () => {
     if (!migrateTarget || !newMainAccountId) return;
@@ -95,7 +95,7 @@ const AdminSubAccounts = () => {
     setNewMainAccountId("");
     setMigrating(false);
     await refreshWorkspace();
-    load();
+    await load();
   };
 
   const handleDeleteSub = async (sub: SubAccount) => {
@@ -103,7 +103,7 @@ const AdminSubAccounts = () => {
     if (error) { toast.error("Failed to delete: " + error.message); return; }
     toast.success(`"${sub.name}" deleted`);
     await refreshWorkspace();
-    load();
+    await load();
   };
 
   const filtered = subs.filter((s) => {

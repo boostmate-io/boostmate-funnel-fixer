@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,7 +27,7 @@ const AdminMainAccounts = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const { mainAccount, switchMainAccount, refreshWorkspace } = useWorkspace();
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase.from("main_accounts").select("*").order("created_at", { ascending: false });
     if (error) { toast.error("Failed to load accounts"); setLoading(false); return; }
@@ -40,9 +40,9 @@ const AdminMainAccounts = () => {
     }
     setAccounts(enriched);
     setLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (id: string) => {
     const isDeletingActive = mainAccount?.id === id;
@@ -54,7 +54,7 @@ const AdminMainAccounts = () => {
       localStorage.removeItem("activeSubAccountId");
     }
     await refreshWorkspace();
-    load();
+    await load();
   };
 
   const handleToggleType = async (acc: MainAccount) => {
@@ -67,7 +67,7 @@ const AdminMainAccounts = () => {
     if (error) { toast.error("Failed to update type: " + error.message); return; }
     toast.success(`Account type changed to ${newType}`);
     await refreshWorkspace();
-    load();
+    await load();
   };
 
   const handleManage = async (mainAccountId: string) => {

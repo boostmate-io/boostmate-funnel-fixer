@@ -275,14 +275,17 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   }, [userId, activeSubAccountId]);
 
   const loadTemplates = useCallback(async () => {
-    if (!activeSubAccountId) return;
+    if (!activeSubAccountId) {
+      setTemplates([]);
+      return;
+    }
     const { data } = await supabase
       .from("funnels")
       .select("*")
       .eq("is_template", true)
       .eq("sub_account_id", activeSubAccountId)
       .order("name", { ascending: true });
-    if (data) setTemplates(data as unknown as Funnel[]);
+    setTemplates((data || []) as unknown as Funnel[]);
   }, [activeSubAccountId]);
 
   useEffect(() => {
