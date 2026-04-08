@@ -155,6 +155,29 @@ const AdminUsers = () => {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    setIsDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error("Not authenticated"); return; }
+      const { data, error } = await supabase.functions.invoke("delete-account", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { target_user_id: selectedUser.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("User deleted successfully");
+      setSelectedUser(null);
+      load();
+    } catch (err: any) {
+      toast.error(err.message || "Error deleting user");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   const filtered = users.filter((u) => {
     if (!search) return true;
     const q = search.toLowerCase();
