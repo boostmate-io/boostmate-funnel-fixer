@@ -17,6 +17,7 @@ export type Database = {
       agency_clients: {
         Row: {
           agency_user_id: string
+          client_account_id: string | null
           client_user_id: string
           created_at: string
           id: string
@@ -24,6 +25,7 @@ export type Database = {
         }
         Insert: {
           agency_user_id: string
+          client_account_id?: string | null
           client_user_id: string
           created_at?: string
           id?: string
@@ -31,12 +33,21 @@ export type Database = {
         }
         Update: {
           agency_user_id?: string
+          client_account_id?: string | null
           client_user_id?: string
           created_at?: string
           id?: string
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agency_clients_client_account_id_fkey"
+            columns: ["client_account_id"]
+            isOneToOne: false
+            referencedRelation: "client_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       agency_invites: {
         Row: {
@@ -201,6 +212,68 @@ export type Database = {
           traffic_source?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      client_account_invites: {
+        Row: {
+          agency_user_id: string
+          client_account_id: string
+          created_at: string
+          email: string
+          id: string
+          invite_code: string
+          status: string
+        }
+        Insert: {
+          agency_user_id: string
+          client_account_id: string
+          created_at?: string
+          email: string
+          id?: string
+          invite_code?: string
+          status?: string
+        }
+        Update: {
+          agency_user_id?: string
+          client_account_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invite_code?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_account_invites_client_account_id_fkey"
+            columns: ["client_account_id"]
+            isOneToOne: false
+            referencedRelation: "client_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_accounts: {
+        Row: {
+          agency_user_id: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          agency_user_id: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Update: {
+          agency_user_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
