@@ -263,16 +263,16 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   }, [undo, redo]);
 
   const loadFunnels = useCallback(async () => {
-    if (!userId || !activeProject) return;
+    if (!userId || !activeSubAccountId) return;
     const { data } = await supabase
       .from("funnels")
       .select("*")
       .eq("user_id", userId)
       .eq("is_template", false)
-      .eq("project_id", activeProject.id)
+      .eq("sub_account_id", activeSubAccountId)
       .order("updated_at", { ascending: false });
     if (data) setFunnels(data as unknown as Funnel[]);
-  }, [userId, activeProject]);
+  }, [userId, activeSubAccountId]);
 
   const loadTemplates = useCallback(async () => {
     const { data } = await supabase
@@ -291,7 +291,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       loadTemplates();
       resetCanvas();
     }
-  }, [activeProject]);
+  }, [activeSubAccountId]);
 
   const linkedAssetIds = useMemo(
     () => Array.from(new Set(
@@ -468,7 +468,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       return;
     }
 
-    if (!activeProject) return;
+    if (!activeSubAccountId) return;
 
     const payload = {
       user_id: userId,
@@ -476,7 +476,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       nodes: JSON.parse(JSON.stringify(persistedNodes)),
       edges: JSON.parse(JSON.stringify(edges)),
       is_template: false,
-      project_id: activeProject.id,
+      sub_account_id: activeSubAccountId,
     };
     if (currentFunnel?.id) {
       const { error } = await supabase
@@ -494,10 +494,10 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       }
     }
     loadFunnels();
-  }, [currentFunnel, nodes, edges, t, loadFunnels, loadTemplates, userId, activeProject, resolveNodeCopySections, editingSeedTemplate, editingTemplate, loadSeedTemplates]);
+  }, [currentFunnel, nodes, edges, t, loadFunnels, loadTemplates, userId, activeSubAccountId, resolveNodeCopySections, editingSeedTemplate, editingTemplate, loadSeedTemplates]);
 
   const saveAsTemplate = useCallback(async () => {
-    if (!userId || !activeProject) return;
+    if (!userId || !activeSubAccountId) return;
     const rawNodes = JSON.parse(JSON.stringify(nodes));
     const linkedAssetIds = rawNodes
       .filter((n: any) => n.type === "funnelPage" && n.data?.linkedAssetId)
@@ -528,7 +528,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     const { error } = await supabase.from("funnels").insert({
       user_id: userId, name: templateName || "Untitled Template",
       nodes: cleanedNodes, edges: JSON.parse(JSON.stringify(edges)),
-      is_template: true, project_id: activeProject.id,
+      is_template: true, sub_account_id: activeSubAccountId,
     });
     if (error) toast.error(t("funnelDesigner.saveError"));
     else {
@@ -537,7 +537,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       setTemplateName("");
       loadTemplates();
     }
-  }, [templateName, nodes, edges, t, loadTemplates, userId, activeProject]);
+  }, [templateName, nodes, edges, t, loadTemplates, userId, activeSubAccountId]);
 
   const loadFunnel = useCallback((funnel: Funnel) => {
     setNodes(funnel.nodes || []);
@@ -577,7 +577,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   }, [setNodes, setEdges, t]);
 
   const createNewFunnel = useCallback(async () => {
-    if (!userId || !activeProject) return;
+    if (!userId || !activeSubAccountId) return;
     const persistedNodes = nodes.map((node) => node.type === "funnelPage"
       ? { ...node, data: { ...node.data, copySections: resolveNodeCopySections(node) } }
       : node);
@@ -586,7 +586,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       user_id: userId, name: funnelName || "Untitled Funnel",
       nodes: JSON.parse(JSON.stringify(persistedNodes)),
       edges: JSON.parse(JSON.stringify(edges)),
-      is_template: false, project_id: activeProject.id,
+      is_template: false, sub_account_id: activeSubAccountId,
     }).select().single();
     if (error) toast.error(t("funnelDesigner.saveError"));
     else {
@@ -621,7 +621,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         } catch { /* brief cloning failed silently */ }
       }
     }
-  }, [funnelName, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections]);
+  }, [funnelName, nodes, edges, t, loadFunnels, userId, activeSubAccountId, resolveNodeCopySections]);
 
   const deleteFunnel = useCallback(async (id: string) => {
     const { error } = await supabase.from("funnels").delete().eq("id", id);
