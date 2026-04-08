@@ -10,10 +10,12 @@ import { toast } from "sonner";
 
 const ProjectSettings = () => {
   const { t } = useTranslation();
-  const { activeSubAccount, renameSubAccount } = useWorkspace();
+  const { activeSubAccount, renameSubAccount, mainAccount, memberships } = useWorkspace();
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
+  const [editingMain, setEditingMain] = useState(false);
+  const [editMainName, setEditMainName] = useState("");
 
   // Profile name fields
   const [firstName, setFirstName] = useState("");
@@ -37,6 +39,22 @@ const ProjectSettings = () => {
     if (!editName.trim() || !activeSubAccount) return;
     await renameSubAccount(activeSubAccount.id, editName.trim());
     setEditing(false);
+  };
+
+  const isOwner = user && mainAccount && memberships.some(
+    (m) => m.user_id === user.id && m.main_account_id === mainAccount.id && !m.sub_account_id && m.role === "owner"
+  );
+
+  const handleRenameMain = async () => {
+    if (!editMainName.trim() || !mainAccount) return;
+    const { error } = await supabase.from("main_accounts").update({ name: editMainName.trim() }).eq("id", mainAccount.id);
+    if (error) {
+      toast.error("Failed to rename account");
+    } else {
+      toast.success("Account name updated");
+      window.location.reload();
+    }
+    setEditingMain(false);
   };
 
   const handleSaveProfile = async () => {
@@ -76,6 +94,45 @@ const ProjectSettings = () => {
           </div>
         )}
       </div>
+
+      {/* Main account name (owner only) */}
+      {isOwner && mainAccount && (
+        <div className="border-t border-border pt-6 space-y-3">
+          <h3 className="font-display font-bold text-foreground">Account Name</h3>
+          <p className="text-sm text-muted-foreground">The name of your main account.</p>
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+            {editingMain ? (
+              <div className="flex items-center gap-2 flex-1">
+                <Input
+                  autoFocus
+                  value={editMainName}
+                  onChange={(e) => setEditMainName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleRenameMain()}
+                  className="h-8 text-sm"
+                />
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleRenameMain}>
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingMain(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-foreground">{mainAccount.name}</p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => { setEditingMain(true); setEditMainName(mainAccount.name); }}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="border-t border-border pt-6 space-y-3">
         <h3 className="font-display font-bold text-foreground">Workspace Name</h3>
