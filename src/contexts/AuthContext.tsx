@@ -26,16 +26,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let isMounted = true;
     let hasRestoredInitialSession = false;
 
-    const applySession = (nextSession: Session | null) => {
+    const applySession = (event: string, nextSession: Session | null) => {
       if (!isMounted) return;
       const nextUserId = nextSession?.user?.id ?? null;
       const prevUserId = currentUserIdRef.current;
+
+      // Don't clear a valid user on TOKEN_REFRESHED with null session (429 race)
+      if (!nextSession && prevUserId && event === "TOKEN_REFRESHED") {
+        return;
+      }
 
       // Always update session (for fresh tokens)
       setSession(nextSession);
 
       // Only update user object when the user ID actually changes
-      // This prevents re-renders in consumers that depend on `user`
       if (nextUserId !== prevUserId) {
         currentUserIdRef.current = nextUserId;
         setUser(nextSession?.user ?? null);
@@ -43,7 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      applySession(nextSession);
+      applySession(event, nextSession);
 
       if (hasRestoredInitialSession || event !== "INITIAL_SESSION") {
         if (isMounted) setIsReady(true);
@@ -52,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     void supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       hasRestoredInitialSession = true;
-      applySession(initialSession);
+      applySession("INITIAL_SESSION", initialSession);
       if (isMounted) setIsReady(true);
     }).catch(() => {
       hasRestoredInitialSession = true;
