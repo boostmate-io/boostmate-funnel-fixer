@@ -267,11 +267,32 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
 
             <div className="flex-1 overflow-auto">
               <TabsContent value="fill" className="px-4 pb-4 mt-0">
+                {/* Approval status */}
+                {brief?.id && !isSeedTemplate && (
+                  <div className={`flex items-center justify-between p-2.5 rounded-lg border mb-3 mt-2 ${isApproved ? "bg-emerald-500/10 border-emerald-500/30" : "bg-muted/30 border-border"}`}>
+                    <div className="flex items-center gap-2">
+                      {isApproved ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-muted-foreground" />}
+                      <span className={`text-xs font-medium ${isApproved ? "text-emerald-600" : "text-muted-foreground"}`}>
+                        {isApproved ? "Brief Approved" : "Pending Approval"}
+                      </span>
+                    </div>
+                    {!readOnly && (
+                      <Button
+                        variant={isApproved ? "outline" : "default"}
+                        size="sm"
+                        className="h-6 text-[10px] px-2"
+                        onClick={toggleApproval}
+                      >
+                        {isApproved ? "Revoke" : "Approve"}
+                      </Button>
+                    )}
+                  </div>
+                )}
                 <BriefFiller
                   structure={structure}
                   values={values}
                   onChange={handleValuesChange}
-                  readOnly={readOnly}
+                  readOnly={readOnly || isApproved}
                 />
               </TabsContent>
 
