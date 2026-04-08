@@ -58,6 +58,7 @@ import { toPng } from "html-to-image";
 import { Switch } from "@/components/ui/switch";
 import FunnelBriefPanel from "@/components/funnel-brief/FunnelBriefPanel";
 import FunnelShareDialog from "./FunnelShareDialog";
+import OfferPanel from "@/components/offers/OfferPanel";
 
 const nodeTypes = {
   funnelPage: FunnelNode,
@@ -86,7 +87,11 @@ interface HistoryEntry {
   edges: Edge[];
 }
 
-const FunnelDesigner = () => {
+interface FunnelDesignerProps {
+  onNavigateToOffer?: (offerId: string) => void;
+}
+
+const FunnelDesigner = ({ onNavigateToOffer }: FunnelDesignerProps = {}) => {
   const { t } = useTranslation();
   const { activeProject } = useProject();
   const { user } = useAuth();
