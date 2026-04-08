@@ -19,8 +19,8 @@ const ProjectSettings = () => {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-display font-bold text-foreground">{t("projects.title")}</h3>
-      <p className="text-sm text-muted-foreground">{t("projects.description")}</p>
+      <h3 className="font-display font-bold text-foreground">Workspace Name</h3>
+      <p className="text-sm text-muted-foreground">Rename your current workspace.</p>
 
       {activeSubAccount && (
         <div className="flex items-center justify-between p-3 rounded-lg border border-primary bg-primary/5">

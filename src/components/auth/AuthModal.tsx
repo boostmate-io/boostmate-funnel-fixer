@@ -19,6 +19,7 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
   const [mode, setMode] = useState<"login" | "signup">(defaultMode);
   const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState("");
+  const [accountName, setAccountName] = useState("");
   const [accountType, setAccountType] = useState<"standard" | "agency">("standard");
   const [loading, setLoading] = useState(false);
 
@@ -29,12 +30,17 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
     setLoading(true);
     try {
       if (mode === "signup") {
+        if (!accountName.trim()) {
+          toast.error("Please enter an account name");
+          setLoading(false);
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { account_type: accountType },
+            data: { account_type: accountType, account_name: accountName.trim() },
           },
         });
         if (error) throw error;
@@ -70,35 +76,45 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
           <Input type="password" placeholder={t("auth.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="h-11" />
 
           {mode === "signup" && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Account type</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAccountType("standard")}
-                  className={`flex items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-colors ${
-                    accountType === "standard"
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/50"
-                  }`}
-                >
-                  <User className="w-4 h-4" />
-                  Standard
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAccountType("agency")}
-                  className={`flex items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-colors ${
-                    accountType === "agency"
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/50"
-                  }`}
-                >
-                  <Building2 className="w-4 h-4" />
-                  Agency
-                </button>
+            <>
+              <Input
+                type="text"
+                placeholder="Account name (e.g. your company name)"
+                value={accountName}
+                onChange={(e) => setAccountName(e.target.value)}
+                required
+                className="h-11"
+              />
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Account type</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAccountType("standard")}
+                    className={`flex items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-colors ${
+                      accountType === "standard"
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    <User className="w-4 h-4" />
+                    Standard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAccountType("agency")}
+                    className={`flex items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-colors ${
+                      accountType === "agency"
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4" />
+                    Agency
+                  </button>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
