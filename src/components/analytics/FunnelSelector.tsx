@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
-import { useProject } from "@/contexts/ProjectContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Funnel {
@@ -18,16 +18,16 @@ interface FunnelSelectorProps {
 
 const FunnelSelector = ({ selectedFunnelId, onSelect }: FunnelSelectorProps) => {
   const { t } = useTranslation();
-  const { activeProject } = useProject();
+  const { activeSubAccountId } = useWorkspace();
   const [funnels, setFunnels] = useState<Funnel[]>([]);
 
   useEffect(() => {
-    if (!activeProject) return;
+    if (!activeSubAccountId) return;
     const load = async () => {
       const { data } = await supabase
         .from("funnels")
         .select("id, name, nodes, edges")
-        .eq("project_id", activeProject.id)
+        .eq("sub_account_id", activeSubAccountId)
         .eq("is_template", false)
         .order("updated_at", { ascending: false });
       if (data) {
@@ -41,7 +41,7 @@ const FunnelSelector = ({ selectedFunnelId, onSelect }: FunnelSelectorProps) => 
       }
     };
     load();
-  }, [activeProject]);
+  }, [activeSubAccountId]);
 
   return (
     <Select

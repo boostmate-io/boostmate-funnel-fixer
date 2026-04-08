@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProject } from "@/contexts/ProjectContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 import { Plus, Search, Trash2, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,25 +29,24 @@ interface FunnelListProps {
 
 const FunnelList = ({ onOpenFunnel, onCreateNew }: FunnelListProps) => {
   const { user } = useAuth();
-  const { activeProject } = useProject();
+  const { activeSubAccountId } = useWorkspace();
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadFunnels = useCallback(async () => {
-    if (!user?.id || !activeProject?.id) return;
+    if (!user?.id || !activeSubAccountId) return;
     setLoading(true);
     const { data } = await supabase
       .from("funnels")
       .select("*")
-      .eq("user_id", user.id)
-      .eq("project_id", activeProject.id)
+      .eq("sub_account_id", activeSubAccountId)
       .eq("is_template", false)
       .order("updated_at", { ascending: false });
     if (data) setFunnels(data as unknown as Funnel[]);
     setLoading(false);
-  }, [user?.id, activeProject?.id]);
+  }, [user?.id, activeSubAccountId]);
 
   useEffect(() => { loadFunnels(); }, [loadFunnels]);
 

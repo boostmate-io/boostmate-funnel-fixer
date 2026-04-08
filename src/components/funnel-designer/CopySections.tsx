@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProject } from "@/contexts/ProjectContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ interface CopySectionsProps {
 const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onLinkAsset, defaultAssetName }: CopySectionsProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { activeProject } = useProject();
+  const { activeSubAccountId } = useWorkspace();
   const [assetSections, setAssetSections] = useState<CopySection[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [converting, setConverting] = useState(false);
@@ -87,7 +87,7 @@ const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onL
           user_id: user.id,
           type: "sales_copy",
           name: assetName || "Sales Copy",
-          project_id: activeProject?.id || null,
+          sub_account_id: activeSubAccountId || null,
         })
         .select("id")
         .single();

@@ -21,8 +21,9 @@ const InviteRegistration = () => {
   useEffect(() => {
     const loadInvite = async () => {
       if (!code) { setLoading(false); return; }
+      // Try new account_invites table first
       const { data } = await supabase
-        .from("agency_invites")
+        .from("account_invites")
         .select("*")
         .eq("invite_code", code)
         .eq("status", "pending")
@@ -42,7 +43,6 @@ const InviteRegistration = () => {
     setSubmitting(true);
 
     try {
-      // Sign up the user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -53,27 +53,31 @@ const InviteRegistration = () => {
       });
       if (authError) throw authError;
 
-      // Update profile to client type
       if (authData.user) {
-        // Wait briefly for trigger to create profile
-        await new Promise((r) => setTimeout(r, 1000));
+        // Wait for signup trigger to create account structure
+        await new Promise((r) => setTimeout(r, 1500));
 
+        // Update display name
         await supabase
           .from("profiles")
-          .update({ account_type: "client", display_name: displayName } as any)
+          .update({ display_name: displayName } as any)
           .eq("id", authData.user.id);
 
-        // Create agency-client relationship
-        await supabase
-          .from("agency_clients")
-          .insert({
-            agency_user_id: invite.agency_user_id,
-            client_user_id: authData.user.id,
-          } as any);
+        // Create membership for the invited sub account
+        if (invite.sub_account_id) {
+          await supabase
+            .from("account_memberships")
+            .insert({
+              user_id: authData.user.id,
+              main_account_id: invite.main_account_id,
+              sub_account_id: invite.sub_account_id,
+              role: invite.role || "workspace_member",
+            } as any);
+        }
 
         // Mark invite as accepted
         await supabase
-          .from("agency_invites")
+          .from("account_invites")
           .update({ status: "accepted" } as any)
           .eq("id", invite.id);
       }
@@ -119,30 +123,9 @@ const InviteRegistration = () => {
           {t("agency.joinDescription")}
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            placeholder={t("agency.displayNamePlaceholder")}
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            required
-            className="h-11"
-          />
-          <Input
-            type="email"
-            placeholder={t("auth.emailPlaceholder")}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="h-11"
-          />
-          <Input
-            type="password"
-            placeholder={t("auth.passwordPlaceholder")}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="h-11"
-          />
+          <Input placeholder={t("agency.displayNamePlaceholder")} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required className="h-11" />
+          <Input type="email" placeholder={t("auth.emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required className="h-11" />
+          <Input type="password" placeholder={t("auth.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="h-11" />
           <Button type="submit" className="w-full" size="lg" disabled={submitting}>
             {submitting ? t("auth.loading") : t("auth.signup")}
           </Button>

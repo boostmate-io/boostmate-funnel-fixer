@@ -1,7 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { AgencyProvider } from "@/contexts/AgencyContext";
-import { ProjectProvider } from "@/contexts/ProjectContext";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isReady } = useAuth();
@@ -19,11 +18,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <AgencyProvider>
-      <ProjectProvider>
-        {children}
-      </ProjectProvider>
-    </AgencyProvider>
+    <WorkspaceProvider>
+      {children}
+    </WorkspaceProvider>
   );
 };
 

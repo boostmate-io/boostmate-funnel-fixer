@@ -14,6 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_invites: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invite_code: string
+          invited_by: string
+          main_account_id: string
+          role: Database["public"]["Enums"]["membership_role"]
+          status: string
+          sub_account_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invite_code?: string
+          invited_by: string
+          main_account_id: string
+          role?: Database["public"]["Enums"]["membership_role"]
+          status?: string
+          sub_account_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invite_code?: string
+          invited_by?: string
+          main_account_id?: string
+          role?: Database["public"]["Enums"]["membership_role"]
+          status?: string
+          sub_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_invites_main_account_id_fkey"
+            columns: ["main_account_id"]
+            isOneToOne: false
+            referencedRelation: "main_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_invites_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          main_account_id: string
+          role: Database["public"]["Enums"]["membership_role"]
+          sub_account_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          main_account_id: string
+          role?: Database["public"]["Enums"]["membership_role"]
+          sub_account_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          main_account_id?: string
+          role?: Database["public"]["Enums"]["membership_role"]
+          sub_account_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_memberships_main_account_id_fkey"
+            columns: ["main_account_id"]
+            isOneToOne: false
+            referencedRelation: "main_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_memberships_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agency_clients: {
         Row: {
           agency_user_id: string
@@ -124,6 +217,7 @@ export type Database = {
           id: string
           name: string
           project_id: string | null
+          sub_account_id: string | null
           type: string
           updated_at: string
           user_id: string
@@ -134,6 +228,7 @@ export type Database = {
           id?: string
           name?: string
           project_id?: string | null
+          sub_account_id?: string | null
           type?: string
           updated_at?: string
           user_id: string
@@ -144,6 +239,7 @@ export type Database = {
           id?: string
           name?: string
           project_id?: string | null
+          sub_account_id?: string | null
           type?: string
           updated_at?: string
           user_id?: string
@@ -154,6 +250,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -172,6 +275,7 @@ export type Database = {
           offer: string
           result: Json | null
           score: number | null
+          sub_account_id: string | null
           target_audience: string
           traffic_source: string
           updated_at: string
@@ -190,6 +294,7 @@ export type Database = {
           offer?: string
           result?: Json | null
           score?: number | null
+          sub_account_id?: string | null
           target_audience?: string
           traffic_source?: string
           updated_at?: string
@@ -208,12 +313,21 @@ export type Database = {
           offer?: string
           result?: Json | null
           score?: number | null
+          sub_account_id?: string | null
           target_audience?: string
           traffic_source?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "audits_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_account_invites: {
         Row: {
@@ -283,6 +397,7 @@ export type Database = {
           date: string
           funnel_id: string
           id: string
+          sub_account_id: string | null
           updated_at: string
           user_id: string
         }
@@ -291,6 +406,7 @@ export type Database = {
           date: string
           funnel_id: string
           id?: string
+          sub_account_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -299,6 +415,7 @@ export type Database = {
           date?: string
           funnel_id?: string
           id?: string
+          sub_account_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -308,6 +425,13 @@ export type Database = {
             columns: ["funnel_id"]
             isOneToOne: false
             referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_analytics_entries_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -322,6 +446,7 @@ export type Database = {
           share_permission: string
           share_token: string | null
           structure: Json
+          sub_account_id: string | null
           updated_at: string
           user_id: string
           values: Json
@@ -335,6 +460,7 @@ export type Database = {
           share_permission?: string
           share_token?: string | null
           structure?: Json
+          sub_account_id?: string | null
           updated_at?: string
           user_id: string
           values?: Json
@@ -348,6 +474,7 @@ export type Database = {
           share_permission?: string
           share_token?: string | null
           structure?: Json
+          sub_account_id?: string | null
           updated_at?: string
           user_id?: string
           values?: Json
@@ -358,6 +485,13 @@ export type Database = {
             columns: ["funnel_id"]
             isOneToOne: true
             referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_briefs_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -412,6 +546,7 @@ export type Database = {
           nodes: Json
           project_id: string | null
           share_token: string | null
+          sub_account_id: string | null
           template_id: string | null
           updated_at: string
           user_id: string
@@ -427,6 +562,7 @@ export type Database = {
           nodes?: Json
           project_id?: string | null
           share_token?: string | null
+          sub_account_id?: string | null
           template_id?: string | null
           updated_at?: string
           user_id: string
@@ -442,6 +578,7 @@ export type Database = {
           nodes?: Json
           project_id?: string | null
           share_token?: string | null
+          sub_account_id?: string | null
           template_id?: string | null
           updated_at?: string
           user_id?: string
@@ -459,6 +596,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnels_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -503,6 +647,30 @@ export type Database = {
         }
         Relationships: []
       }
+      main_accounts: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          type: Database["public"]["Enums"]["main_account_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          type?: Database["public"]["Enums"]["main_account_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          type?: Database["public"]["Enums"]["main_account_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       offers: {
         Row: {
           completion: number
@@ -513,6 +681,7 @@ export type Database = {
           project_id: string | null
           share_token: string | null
           status: string
+          sub_account_id: string | null
           updated_at: string
           user_id: string
         }
@@ -525,6 +694,7 @@ export type Database = {
           project_id?: string | null
           share_token?: string | null
           status?: string
+          sub_account_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -537,6 +707,7 @@ export type Database = {
           project_id?: string | null
           share_token?: string | null
           status?: string
+          sub_account_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -546,6 +717,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -634,6 +812,41 @@ export type Database = {
         }
         Relationships: []
       }
+      sub_accounts: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          main_account_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          main_account_id: string
+          name?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          main_account_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sub_accounts_main_account_id_fkey"
+            columns: ["main_account_id"]
+            isOneToOne: false
+            referencedRelation: "main_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -660,6 +873,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_main_account: { Args: { _user_id: string }; Returns: string }
+      get_user_sub_accounts: { Args: { _user_id: string }; Returns: string[] }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -671,10 +886,26 @@ export type Database = {
         Args: { _agency_id: string; _client_id: string }
         Returns: boolean
       }
+      is_app_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_main_account_admin: {
+        Args: { _main_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_sub_account_member: {
+        Args: { _sub_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       account_type: "personal" | "agency" | "client"
       app_role: "admin" | "user"
+      main_account_type: "standard" | "agency"
+      membership_role:
+        | "owner"
+        | "admin"
+        | "member"
+        | "workspace_admin"
+        | "workspace_member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -804,6 +1035,14 @@ export const Constants = {
     Enums: {
       account_type: ["personal", "agency", "client"],
       app_role: ["admin", "user"],
+      main_account_type: ["standard", "agency"],
+      membership_role: [
+        "owner",
+        "admin",
+        "member",
+        "workspace_admin",
+        "workspace_member",
+      ],
     },
   },
 } as const

@@ -48,7 +48,7 @@ export async function analyzeAudit(
 
 export async function createSalesCopyAsset(
   userId: string,
-  projectId: string | null,
+  subAccountId: string | null,
   assetName: string,
   sections: AnalysisSection[]
 ): Promise<string | null> {
@@ -60,7 +60,7 @@ export async function createSalesCopyAsset(
       user_id: userId,
       type: "sales_copy",
       name: assetName,
-      project_id: projectId,
+      sub_account_id: subAccountId,
     })
     .select("id")
     .single();
@@ -90,7 +90,7 @@ export async function createSalesCopyAsset(
 
 export async function createFunnelFromAnalysis(
   userId: string,
-  projectId: string | null,
+  subAccountId: string | null,
   funnelName: string,
   nodes: FunnelNode[],
   edges: FunnelEdge[],
@@ -98,7 +98,6 @@ export async function createFunnelFromAnalysis(
 ): Promise<string | null> {
   if (nodes.length === 0) return null;
 
-  // Link the sales copy asset to the first funnelPage node (the landing page)
   if (salesCopyAssetId) {
     const firstPageNode = nodes.find((n) => n.type === "funnelPage");
     if (firstPageNode) {
@@ -114,7 +113,7 @@ export async function createFunnelFromAnalysis(
       nodes: JSON.parse(JSON.stringify(nodes)),
       edges: JSON.parse(JSON.stringify(edges)),
       is_template: false,
-      project_id: projectId,
+      sub_account_id: subAccountId,
     })
     .select("id")
     .single();

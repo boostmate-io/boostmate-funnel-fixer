@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProject } from "@/contexts/ProjectContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 import { Plus, Search, Copy, Trash2, Gem } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,32 +20,31 @@ interface OfferListProps {
 
 const OfferList = ({ onEditOffer }: OfferListProps) => {
   const { user } = useAuth();
-  const { activeProject } = useProject();
+  const { activeSubAccountId } = useWorkspace();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadOffers = useCallback(async () => {
-    if (!user?.id || !activeProject?.id) return;
+    if (!user?.id || !activeSubAccountId) return;
     setLoading(true);
     const { data } = await supabase
       .from("offers")
       .select("*")
-      .eq("user_id", user.id)
-      .eq("project_id", activeProject.id)
+      .eq("sub_account_id", activeSubAccountId)
       .order("updated_at", { ascending: false });
     if (data) setOffers(data as unknown as Offer[]);
     setLoading(false);
-  }, [user?.id, activeProject?.id]);
+  }, [user?.id, activeSubAccountId]);
 
   useEffect(() => { loadOffers(); }, [loadOffers]);
 
   const createOffer = useCallback(async () => {
-    if (!user?.id || !activeProject?.id) return;
+    if (!user?.id || !activeSubAccountId) return;
     const { data, error } = await supabase
       .from("offers")
-      .insert({ user_id: user.id, project_id: activeProject.id, name: "Untitled Offer" })
+      .insert({ user_id: user.id, sub_account_id: activeSubAccountId, name: "Untitled Offer" })
       .select()
       .single();
     if (error) toast.error("Error creating offer");
@@ -53,15 +52,15 @@ const OfferList = ({ onEditOffer }: OfferListProps) => {
       toast.success("Offer created");
       onEditOffer((data as any).id);
     }
-  }, [user?.id, activeProject?.id, onEditOffer]);
+  }, [user?.id, activeSubAccountId, onEditOffer]);
 
   const duplicateOffer = useCallback(async (offer: Offer) => {
-    if (!user?.id) return;
+    if (!user?.id || !activeSubAccountId) return;
     const { data, error } = await supabase
       .from("offers")
       .insert({
         user_id: user.id,
-        project_id: offer.project_id,
+        sub_account_id: activeSubAccountId,
         name: `${offer.name} (copy)`,
         data: offer.data as any,
         status: "draft",
@@ -71,7 +70,7 @@ const OfferList = ({ onEditOffer }: OfferListProps) => {
       .single();
     if (error) toast.error("Error duplicating offer");
     else { toast.success("Offer duplicated"); loadOffers(); }
-  }, [user?.id, loadOffers]);
+  }, [user?.id, activeSubAccountId, loadOffers]);
 
   const deleteOffer = useCallback(async (id: string) => {
     const { error } = await supabase.from("offers").delete().eq("id", id);
