@@ -51,6 +51,18 @@ const AdminMainAccounts = () => {
     load();
   };
 
+  const handleToggleType = async (acc: MainAccount) => {
+    const newType = acc.type === "agency" ? "standard" : "agency";
+    if (newType === "standard" && (acc.sub_count || 0) > 1) {
+      toast.error("Cannot switch to standard: account has multiple sub accounts. Remove extras first.");
+      return;
+    }
+    const { error } = await supabase.from("main_accounts").update({ type: newType }).eq("id", acc.id);
+    if (error) { toast.error("Failed to update type: " + error.message); return; }
+    toast.success(`Account type changed to ${newType}`);
+    load();
+  };
+
   const handleManage = async (mainAccountId: string) => {
     const { data } = await supabase
       .from("sub_accounts")
@@ -125,7 +137,14 @@ const AdminMainAccounts = () => {
                 <TableRow key={acc.id}>
                   <TableCell className="font-medium">{acc.name}</TableCell>
                   <TableCell>
-                    <Badge variant={acc.type === "agency" ? "default" : "secondary"}>{acc.type}</Badge>
+                    <Badge
+                      variant={acc.type === "agency" ? "default" : "secondary"}
+                      className="cursor-pointer hover:opacity-80"
+                      onClick={() => handleToggleType(acc)}
+                      title={`Click to switch to ${acc.type === "agency" ? "standard" : "agency"}`}
+                    >
+                      {acc.type}
+                    </Badge>
                   </TableCell>
                   <TableCell>{acc.sub_count}</TableCell>
                   <TableCell>{acc.member_count}</TableCell>
