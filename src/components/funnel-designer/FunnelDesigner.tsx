@@ -22,7 +22,7 @@ import { useProject } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
-  Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil,
+  Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil, ArrowLeft,
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
   Sprout, ShieldCheck, ClipboardList, Gem,
