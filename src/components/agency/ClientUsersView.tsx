@@ -1,90 +1,103 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Trash2, Users } from "lucide-react";
-import { toast } from "sonner";
+import { Search, Users } from "lucide-react";
 
-interface ClientUser {
-  id: string;
-  client_user_id: string;
-  client_account_id: string | null;
-  status: string;
-  created_at: string;
-  profile?: {
-    display_name: string;
-    account_type: string;
-  } | null;
-  account_name?: string;
-}
-
-interface ClientAccount {
-  id: string;
-  name: string;
+interface MemberUser {
+  membership_id: string;
+  user_id: string;
+  sub_account_id: string | null;
+  role: string;
+  sub_account_name: string;
+  first_name: string;
+  last_name: string;
+  display_name: string;
+  email?: string;
 }
 
 const ClientUsersView = () => {
-  const [users, setUsers] = useState<ClientUser[]>([]);
-  const [accounts, setAccounts] = useState<ClientAccount[]>([]);
+  const { mainAccount, subAccounts } = useWorkspace();
+  const [users, setUsers] = useState<MemberUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterAccount, setFilterAccount] = useState<string>("all");
 
   const loadData = useCallback(async () => {
+    if (!mainAccount) return;
     setLoading(true);
 
-    // Load accounts
-    const { data: accs } = await supabase
-      .from("client_accounts")
-      .select("id, name");
-    setAccounts((accs || []) as ClientAccount[]);
+    // Get all memberships for this main account that have a sub_account_id
+    const { data: memberships } = await supabase
+      .from("account_memberships")
+      .select("id, user_id, sub_account_id, role")
+      .eq("main_account_id", mainAccount.id)
+      .not("sub_account_id", "is", null);
 
-    // Load all agency_clients (users linked to this agency)
-    const { data: clients } = await supabase
-      .from("agency_clients")
-      .select("*");
-
-    if (clients && clients.length > 0) {
-      const userIds = clients.map((c: any) => c.client_user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, display_name, account_type")
-        .in("id", userIds);
-
-      const accountMap: Record<string, string> = {};
-      (accs || []).forEach((a: any) => { accountMap[a.id] = a.name; });
-
-      const enriched = clients.map((c: any) => ({
-        ...c,
-        profile: (profiles || []).find((p: any) => p.id === c.client_user_id) || null,
-        account_name: c.client_account_id ? accountMap[c.client_account_id] || "Unknown" : "Unassigned",
-      }));
-      setUsers(enriched);
-    } else {
+    if (!memberships || memberships.length === 0) {
       setUsers([]);
+      setLoading(false);
+      return;
     }
+
+    // Get unique user IDs and fetch profiles
+    const userIds = [...new Set(memberships.map((m: any) => m.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name, display_name")
+      .in("id", userIds);
+
+    // Build sub account name map
+    const subMap: Record<string, string> = {};
+    subAccounts.forEach((s) => { subMap[s.id] = s.name; });
+
+    const enriched: MemberUser[] = memberships.map((m: any) => {
+      const profile = (profiles || []).find((p: any) => p.id === m.user_id);
+      return {
+        membership_id: m.id,
+        user_id: m.user_id,
+        sub_account_id: m.sub_account_id,
+        role: m.role,
+        sub_account_name: m.sub_account_id ? subMap[m.sub_account_id] || "Unknown" : "—",
+        first_name: profile?.first_name || "",
+        last_name: profile?.last_name || "",
+        display_name: profile?.display_name || "",
+      };
+    });
+
+    setUsers(enriched);
     setLoading(false);
-  }, []);
+  }, [mainAccount, subAccounts]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleRemoveUser = async (id: string) => {
-    if (!confirm("Remove this user from your agency?")) return;
-    await supabase.from("agency_clients").delete().eq("id", id);
-    toast.success("User removed");
-    loadData();
+  const getName = (u: MemberUser) => {
+    const full = [u.first_name, u.last_name].filter(Boolean).join(" ");
+    return full || u.display_name || "Unknown User";
   };
 
   const filtered = users.filter((u) => {
-    const matchSearch = !search ||
-      (u.profile?.display_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      u.client_user_id.toLowerCase().includes(search.toLowerCase());
-    const matchAccount = filterAccount === "all" || u.client_account_id === filterAccount;
+    const name = getName(u).toLowerCase();
+    const matchSearch = !search || name.includes(search.toLowerCase()) || u.user_id.includes(search.toLowerCase());
+    const matchAccount = filterAccount === "all" || u.sub_account_id === filterAccount;
     return matchSearch && matchAccount;
   });
+
+  // Deduplicate: show each user once, with all their workspace badges
+  const userMap = new Map<string, { user: MemberUser; workspaces: { name: string; role: string }[] }>();
+  filtered.forEach((u) => {
+    const existing = userMap.get(u.user_id);
+    if (existing) {
+      existing.workspaces.push({ name: u.sub_account_name, role: u.role });
+    } else {
+      userMap.set(u.user_id, { user: u, workspaces: [{ name: u.sub_account_name, role: u.role }] });
+    }
+  });
+
+  const uniqueUsers = Array.from(userMap.values());
 
   return (
     <div className="space-y-4">
@@ -108,7 +121,7 @@ const ClientUsersView = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All accounts</SelectItem>
-            {accounts.map((a) => (
+            {subAccounts.map((a) => (
               <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
             ))}
           </SelectContent>
@@ -117,7 +130,7 @@ const ClientUsersView = () => {
 
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading...</p>
-      ) : filtered.length === 0 ? (
+      ) : uniqueUsers.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Users className="w-12 h-12 mx-auto text-muted-foreground/40 mb-4" />
@@ -126,37 +139,27 @@ const ClientUsersView = () => {
         </Card>
       ) : (
         <div className="space-y-2">
-          {filtered.map((user) => {
-            const isSelf = user.client_user_id === user.id; // agency's own record
-            return (
-              <Card key={user.id}>
-                <CardContent className="py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
-                      {(user.profile?.display_name || "?")[0]?.toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {user.profile?.display_name || "Unknown User"}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Badge variant="outline" className="text-xs">{user.account_name}</Badge>
-                        <Badge variant="secondary" className="text-xs">{user.status}</Badge>
-                      </div>
+          {uniqueUsers.map(({ user, workspaces }) => (
+            <Card key={user.user_id}>
+              <CardContent className="py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+                    {getName(user)[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{getName(user)}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {workspaces.map((w, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">
+                          {w.name} ({w.role})
+                        </Badge>
+                      ))}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleRemoveUser(user.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>

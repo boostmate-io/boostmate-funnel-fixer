@@ -111,17 +111,34 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       if (cancelled) return;
       setMainAccount(mainData as MainAccount | null);
 
-      // Load all sub accounts this user has access to
-      const subAccountIds = mems
-        .filter((m) => m.sub_account_id)
-        .map((m) => m.sub_account_id!);
+      // Load all sub accounts - for agency owners load ALL under main account
+      const isOwner = mems.some((m) => m.role === "owner" && !m.sub_account_id);
+      const isAgencyAccount = mainData?.type === "agency";
 
-      if (subAccountIds.length > 0) {
-        const { data: subData } = await supabase
+      let subData: any[] | null = null;
+      if (isOwner && isAgencyAccount && mainData) {
+        // Agency owners see ALL sub accounts under their main account
+        const { data } = await supabase
           .from("sub_accounts")
           .select("*")
-          .in("id", subAccountIds)
+          .eq("main_account_id", mainData.id)
           .order("created_at", { ascending: true });
+        subData = data;
+      } else {
+        const subAccountIds = mems
+          .filter((m) => m.sub_account_id)
+          .map((m) => m.sub_account_id!);
+        if (subAccountIds.length > 0) {
+          const { data } = await supabase
+            .from("sub_accounts")
+            .select("*")
+            .in("id", subAccountIds)
+            .order("created_at", { ascending: true });
+          subData = data;
+        }
+      }
+
+      if (subData && subData.length > 0) {
         if (cancelled) return;
         setSubAccounts((subData || []) as SubAccount[]);
 

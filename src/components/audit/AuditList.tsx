@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { Plus, BarChart3, Clock } from "lucide-react";
 import ScoreGauge from "./ScoreGauge";
@@ -28,19 +29,26 @@ interface AuditListProps {
 
 const AuditList = ({ onNewAudit, onViewAudit }: AuditListProps) => {
   const { t } = useTranslation();
+  const { activeSubAccountId } = useWorkspace();
   const [audits, setAudits] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchAudits();
-  }, []);
+  }, [activeSubAccountId]);
 
   const fetchAudits = async () => {
-    const { data, error } = await supabase
+    setLoading(true);
+    let query = supabase
       .from("audits")
       .select("*")
       .order("created_at", { ascending: false });
 
+    if (activeSubAccountId) {
+      query = query.eq("sub_account_id", activeSubAccountId);
+    }
+
+    const { data, error } = await query;
     if (!error && data) {
       setAudits(data as AuditRow[]);
     }
