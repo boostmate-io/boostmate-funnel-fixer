@@ -24,6 +24,9 @@ export interface BriefStructure {
 
 export type BriefValues = Record<string, string | string[] | boolean | number | null>;
 
+// Per-field approval: stores field IDs that are approved
+export type BriefApprovedFields = Record<string, boolean>;
+
 export interface FunnelBrief {
   id: string;
   funnel_id: string;
@@ -32,6 +35,8 @@ export interface FunnelBrief {
   share_permission: "view" | "edit";
   structure: BriefStructure;
   values: BriefValues;
+  approved_fields?: BriefApprovedFields;
+  is_approved?: boolean;
   created_at: string;
   updated_at: string;
 }

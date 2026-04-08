@@ -4,14 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   X, Save, Share2, Link2, Copy, Settings2, FileEdit, Eye,
-  ClipboardList, ExternalLink, CheckCircle2, Circle,
+  ClipboardList, CheckCircle2, Circle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import BriefBuilder from "./BriefBuilder";
 import BriefFiller from "./BriefFiller";
-import { BriefStructure, BriefValues, FunnelBrief } from "./types";
+import { BriefStructure, BriefValues, BriefApprovedFields, FunnelBrief } from "./types";
 
 interface FunnelBriefPanelProps {
   funnelId: string | null;
@@ -29,11 +29,11 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
   const [saving, setSaving] = useState(false);
   const [structure, setStructure] = useState<BriefStructure>({ sections: [] });
   const [values, setValues] = useState<BriefValues>({});
+  const [approvedFields, setApprovedFields] = useState<BriefApprovedFields>({});
   const [activeTab, setActiveTab] = useState<string>("fill");
   const [isApproved, setIsApproved] = useState(false);
   const isDirty = useRef(false);
 
-  // Load brief for current funnel or seed template
   useEffect(() => {
     if (!funnelId) { setLoading(false); return; }
 
@@ -41,8 +41,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
       setLoading(true);
 
       if (isSeedTemplate) {
-        // Load brief_structure from seed_templates
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("seed_templates")
           .select("brief_structure")
           .eq("id", funnelId)
@@ -51,29 +50,32 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
         if (data) {
           const s = (data.brief_structure as any) || { sections: [] };
           setStructure(s);
-          setBrief({ id: funnelId, funnel_id: funnelId, user_id: userId || "", structure: s, values: {}, share_token: null, share_permission: "view", created_at: "", updated_at: "" } as FunnelBrief);
+          setBrief({ id: funnelId, funnel_id: funnelId, user_id: userId || "", structure: s, values: {}, approved_fields: {}, share_token: null, share_permission: "view", created_at: "", updated_at: "" } as FunnelBrief);
         } else {
           setBrief(null);
           setStructure({ sections: [] });
         }
         setValues({});
+        setApprovedFields({});
       } else {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("funnel_briefs")
           .select("*")
           .eq("funnel_id", funnelId)
           .maybeSingle();
 
         if (data) {
-          const b = data as unknown as FunnelBrief;
-          setBrief(b);
+          const b = data as any;
+          setBrief(b as unknown as FunnelBrief);
           setStructure(b.structure || { sections: [] });
           setValues(b.values || {});
-          setIsApproved(!!(data as any).is_approved);
+          setApprovedFields(b.approved_fields || {});
+          setIsApproved(!!b.is_approved);
         } else {
           setBrief(null);
           setStructure({ sections: [] });
           setValues({});
+          setApprovedFields({});
         }
       }
       setLoading(false);
@@ -86,20 +88,17 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
     setSaving(true);
 
     if (isSeedTemplate) {
-      // Save brief_structure directly to seed_templates
       const { error } = await supabase
         .from("seed_templates")
         .update({ brief_structure: structure as any, updated_at: new Date().toISOString() })
         .eq("id", funnelId);
       if (error) toast.error("Error saving brief");
-      else {
-        toast.success("Brief saved");
-        isDirty.current = false;
-      }
+      else { toast.success("Brief saved"); isDirty.current = false; }
     } else {
       const payload = {
         structure: structure as any,
         values: values as any,
+        approved_fields: approvedFields as any,
         updated_at: new Date().toISOString(),
       };
 
@@ -109,10 +108,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
           .update(payload)
           .eq("id", brief.id);
         if (error) toast.error("Error saving brief");
-        else {
-          toast.success("Brief saved");
-          isDirty.current = false;
-        }
+        else { toast.success("Brief saved"); isDirty.current = false; }
       } else {
         const { data, error } = await supabase
           .from("funnel_briefs")
@@ -121,19 +117,16 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
             user_id: userId,
             structure: structure as any,
             values: values as any,
+            approved_fields: approvedFields as any,
           })
           .select()
           .single();
         if (error) toast.error("Error creating brief");
-        else {
-          setBrief(data as unknown as FunnelBrief);
-          toast.success("Brief created");
-          isDirty.current = false;
-        }
+        else { setBrief(data as unknown as FunnelBrief); toast.success("Brief created"); isDirty.current = false; }
       }
     }
     setSaving(false);
-  }, [funnelId, userId, brief, structure, values, isSeedTemplate]);
+  }, [funnelId, userId, brief, structure, values, approvedFields, isSeedTemplate]);
 
   const handleStructureChange = useCallback((newStructure: BriefStructure) => {
     setStructure(newStructure);
@@ -145,12 +138,13 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
     isDirty.current = true;
   }, []);
 
-  // Share link
+  const handleApprovedFieldsChange = useCallback((newAf: BriefApprovedFields) => {
+    setApprovedFields(newAf);
+    isDirty.current = true;
+  }, []);
+
   const generateShareLink = useCallback(async () => {
-    if (!brief?.id) {
-      toast.error("Save the brief first");
-      return;
-    }
+    if (!brief?.id) { toast.error("Save the brief first"); return; }
     let token = brief.share_token;
     if (!token) {
       token = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
@@ -173,10 +167,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
       .update({ share_permission: permission } as any)
       .eq("id", brief.id);
     if (error) toast.error("Error updating permission");
-    else {
-      setBrief({ ...brief, share_permission: permission });
-      toast.success(`Share permission set to ${permission}`);
-    }
+    else { setBrief({ ...brief, share_permission: permission }); toast.success(`Permission set to ${permission}`); }
   }, [brief]);
 
   const removeShareLink = useCallback(async () => {
@@ -186,10 +177,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
       .update({ share_token: null } as any)
       .eq("id", brief.id);
     if (error) toast.error("Error removing share link");
-    else {
-      setBrief({ ...brief, share_token: null });
-      toast.success("Share link removed");
-    }
+    else { setBrief({ ...brief, share_token: null }); toast.success("Share link removed"); }
   }, [brief]);
 
   const toggleApproval = useCallback(async () => {
@@ -200,10 +188,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
       .update({ is_approved: newVal } as any)
       .eq("id", brief.id);
     if (error) toast.error("Error updating approval status");
-    else {
-      setIsApproved(newVal);
-      toast.success(newVal ? "Brief marked as approved" : "Brief approval removed");
-    }
+    else { setIsApproved(newVal); toast.success(newVal ? "Brief approved" : "Brief approval removed"); }
   }, [brief, isApproved]);
 
   if (!funnelId) {
@@ -222,7 +207,6 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
 
   return (
     <div className="w-96 border-l border-border bg-card flex flex-col h-full overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <ClipboardList className="w-4 h-4 text-primary shrink-0" />
@@ -267,7 +251,6 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
 
             <div className="flex-1 overflow-auto">
               <TabsContent value="fill" className="px-4 pb-4 mt-0">
-                {/* Approval status */}
                 {brief?.id && !isSeedTemplate && (
                   <div className={`flex items-center justify-between p-2.5 rounded-lg border mb-3 mt-2 ${isApproved ? "bg-emerald-500/10 border-emerald-500/30" : "bg-muted/30 border-border"}`}>
                     <div className="flex items-center gap-2">
@@ -283,7 +266,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
                         className="h-6 text-[10px] px-2"
                         onClick={toggleApproval}
                       >
-                        {isApproved ? "Revoke" : "Approve"}
+                        {isApproved ? "Revoke" : "Approve All"}
                       </Button>
                     )}
                   </div>
@@ -293,21 +276,20 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
                   values={values}
                   onChange={handleValuesChange}
                   readOnly={readOnly || isApproved}
+                  approvedFields={approvedFields}
+                  onApprovedFieldsChange={!readOnly ? handleApprovedFieldsChange : undefined}
+                  canApprove={!readOnly && !isApproved}
                 />
               </TabsContent>
 
               {!readOnly && (
                 <>
                   <TabsContent value="builder" className="px-4 pb-4 mt-0">
-                    <BriefBuilder
-                      structure={structure}
-                      onChange={handleStructureChange}
-                    />
+                    <BriefBuilder structure={structure} onChange={handleStructureChange} />
                   </TabsContent>
 
                   <TabsContent value="share" className="px-4 pb-4 mt-0">
                     <div className="space-y-4 pt-2">
-                      {/* Share link */}
                       <div className="space-y-2">
                         <h4 className="text-xs font-semibold text-foreground">Share Link</h4>
                         <p className="text-[10px] text-muted-foreground">
@@ -342,7 +324,6 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
                         )}
                       </div>
 
-                      {/* Permissions */}
                       {brief?.share_token && (
                         <div className="space-y-2">
                           <h4 className="text-xs font-semibold text-foreground">Permissions</h4>
@@ -355,14 +336,10 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="view" className="text-xs">
-                                <div className="flex items-center gap-1.5">
-                                  <Eye className="w-3 h-3" /> View Only
-                                </div>
+                                <div className="flex items-center gap-1.5"><Eye className="w-3 h-3" /> View Only</div>
                               </SelectItem>
                               <SelectItem value="edit" className="text-xs">
-                                <div className="flex items-center gap-1.5">
-                                  <FileEdit className="w-3 h-3" /> Can Edit
-                                </div>
+                                <div className="flex items-center gap-1.5"><FileEdit className="w-3 h-3" /> Can Edit</div>
                               </SelectItem>
                             </SelectContent>
                           </Select>

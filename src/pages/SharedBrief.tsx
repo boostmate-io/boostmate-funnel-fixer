@@ -2,10 +2,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BriefFiller from "@/components/funnel-brief/BriefFiller";
-import { BriefStructure, BriefValues, FunnelBrief } from "@/components/funnel-brief/types";
+import { BriefStructure, BriefValues, BriefApprovedFields, FunnelBrief } from "@/components/funnel-brief/types";
 import logo from "@/assets/logo-boostmate.svg";
 
 const SharedBrief = () => {
@@ -15,6 +15,7 @@ const SharedBrief = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [values, setValues] = useState<BriefValues>({});
+  const [approvedFields, setApprovedFields] = useState<BriefApprovedFields>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -34,10 +35,11 @@ const SharedBrief = () => {
           ...b,
           structure: b.structure || { sections: [] },
           values: b.values || {},
+          approved_fields: b.approved_fields || {},
         } as FunnelBrief);
         setValues(b.values || {});
+        setApprovedFields(b.approved_fields || {});
 
-        // Fetch funnel name separately
         if (b.funnel_id) {
           const { data: funnelData } = await supabase
             .from("funnels")
@@ -58,12 +60,12 @@ const SharedBrief = () => {
     setSaving(true);
     const { error: err } = await supabase
       .from("funnel_briefs")
-      .update({ values: values as any })
+      .update({ values: values as any, approved_fields: approvedFields as any } as any)
       .eq("id", brief.id);
     if (err) toast.error("Error saving");
     else toast.success("Brief saved");
     setSaving(false);
-  }, [brief, values, canEdit]);
+  }, [brief, values, approvedFields, canEdit]);
 
   if (loading) {
     return (
@@ -84,7 +86,6 @@ const SharedBrief = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-3 border-b border-border bg-card">
         <div className="flex items-center gap-3">
           <img src={logo} alt="Boostmate" className="h-5" />
@@ -102,13 +103,15 @@ const SharedBrief = () => {
         )}
       </div>
 
-      {/* Brief content */}
       <div className="max-w-2xl mx-auto px-6 py-8">
         <BriefFiller
           structure={brief.structure}
           values={values}
           onChange={setValues}
           readOnly={!canEdit}
+          approvedFields={approvedFields}
+          onApprovedFieldsChange={canEdit ? setApprovedFields : undefined}
+          canApprove={canEdit}
         />
       </div>
     </div>
