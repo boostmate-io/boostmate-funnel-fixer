@@ -40,6 +40,9 @@ interface WorkspaceContextType {
   loading: boolean;
   renameSubAccount: (id: string, name: string) => Promise<void>;
   createClientSubAccount: (name: string) => Promise<SubAccount | null>;
+  // Admin: all main accounts for switching
+  allMainAccounts: MainAccount[];
+  switchMainAccount: (mainAccountId: string) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
@@ -61,8 +64,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     localStorage.getItem("activeSubAccountId")
   );
   const [isAppAdmin, setIsAppAdmin] = useState(false);
+  const [allMainAccounts, setAllMainAccounts] = useState<MainAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const loadedForUserRef = useRef<string | null>(null);
+
+  // Load user's own main account id for reference
+  const ownMainAccountIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -71,9 +78,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       setMemberships([]);
       setActiveSubAccountId(null);
       setIsAppAdmin(false);
+      setAllMainAccounts([]);
       setLoading(false);
       loadedForUserRef.current = null;
+      ownMainAccountIdRef.current = null;
       localStorage.removeItem("activeSubAccountId");
+      localStorage.removeItem("activeMainAccountId");
       return;
     }
 
@@ -83,6 +93,17 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
 
     (async () => {
+      // Check admin role first
+      const { data: adminData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (cancelled) return;
+      const adminStatus = !!adminData;
+      setIsAppAdmin(adminStatus);
+
       // Load memberships
       const { data: membershipData } = await supabase
         .from("account_memberships")
@@ -93,76 +114,41 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const mems = (membershipData || []) as Membership[];
       setMemberships(mems);
 
-      // Find main account (owner membership without sub_account_id)
+      // Find user's own main account
       const ownerMembership = mems.find((m) => m.role === "owner" && !m.sub_account_id);
       if (!ownerMembership) {
-        // User might not have account yet (edge case during signup)
         setLoading(false);
         loadedForUserRef.current = userId;
         return;
       }
 
+      ownMainAccountIdRef.current = ownerMembership.main_account_id;
+
+      // If admin, load ALL main accounts for the switcher
+      if (adminStatus) {
+        const { data: allMains } = await supabase
+          .from("main_accounts")
+          .select("*")
+          .order("name", { ascending: true });
+        if (cancelled) return;
+        setAllMainAccounts((allMains || []) as MainAccount[]);
+      }
+
+      // Determine which main account to show
+      const storedMainId = localStorage.getItem("activeMainAccountId");
+      const targetMainId = (adminStatus && storedMainId) ? storedMainId : ownerMembership.main_account_id;
+
       // Load main account
       const { data: mainData } = await supabase
         .from("main_accounts")
         .select("*")
-        .eq("id", ownerMembership.main_account_id)
+        .eq("id", targetMainId)
         .single();
       if (cancelled) return;
       setMainAccount(mainData as MainAccount | null);
 
-      // Load all sub accounts - for agency owners load ALL under main account
-      const isOwner = mems.some((m) => m.role === "owner" && !m.sub_account_id);
-      const isAgencyAccount = mainData?.type === "agency";
-
-      let subData: any[] | null = null;
-      if (isOwner && isAgencyAccount && mainData) {
-        // Agency owners see ALL sub accounts under their main account
-        const { data } = await supabase
-          .from("sub_accounts")
-          .select("*")
-          .eq("main_account_id", mainData.id)
-          .order("created_at", { ascending: true });
-        subData = data;
-      } else {
-        const subAccountIds = mems
-          .filter((m) => m.sub_account_id)
-          .map((m) => m.sub_account_id!);
-        if (subAccountIds.length > 0) {
-          const { data } = await supabase
-            .from("sub_accounts")
-            .select("*")
-            .in("id", subAccountIds)
-            .order("created_at", { ascending: true });
-          subData = data;
-        }
-      }
-
-      if (subData && subData.length > 0) {
-        if (cancelled) return;
-        setSubAccounts((subData || []) as SubAccount[]);
-
-        // Set active sub account
-        const stored = localStorage.getItem("activeSubAccountId");
-        const match = (subData || []).find((s: any) => s.id === stored);
-        if (match) {
-          setActiveSubAccountId(match.id);
-        } else if (subData && subData.length > 0) {
-          const defaultSub = subData.find((s: any) => s.is_default) || subData[0];
-          setActiveSubAccountId(defaultSub.id);
-          localStorage.setItem("activeSubAccountId", defaultSub.id);
-        }
-      }
-
-      // Check admin role
-      const { data: adminData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (cancelled) return;
-      setIsAppAdmin(!!adminData);
+      // Load sub accounts for the active main account
+      await loadSubAccountsForMain(targetMainId, cancelled, mems, adminStatus, ownerMembership.main_account_id);
 
       loadedForUserRef.current = userId;
       setLoading(false);
@@ -173,6 +159,61 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     return () => { cancelled = true; };
   }, [userId]);
 
+  const loadSubAccountsForMain = async (
+    mainId: string,
+    cancelled: boolean,
+    mems: Membership[],
+    adminStatus: boolean,
+    ownMainId: string
+  ) => {
+    const isOwnAccount = mainId === ownMainId;
+    const isOwner = mems.some((m) => m.role === "owner" && !m.sub_account_id);
+
+    let subData: any[] | null = null;
+
+    if (adminStatus || (isOwner && isOwnAccount)) {
+      // Admin or agency owner: load ALL sub accounts under this main account
+      const { data } = await supabase
+        .from("sub_accounts")
+        .select("*")
+        .eq("main_account_id", mainId)
+        .order("created_at", { ascending: true });
+      subData = data;
+    } else {
+      // Regular user: only load sub accounts they have membership for
+      const subAccountIds = mems
+        .filter((m) => m.sub_account_id)
+        .map((m) => m.sub_account_id!);
+      if (subAccountIds.length > 0) {
+        const { data } = await supabase
+          .from("sub_accounts")
+          .select("*")
+          .in("id", subAccountIds)
+          .order("created_at", { ascending: true });
+        subData = data;
+      }
+    }
+
+    if (cancelled) return;
+
+    if (subData && subData.length > 0) {
+      setSubAccounts(subData as SubAccount[]);
+
+      const stored = localStorage.getItem("activeSubAccountId");
+      const match = subData.find((s: any) => s.id === stored);
+      if (match) {
+        setActiveSubAccountId(match.id);
+      } else {
+        const defaultSub = subData.find((s: any) => s.is_default) || subData[0];
+        setActiveSubAccountId(defaultSub.id);
+        localStorage.setItem("activeSubAccountId", defaultSub.id);
+      }
+    } else {
+      setSubAccounts([]);
+      setActiveSubAccountId(null);
+    }
+  };
+
   useEffect(() => {
     if (activeSubAccountId) localStorage.setItem("activeSubAccountId", activeSubAccountId);
   }, [activeSubAccountId]);
@@ -180,6 +221,37 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const switchSubAccount = useCallback((id: string) => {
     setActiveSubAccountId(id);
     localStorage.setItem("activeSubAccountId", id);
+  }, []);
+
+  const switchMainAccount = useCallback(async (mainAccountId: string) => {
+    localStorage.setItem("activeMainAccountId", mainAccountId);
+    localStorage.removeItem("activeSubAccountId");
+
+    // Load the new main account
+    const { data: mainData } = await supabase
+      .from("main_accounts")
+      .select("*")
+      .eq("id", mainAccountId)
+      .single();
+    setMainAccount(mainData as MainAccount | null);
+
+    // Load sub accounts for it
+    const { data: subData } = await supabase
+      .from("sub_accounts")
+      .select("*")
+      .eq("main_account_id", mainAccountId)
+      .order("created_at", { ascending: true });
+
+    const subs = (subData || []) as SubAccount[];
+    setSubAccounts(subs);
+
+    if (subs.length > 0) {
+      const defaultSub = subs.find((s) => s.is_default) || subs[0];
+      setActiveSubAccountId(defaultSub.id);
+      localStorage.setItem("activeSubAccountId", defaultSub.id);
+    } else {
+      setActiveSubAccountId(null);
+    }
   }, []);
 
   const isAgency = mainAccount?.type === "agency";
@@ -219,6 +291,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       loading,
       renameSubAccount,
       createClientSubAccount,
+      allMainAccounts,
+      switchMainAccount,
     }}>
       {children}
     </WorkspaceContext.Provider>
