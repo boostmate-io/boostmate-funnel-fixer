@@ -123,8 +123,9 @@ const ClientAccountsView = () => {
   };
 
   const handleManage = (subAccountId: string) => {
+    const sub = allSubAccounts.find(s => s.id === subAccountId);
     switchSubAccount(subAccountId);
-    toast.success("Switched to workspace");
+    toast.success(`Switched to ${sub?.name || "workspace"}`);
   };
 
   return (
