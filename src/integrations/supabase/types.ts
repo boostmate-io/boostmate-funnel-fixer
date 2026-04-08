@@ -420,6 +420,50 @@ export type Database = {
         }
         Relationships: []
       }
+      offers: {
+        Row: {
+          completion: number
+          created_at: string
+          data: Json
+          id: string
+          name: string
+          project_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completion?: number
+          created_at?: string
+          data?: Json
+          id?: string
+          name?: string
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completion?: number
+          created_at?: string
+          data?: Json
+          id?: string
+          name?: string
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
