@@ -19,7 +19,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create a client with the user's token to get their ID
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -28,19 +27,39 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) {
+    const { data: { user: callerUser }, error: userError } = await userClient.auth.getUser();
+    if (userError || !callerUser) {
       return new Response(JSON.stringify({ error: "Invalid session" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Use service role to delete all user data and then the auth user
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Check if a target_user_id was provided (admin deleting another user)
+    let targetUserId = callerUser.id;
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      // No body = self-delete
+    }
+
+    if (body?.target_user_id && body.target_user_id !== callerUser.id) {
+      // Verify caller is app admin
+      const { data: isAdmin } = await adminClient.rpc("is_app_admin", { _user_id: callerUser.id });
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Not authorized" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      targetUserId = body.target_user_id;
+    }
+
     // Delete in order (respecting dependencies)
-    const userId = user.id;
+    const userId = targetUserId;
 
     // Delete funnel step metrics (via entries)
     await adminClient.from("funnel_step_metrics").delete().in(
@@ -48,19 +67,22 @@ Deno.serve(async (req) => {
       (await adminClient.from("funnel_analytics_entries").select("id").eq("user_id", userId)).data?.map((e: any) => e.id) || []
     );
 
-    // Delete remaining tables
     await adminClient.from("funnel_analytics_entries").delete().eq("user_id", userId);
     await adminClient.from("asset_sections").delete().in(
       "asset_id",
       (await adminClient.from("assets").select("id").eq("user_id", userId)).data?.map((a: any) => a.id) || []
     );
     await adminClient.from("assets").delete().eq("user_id", userId);
+    await adminClient.from("funnel_briefs").delete().eq("user_id", userId);
+    await adminClient.from("offers").delete().eq("user_id", userId);
     await adminClient.from("funnels").delete().eq("user_id", userId);
     await adminClient.from("audits").delete().eq("user_id", userId);
     await adminClient.from("projects").delete().eq("user_id", userId);
     await adminClient.from("agency_clients").delete().eq("agency_user_id", userId);
     await adminClient.from("agency_clients").delete().eq("client_user_id", userId);
     await adminClient.from("agency_invites").delete().eq("agency_user_id", userId);
+    await adminClient.from("account_memberships").delete().eq("user_id", userId);
+    await adminClient.from("account_invites").delete().eq("invited_by", userId);
     await adminClient.from("user_roles").delete().eq("user_id", userId);
     await adminClient.from("profiles").delete().eq("id", userId);
 
