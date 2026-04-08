@@ -1090,6 +1090,17 @@ const FunnelDesigner = () => {
         />
       )}
 
+      <FunnelShareDialog
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        funnelId={currentFunnel?.id || null}
+        funnelName={currentFunnel?.name || ""}
+        shareToken={currentFunnel?.share_token || null}
+        onShareTokenChange={(token) => {
+          if (currentFunnel) setCurrentFunnel({ ...currentFunnel, share_token: token });
+        }}
+      />
+
       {/* Dialogs */}
       <Dialog open={showFunnelList} onOpenChange={setShowFunnelList}>
         <DialogContent>
