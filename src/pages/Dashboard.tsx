@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
 import KnowledgeCenter from "@/components/dashboard/KnowledgeCenter";
 import AuditModule from "@/components/audit/AuditModule";
-import ImpersonationBanner from "@/components/agency/ImpersonationBanner";
+import WorkspaceBanner from "@/components/agency/WorkspaceBanner";
 import ClientManagement from "@/components/agency/ClientManagement";
 import AgencySettings from "@/components/agency/AgencySettings";
 import { BarChart3, GitBranch, Library, TrendingUp, Gem } from "lucide-react";
@@ -23,12 +24,21 @@ const Dashboard = () => {
   const initialModule = searchParams.get("module") || "overview";
   const [activeModule, setActiveModule] = useState(initialModule);
   const { user } = useAuth();
+  const { loading } = useWorkspace();
 
   const fullHeightModules = ["funnels", "assets-library", "funnel-audit", "analytics", "clients", "offers"];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background-dashboard">
-      <ImpersonationBanner />
+      <WorkspaceBanner />
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar activeModule={activeModule} onModuleChange={setActiveModule} />
         <main className={`flex-1 overflow-auto ${fullHeightModules.includes(activeModule) ? "" : "p-8"}`}>
