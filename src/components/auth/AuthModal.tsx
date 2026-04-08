@@ -20,6 +20,8 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
   const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [accountType, setAccountType] = useState<"standard" | "agency">("standard");
   const [loading, setLoading] = useState(false);
 
