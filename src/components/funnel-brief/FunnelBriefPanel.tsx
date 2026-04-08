@@ -83,42 +83,55 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
     if (!funnelId || !userId) return;
     setSaving(true);
 
-    const payload = {
-      structure: structure as any,
-      values: values as any,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (brief?.id) {
+    if (isSeedTemplate) {
+      // Save brief_structure directly to seed_templates
       const { error } = await supabase
-        .from("funnel_briefs")
-        .update(payload)
-        .eq("id", brief.id);
+        .from("seed_templates")
+        .update({ brief_structure: structure as any, updated_at: new Date().toISOString() })
+        .eq("id", funnelId);
       if (error) toast.error("Error saving brief");
       else {
         toast.success("Brief saved");
         isDirty.current = false;
       }
     } else {
-      const { data, error } = await supabase
-        .from("funnel_briefs")
-        .insert({
-          funnel_id: funnelId,
-          user_id: userId,
-          structure: structure as any,
-          values: values as any,
-        })
-        .select()
-        .single();
-      if (error) toast.error("Error creating brief");
-      else {
-        setBrief(data as unknown as FunnelBrief);
-        toast.success("Brief created");
-        isDirty.current = false;
+      const payload = {
+        structure: structure as any,
+        values: values as any,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (brief?.id) {
+        const { error } = await supabase
+          .from("funnel_briefs")
+          .update(payload)
+          .eq("id", brief.id);
+        if (error) toast.error("Error saving brief");
+        else {
+          toast.success("Brief saved");
+          isDirty.current = false;
+        }
+      } else {
+        const { data, error } = await supabase
+          .from("funnel_briefs")
+          .insert({
+            funnel_id: funnelId,
+            user_id: userId,
+            structure: structure as any,
+            values: values as any,
+          })
+          .select()
+          .single();
+        if (error) toast.error("Error creating brief");
+        else {
+          setBrief(data as unknown as FunnelBrief);
+          toast.success("Brief created");
+          isDirty.current = false;
+        }
       }
     }
     setSaving(false);
-  }, [funnelId, userId, brief, structure, values]);
+  }, [funnelId, userId, brief, structure, values, isSeedTemplate]);
 
   const handleStructureChange = useCallback((newStructure: BriefStructure) => {
     setStructure(newStructure);
