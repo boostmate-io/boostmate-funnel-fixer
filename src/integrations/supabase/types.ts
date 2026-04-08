@@ -239,6 +239,50 @@ export type Database = {
           },
         ]
       }
+      funnel_briefs: {
+        Row: {
+          created_at: string
+          funnel_id: string
+          id: string
+          share_permission: string
+          share_token: string | null
+          structure: Json
+          updated_at: string
+          user_id: string
+          values: Json
+        }
+        Insert: {
+          created_at?: string
+          funnel_id: string
+          id?: string
+          share_permission?: string
+          share_token?: string | null
+          structure?: Json
+          updated_at?: string
+          user_id: string
+          values?: Json
+        }
+        Update: {
+          created_at?: string
+          funnel_id?: string
+          id?: string
+          share_permission?: string
+          share_token?: string | null
+          structure?: Json
+          updated_at?: string
+          user_id?: string
+          values?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_briefs_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: true
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funnel_step_metrics: {
         Row: {
           created_at: string
@@ -420,6 +464,7 @@ export type Database = {
       }
       seed_templates: {
         Row: {
+          brief_structure: Json
           created_at: string
           description: string | null
           edges: Json
@@ -430,6 +475,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brief_structure?: Json
           created_at?: string
           description?: string | null
           edges?: Json
@@ -440,6 +486,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brief_structure?: Json
           created_at?: string
           description?: string | null
           edges?: Json

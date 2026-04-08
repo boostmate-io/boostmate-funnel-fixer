@@ -25,7 +25,7 @@ import {
   Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil,
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
-  Sprout, ShieldCheck,
+  Sprout, ShieldCheck, ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,7 @@ import NodeDetailsPanel from "./NodeDetailsPanel";
 import { TRAFFIC_SOURCES, FUNNEL_ELEMENTS } from "./constants";
 import { toPng } from "html-to-image";
 import { Switch } from "@/components/ui/switch";
+import FunnelBriefPanel from "@/components/funnel-brief/FunnelBriefPanel";
 
 const nodeTypes = {
   funnelPage: FunnelNode,
@@ -119,6 +120,8 @@ const FunnelDesigner = () => {
   const [seedTemplates, setSeedTemplates] = useState<Array<{ id: string; name: string; description: string; created_at: string; nodes: any[]; edges: any[]; is_active: boolean }>>([]);
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
   const [editingSeedTemplate, setEditingSeedTemplate] = useState<{ id: string; name: string } | null>(null);
+  const [showBriefPanel, setShowBriefPanel] = useState(false);
+  const templateSourceRef = useRef<{ type: "funnel" | "seed"; id: string } | null>(null);
 
   // Check admin role
   useEffect(() => {
@@ -143,10 +146,17 @@ const FunnelDesigner = () => {
       }
       return node;
     });
+    // Get current brief structure if funnel has one
+    let briefStructure: any = { sections: [] };
+    if (currentFunnel?.id) {
+      const { data: briefData } = await supabase.from("funnel_briefs").select("structure").eq("funnel_id", currentFunnel.id).maybeSingle();
+      if (briefData?.structure) briefStructure = briefData.structure;
+    }
     const { error } = await supabase.from("seed_templates").insert({
       name: seedTemplateName || "Untitled Seed Template",
       nodes: cleanedNodes,
       edges: JSON.parse(JSON.stringify(edges)),
+      brief_structure: briefStructure,
     });
     if (error) toast.error("Error saving seed template");
     else {
@@ -155,7 +165,7 @@ const FunnelDesigner = () => {
       setSeedTemplateName("");
       loadSeedTemplates();
     }
-  }, [seedTemplateName, nodes, edges, isAdmin, loadSeedTemplates]);
+  }, [seedTemplateName, nodes, edges, isAdmin, loadSeedTemplates, currentFunnel]);
 
   const deleteSeedTemplate = useCallback(async (id: string) => {
     const { error } = await supabase.from("seed_templates").delete().eq("id", id);
@@ -532,6 +542,7 @@ const FunnelDesigner = () => {
     setCurrentFunnel(null);
     setEditingTemplate(null);
     setEditingSeedTemplate(null);
+    templateSourceRef.current = { type: "funnel", id: template.id };
     setFunnelName(template.name + " (copy)");
     setShowTemplates(false);
     setShowNewFunnel(true);
@@ -563,11 +574,36 @@ const FunnelDesigner = () => {
     }).select().single();
     if (error) toast.error(t("funnelDesigner.saveError"));
     else {
-      setCurrentFunnel(data as unknown as Funnel);
+      const newFunnel = data as unknown as Funnel;
+      setCurrentFunnel(newFunnel);
       setShowNewFunnel(false);
       setFunnelName("");
       toast.success(t("funnelDesigner.created"));
       loadFunnels();
+
+      // Clone brief from template source if available
+      if (templateSourceRef.current && newFunnel.id) {
+        const src = templateSourceRef.current;
+        templateSourceRef.current = null;
+        try {
+          let briefStructure: any = null;
+          if (src.type === "funnel") {
+            const { data: briefData } = await supabase.from("funnel_briefs").select("structure").eq("funnel_id", src.id).maybeSingle();
+            briefStructure = briefData?.structure;
+          } else if (src.type === "seed") {
+            const { data: seedData } = await supabase.from("seed_templates").select("brief_structure").eq("id", src.id).maybeSingle();
+            briefStructure = seedData?.brief_structure;
+          }
+          if (briefStructure && briefStructure.sections?.length > 0) {
+            await supabase.from("funnel_briefs").insert({
+              funnel_id: newFunnel.id,
+              user_id: userId,
+              structure: briefStructure,
+              values: {},
+            });
+          }
+        } catch { /* brief cloning failed silently */ }
+      }
     }
   }, [funnelName, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections]);
 
@@ -882,6 +918,12 @@ const FunnelDesigner = () => {
               </Button>
             </TooltipTrigger><TooltipContent>{t("funnelDesigner.downloadPng")}</TooltipContent></Tooltip>
 
+            <Tooltip><TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => setShowBriefPanel(!showBriefPanel)} className={showBriefPanel ? "bg-primary/10 border-primary" : ""}>
+                <ClipboardList className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger><TooltipContent>Funnel Brief</TooltipContent></Tooltip>
+
             <div className="w-px h-6 bg-border mx-1" />
 
             <Tooltip><TooltipTrigger asChild>
@@ -1042,6 +1084,15 @@ const FunnelDesigner = () => {
           onNoteContentChange={handleNoteContentChange}
           onDataChange={handleDataChange}
           onClose={() => setDetailsNodeId(null)}
+        />
+      )}
+
+      {showBriefPanel && !detailsNode && (
+        <FunnelBriefPanel
+          funnelId={currentFunnel?.id || null}
+          userId={userId}
+          funnelName={currentFunnel?.name || ""}
+          onClose={() => setShowBriefPanel(false)}
         />
       )}
 
