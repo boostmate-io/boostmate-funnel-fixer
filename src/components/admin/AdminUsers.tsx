@@ -4,38 +4,49 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, ShieldCheck, ShieldOff } from "lucide-react";
+import { Search, ArrowLeft, ShieldCheck, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface UserRow {
   id: string;
   email: string;
-  display_name: string;
+  first_name: string;
+  last_name: string;
   created_at: string;
   roles: string[];
   main_account_name?: string;
   sub_account_count: number;
 }
 
+interface UserMembership {
+  id: string;
+  main_account_id: string;
+  main_account_name: string;
+  sub_account_id: string | null;
+  sub_account_name: string | null;
+  role: string;
+}
+
 const AdminUsers = () => {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [userMemberships, setUserMemberships] = useState<UserMembership[]>([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const load = async () => {
     setLoading(true);
 
-    // Get all auth users via admin function (includes email)
     const { data: authUsers } = await supabase.rpc("get_all_users_admin");
     if (!authUsers || authUsers.length === 0) { setLoading(false); return; }
 
-    // Get all profiles
     const { data: profiles } = await supabase.from("profiles").select("*");
     const profileMap = new Map<string, any>();
     (profiles || []).forEach((p: any) => profileMap.set(p.id, p));
 
-    // Get all roles
     const { data: roles } = await supabase.from("user_roles").select("*");
     const roleMap = new Map<string, string[]>();
     (roles || []).forEach((r: any) => {
@@ -44,7 +55,6 @@ const AdminUsers = () => {
       roleMap.set(r.user_id, list);
     });
 
-    // Get memberships
     const { data: memberships } = await supabase.from("account_memberships").select("user_id, main_account_id, sub_account_id, role");
     const mainAccountIds = new Set<string>();
     const userMainMap = new Map<string, string>();
@@ -72,7 +82,8 @@ const AdminUsers = () => {
       return {
         id: au.id,
         email: au.email,
-        display_name: profile?.display_name || "",
+        first_name: profile?.first_name || "",
+        last_name: profile?.last_name || "",
         created_at: au.created_at,
         roles: roleMap.get(au.id) || [],
         main_account_name: mainNameMap.get(userMainMap.get(au.id) || "") || "—",
@@ -86,24 +97,151 @@ const AdminUsers = () => {
 
   useEffect(() => { load(); }, []);
 
+  const openUserDetail = async (user: UserRow) => {
+    setSelectedUser(user);
+    setLoadingDetail(true);
+
+    // Load all memberships for this user
+    const { data: mems } = await supabase
+      .from("account_memberships")
+      .select("id, main_account_id, sub_account_id, role")
+      .eq("user_id", user.id);
+
+    if (!mems) { setLoadingDetail(false); return; }
+
+    const mainIds = [...new Set(mems.map((m: any) => m.main_account_id))];
+    const subIds = mems.filter((m: any) => m.sub_account_id).map((m: any) => m.sub_account_id);
+
+    const [{ data: mains }, { data: subs }] = await Promise.all([
+      supabase.from("main_accounts").select("id, name").in("id", mainIds),
+      subIds.length > 0
+        ? supabase.from("sub_accounts").select("id, name").in("id", subIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const mainMap = new Map((mains || []).map((m: any) => [m.id, m.name]));
+    const subMap = new Map((subs || []).map((s: any) => [s.id, s.name]));
+
+    const enriched: UserMembership[] = mems.map((m: any) => ({
+      id: m.id,
+      main_account_id: m.main_account_id,
+      main_account_name: mainMap.get(m.main_account_id) || "Unknown",
+      sub_account_id: m.sub_account_id,
+      sub_account_name: m.sub_account_id ? (subMap.get(m.sub_account_id) || "Unknown") : null,
+      role: m.role,
+    }));
+
+    setUserMemberships(enriched);
+    setLoadingDetail(false);
+  };
+
   const toggleAdmin = async (userId: string, isAdmin: boolean) => {
     if (isAdmin) {
-      const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "admin");
-      if (error) { toast.error("Failed to remove admin"); return; }
+      await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "admin");
       toast.success("Admin role removed");
     } else {
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "admin" });
-      if (error) { toast.error("Failed to grant admin"); return; }
+      await supabase.from("user_roles").insert({ user_id: userId, role: "admin" });
       toast.success("Admin role granted");
     }
     load();
+    if (selectedUser && selectedUser.id === userId) {
+      setSelectedUser((prev) => prev ? {
+        ...prev,
+        roles: isAdmin ? prev.roles.filter((r) => r !== "admin") : [...prev.roles, "admin"],
+      } : null);
+    }
   };
 
   const filtered = users.filter((u) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return u.email.toLowerCase().includes(q) || u.display_name.toLowerCase().includes(q) || u.main_account_name?.toLowerCase().includes(q);
+    return u.email.toLowerCase().includes(q) || u.first_name.toLowerCase().includes(q) || u.last_name.toLowerCase().includes(q) || u.main_account_name?.toLowerCase().includes(q);
   });
+
+  // Detail view
+  if (selectedUser) {
+    const isAdmin = selectedUser.roles.includes("admin");
+    return (
+      <div className="space-y-4 mt-4">
+        <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)} className="gap-1">
+          <ArrowLeft className="w-4 h-4" /> Back to users
+        </Button>
+
+        <Card>
+          <CardContent className="py-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">
+                  {selectedUser.first_name || selectedUser.last_name
+                    ? `${selectedUser.first_name} ${selectedUser.last_name}`.trim()
+                    : "No name set"}
+                </h2>
+                <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedUser.roles.map((r) => (
+                  <Badge key={r} variant={r === "admin" ? "default" : "secondary"}>{r}</Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground text-xs">Main Account</p>
+                <p className="font-medium">{selectedUser.main_account_name}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Created</p>
+                <p className="font-medium">{format(new Date(selectedUser.created_at), "dd MMM yyyy HH:mm")}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-border">
+              <Button
+                variant={isAdmin ? "destructive" : "default"}
+                size="sm"
+                onClick={() => toggleAdmin(selectedUser.id, isAdmin)}
+              >
+                {isAdmin ? <><ShieldOff className="w-4 h-4 mr-1" /> Remove Admin</> : <><ShieldCheck className="w-4 h-4 mr-1" /> Grant Admin</>}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div>
+          <h3 className="font-semibold text-foreground mb-3">Account Memberships</h3>
+          {loadingDetail ? (
+            <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>
+          ) : userMemberships.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No memberships found.</p>
+          ) : (
+            <div className="bg-card rounded-lg border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Main Account</TableHead>
+                    <TableHead>Workspace</TableHead>
+                    <TableHead>Role</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {userMemberships.map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-medium">{m.main_account_name}</TableCell>
+                      <TableCell className="text-muted-foreground">{m.sub_account_name || "— (account level)"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">{m.role}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 mt-4">
@@ -127,41 +265,32 @@ const AdminUsers = () => {
                 <TableHead>Workspaces</TableHead>
                 <TableHead>Roles</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((u) => {
-                const isAdmin = u.roles.includes("admin");
-                return (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.email}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{u.display_name || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{u.main_account_name}</TableCell>
-                    <TableCell>{u.sub_account_count}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {u.roles.map((r) => (
-                          <Badge key={r} variant={r === "admin" ? "default" : "secondary"} className="text-xs">{r}</Badge>
-                        ))}
-                        {u.roles.length === 0 && <span className="text-xs text-muted-foreground">—</span>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{format(new Date(u.created_at), "dd MMM yyyy")}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-8 w-8 ${isAdmin ? "text-primary" : "text-muted-foreground"}`}
-                        onClick={() => toggleAdmin(u.id, isAdmin)}
-                        title={isAdmin ? "Remove admin role" : "Grant admin role"}
-                      >
-                        {isAdmin ? <ShieldOff className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {filtered.map((u) => (
+                <TableRow
+                  key={u.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => openUserDetail(u)}
+                >
+                  <TableCell className="font-medium">{u.email}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {u.first_name || u.last_name ? `${u.first_name} ${u.last_name}`.trim() : "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{u.main_account_name}</TableCell>
+                  <TableCell>{u.sub_account_count}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      {u.roles.map((r) => (
+                        <Badge key={r} variant={r === "admin" ? "default" : "secondary"} className="text-xs">{r}</Badge>
+                      ))}
+                      {u.roles.length === 0 && <span className="text-xs text-muted-foreground">—</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{format(new Date(u.created_at), "dd MMM yyyy")}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>

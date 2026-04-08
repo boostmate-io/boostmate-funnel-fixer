@@ -20,6 +20,8 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
   const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [accountType, setAccountType] = useState<"standard" | "agency">("standard");
   const [loading, setLoading] = useState(false);
 
@@ -40,7 +42,7 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { account_type: accountType, account_name: accountName.trim() },
+            data: { account_type: accountType, account_name: accountName.trim(), first_name: firstName.trim(), last_name: lastName.trim() },
           },
         });
         if (error) throw error;
@@ -77,6 +79,24 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
 
           {mode === "signup" && (
             <>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  type="text"
+                  placeholder="First name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  className="h-11"
+                />
+                <Input
+                  type="text"
+                  placeholder="Last name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  className="h-11"
+                />
+              </div>
               <Input
                 type="text"
                 placeholder="Account name (e.g. your company name)"

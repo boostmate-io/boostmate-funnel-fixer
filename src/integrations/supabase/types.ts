@@ -733,21 +733,27 @@ export type Database = {
           account_type: Database["public"]["Enums"]["account_type"]
           created_at: string
           display_name: string
+          first_name: string
           id: string
+          last_name: string
           updated_at: string
         }
         Insert: {
           account_type?: Database["public"]["Enums"]["account_type"]
           created_at?: string
           display_name?: string
+          first_name?: string
           id: string
+          last_name?: string
           updated_at?: string
         }
         Update: {
           account_type?: Database["public"]["Enums"]["account_type"]
           created_at?: string
           display_name?: string
+          first_name?: string
           id?: string
+          last_name?: string
           updated_at?: string
         }
         Relationships: []
