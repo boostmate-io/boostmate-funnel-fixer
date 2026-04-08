@@ -542,6 +542,7 @@ const FunnelDesigner = () => {
     setCurrentFunnel(null);
     setEditingTemplate(null);
     setEditingSeedTemplate(null);
+    templateSourceRef.current = { type: "funnel", id: template.id };
     setFunnelName(template.name + " (copy)");
     setShowTemplates(false);
     setShowNewFunnel(true);
@@ -573,11 +574,36 @@ const FunnelDesigner = () => {
     }).select().single();
     if (error) toast.error(t("funnelDesigner.saveError"));
     else {
-      setCurrentFunnel(data as unknown as Funnel);
+      const newFunnel = data as unknown as Funnel;
+      setCurrentFunnel(newFunnel);
       setShowNewFunnel(false);
       setFunnelName("");
       toast.success(t("funnelDesigner.created"));
       loadFunnels();
+
+      // Clone brief from template source if available
+      if (templateSourceRef.current && newFunnel.id) {
+        const src = templateSourceRef.current;
+        templateSourceRef.current = null;
+        try {
+          let briefStructure: any = null;
+          if (src.type === "funnel") {
+            const { data: briefData } = await supabase.from("funnel_briefs").select("structure").eq("funnel_id", src.id).maybeSingle();
+            briefStructure = briefData?.structure;
+          } else if (src.type === "seed") {
+            const { data: seedData } = await supabase.from("seed_templates").select("brief_structure").eq("id", src.id).maybeSingle();
+            briefStructure = seedData?.brief_structure;
+          }
+          if (briefStructure && briefStructure.sections?.length > 0) {
+            await supabase.from("funnel_briefs").insert({
+              funnel_id: newFunnel.id,
+              user_id: userId,
+              structure: briefStructure,
+              values: {},
+            });
+          }
+        } catch { /* brief cloning failed silently */ }
+      }
     }
   }, [funnelName, nodes, edges, t, loadFunnels, userId, activeProject, resolveNodeCopySections]);
 
