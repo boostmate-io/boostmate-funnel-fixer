@@ -10,8 +10,8 @@ import { format } from "date-fns";
 
 interface UserRow {
   id: string;
+  email: string;
   display_name: string;
-  account_type: string;
   created_at: string;
   roles: string[];
   main_account_name?: string;
@@ -26,9 +26,14 @@ const AdminUsers = () => {
   const load = async () => {
     setLoading(true);
 
+    // Get all auth users via admin function (includes email)
+    const { data: authUsers } = await supabase.rpc("get_all_users_admin");
+    if (!authUsers || authUsers.length === 0) { setLoading(false); return; }
+
     // Get all profiles
-    const { data: profiles } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-    if (!profiles) { setLoading(false); return; }
+    const { data: profiles } = await supabase.from("profiles").select("*");
+    const profileMap = new Map<string, any>();
+    (profiles || []).forEach((p: any) => profileMap.set(p.id, p));
 
     // Get all roles
     const { data: roles } = await supabase.from("user_roles").select("*");
@@ -39,7 +44,7 @@ const AdminUsers = () => {
       roleMap.set(r.user_id, list);
     });
 
-    // Get memberships with main account info
+    // Get memberships
     const { data: memberships } = await supabase.from("account_memberships").select("user_id, main_account_id, sub_account_id, role");
     const mainAccountIds = new Set<string>();
     const userMainMap = new Map<string, string>();
@@ -55,23 +60,25 @@ const AdminUsers = () => {
       }
     });
 
-    // Fetch main account names
-    const mainIds = Array.from(mainAccountIds);
     let mainNameMap = new Map<string, string>();
+    const mainIds = Array.from(mainAccountIds);
     if (mainIds.length > 0) {
       const { data: mainAccs } = await supabase.from("main_accounts").select("id, name").in("id", mainIds);
       (mainAccs || []).forEach((m: any) => mainNameMap.set(m.id, m.name));
     }
 
-    const enriched: UserRow[] = profiles.map((p: any) => ({
-      id: p.id,
-      display_name: p.display_name || "(no name)",
-      account_type: p.account_type,
-      created_at: p.created_at,
-      roles: roleMap.get(p.id) || [],
-      main_account_name: mainNameMap.get(userMainMap.get(p.id) || "") || "—",
-      sub_account_count: userSubCount.get(p.id) || 0,
-    }));
+    const enriched: UserRow[] = (authUsers as any[]).map((au) => {
+      const profile = profileMap.get(au.id);
+      return {
+        id: au.id,
+        email: au.email,
+        display_name: profile?.display_name || "",
+        created_at: au.created_at,
+        roles: roleMap.get(au.id) || [],
+        main_account_name: mainNameMap.get(userMainMap.get(au.id) || "") || "—",
+        sub_account_count: userSubCount.get(au.id) || 0,
+      };
+    });
 
     setUsers(enriched);
     setLoading(false);
@@ -95,14 +102,14 @@ const AdminUsers = () => {
   const filtered = users.filter((u) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return u.display_name.toLowerCase().includes(q) || u.id.includes(q) || u.main_account_name?.toLowerCase().includes(q);
+    return u.email.toLowerCase().includes(q) || u.display_name.toLowerCase().includes(q) || u.main_account_name?.toLowerCase().includes(q);
   });
 
   return (
     <div className="space-y-4 mt-4">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Search by name, ID, or account..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        <Input placeholder="Search by email, name, or account..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
       </div>
 
       {loading ? (
@@ -114,6 +121,7 @@ const AdminUsers = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Email</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Main Account</TableHead>
                 <TableHead>Workspaces</TableHead>
@@ -127,7 +135,8 @@ const AdminUsers = () => {
                 const isAdmin = u.roles.includes("admin");
                 return (
                   <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.display_name}</TableCell>
+                    <TableCell className="font-medium">{u.email}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{u.display_name || "—"}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{u.main_account_name}</TableCell>
                     <TableCell>{u.sub_account_count}</TableCell>
                     <TableCell>
