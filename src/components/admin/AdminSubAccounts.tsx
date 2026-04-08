@@ -5,10 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, ArrowRightLeft, Eye } from "lucide-react";
+import { Search, ArrowRightLeft, Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface SubAccount {
@@ -93,6 +94,13 @@ const AdminSubAccounts = () => {
     load();
   };
 
+  const handleDeleteSub = async (sub: SubAccount) => {
+    const { error } = await supabase.from("sub_accounts").delete().eq("id", sub.id);
+    if (error) { toast.error("Failed to delete: " + error.message); return; }
+    toast.success(`"${sub.name}" deleted`);
+    load();
+  };
+
   const filtered = subs.filter((s) => {
     if (filterMainId !== "all" && s.main_account_id !== filterMainId) return false;
     if (search && !s.name.toLowerCase().includes(search.toLowerCase()) && !s.main_account_name?.toLowerCase().includes(search.toLowerCase())) return false;
@@ -164,6 +172,23 @@ const AdminSubAccounts = () => {
                       >
                         <ArrowRightLeft className="w-4 h-4" />
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete workspace">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete workspace?</AlertDialogTitle>
+                            <AlertDialogDescription>This will permanently delete "{sub.name}" and all associated data. This action cannot be undone.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteSub(sub)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>
