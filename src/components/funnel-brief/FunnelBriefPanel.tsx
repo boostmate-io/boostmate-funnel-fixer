@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   X, Save, Share2, Link2, Copy, Settings2, FileEdit, Eye,
-  ClipboardList, ExternalLink,
+  ClipboardList, ExternalLink, CheckCircle2, Circle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,6 +30,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
   const [structure, setStructure] = useState<BriefStructure>({ sections: [] });
   const [values, setValues] = useState<BriefValues>({});
   const [activeTab, setActiveTab] = useState<string>("fill");
+  const [isApproved, setIsApproved] = useState(false);
   const isDirty = useRef(false);
 
   // Load brief for current funnel or seed template
@@ -68,6 +69,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
           setBrief(b);
           setStructure(b.structure || { sections: [] });
           setValues(b.values || {});
+          setIsApproved(!!(data as any).is_approved);
         } else {
           setBrief(null);
           setStructure({ sections: [] });
