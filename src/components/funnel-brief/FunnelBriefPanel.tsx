@@ -18,10 +18,11 @@ interface FunnelBriefPanelProps {
   userId: string | null;
   funnelName: string;
   readOnly?: boolean;
+  isSeedTemplate?: boolean;
   onClose: () => void;
 }
 
-const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, onClose }: FunnelBriefPanelProps) => {
+const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTemplate, onClose }: FunnelBriefPanelProps) => {
   const { t } = useTranslation();
   const [brief, setBrief] = useState<FunnelBrief | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,32 +32,52 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, onClose }: F
   const [activeTab, setActiveTab] = useState<string>("fill");
   const isDirty = useRef(false);
 
-  // Load brief for current funnel
+  // Load brief for current funnel or seed template
   useEffect(() => {
     if (!funnelId) { setLoading(false); return; }
 
     (async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("funnel_briefs")
-        .select("*")
-        .eq("funnel_id", funnelId)
-        .maybeSingle();
 
-      if (data) {
-        const b = data as unknown as FunnelBrief;
-        setBrief(b);
-        setStructure(b.structure || { sections: [] });
-        setValues(b.values || {});
-      } else {
-        setBrief(null);
-        setStructure({ sections: [] });
+      if (isSeedTemplate) {
+        // Load brief_structure from seed_templates
+        const { data, error } = await supabase
+          .from("seed_templates")
+          .select("brief_structure")
+          .eq("id", funnelId)
+          .maybeSingle();
+
+        if (data) {
+          const s = (data.brief_structure as any) || { sections: [] };
+          setStructure(s);
+          setBrief({ id: funnelId, funnel_id: funnelId, user_id: userId || "", structure: s, values: {}, share_token: null, share_permission: "view", created_at: "", updated_at: "" } as FunnelBrief);
+        } else {
+          setBrief(null);
+          setStructure({ sections: [] });
+        }
         setValues({});
+      } else {
+        const { data, error } = await supabase
+          .from("funnel_briefs")
+          .select("*")
+          .eq("funnel_id", funnelId)
+          .maybeSingle();
+
+        if (data) {
+          const b = data as unknown as FunnelBrief;
+          setBrief(b);
+          setStructure(b.structure || { sections: [] });
+          setValues(b.values || {});
+        } else {
+          setBrief(null);
+          setStructure({ sections: [] });
+          setValues({});
+        }
       }
       setLoading(false);
       isDirty.current = false;
     })();
-  }, [funnelId]);
+  }, [funnelId, isSeedTemplate]);
 
   const saveBrief = useCallback(async () => {
     if (!funnelId || !userId) return;
