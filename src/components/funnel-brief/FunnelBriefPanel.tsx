@@ -231,7 +231,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
-            <TabsList className={`mx-4 mt-3 shrink-0 ${readOnly ? "grid-cols-1" : "grid-cols-3"} grid`}>
+            <TabsList className={`mx-4 mt-3 shrink-0 ${readOnly ? "grid-cols-1" : isSeedTemplate ? "grid-cols-2" : "grid-cols-3"} grid`}>
               <TabsTrigger value="fill" className="text-xs">
                 <FileEdit className="w-3 h-3 mr-1" /> Fill
               </TabsTrigger>
@@ -240,9 +240,11 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
                   <TabsTrigger value="builder" className="text-xs">
                     <Settings2 className="w-3 h-3 mr-1" /> Builder
                   </TabsTrigger>
-                  <TabsTrigger value="share" className="text-xs">
-                    <Share2 className="w-3 h-3 mr-1" /> Share
-                  </TabsTrigger>
+                  {!isSeedTemplate && (
+                    <TabsTrigger value="share" className="text-xs">
+                      <Share2 className="w-3 h-3 mr-1" /> Share
+                    </TabsTrigger>
+                  )}
                 </>
               )}
             </TabsList>

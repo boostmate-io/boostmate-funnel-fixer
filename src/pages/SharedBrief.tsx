@@ -22,7 +22,7 @@ const SharedBrief = () => {
     (async () => {
       const { data, error: err } = await supabase
         .from("funnel_briefs")
-        .select("*, funnels!inner(name)")
+        .select("*")
         .eq("share_token", token)
         .maybeSingle();
 
@@ -36,7 +36,16 @@ const SharedBrief = () => {
           values: b.values || {},
         } as FunnelBrief);
         setValues(b.values || {});
-        setFunnelName(b.funnels?.name || "Funnel Brief");
+
+        // Fetch funnel name separately
+        if (b.funnel_id) {
+          const { data: funnelData } = await supabase
+            .from("funnels")
+            .select("name")
+            .eq("id", b.funnel_id)
+            .maybeSingle();
+          setFunnelName(funnelData?.name || "Funnel Brief");
+        }
       }
       setLoading(false);
     })();
