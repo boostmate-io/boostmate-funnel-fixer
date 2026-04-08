@@ -48,13 +48,16 @@ const InviteRegistration = () => {
         password,
         options: {
           emailRedirectTo: window.location.origin,
-          data: { display_name: displayName },
+          data: {
+            display_name: displayName,
+            invite_code: invite.invite_code,
+          },
         },
       });
       if (authError) throw authError;
 
       if (authData.user) {
-        // Wait for signup trigger to create account structure
+        // Wait for signup trigger to process invite and create memberships
         await new Promise((r) => setTimeout(r, 1500));
 
         // Update display name
@@ -62,24 +65,6 @@ const InviteRegistration = () => {
           .from("profiles")
           .update({ display_name: displayName } as any)
           .eq("id", authData.user.id);
-
-        // Create membership for the invited sub account
-        if (invite.sub_account_id) {
-          await supabase
-            .from("account_memberships")
-            .insert({
-              user_id: authData.user.id,
-              main_account_id: invite.main_account_id,
-              sub_account_id: invite.sub_account_id,
-              role: invite.role || "workspace_member",
-            } as any);
-        }
-
-        // Mark invite as accepted
-        await supabase
-          .from("account_invites")
-          .update({ status: "accepted" } as any)
-          .eq("id", invite.id);
       }
 
       toast.success(t("auth.signupSuccess"));
