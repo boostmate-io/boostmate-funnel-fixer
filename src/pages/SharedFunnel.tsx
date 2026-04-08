@@ -16,10 +16,13 @@ import { supabase } from "@/integrations/supabase/client";
 import FunnelNode from "@/components/funnel-designer/FunnelNode";
 import TrafficSourceNode from "@/components/funnel-designer/TrafficSourceNode";
 import NodeDetailsPanel from "@/components/funnel-designer/NodeDetailsPanel";
+import BriefFiller from "@/components/funnel-brief/BriefFiller";
+import { BriefStructure, BriefValues } from "@/components/funnel-brief/types";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Image, Monitor, ZoomIn, ZoomOut, Camera } from "lucide-react";
+import { Image, Monitor, ZoomIn, ZoomOut, Camera, ClipboardList, CheckCircle2, Circle, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import logo from "@/assets/logo-boostmate.svg";
 
 const nodeTypes = {
@@ -37,6 +40,15 @@ interface FunnelData {
   name: string;
   nodes: Node[];
   edges: Edge[];
+  id?: string;
+}
+
+interface BriefData {
+  id: string;
+  structure: BriefStructure;
+  values: BriefValues;
+  is_approved: boolean;
+  share_permission: string;
 }
 
 const SharedFunnelInner = () => {
@@ -50,6 +62,10 @@ const SharedFunnelInner = () => {
   const initDone = useRef(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const flowRef = useRef<HTMLDivElement>(null);
+  const [briefData, setBriefData] = useState<BriefData | null>(null);
+  const [briefValues, setBriefValues] = useState<BriefValues>({});
+  const [showBrief, setShowBrief] = useState(false);
+  const [savingBrief, setSavingBrief] = useState(false);
 
   useEffect(() => {
     if (!token) return;
