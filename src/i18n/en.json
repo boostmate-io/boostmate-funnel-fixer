@@ -67,7 +67,20 @@
     "register": "Register",
     "signupSuccess": "Account created! Check your email to confirm.",
     "loginSuccess": "Successfully logged in!",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "forgotPassword": "Reset password",
+    "forgotPasswordSubtitle": "Enter your email and we'll send you a reset link.",
+    "sendResetLink": "Send reset link",
+    "resetEmailSent": "Check your email for a password reset link.",
+    "backToLogin": "Back to login",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "New password (min. 6 characters)",
+    "confirmNewPassword": "Confirm new password",
+    "updatePassword": "Update password",
+    "passwordUpdated": "Password updated! You can now log in.",
+    "passwordMismatch": "Passwords do not match",
+    "resetPasswordTitle": "Set new password",
+    "resetPasswordSubtitle": "Enter your new password below."
   },
   "dashboard": {
     "title": "Dashboard",
