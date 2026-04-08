@@ -94,6 +94,13 @@ const AdminSubAccounts = () => {
     load();
   };
 
+  const handleDeleteSub = async (sub: SubAccount) => {
+    const { error } = await supabase.from("sub_accounts").delete().eq("id", sub.id);
+    if (error) { toast.error("Failed to delete: " + error.message); return; }
+    toast.success(`"${sub.name}" deleted`);
+    load();
+  };
+
   const filtered = subs.filter((s) => {
     if (filterMainId !== "all" && s.main_account_id !== filterMainId) return false;
     if (search && !s.name.toLowerCase().includes(search.toLowerCase()) && !s.main_account_name?.toLowerCase().includes(search.toLowerCase())) return false;
