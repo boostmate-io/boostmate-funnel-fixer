@@ -33,7 +33,7 @@ const AdminSubAccounts = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterMainId, setFilterMainId] = useState("all");
-  const { switchSubAccount } = useWorkspace();
+  const { switchSubAccount, switchMainAccount } = useWorkspace();
 
   // Migration dialog
   const [migrateTarget, setMigrateTarget] = useState<SubAccount | null>(null);
