@@ -137,7 +137,14 @@ const AdminMainAccounts = () => {
                 <TableRow key={acc.id}>
                   <TableCell className="font-medium">{acc.name}</TableCell>
                   <TableCell>
-                    <Badge variant={acc.type === "agency" ? "default" : "secondary"}>{acc.type}</Badge>
+                    <Badge
+                      variant={acc.type === "agency" ? "default" : "secondary"}
+                      className="cursor-pointer hover:opacity-80"
+                      onClick={() => handleToggleType(acc)}
+                      title={`Click to switch to ${acc.type === "agency" ? "standard" : "agency"}`}
+                    >
+                      {acc.type}
+                    </Badge>
                   </TableCell>
                   <TableCell>{acc.sub_count}</TableCell>
                   <TableCell>{acc.member_count}</TableCell>
