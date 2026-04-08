@@ -1053,6 +1053,15 @@ const FunnelDesigner = () => {
         />
       )}
 
+      {showBriefPanel && !detailsNode && (
+        <FunnelBriefPanel
+          funnelId={currentFunnel?.id || null}
+          userId={userId}
+          funnelName={currentFunnel?.name || ""}
+          onClose={() => setShowBriefPanel(false)}
+        />
+      )}
+
       {/* Dialogs */}
       <Dialog open={showFunnelList} onOpenChange={setShowFunnelList}>
         <DialogContent>
