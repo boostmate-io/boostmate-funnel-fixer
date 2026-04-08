@@ -1089,10 +1089,11 @@ const FunnelDesigner = () => {
 
       {showBriefPanel && !detailsNode && (
         <FunnelBriefPanel
-          funnelId={currentFunnel?.id || null}
+          funnelId={currentFunnel?.id || editingSeedTemplate?.id || null}
           userId={userId}
-          funnelName={currentFunnel?.name || ""}
+          funnelName={currentFunnel?.name || editingSeedTemplate?.name || ""}
           onClose={() => setShowBriefPanel(false)}
+          isSeedTemplate={!!editingSeedTemplate}
         />
       )}
 
