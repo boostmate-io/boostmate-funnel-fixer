@@ -18,10 +18,11 @@ interface FunnelBriefPanelProps {
   userId: string | null;
   funnelName: string;
   readOnly?: boolean;
+  isSeedTemplate?: boolean;
   onClose: () => void;
 }
 
-const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, onClose }: FunnelBriefPanelProps) => {
+const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTemplate, onClose }: FunnelBriefPanelProps) => {
   const { t } = useTranslation();
   const [brief, setBrief] = useState<FunnelBrief | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,73 +32,106 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, onClose }: F
   const [activeTab, setActiveTab] = useState<string>("fill");
   const isDirty = useRef(false);
 
-  // Load brief for current funnel
+  // Load brief for current funnel or seed template
   useEffect(() => {
     if (!funnelId) { setLoading(false); return; }
 
     (async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("funnel_briefs")
-        .select("*")
-        .eq("funnel_id", funnelId)
-        .maybeSingle();
 
-      if (data) {
-        const b = data as unknown as FunnelBrief;
-        setBrief(b);
-        setStructure(b.structure || { sections: [] });
-        setValues(b.values || {});
-      } else {
-        setBrief(null);
-        setStructure({ sections: [] });
+      if (isSeedTemplate) {
+        // Load brief_structure from seed_templates
+        const { data, error } = await supabase
+          .from("seed_templates")
+          .select("brief_structure")
+          .eq("id", funnelId)
+          .maybeSingle();
+
+        if (data) {
+          const s = (data.brief_structure as any) || { sections: [] };
+          setStructure(s);
+          setBrief({ id: funnelId, funnel_id: funnelId, user_id: userId || "", structure: s, values: {}, share_token: null, share_permission: "view", created_at: "", updated_at: "" } as FunnelBrief);
+        } else {
+          setBrief(null);
+          setStructure({ sections: [] });
+        }
         setValues({});
+      } else {
+        const { data, error } = await supabase
+          .from("funnel_briefs")
+          .select("*")
+          .eq("funnel_id", funnelId)
+          .maybeSingle();
+
+        if (data) {
+          const b = data as unknown as FunnelBrief;
+          setBrief(b);
+          setStructure(b.structure || { sections: [] });
+          setValues(b.values || {});
+        } else {
+          setBrief(null);
+          setStructure({ sections: [] });
+          setValues({});
+        }
       }
       setLoading(false);
       isDirty.current = false;
     })();
-  }, [funnelId]);
+  }, [funnelId, isSeedTemplate]);
 
   const saveBrief = useCallback(async () => {
     if (!funnelId || !userId) return;
     setSaving(true);
 
-    const payload = {
-      structure: structure as any,
-      values: values as any,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (brief?.id) {
+    if (isSeedTemplate) {
+      // Save brief_structure directly to seed_templates
       const { error } = await supabase
-        .from("funnel_briefs")
-        .update(payload)
-        .eq("id", brief.id);
+        .from("seed_templates")
+        .update({ brief_structure: structure as any, updated_at: new Date().toISOString() })
+        .eq("id", funnelId);
       if (error) toast.error("Error saving brief");
       else {
         toast.success("Brief saved");
         isDirty.current = false;
       }
     } else {
-      const { data, error } = await supabase
-        .from("funnel_briefs")
-        .insert({
-          funnel_id: funnelId,
-          user_id: userId,
-          structure: structure as any,
-          values: values as any,
-        })
-        .select()
-        .single();
-      if (error) toast.error("Error creating brief");
-      else {
-        setBrief(data as unknown as FunnelBrief);
-        toast.success("Brief created");
-        isDirty.current = false;
+      const payload = {
+        structure: structure as any,
+        values: values as any,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (brief?.id) {
+        const { error } = await supabase
+          .from("funnel_briefs")
+          .update(payload)
+          .eq("id", brief.id);
+        if (error) toast.error("Error saving brief");
+        else {
+          toast.success("Brief saved");
+          isDirty.current = false;
+        }
+      } else {
+        const { data, error } = await supabase
+          .from("funnel_briefs")
+          .insert({
+            funnel_id: funnelId,
+            user_id: userId,
+            structure: structure as any,
+            values: values as any,
+          })
+          .select()
+          .single();
+        if (error) toast.error("Error creating brief");
+        else {
+          setBrief(data as unknown as FunnelBrief);
+          toast.success("Brief created");
+          isDirty.current = false;
+        }
       }
     }
     setSaving(false);
-  }, [funnelId, userId, brief, structure, values]);
+  }, [funnelId, userId, brief, structure, values, isSeedTemplate]);
 
   const handleStructureChange = useCallback((newStructure: BriefStructure) => {
     setStructure(newStructure);
@@ -197,7 +231,7 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, onClose }: F
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
-            <TabsList className={`mx-4 mt-3 shrink-0 ${readOnly ? "grid-cols-1" : "grid-cols-3"} grid`}>
+            <TabsList className={`mx-4 mt-3 shrink-0 ${readOnly ? "grid-cols-1" : isSeedTemplate ? "grid-cols-2" : "grid-cols-3"} grid`}>
               <TabsTrigger value="fill" className="text-xs">
                 <FileEdit className="w-3 h-3 mr-1" /> Fill
               </TabsTrigger>
@@ -206,9 +240,11 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, onClose }: F
                   <TabsTrigger value="builder" className="text-xs">
                     <Settings2 className="w-3 h-3 mr-1" /> Builder
                   </TabsTrigger>
-                  <TabsTrigger value="share" className="text-xs">
-                    <Share2 className="w-3 h-3 mr-1" /> Share
-                  </TabsTrigger>
+                  {!isSeedTemplate && (
+                    <TabsTrigger value="share" className="text-xs">
+                      <Share2 className="w-3 h-3 mr-1" /> Share
+                    </TabsTrigger>
+                  )}
                 </>
               )}
             </TabsList>
