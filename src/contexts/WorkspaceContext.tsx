@@ -292,6 +292,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshWorkspace = useCallback(async () => {
     loadedForUserRef.current = null;
+    localStorage.removeItem("activeMainAccountId");
+    localStorage.removeItem("activeSubAccountId");
     setLoading(true);
     setReloadVersion((current) => current + 1);
   }, []);
