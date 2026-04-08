@@ -1,0 +1,1 @@
+ALTER TABLE public.funnel_briefs ADD COLUMN is_approved boolean NOT NULL DEFAULT false;

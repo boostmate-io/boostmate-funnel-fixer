@@ -244,6 +244,7 @@ export type Database = {
           created_at: string
           funnel_id: string
           id: string
+          is_approved: boolean
           share_permission: string
           share_token: string | null
           structure: Json
@@ -255,6 +256,7 @@ export type Database = {
           created_at?: string
           funnel_id: string
           id?: string
+          is_approved?: boolean
           share_permission?: string
           share_token?: string | null
           structure?: Json
@@ -266,6 +268,7 @@ export type Database = {
           created_at?: string
           funnel_id?: string
           id?: string
+          is_approved?: boolean
           share_permission?: string
           share_token?: string | null
           structure?: Json
