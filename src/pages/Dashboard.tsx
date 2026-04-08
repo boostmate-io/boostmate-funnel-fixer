@@ -77,7 +77,12 @@ const Dashboard = () => {
           {activeModule === "funnel-audit" && <AuditModule />}
           {activeModule === "funnel-designer" && (
             <div className="h-full">
-              <FunnelDesigner />
+              <FunnelDesigner onNavigateToOffer={(id) => { setActiveModule("offers"); }} />
+            </div>
+          )}
+          {activeModule === "offers" && (
+            <div className="h-full">
+              <OfferModule />
             </div>
           )}
           {activeModule === "analytics" && (
