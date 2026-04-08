@@ -25,7 +25,7 @@ const AdminMainAccounts = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const { switchMainAccount, refreshWorkspace } = useWorkspace();
+  const { mainAccount, switchMainAccount, refreshWorkspace } = useWorkspace();
 
   const load = async () => {
     setLoading(true);
