@@ -874,6 +874,7 @@ export type Database = {
     }
     Functions: {
       get_user_main_account: { Args: { _user_id: string }; Returns: string }
+      get_user_main_accounts: { Args: { _user_id: string }; Returns: string[] }
       get_user_sub_accounts: { Args: { _user_id: string }; Returns: string[] }
       has_role: {
         Args: {
