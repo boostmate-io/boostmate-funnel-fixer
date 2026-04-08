@@ -378,7 +378,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     applySubAccountSelection(nextSubAccounts);
   }, [refreshWorkspace, fetchSubAccountsForMain, memberships, isAppAdmin, applySubAccountSelection]);
 
-  const isAgency = mainAccount?.type === "agency";
+  // Only show agency features if the user is an owner/admin of the main account (not just a workspace member)
+  const isAgencyOwner = mainAccount?.type === "agency" && memberships.some(
+    (m) => m.main_account_id === mainAccount.id && !m.sub_account_id && ["owner", "admin"].includes(m.role)
+  );
+  const isAgency = isAgencyOwner || false;
   const activeSubAccount = subAccounts.find((sub) => sub.id === activeSubAccountId) || null;
 
   const renameSubAccount = useCallback(async (id: string, name: string) => {

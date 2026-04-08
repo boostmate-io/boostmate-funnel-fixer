@@ -15,7 +15,8 @@ const InviteRegistration = () => {
   const [accountName, setAccountName] = useState("");
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -52,7 +53,9 @@ const InviteRegistration = () => {
         options: {
           emailRedirectTo: window.location.origin,
           data: {
-            display_name: displayName,
+            display_name: `${firstName} ${lastName}`.trim(),
+            first_name: firstName,
+            last_name: lastName,
             invite_code: invite.invite_code,
           },
         },
@@ -66,7 +69,7 @@ const InviteRegistration = () => {
         // Update display name
         await supabase
           .from("profiles")
-          .update({ display_name: displayName } as any)
+          .update({ display_name: `${firstName} ${lastName}`.trim(), first_name: firstName, last_name: lastName } as any)
           .eq("id", authData.user.id);
       }
 
@@ -113,15 +116,27 @@ const InviteRegistration = () => {
             : t("agency.joinDescription")}
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">{t("agency.yourName")}</label>
-            <Input
-              placeholder={t("agency.displayNamePlaceholder")}
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              required
-              className="h-11"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("auth.firstName")}</label>
+              <Input
+                placeholder={t("auth.firstName")}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                className="h-11"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("auth.lastName")}</label>
+              <Input
+                placeholder={t("auth.lastName")}
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                className="h-11"
+              />
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium text-foreground mb-1 block">{t("auth.emailPlaceholder")}</label>
