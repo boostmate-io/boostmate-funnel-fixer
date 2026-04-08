@@ -5,10 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, ArrowRightLeft } from "lucide-react";
+import { Search, ArrowRightLeft, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface SubAccount {
   id: string;
@@ -31,6 +32,7 @@ const AdminSubAccounts = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterMainId, setFilterMainId] = useState("all");
+  const { switchSubAccount } = useWorkspace();
 
   // Migration dialog
   const [migrateTarget, setMigrateTarget] = useState<SubAccount | null>(null);
@@ -143,15 +145,26 @@ const AdminSubAccounts = () => {
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{format(new Date(sub.created_at), "dd MMM yyyy")}</TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => { setMigrateTarget(sub); setNewMainAccountId(""); }}
-                      title="Migrate to another main account"
-                    >
-                      <ArrowRightLeft className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => { switchSubAccount(sub.id); toast.success("Switched to workspace"); }}
+                        title="Manage this workspace"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => { setMigrateTarget(sub); setNewMainAccountId(""); }}
+                        title="Migrate to another main account"
+                      >
+                        <ArrowRightLeft className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

@@ -14,33 +14,20 @@ import {
 
 const ClientAccountsView = () => {
   const { t } = useTranslation();
-  const { mainAccount, switchSubAccount, createClientSubAccount } = useWorkspace();
-  const [subAccounts, setSubAccounts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { mainAccount, subAccounts: allSubAccounts, switchSubAccount, createClientSubAccount, activeSubAccountId } = useWorkspace();
+  const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmails, setNewEmails] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // Invite dialog
   const [inviteSubAccountId, setInviteSubAccountId] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [accountInvites, setAccountInvites] = useState<any[]>([]);
   const [sendingInvite, setSendingInvite] = useState(false);
 
-  const loadAccounts = useCallback(async () => {
-    if (!mainAccount) return;
-    const { data } = await supabase
-      .from("sub_accounts")
-      .select("*")
-      .eq("main_account_id", mainAccount.id)
-      .eq("is_default", false)
-      .order("created_at", { ascending: false });
-    setSubAccounts(data || []);
-    setLoading(false);
-  }, [mainAccount]);
-
-  useEffect(() => { loadAccounts(); }, [loadAccounts]);
+  // Show ALL sub-accounts (including the agency's own default one)
+  const subAccounts = allSubAccounts;
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -52,7 +39,6 @@ const ClientAccountsView = () => {
       return;
     }
 
-    // Create membership for agency owner
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user && mainAccount) {
       await supabase.from("account_memberships").insert({
@@ -63,7 +49,6 @@ const ClientAccountsView = () => {
       });
     }
 
-    // Send invites if emails provided
     const emails = newEmails.split(/[,;\n]/).map(e => e.trim()).filter(Boolean);
     if (emails.length > 0 && userData.user && mainAccount) {
       for (const email of emails) {
@@ -82,14 +67,12 @@ const ClientAccountsView = () => {
     setNewEmails("");
     setShowCreate(false);
     setCreating(false);
-    loadAccounts();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this account?")) return;
     await supabase.from("sub_accounts").delete().eq("id", id);
     toast.success("Account deleted");
-    loadAccounts();
   };
 
   const loadAccountInvites = useCallback(async (subAccountId: string) => {
@@ -139,69 +122,83 @@ const ClientAccountsView = () => {
     loadAccountInvites(subAccountId);
   };
 
+  const handleManage = (subAccountId: string) => {
+    switchSubAccount(subAccountId);
+    toast.success("Switched to workspace");
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Client Accounts</h2>
+        <h2 className="text-lg font-semibold">Accounts</h2>
         <Button onClick={() => setShowCreate(true)}>
           <Plus className="w-4 h-4 mr-1" />
           Create Account
         </Button>
       </div>
 
-      {loading ? (
-        <p className="text-muted-foreground text-sm">Loading...</p>
-      ) : subAccounts.length === 0 ? (
+      {subAccounts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Building2 className="w-12 h-12 mx-auto text-muted-foreground/40 mb-4" />
-            <p className="text-muted-foreground">No client accounts yet.</p>
-            <Button className="mt-4" onClick={() => setShowCreate(true)}>
-              <Plus className="w-4 h-4 mr-1" /> Create First Account
-            </Button>
+            <p className="text-muted-foreground">No accounts yet.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
           {subAccounts.map((account) => (
-            <Card key={account.id}>
+            <Card key={account.id} className={account.id === activeSubAccountId ? "border-primary" : ""}>
               <CardContent className="py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                     <Building2 className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{account.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-foreground">{account.name}</p>
+                      {account.is_default && (
+                        <Badge variant="secondary" className="text-[10px]">Internal</Badge>
+                      )}
+                      {account.id === activeSubAccountId && (
+                        <Badge className="text-[10px]">Active</Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       Created {new Date(account.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openInviteDialog(account.id)}
-                  >
-                    <UserPlus className="w-4 h-4 mr-1" />
-                    Invite User
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => switchSubAccount(account.id)}
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    Manage
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleDelete(account.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  {!account.is_default && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openInviteDialog(account.id)}
+                    >
+                      <UserPlus className="w-4 h-4 mr-1" />
+                      Invite
+                    </Button>
+                  )}
+                  {account.id !== activeSubAccountId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleManage(account.id)}
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Manage
+                    </Button>
+                  )}
+                  {!account.is_default && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDelete(account.id)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
