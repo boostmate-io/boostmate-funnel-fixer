@@ -12,6 +12,7 @@ const ProjectSettings = () => {
   const { t } = useTranslation();
   const { activeSubAccount, renameSubAccount, renameMainAccount, mainAccount, memberships } = useWorkspace();
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editingMain, setEditingMain] = useState(false);
@@ -24,15 +25,25 @@ const ProjectSettings = () => {
   const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) {
+      setLoadingProfile(false);
+      return;
+    }
+
     let cancelled = false;
+    setLoadingProfile(true);
 
     (async () => {
       try {
-        const { data } = await supabase.from("profiles").select("first_name, last_name").eq("id", user.id).single();
-        if (!cancelled && data) {
-          setFirstName((data as any).first_name || "");
-          setLastName((data as any).last_name || "");
+        const { data } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (!cancelled) {
+          setFirstName((data as any)?.first_name || "");
+          setLastName((data as any)?.last_name || "");
         }
       } finally {
         if (!cancelled) {
@@ -44,7 +55,7 @@ const ProjectSettings = () => {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [userId]);
 
   const handleRename = async () => {
     if (!editName.trim() || !activeSubAccount) return;
@@ -68,12 +79,12 @@ const ProjectSettings = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!user) return;
+    if (!userId) return;
     setSavingProfile(true);
     const { error } = await supabase.from("profiles").update({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
-    } as any).eq("id", user.id);
+    } as any).eq("id", userId);
     if (error) {
       toast.error("Failed to save");
     } else {

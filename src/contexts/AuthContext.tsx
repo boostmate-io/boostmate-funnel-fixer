@@ -22,22 +22,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isReady, setIsReady] = useState(false);
   const lastStableSessionRef = useRef<Session | null>(null);
   const initialSessionResolvedRef = useRef(false);
-  const pendingSessionCheckRef = useRef<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    const clearPendingSessionCheck = () => {
-      if (pendingSessionCheckRef.current) {
-        window.clearTimeout(pendingSessionCheckRef.current);
-        pendingSessionCheckRef.current = null;
-      }
-    };
-
     const applySession = (nextSession: Session | null) => {
       if (!isMounted) return;
-
-      clearPendingSessionCheck();
 
       if (nextSession?.user) {
         lastStableSessionRef.current = nextSession;
@@ -50,38 +40,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const clearSession = () => {
       if (!isMounted) return;
 
-      clearPendingSessionCheck();
-
       lastStableSessionRef.current = null;
       setSession(null);
       setUser(null);
-    };
-
-    const verifySessionAfterDelay = () => {
-      clearPendingSessionCheck();
-
-      pendingSessionCheckRef.current = window.setTimeout(() => {
-        void supabase.auth
-          .getSession()
-          .then(({ data: { session: recoveredSession } }) => {
-            if (!isMounted) return;
-
-            if (recoveredSession?.user) {
-              applySession(recoveredSession);
-              setIsReady(true);
-              return;
-            }
-
-            clearSession();
-            setIsReady(true);
-          })
-          .catch(() => {
-            if (!isMounted) return;
-
-            clearSession();
-            setIsReady(true);
-          });
-      }, 1200);
     };
 
     const {
@@ -89,17 +50,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!isMounted) return;
 
-      if (event === "SIGNED_OUT") {
-        if (lastStableSessionRef.current) {
-          verifySessionAfterDelay();
-        } else {
+      if (event === "INITIAL_SESSION") {
+        initialSessionResolvedRef.current = true;
+
+        if (nextSession?.user) {
+          applySession(nextSession);
+        } else if (!lastStableSessionRef.current) {
           clearSession();
-          setIsReady(true);
         }
+
+        setIsReady(true);
         return;
       }
 
-      if (event === "INITIAL_SESSION" && !initialSessionResolvedRef.current && !nextSession?.user) {
+      if (event === "SIGNED_OUT") {
+        clearSession();
+        setIsReady(true);
         return;
       }
 
@@ -109,13 +75,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      if (lastStableSessionRef.current) {
-        verifySessionAfterDelay();
-        return;
-      }
-
       if (!lastStableSessionRef.current && initialSessionResolvedRef.current) {
-        applySession(null);
+        clearSession();
       }
 
       setIsReady(true);
@@ -150,7 +111,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       isMounted = false;
-      clearPendingSessionCheck();
       subscription.unsubscribe();
     };
   }, []);
