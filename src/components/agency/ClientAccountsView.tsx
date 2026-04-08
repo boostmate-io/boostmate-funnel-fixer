@@ -1,38 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useAgency } from "@/contexts/AgencyContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, Eye, Plus, Trash2, UserPlus, Mail, Copy, Link2 } from "lucide-react";
+import { Building2, Eye, Plus, Trash2, UserPlus, Mail, Link2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 
-interface ClientAccount {
-  id: string;
-  agency_user_id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface AccountInvite {
-  id: string;
-  client_account_id: string;
-  email: string;
-  invite_code: string;
-  status: string;
-  created_at: string;
-}
-
 const ClientAccountsView = () => {
   const { t } = useTranslation();
-  const { startImpersonation } = useAgency();
-  const [accounts, setAccounts] = useState<ClientAccount[]>([]);
+  const { mainAccount, switchSubAccount, createClientSubAccount } = useWorkspace();
+  const [subAccounts, setSubAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -40,67 +23,58 @@ const ClientAccountsView = () => {
   const [creating, setCreating] = useState(false);
 
   // Invite dialog
-  const [inviteAccountId, setInviteAccountId] = useState<string | null>(null);
+  const [inviteSubAccountId, setInviteSubAccountId] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [accountInvites, setAccountInvites] = useState<AccountInvite[]>([]);
+  const [accountInvites, setAccountInvites] = useState<any[]>([]);
   const [sendingInvite, setSendingInvite] = useState(false);
 
-  // User counts per account
-  const [userCounts, setUserCounts] = useState<Record<string, number>>({});
-
   const loadAccounts = useCallback(async () => {
+    if (!mainAccount) return;
     const { data } = await supabase
-      .from("client_accounts")
+      .from("sub_accounts")
       .select("*")
+      .eq("main_account_id", mainAccount.id)
+      .eq("is_default", false)
       .order("created_at", { ascending: false });
-    setAccounts((data || []) as ClientAccount[]);
+    setSubAccounts(data || []);
     setLoading(false);
-
-    // Load user counts
-    if (data && data.length > 0) {
-      const { data: clients } = await supabase
-        .from("agency_clients")
-        .select("client_account_id");
-      const counts: Record<string, number> = {};
-      (clients || []).forEach((c: any) => {
-        if (c.client_account_id) {
-          counts[c.client_account_id] = (counts[c.client_account_id] || 0) + 1;
-        }
-      });
-      setUserCounts(counts);
-    }
-  }, []);
+  }, [mainAccount]);
 
   useEffect(() => { loadAccounts(); }, [loadAccounts]);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
     setCreating(true);
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) { setCreating(false); return; }
-
-    const { data: account, error } = await supabase
-      .from("client_accounts")
-      .insert({ agency_user_id: user.user.id, name: newName.trim() } as any)
-      .select()
-      .single();
-
-    if (error || !account) {
+    const newSub = await createClientSubAccount(newName.trim());
+    if (!newSub) {
       toast.error("Failed to create account");
       setCreating(false);
       return;
     }
 
+    // Create membership for agency owner
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user && mainAccount) {
+      await supabase.from("account_memberships").insert({
+        user_id: userData.user.id,
+        main_account_id: mainAccount.id,
+        sub_account_id: newSub.id,
+        role: "workspace_admin",
+      });
+    }
+
     // Send invites if emails provided
     const emails = newEmails.split(/[,;\n]/).map(e => e.trim()).filter(Boolean);
-    for (const email of emails) {
-      await supabase
-        .from("client_account_invites")
-        .insert({
-          client_account_id: (account as any).id,
-          agency_user_id: user.user.id,
+    if (emails.length > 0 && userData.user && mainAccount) {
+      for (const email of emails) {
+        await supabase.from("account_invites").insert({
+          main_account_id: mainAccount.id,
+          sub_account_id: newSub.id,
           email,
-        } as any);
+          invited_by: userData.user.id,
+          role: "workspace_member",
+        });
+      }
     }
 
     toast.success("Account created");
@@ -113,40 +87,42 @@ const ClientAccountsView = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this account?")) return;
-    await supabase.from("client_accounts").delete().eq("id", id);
+    await supabase.from("sub_accounts").delete().eq("id", id);
     toast.success("Account deleted");
     loadAccounts();
   };
 
-  const loadAccountInvites = useCallback(async (accountId: string) => {
+  const loadAccountInvites = useCallback(async (subAccountId: string) => {
+    if (!mainAccount) return;
     const { data } = await supabase
-      .from("client_account_invites")
+      .from("account_invites")
       .select("*")
-      .eq("client_account_id", accountId)
+      .eq("main_account_id", mainAccount.id)
+      .eq("sub_account_id", subAccountId)
       .order("created_at", { ascending: false });
-    setAccountInvites((data || []) as AccountInvite[]);
-  }, []);
+    setAccountInvites(data || []);
+  }, [mainAccount]);
 
   const handleSendInvite = async () => {
-    if (!inviteEmail.trim() || !inviteAccountId) return;
+    if (!inviteEmail.trim() || !inviteSubAccountId || !mainAccount) return;
     setSendingInvite(true);
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) { setSendingInvite(false); return; }
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) { setSendingInvite(false); return; }
 
-    const { error } = await supabase
-      .from("client_account_invites")
-      .insert({
-        client_account_id: inviteAccountId,
-        agency_user_id: user.user.id,
-        email: inviteEmail.trim(),
-      } as any);
+    const { error } = await supabase.from("account_invites").insert({
+      main_account_id: mainAccount.id,
+      sub_account_id: inviteSubAccountId,
+      email: inviteEmail.trim(),
+      invited_by: userData.user.id,
+      role: "workspace_member",
+    });
 
     if (error) {
       toast.error("Failed to send invite");
     } else {
       toast.success("Invite sent");
       setInviteEmail("");
-      loadAccountInvites(inviteAccountId);
+      loadAccountInvites(inviteSubAccountId);
     }
     setSendingInvite(false);
   };
@@ -157,10 +133,10 @@ const ClientAccountsView = () => {
     toast.success("Link copied");
   };
 
-  const openInviteDialog = (accountId: string) => {
-    setInviteAccountId(accountId);
+  const openInviteDialog = (subAccountId: string) => {
+    setInviteSubAccountId(subAccountId);
     setInviteEmail("");
-    loadAccountInvites(accountId);
+    loadAccountInvites(subAccountId);
   };
 
   return (
@@ -175,7 +151,7 @@ const ClientAccountsView = () => {
 
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading...</p>
-      ) : accounts.length === 0 ? (
+      ) : subAccounts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Building2 className="w-12 h-12 mx-auto text-muted-foreground/40 mb-4" />
@@ -187,7 +163,7 @@ const ClientAccountsView = () => {
         </Card>
       ) : (
         <div className="space-y-3">
-          {accounts.map((account) => (
+          {subAccounts.map((account) => (
             <Card key={account.id}>
               <CardContent className="py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -197,7 +173,7 @@ const ClientAccountsView = () => {
                   <div>
                     <p className="font-medium text-foreground">{account.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {userCounts[account.id] || 0} user(s) · Created {new Date(account.created_at).toLocaleDateString()}
+                      Created {new Date(account.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -213,7 +189,7 @@ const ClientAccountsView = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => startImpersonation(account.id, account.name)}
+                    onClick={() => switchSubAccount(account.id)}
                   >
                     <Eye className="w-4 h-4 mr-1" />
                     Manage
@@ -275,7 +251,7 @@ const ClientAccountsView = () => {
       </Dialog>
 
       {/* Invite Users Dialog */}
-      <Dialog open={!!inviteAccountId} onOpenChange={(open) => !open && setInviteAccountId(null)}>
+      <Dialog open={!!inviteSubAccountId} onOpenChange={(open) => !open && setInviteSubAccountId(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Invite User to Account</DialogTitle>
@@ -301,7 +277,7 @@ const ClientAccountsView = () => {
             {accountInvites.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">Pending Invites</p>
-                {accountInvites.map((inv) => (
+                {accountInvites.map((inv: any) => (
                   <div key={inv.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm">
                     <div>
                       <p className="text-foreground">{inv.email}</p>

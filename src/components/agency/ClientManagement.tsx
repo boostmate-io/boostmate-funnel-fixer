@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAgency } from "@/contexts/AgencyContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Users } from "lucide-react";
 import ClientAccountsView from "./ClientAccountsView";
