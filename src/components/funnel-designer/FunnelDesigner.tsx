@@ -120,6 +120,7 @@ const FunnelDesigner = () => {
   const [seedTemplates, setSeedTemplates] = useState<Array<{ id: string; name: string; description: string; created_at: string; nodes: any[]; edges: any[]; is_active: boolean }>>([]);
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
   const [editingSeedTemplate, setEditingSeedTemplate] = useState<{ id: string; name: string } | null>(null);
+  const [showBriefPanel, setShowBriefPanel] = useState(false);
 
   // Check admin role
   useEffect(() => {
