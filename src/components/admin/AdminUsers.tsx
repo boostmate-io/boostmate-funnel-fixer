@@ -37,6 +37,8 @@ const AdminUsers = () => {
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [userMemberships, setUserMemberships] = useState<UserMembership[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
