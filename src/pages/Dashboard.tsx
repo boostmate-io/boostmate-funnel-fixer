@@ -15,6 +15,7 @@ import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
 import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
+import OfferModule from "@/components/offers/OfferModule";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -28,8 +29,8 @@ const Dashboard = () => {
       <ImpersonationBanner />
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar activeModule={activeModule} onModuleChange={setActiveModule} />
-        <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" || activeModule === "assets-library" || activeModule === "funnel-audit" || activeModule === "analytics" || activeModule === "clients" ? "" : "p-8"}`}>
-          {activeModule !== "funnel-designer" && activeModule !== "assets-library" && activeModule !== "funnel-audit" && activeModule !== "analytics" && activeModule !== "clients" && (
+        <main className={`flex-1 overflow-auto ${activeModule === "funnel-designer" || activeModule === "assets-library" || activeModule === "funnel-audit" || activeModule === "analytics" || activeModule === "clients" || activeModule === "offers" ? "" : "p-8"}`}>
+          {activeModule !== "funnel-designer" && activeModule !== "assets-library" && activeModule !== "funnel-audit" && activeModule !== "analytics" && activeModule !== "clients" && activeModule !== "offers" && (
             <div className="mb-8">
               <h1 className="text-2xl font-display font-bold text-foreground">
                 {activeModule === "overview" && t("dashboard.title")}
