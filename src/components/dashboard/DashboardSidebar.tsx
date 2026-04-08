@@ -6,7 +6,7 @@ import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, Trend
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import ProjectSwitcher from "./ProjectSwitcher";
+
 import { useAgency } from "@/contexts/AgencyContext";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
