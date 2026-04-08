@@ -128,6 +128,8 @@ const FunnelDesigner = ({ onNavigateToOffer }: FunnelDesignerProps = {}) => {
   const [editingSeedTemplate, setEditingSeedTemplate] = useState<{ id: string; name: string } | null>(null);
   const [showBriefPanel, setShowBriefPanel] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showOfferPanel, setShowOfferPanel] = useState(false);
+  const [linkedOfferId, setLinkedOfferId] = useState<string | null>(null);
   const templateSourceRef = useRef<{ type: "funnel" | "seed"; id: string } | null>(null);
 
   // Check admin role
