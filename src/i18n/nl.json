@@ -67,7 +67,20 @@
     "register": "Registreren",
     "signupSuccess": "Account aangemaakt! Check je e-mail om te bevestigen.",
     "loginSuccess": "Succesvol ingelogd!",
-    "error": "Er ging iets mis"
+    "error": "Er ging iets mis",
+    "forgotPassword": "Wachtwoord vergeten",
+    "forgotPasswordSubtitle": "Voer je e-mailadres in en we sturen je een resetlink.",
+    "sendResetLink": "Resetlink versturen",
+    "resetEmailSent": "Controleer je e-mail voor een link om je wachtwoord te resetten.",
+    "backToLogin": "Terug naar inloggen",
+    "newPassword": "Nieuw wachtwoord",
+    "newPasswordPlaceholder": "Nieuw wachtwoord (min. 6 tekens)",
+    "confirmNewPassword": "Bevestig nieuw wachtwoord",
+    "updatePassword": "Wachtwoord bijwerken",
+    "passwordUpdated": "Wachtwoord bijgewerkt! Je kunt nu inloggen.",
+    "passwordMismatch": "Wachtwoorden komen niet overeen",
+    "resetPasswordTitle": "Nieuw wachtwoord instellen",
+    "resetPasswordSubtitle": "Voer hieronder je nieuwe wachtwoord in."
   },
   "dashboard": {
     "title": "Dashboard",

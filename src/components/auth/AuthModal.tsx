@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +24,66 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
   const [lastName, setLastName] = useState("");
   const [accountType, setAccountType] = useState<"standard" | "agency">("standard");
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
 
   if (!open) return null;
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+    } catch (err: any) {
+      toast.error(err.message || t("auth.error"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (showForgotPassword) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm animate-fade-in">
+        <div className="bg-card rounded-xl shadow-xl border border-border p-8 w-full max-w-md relative">
+          <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+            <X className="w-5 h-5" />
+          </button>
+          <h2 className="text-2xl font-display font-bold text-foreground mb-1">
+            {t("auth.forgotPassword")}
+          </h2>
+          <p className="text-muted-foreground mb-6 text-sm">
+            {t("auth.forgotPasswordSubtitle")}
+          </p>
+          {resetSent ? (
+            <div className="space-y-4">
+              <p className="text-sm text-foreground">{t("auth.resetEmailSent")}</p>
+              <Button className="w-full" onClick={() => { setShowForgotPassword(false); setResetSent(false); }}>
+                {t("auth.backToLogin")}
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <Input type="email" placeholder={t("auth.emailPlaceholder")} value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required className="h-11" />
+              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                {loading ? t("auth.loading") : t("auth.sendResetLink")}
+              </Button>
+            </form>
+          )}
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            <button onClick={() => { setShowForgotPassword(false); setResetSent(false); }} className="text-primary font-medium hover:underline">
+              {t("auth.backToLogin")}
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,6 +199,13 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
             {loading ? t("auth.loading") : mode === "signup" ? t("auth.signup") : t("auth.login")}
           </Button>
         </form>
+        {mode === "login" && (
+          <p className="text-center text-sm text-muted-foreground mt-3">
+            <button onClick={() => { setShowForgotPassword(true); setResetEmail(email); }} className="text-primary font-medium hover:underline">
+              {t("auth.forgotPassword")}
+            </button>
+          </p>
+        )}
         <p className="text-center text-sm text-muted-foreground mt-4">
           {mode === "signup" ? (
             <>{t("auth.haveAccount")}{" "}<button onClick={() => setMode("login")} className="text-primary font-medium hover:underline">{t("auth.login")}</button></>

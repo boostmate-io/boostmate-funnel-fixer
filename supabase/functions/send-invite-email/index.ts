@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -6,9 +5,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
@@ -21,46 +20,27 @@ serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
-
     const inviteLink = `https://boostmate-funnel-fixer.lovable.app/invite/${invite_code}`;
 
-    // Try to send an auth invite email via Supabase Auth
-    // This uses Supabase's built-in email sending
-    const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: inviteLink,
-      data: {
-        invite_code,
-        account_name: account_name || "workspace",
-      },
-    });
+    // Do NOT use inviteUserByEmail — that creates an auth user and triggers
+    // the handle_new_user_role function which immediately marks the invite
+    // as "accepted". Instead, just return the invite link. The invite email
+    // can be sent via a transactional email service later. For now the link
+    // is shown in the UI so the agency can share it manually.
 
-    if (error) {
-      // User might already exist - that's OK, invite record is created
-      // They can use the invite link directly
-      console.log("Auth invite error (may be expected for existing users):", error.message);
-      return new Response(JSON.stringify({ 
-        success: true, 
-        invite_link: inviteLink,
-        email_sent: false,
-        note: "Invite created. User can use the invite link to join."
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    console.log(`Invite created for ${email}: ${inviteLink}`);
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       invite_link: inviteLink,
-      email_sent: true 
+      email_sent: false,
+      note: "Invite link generated. Share it with the user to join.",
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error sending invite:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Error in send-invite-email:", error);
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
