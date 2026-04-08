@@ -25,7 +25,7 @@ import {
   Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil,
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
-  Sprout, ShieldCheck,
+  Sprout, ShieldCheck, ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,7 @@ import NodeDetailsPanel from "./NodeDetailsPanel";
 import { TRAFFIC_SOURCES, FUNNEL_ELEMENTS } from "./constants";
 import { toPng } from "html-to-image";
 import { Switch } from "@/components/ui/switch";
+import FunnelBriefPanel from "@/components/funnel-brief/FunnelBriefPanel";
 
 const nodeTypes = {
   funnelPage: FunnelNode,
