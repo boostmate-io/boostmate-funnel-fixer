@@ -48,7 +48,7 @@ export async function analyzeAudit(
 
 export async function createSalesCopyAsset(
   userId: string,
-  projectId: string | null,
+  subAccountId: string | null,
   assetName: string,
   sections: AnalysisSection[]
 ): Promise<string | null> {
@@ -60,7 +60,7 @@ export async function createSalesCopyAsset(
       user_id: userId,
       type: "sales_copy",
       name: assetName,
-      project_id: projectId,
+      sub_account_id: subAccountId,
     })
     .select("id")
     .single();
