@@ -68,7 +68,7 @@ const FunnelShareDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md overflow-hidden">
-        <DialogHeader>
+        <DialogHeader className="pr-8">
           <DialogTitle>Share Funnel</DialogTitle>
           <DialogDescription>
             Share a read-only link for "{funnelName}" with clients or stakeholders.
