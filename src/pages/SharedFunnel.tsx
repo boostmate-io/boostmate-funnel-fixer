@@ -72,13 +72,32 @@ const SharedFunnelInner = () => {
     (async () => {
       const { data, error: err } = await supabase
         .from("funnels")
-        .select("name, nodes, edges")
+        .select("id, name, nodes, edges")
         .eq("share_token", token)
         .single();
       if (err || !data) {
         setError(true);
       } else {
         setFunnel(data as unknown as FunnelData);
+        // Load brief for this funnel
+        if (data.id) {
+          const { data: briefRow } = await supabase
+            .from("funnel_briefs")
+            .select("id, structure, values, is_approved, share_permission")
+            .eq("funnel_id", data.id)
+            .maybeSingle();
+          if (briefRow) {
+            const bd = briefRow as any;
+            setBriefData({
+              id: bd.id,
+              structure: bd.structure || { sections: [] },
+              values: bd.values || {},
+              is_approved: !!bd.is_approved,
+              share_permission: bd.share_permission || "view",
+            });
+            setBriefValues(bd.values || {});
+          }
+        }
       }
       setLoading(false);
     })();
