@@ -36,7 +36,12 @@ const FunnelList = ({ onOpenFunnel, onCreateNew }: FunnelListProps) => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadFunnels = useCallback(async () => {
-    if (!user?.id || !activeSubAccountId) return;
+    if (!user?.id || !activeSubAccountId) {
+      setFunnels([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const { data } = await supabase
       .from("funnels")
@@ -45,6 +50,7 @@ const FunnelList = ({ onOpenFunnel, onCreateNew }: FunnelListProps) => {
       .eq("is_template", false)
       .order("updated_at", { ascending: false });
     if (data) setFunnels(data as unknown as Funnel[]);
+    else setFunnels([]);
     setLoading(false);
   }, [user?.id, activeSubAccountId]);
 

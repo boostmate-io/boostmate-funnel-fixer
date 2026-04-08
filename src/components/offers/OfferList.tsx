@@ -27,7 +27,12 @@ const OfferList = ({ onEditOffer }: OfferListProps) => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadOffers = useCallback(async () => {
-    if (!user?.id || !activeSubAccountId) return;
+    if (!user?.id || !activeSubAccountId) {
+      setOffers([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const { data } = await supabase
       .from("offers")
@@ -35,6 +40,7 @@ const OfferList = ({ onEditOffer }: OfferListProps) => {
       .eq("sub_account_id", activeSubAccountId)
       .order("updated_at", { ascending: false });
     if (data) setOffers(data as unknown as Offer[]);
+    else setOffers([]);
     setLoading(false);
   }, [user?.id, activeSubAccountId]);
 

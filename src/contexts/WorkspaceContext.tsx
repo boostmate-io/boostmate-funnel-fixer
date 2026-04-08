@@ -94,17 +94,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("activeMainAccountId");
   };
 
-  const loadSubAccountsForMain = useCallback(async (
+  const fetchSubAccountsForMain = useCallback(async (
     mainId: string,
-    cancelled: boolean,
     mems: Membership[],
     adminStatus: boolean,
-    ownMainId: string
-  ) => {
-    const isOwnAccount = mainId === ownMainId;
-    const isOwner = mems.some((m) => m.role === "owner" && !m.sub_account_id);
-
-    let subData: any[] | null = null;
+    ownMainId: string | null
+  ): Promise<SubAccount[]> => {
+    const isOwnAccount = ownMainId === mainId;
+    const isOwner = mems.some((m) => m.main_account_id === mainId && m.role === "owner" && !m.sub_account_id);
 
     if (adminStatus || (isOwner && isOwnAccount)) {
       const { data } = await supabase
@@ -112,38 +109,42 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         .select("*")
         .eq("main_account_id", mainId)
         .order("created_at", { ascending: true });
-      subData = data;
-    } else {
-      const subAccountIds = mems
-        .filter((m) => m.sub_account_id)
-        .map((m) => m.sub_account_id!);
 
-      if (subAccountIds.length > 0) {
-        const { data } = await supabase
-          .from("sub_accounts")
-          .select("*")
-          .in("id", subAccountIds)
-          .order("created_at", { ascending: true });
-        subData = data;
-      }
+      return (data || []) as SubAccount[];
     }
 
-    if (cancelled) return;
+    const subAccountIds = mems
+      .filter((m) => m.main_account_id === mainId && m.sub_account_id)
+      .map((m) => m.sub_account_id!);
 
-    if (subData && subData.length > 0) {
-      setSubAccounts(subData as SubAccount[]);
+    if (subAccountIds.length === 0) {
+      return [];
+    }
 
-      const storedSubId = localStorage.getItem("activeSubAccountId");
-      const matchedSub = subData.find((sub: any) => sub.id === storedSubId);
-      const nextSub = matchedSub || subData.find((sub: any) => sub.is_default) || subData[0];
+    const { data } = await supabase
+      .from("sub_accounts")
+      .select("*")
+      .in("id", subAccountIds)
+      .order("created_at", { ascending: true });
 
-      setActiveSubAccountId(nextSub.id);
-      localStorage.setItem("activeSubAccountId", nextSub.id);
-    } else {
-      setSubAccounts([]);
+    return (data || []) as SubAccount[];
+  }, []);
+
+  const applySubAccountSelection = useCallback((nextSubAccounts: SubAccount[]) => {
+    setSubAccounts(nextSubAccounts);
+
+    if (nextSubAccounts.length === 0) {
       setActiveSubAccountId(null);
       localStorage.removeItem("activeSubAccountId");
+      return;
     }
+
+    const storedSubId = localStorage.getItem("activeSubAccountId");
+    const matchedSub = nextSubAccounts.find((sub) => sub.id === storedSubId);
+    const nextSub = matchedSub || nextSubAccounts.find((sub) => sub.is_default) || nextSubAccounts[0];
+
+    setActiveSubAccountId(nextSub.id);
+    localStorage.setItem("activeSubAccountId", nextSub.id);
   }, []);
 
   useEffect(() => {
@@ -194,8 +195,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const mems = (membershipData || []) as Membership[];
       setMemberships(mems);
 
-      const ownerMembership = mems.find((m) => m.role === "owner" && !m.sub_account_id);
-      if (!ownerMembership) {
+      const ownerMembership = mems.find((m) => m.role === "owner" && !m.sub_account_id) || null;
+      if (!ownerMembership && !adminStatus) {
         setAllMainAccounts([]);
         setMainAccount(null);
         setSubAccounts([]);
@@ -205,7 +206,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      ownMainAccountIdRef.current = ownerMembership.main_account_id;
+      ownMainAccountIdRef.current = ownerMembership?.main_account_id ?? null;
 
       let availableMainAccounts: MainAccount[] = [];
       if (adminStatus) {
@@ -222,13 +223,19 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const storedMainId = localStorage.getItem("activeMainAccountId");
-      const targetMainId = adminStatus
+      const preferredMainId = adminStatus
         ? (storedMainId && availableMainAccounts.some((account) => account.id === storedMainId)
             ? storedMainId
-            : availableMainAccounts.find((account) => account.id === ownerMembership.main_account_id)?.id || availableMainAccounts[0]?.id || null)
-        : ownerMembership.main_account_id;
+            : availableMainAccounts.find((account) => account.id === ownerMembership?.main_account_id)?.id || availableMainAccounts[0]?.id || null)
+        : ownerMembership?.main_account_id || null;
 
-      if (!targetMainId) {
+      const candidateMainIds = Array.from(new Set([
+        preferredMainId,
+        ownerMembership?.main_account_id || null,
+        ...availableMainAccounts.map((account) => account.id),
+      ].filter(Boolean))) as string[];
+
+      if (candidateMainIds.length === 0) {
         localStorage.removeItem("activeMainAccountId");
         localStorage.removeItem("activeSubAccountId");
         setMainAccount(null);
@@ -239,16 +246,41 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      localStorage.setItem("activeMainAccountId", targetMainId);
+      let resolvedMain: MainAccount | null = null;
+      let resolvedSubAccounts: SubAccount[] = [];
 
-      const { data: mainData } = await supabase
-        .from("main_accounts")
-        .select("*")
-        .eq("id", targetMainId)
-        .maybeSingle();
-      if (cancelled) return;
+      for (const candidateMainId of candidateMainIds) {
+        const { data: candidateMain } = await supabase
+          .from("main_accounts")
+          .select("*")
+          .eq("id", candidateMainId)
+          .maybeSingle();
 
-      if (!mainData) {
+        if (cancelled) return;
+        if (!candidateMain) continue;
+
+        const candidateSubs = await fetchSubAccountsForMain(
+          candidateMainId,
+          mems,
+          adminStatus,
+          ownerMembership?.main_account_id ?? null,
+        );
+
+        if (cancelled) return;
+
+        if (!resolvedMain) {
+          resolvedMain = candidateMain as MainAccount;
+          resolvedSubAccounts = candidateSubs;
+        }
+
+        if (candidateSubs.length > 0) {
+          resolvedMain = candidateMain as MainAccount;
+          resolvedSubAccounts = candidateSubs;
+          break;
+        }
+      }
+
+      if (!resolvedMain) {
         localStorage.removeItem("activeMainAccountId");
         localStorage.removeItem("activeSubAccountId");
         setMainAccount(null);
@@ -259,8 +291,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      setMainAccount(mainData as MainAccount);
-      await loadSubAccountsForMain(targetMainId, cancelled, mems, adminStatus, ownerMembership.main_account_id);
+      localStorage.setItem("activeMainAccountId", resolvedMain.id);
+      setMainAccount(resolvedMain);
+      applySubAccountSelection(resolvedSubAccounts);
 
       loadedForUserRef.current = userId;
       setLoading(false);
@@ -271,7 +304,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       cancelled = true;
     };
-  }, [userId, isReady, reloadVersion, loadSubAccountsForMain]);
+  }, [userId, isReady, reloadVersion, fetchSubAccountsForMain, applySubAccountSelection]);
 
   useEffect(() => {
     return () => {
@@ -313,26 +346,21 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    setMainAccount(mainData as MainAccount);
+    const nextSubAccounts = await fetchSubAccountsForMain(
+      mainAccountId,
+      memberships,
+      isAppAdmin,
+      ownMainAccountIdRef.current,
+    );
 
-    const { data: subData } = await supabase
-      .from("sub_accounts")
-      .select("*")
-      .eq("main_account_id", mainAccountId)
-      .order("created_at", { ascending: true });
-
-    const subs = (subData || []) as SubAccount[];
-    setSubAccounts(subs);
-
-    if (subs.length > 0) {
-      const defaultSub = subs.find((sub) => sub.is_default) || subs[0];
-      setActiveSubAccountId(defaultSub.id);
-      localStorage.setItem("activeSubAccountId", defaultSub.id);
-    } else {
-      setActiveSubAccountId(null);
-      localStorage.removeItem("activeSubAccountId");
+    if (nextSubAccounts.length === 0) {
+      await refreshWorkspace();
+      return;
     }
-  }, [refreshWorkspace]);
+
+    setMainAccount(mainData as MainAccount);
+    applySubAccountSelection(nextSubAccounts);
+  }, [refreshWorkspace, fetchSubAccountsForMain, memberships, isAppAdmin, applySubAccountSelection]);
 
   const isAgency = mainAccount?.type === "agency";
   const activeSubAccount = subAccounts.find((sub) => sub.id === activeSubAccountId) || null;
