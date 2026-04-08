@@ -74,11 +74,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
           <img src={logo} alt="Boostmate" className="h-7" />
         )}
       </div>
-      {!collapsed && (
-        <div className="border-b border-border">
-          <ProjectSwitcher />
-        </div>
-      )}
+      {/* Project switcher removed — 1 account = 1 project */}
       <nav className="flex-1 p-2 space-y-1">
         {navItems.map((item) => (
           <NavButton key={item.id} item={item} />
@@ -107,12 +103,12 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
           </button>
         )}
       </div>
-      {/* Collapse toggle on edge */}
+      {/* Collapse toggle on edge — bottom */}
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="absolute top-1/2 -translate-y-1/2 -right-3.5 w-7 h-7 bg-card border border-border rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-sm z-10"
+            className="absolute bottom-6 -right-3.5 w-7 h-7 bg-card border border-border rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-sm z-10"
           >
             {collapsed ? <ChevronsRight className="w-3.5 h-3.5" /> : <ChevronsLeft className="w-3.5 h-3.5" />}
           </button>
