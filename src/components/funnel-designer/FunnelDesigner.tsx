@@ -539,6 +539,7 @@ const FunnelDesigner = ({ onNavigateToOffer }: FunnelDesignerProps = {}) => {
     setCurrentFunnel(funnel);
     setEditingSeedTemplate(null);
     setEditingTemplate(null);
+    setLinkedOfferId((funnel as any).linked_offer_id || null);
     setShowFunnelList(false);
     undoStack.current = [];
     redoStack.current = [];
