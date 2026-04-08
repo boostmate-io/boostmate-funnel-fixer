@@ -430,6 +430,13 @@ const NodeDetailsPanel = ({
         {/* Wait element config */}
         {isWait && (
           <div className="p-4 border-b border-border space-y-3">
+            <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.customName")}</label>
+            <Input
+              value={customLabel || ""}
+              onChange={(e) => onRename(e.target.value)}
+              placeholder={nodeLabel}
+              className="text-sm h-8"
+            />
             <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.waitType")}</label>
             <Select value={waitType || "days"} onValueChange={(v) => onDataChange?.("waitType", v)}>
               <SelectTrigger className="text-xs h-8">
