@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
-import { useProject } from "@/contexts/ProjectContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Plus, Trash2, FileText, Mail, Megaphone, Share2, ArrowLeft } from "lucide-react";
@@ -29,7 +29,7 @@ const ASSET_TYPES = [
 
 const AssetsLibrary = () => {
   const { t } = useTranslation();
-  const { activeProject } = useProject();
+  const { activeSubAccountId } = useWorkspace();
   const { user } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [activeType, setActiveType] = useState("sales_copy");
@@ -37,23 +37,22 @@ const AssetsLibrary = () => {
   const [editingName, setEditingName] = useState(false);
 
   const loadAssets = useCallback(async () => {
-    if (!user || !activeProject) return;
+    if (!user || !activeSubAccountId) return;
     const { data } = await supabase
       .from("assets")
       .select("*")
-      .eq("user_id", user.id)
-      .eq("project_id", activeProject.id)
+      .eq("sub_account_id", activeSubAccountId)
       .order("updated_at", { ascending: false });
     if (data) setAssets(data as Asset[]);
-  }, [user, activeProject]);
+  }, [user, activeSubAccountId]);
 
   useEffect(() => { loadAssets(); }, [loadAssets]);
 
   const createAsset = async () => {
-    if (!user || !activeProject) return;
+    if (!user || !activeSubAccountId) return;
     const { data, error } = await supabase
       .from("assets")
-      .insert({ user_id: user.id, type: activeType, name: t("assets.untitled"), project_id: activeProject.id })
+      .insert({ user_id: user.id, type: activeType, name: t("assets.untitled"), sub_account_id: activeSubAccountId })
       .select()
       .single();
     if (error) toast.error(t("assets.saveError"));
