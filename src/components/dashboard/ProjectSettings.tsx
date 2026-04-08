@@ -41,6 +41,22 @@ const ProjectSettings = () => {
     setEditing(false);
   };
 
+  const isOwner = user && mainAccount && memberships.some(
+    (m) => m.user_id === user.id && m.main_account_id === mainAccount.id && !m.sub_account_id && m.role === "owner"
+  );
+
+  const handleRenameMain = async () => {
+    if (!editMainName.trim() || !mainAccount) return;
+    const { error } = await supabase.from("main_accounts").update({ name: editMainName.trim() }).eq("id", mainAccount.id);
+    if (error) {
+      toast.error("Failed to rename account");
+    } else {
+      toast.success("Account name updated");
+      window.location.reload();
+    }
+    setEditingMain(false);
+  };
+
   const handleSaveProfile = async () => {
     if (!user) return;
     setSavingProfile(true);
