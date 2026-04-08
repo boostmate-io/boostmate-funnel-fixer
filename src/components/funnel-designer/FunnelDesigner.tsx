@@ -884,6 +884,12 @@ const FunnelDesigner = () => {
               </Button>
             </TooltipTrigger><TooltipContent>{t("funnelDesigner.downloadPng")}</TooltipContent></Tooltip>
 
+            <Tooltip><TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => setShowBriefPanel(!showBriefPanel)} className={showBriefPanel ? "bg-primary/10 border-primary" : ""}>
+                <ClipboardList className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger><TooltipContent>Funnel Brief</TooltipContent></Tooltip>
+
             <div className="w-px h-6 bg-border mx-1" />
 
             <Tooltip><TooltipTrigger asChild>
