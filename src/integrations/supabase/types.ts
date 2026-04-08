@@ -873,6 +873,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_all_users_admin: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          id: string
+        }[]
+      }
       get_user_main_account: { Args: { _user_id: string }; Returns: string }
       get_user_main_accounts: { Args: { _user_id: string }; Returns: string[] }
       get_user_sub_accounts: { Args: { _user_id: string }; Returns: string[] }
