@@ -114,11 +114,10 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
     return (
       <div key={field.id} className="space-y-1.5">
         <label className="text-xs font-medium text-foreground">{field.label}</label>
-        {field.description && <p className="text-[10px] text-muted-foreground">{field.description}</p>}
         {field.type === "select" ? (
           <Select value={value} onValueChange={(v) => updateField(field.id, v)}>
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder={field.placeholder || "Select..."} />
+              <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
               {field.options?.map((opt) => (
@@ -130,16 +129,17 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
           <Textarea
             value={value}
             onChange={(e) => updateField(field.id, e.target.value)}
-            placeholder={field.placeholder}
             className="min-h-[80px] text-sm resize-y"
           />
         ) : (
           <Input
             value={value}
             onChange={(e) => updateField(field.id, e.target.value)}
-            placeholder={field.placeholder}
             className="h-9 text-sm"
           />
+        )}
+        {field.placeholder && (
+          <p className="text-[10px] text-muted-foreground leading-relaxed">{field.placeholder}</p>
         )}
       </div>
     );
@@ -190,6 +190,9 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
                   <SelectItem value="approved">Approved</SelectItem>
                 </SelectContent>
               </Select>
+              <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setShowShareDialog(true)}>
+                <Share2 className="w-3.5 h-3.5" /> Share
+              </Button>
               <Button size="sm" onClick={saveOffer} disabled={saving} className="h-8 gap-1.5">
                 <Save className="w-3.5 h-3.5" /> {saving ? "Saving..." : "Save"}
               </Button>
