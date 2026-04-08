@@ -18,7 +18,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { supabase } from "@/integrations/supabase/client";
-import { useProject } from "@/contexts/ProjectContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
@@ -95,7 +95,7 @@ interface FunnelDesignerProps {
 
 const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: FunnelDesignerProps = {}) => {
   const { t } = useTranslation();
-  const { activeProject } = useProject();
+  const { activeSubAccountId, isAppAdmin: wsIsAppAdmin } = useWorkspace();
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
