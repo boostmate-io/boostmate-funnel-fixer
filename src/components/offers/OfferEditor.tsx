@@ -301,6 +301,17 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
           </div>
         </div>
       </div>
+
+      {!readOnly && (
+        <OfferShareDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          offerId={offerId}
+          offerName={name}
+          shareToken={shareToken}
+          onShareTokenChange={setShareToken}
+        />
+      )}
     </div>
   );
 };

@@ -284,10 +284,14 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   }, []);
 
   useEffect(() => {
-    loadFunnels();
-    loadTemplates();
-    resetCanvas();
-  }, [loadFunnels, loadTemplates, activeProject]);
+    if (initialFunnel) {
+      loadFunnel(initialFunnel);
+    } else {
+      loadFunnels();
+      loadTemplates();
+      resetCanvas();
+    }
+  }, [activeProject]);
 
   const linkedAssetIds = useMemo(
     () => Array.from(new Set(
