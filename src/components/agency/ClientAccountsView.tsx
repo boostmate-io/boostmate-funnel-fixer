@@ -124,17 +124,28 @@ const ClientAccountsView = () => {
     setSendingInvite(true);
     if (!user) { setSendingInvite(false); return; }
 
-    const { error } = await supabase.from("account_invites").insert({
+    const { data: inviteData, error } = await supabase.from("account_invites").insert({
       main_account_id: mainAccount.id,
       sub_account_id: inviteSubAccountId,
       email: inviteEmail.trim(),
       invited_by: user.id,
       role: "workspace_member",
-    });
+    }).select().single();
 
     if (error) {
       toast.error("Failed to send invite");
     } else {
+      // Send invite email
+      const subAccount = allSubAccounts.find(s => s.id === inviteSubAccountId);
+      if (inviteData) {
+        await supabase.functions.invoke("send-invite-email", {
+          body: {
+            email: inviteEmail.trim(),
+            invite_code: inviteData.invite_code,
+            account_name: subAccount?.name || "workspace",
+          },
+        });
+      }
       toast.success("Invite sent");
       setInviteEmail("");
       loadAccountInvites(inviteSubAccountId);
