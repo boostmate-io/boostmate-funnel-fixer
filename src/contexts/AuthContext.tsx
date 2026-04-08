@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,28 +20,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const lastStableSessionRef = useRef<Session | null>(null);
+  const initialSessionResolvedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
 
     const applySession = (nextSession: Session | null) => {
       if (!isMounted) return;
+
+      if (nextSession?.user) {
+        lastStableSessionRef.current = nextSession;
+      }
+
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
     };
 
-    void supabase.auth
-      .getSession()
-      .then(({ data: { session: initialSession } }) => {
-        if (!isMounted) return;
-        applySession(initialSession);
-        setIsReady(true);
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        applySession(null);
-        setIsReady(true);
-      });
+    const clearSession = () => {
+      if (!isMounted) return;
+
+      lastStableSessionRef.current = null;
+      setSession(null);
+      setUser(null);
+    };
 
     const {
       data: { subscription },
@@ -49,16 +51,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!isMounted) return;
 
       if (event === "SIGNED_OUT") {
-        applySession(null);
+        clearSession();
         setIsReady(true);
         return;
       }
 
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
+      if (event === "INITIAL_SESSION" && !initialSessionResolvedRef.current && !nextSession?.user) {
+        return;
+      }
+
+      if (nextSession?.user) {
         applySession(nextSession);
         setIsReady(true);
+        return;
       }
+
+      if (!lastStableSessionRef.current && initialSessionResolvedRef.current) {
+        applySession(null);
+      }
+
+      setIsReady(true);
     });
+
+    void supabase.auth
+      .getSession()
+      .then(({ data: { session: initialSession } }) => {
+        if (!isMounted) return;
+
+        initialSessionResolvedRef.current = true;
+
+        if (initialSession?.user) {
+          applySession(initialSession);
+        } else if (!lastStableSessionRef.current) {
+          applySession(null);
+        }
+
+        setIsReady(true);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+
+        initialSessionResolvedRef.current = true;
+
+        if (!lastStableSessionRef.current) {
+          applySession(null);
+        }
+
+        setIsReady(true);
+      });
 
     return () => {
       isMounted = false;
