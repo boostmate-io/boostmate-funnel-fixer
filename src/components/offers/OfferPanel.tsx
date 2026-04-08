@@ -82,10 +82,10 @@ const OfferPanel = ({ funnelId, linkedOfferId, onLinkedOfferChange, onNavigateTo
   }, [funnelId, onLinkedOfferChange]);
 
   const quickCreateOffer = useCallback(async () => {
-    if (!user?.id || !activeProject?.id || !funnelId) return;
+    if (!user?.id || !activeSubAccountId || !funnelId) return;
     const { data, error } = await supabase
       .from("offers")
-      .insert({ user_id: user.id, project_id: activeProject.id, name: "Untitled Offer" })
+      .insert({ user_id: user.id, sub_account_id: activeSubAccountId, name: "Untitled Offer" })
       .select()
       .single();
     if (error) toast.error("Error creating offer");
@@ -94,7 +94,7 @@ const OfferPanel = ({ funnelId, linkedOfferId, onLinkedOfferChange, onNavigateTo
       await linkOffer(newOffer.id);
       toast.success("New offer created and linked");
     }
-  }, [user?.id, activeProject?.id, funnelId, linkOffer]);
+  }, [user?.id, activeSubAccountId, funnelId, linkOffer]);
 
   if (!funnelId) {
     return (
