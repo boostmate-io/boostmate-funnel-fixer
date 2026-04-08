@@ -121,6 +121,7 @@ const FunnelDesigner = () => {
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
   const [editingSeedTemplate, setEditingSeedTemplate] = useState<{ id: string; name: string } | null>(null);
   const [showBriefPanel, setShowBriefPanel] = useState(false);
+  const templateSourceRef = useRef<{ type: "funnel" | "seed"; id: string } | null>(null);
 
   // Check admin role
   useEffect(() => {
