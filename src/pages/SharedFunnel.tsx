@@ -135,15 +135,31 @@ const SharedFunnelInner = () => {
     });
   }, [funnel?.name]);
 
+  // Compute which handles are actually connected by edges
+  const connectedHandlesMap = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    for (const e of (funnel?.edges ?? []) as Edge[]) {
+      // source side
+      if (!map[e.source]) map[e.source] = new Set();
+      map[e.source].add(`source-${e.sourceHandle || "right"}`);
+      // target side
+      if (!map[e.target]) map[e.target] = new Set();
+      map[e.target].add(`target-${e.targetHandle || "left"}`);
+    }
+    const result: Record<string, string[]> = {};
+    for (const [id, s] of Object.entries(map)) result[id] = Array.from(s);
+    return result;
+  }, [funnel?.edges]);
+
   const readOnlyNodes = useMemo(
     () => (funnel?.nodes ?? []).map((n) => ({
       ...n,
       selected: n.id === selectedNodeId,
       draggable: false,
       connectable: false,
-      data: { ...n.data, showImages, readOnly: true },
+      data: { ...n.data, showImages, readOnly: true, connectedHandles: connectedHandlesMap[n.id] || [] },
     })),
-    [funnel?.nodes, selectedNodeId, showImages]
+    [funnel?.nodes, selectedNodeId, showImages, connectedHandlesMap]
   );
 
   if (loading) {
