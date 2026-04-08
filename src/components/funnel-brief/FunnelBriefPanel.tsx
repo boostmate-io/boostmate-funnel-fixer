@@ -192,6 +192,20 @@ const FunnelBriefPanel = ({ funnelId, userId, funnelName, readOnly, isSeedTempla
     }
   }, [brief]);
 
+  const toggleApproval = useCallback(async () => {
+    if (!brief?.id) return;
+    const newVal = !isApproved;
+    const { error } = await supabase
+      .from("funnel_briefs")
+      .update({ is_approved: newVal } as any)
+      .eq("id", brief.id);
+    if (error) toast.error("Error updating approval status");
+    else {
+      setIsApproved(newVal);
+      toast.success(newVal ? "Brief marked as approved" : "Brief approval removed");
+    }
+  }, [brief, isApproved]);
+
   if (!funnelId) {
     return (
       <div className="w-80 border-l border-border bg-card flex flex-col h-full">
