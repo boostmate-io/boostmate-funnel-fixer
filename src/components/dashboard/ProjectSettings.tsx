@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 const ProjectSettings = () => {
   const { t } = useTranslation();
-  const { activeSubAccount, renameSubAccount, mainAccount, memberships } = useWorkspace();
+  const { activeSubAccount, renameSubAccount, renameMainAccount, mainAccount, memberships } = useWorkspace();
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -25,14 +25,25 @@ const ProjectSettings = () => {
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
+
     (async () => {
-      const { data } = await supabase.from("profiles").select("first_name, last_name").eq("id", user.id).single();
-      if (data) {
-        setFirstName((data as any).first_name || "");
-        setLastName((data as any).last_name || "");
+      try {
+        const { data } = await supabase.from("profiles").select("first_name, last_name").eq("id", user.id).single();
+        if (!cancelled && data) {
+          setFirstName((data as any).first_name || "");
+          setLastName((data as any).last_name || "");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingProfile(false);
+        }
       }
-      setLoadingProfile(false);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const handleRename = async () => {
@@ -47,12 +58,11 @@ const ProjectSettings = () => {
 
   const handleRenameMain = async () => {
     if (!editMainName.trim() || !mainAccount) return;
-    const { error } = await supabase.from("main_accounts").update({ name: editMainName.trim() }).eq("id", mainAccount.id);
-    if (error) {
+    const success = await renameMainAccount(editMainName.trim());
+    if (!success) {
       toast.error("Failed to rename account");
     } else {
       toast.success("Account name updated");
-      window.location.reload();
     }
     setEditingMain(false);
   };

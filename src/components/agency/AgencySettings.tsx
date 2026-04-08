@@ -4,24 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Building2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 const AgencySettings = () => {
   const { t } = useTranslation();
-  const { isAgency, mainAccount } = useWorkspace();
+  const { isAgency, mainAccount, updateMainAccountType } = useWorkspace();
 
   if (isAgency) return null;
 
   const handleUpgrade = async () => {
     if (!mainAccount) return;
-    const { error } = await supabase
-      .from("main_accounts")
-      .update({ type: "agency" as any })
-      .eq("id", mainAccount.id);
-    if (!error) {
+    const success = await updateMainAccountType("agency");
+    if (success) {
       toast.success(t("agency.upgraded"));
-      // Reload to pick up changes
-      window.location.reload();
     }
   };
 
