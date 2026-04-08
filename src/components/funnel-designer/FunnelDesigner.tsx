@@ -89,9 +89,11 @@ interface HistoryEntry {
 
 interface FunnelDesignerProps {
   onNavigateToOffer?: (offerId: string) => void;
+  initialFunnel?: any;
+  onBackToList?: () => void;
 }
 
-const FunnelDesigner = ({ onNavigateToOffer }: FunnelDesignerProps = {}) => {
+const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: FunnelDesignerProps = {}) => {
   const { t } = useTranslation();
   const { activeProject } = useProject();
   const { user } = useAuth();

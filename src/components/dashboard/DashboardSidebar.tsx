@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, PenTool, Settings, Library, TrendingUp, Users, PanelLeftClose, PanelLeftOpen, Gem } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -24,12 +24,12 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
 
   const navItems = [
     { id: "overview", label: t("dashboard.sidebar.dashboard"), icon: LayoutDashboard },
-    ...(isAgency && !impersonatedUserId ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
     { id: "funnel-audit", label: t("dashboard.sidebar.funnelAudit"), icon: BarChart3 },
-    { id: "funnel-designer", label: t("dashboard.sidebar.funnelDesigner"), icon: PenTool },
     { id: "offers", label: "Offers", icon: Gem },
-    { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: TrendingUp },
+    { id: "funnels", label: "Funnels", icon: GitBranch },
     { id: "assets-library", label: t("dashboard.sidebar.assetsLibrary"), icon: Library },
+    { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: TrendingUp },
+    ...(isAgency && !impersonatedUserId ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
     { id: "settings", label: t("dashboard.sidebar.settings"), icon: Settings },
   ];
 
@@ -66,7 +66,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
   };
 
   return (
-    <aside className={`${collapsed ? "w-16" : "w-64"} h-screen bg-card border-r border-border flex flex-col shrink-0 transition-all duration-200`}>
+    <aside className={`${collapsed ? "w-16" : "w-64"} h-screen bg-card border-r border-border flex flex-col shrink-0 transition-all duration-200 relative`}>
       <div className={`${collapsed ? "p-3 flex justify-center" : "p-6"} border-b border-border`}>
         {collapsed ? (
           <img src={logoBadge} alt="Boostmate" className="h-8 w-8 rounded-lg" />
@@ -84,7 +84,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
           <NavButton key={item.id} item={item} />
         ))}
       </nav>
-      <div className="p-2 border-t border-border space-y-1">
+      <div className="p-2 border-t border-border">
         {collapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -106,20 +106,19 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
             {t("dashboard.sidebar.logout")}
           </button>
         )}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCollapsed(!collapsed)}
-              className={`w-full ${collapsed ? "justify-center" : ""}`}
-            >
-              {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <><PanelLeftClose className="w-4 h-4 mr-2" /> {t("dashboard.sidebar.collapse")}</>}
-            </Button>
-          </TooltipTrigger>
-          {collapsed && <TooltipContent side="right">{t("dashboard.sidebar.expand")}</TooltipContent>}
-        </Tooltip>
       </div>
+      {/* Collapse toggle on edge */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="absolute top-1/2 -translate-y-1/2 -right-3.5 w-7 h-7 bg-card border border-border rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-sm z-10"
+          >
+            {collapsed ? <ChevronsRight className="w-3.5 h-3.5" /> : <ChevronsLeft className="w-3.5 h-3.5" />}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">{collapsed ? t("dashboard.sidebar.expand") : t("dashboard.sidebar.collapse")}</TooltipContent>
+      </Tooltip>
     </aside>
   );
 };
