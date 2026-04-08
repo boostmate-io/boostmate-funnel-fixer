@@ -16,7 +16,7 @@ import {
 const ClientAccountsView = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { mainAccount, subAccounts: allSubAccounts, switchSubAccount, createClientSubAccount, activeSubAccountId } = useWorkspace();
+  const { mainAccount, subAccounts: allSubAccounts, switchSubAccount, createClientSubAccount, activeSubAccountId, refreshWorkspace } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -52,11 +52,14 @@ const ClientAccountsView = () => {
 
     // Copy active seed templates as funnel templates for the new sub-account
     if (user) {
-      const { data: activeSeeds } = await supabase
+      const { data: activeSeeds, error: activeSeedsError } = await supabase
         .from("seed_templates")
         .select("*")
         .eq("is_active", true);
-      if (activeSeeds && activeSeeds.length > 0) {
+
+      if (activeSeedsError) {
+        toast.error("Failed to load active system templates");
+      } else if (activeSeeds && activeSeeds.length > 0) {
         const templateFunnels = activeSeeds.map((seed: any) => ({
           user_id: user.id,
           sub_account_id: newSub.id,
@@ -67,7 +70,11 @@ const ClientAccountsView = () => {
           template_id: null,
           description: seed.description || null,
         }));
-        await supabase.from("funnels").insert(templateFunnels);
+
+        const { error: cloneError } = await supabase.from("funnels").insert(templateFunnels);
+        if (cloneError) {
+          toast.error("Failed to clone active system templates");
+        }
       }
     }
 
@@ -99,6 +106,8 @@ const ClientAccountsView = () => {
     setNewName("");
     setNewEmails("");
     setShowCreate(false);
+    switchSubAccount(newSub.id);
+    await refreshWorkspace();
     setCreating(false);
   };
 
