@@ -145,15 +145,26 @@ const AdminSubAccounts = () => {
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{format(new Date(sub.created_at), "dd MMM yyyy")}</TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => { setMigrateTarget(sub); setNewMainAccountId(""); }}
-                      title="Migrate to another main account"
-                    >
-                      <ArrowRightLeft className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => { switchSubAccount(sub.id); toast.success("Switched to workspace"); }}
+                        title="Manage this workspace"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => { setMigrateTarget(sub); setNewMainAccountId(""); }}
+                        title="Migrate to another main account"
+                      >
+                        <ArrowRightLeft className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
