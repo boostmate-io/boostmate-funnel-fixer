@@ -10,7 +10,7 @@ import AuditModule from "@/components/audit/AuditModule";
 import ImpersonationBanner from "@/components/agency/ImpersonationBanner";
 import ClientManagement from "@/components/agency/ClientManagement";
 import AgencySettings from "@/components/agency/AgencySettings";
-import { BarChart3, PenTool, Library, TrendingUp } from "lucide-react";
+import { BarChart3, PenTool, Library, TrendingUp, Gem } from "lucide-react";
 import FunnelDesigner from "@/components/funnel-designer/FunnelDesigner";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
