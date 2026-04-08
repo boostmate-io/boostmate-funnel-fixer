@@ -18,10 +18,11 @@ import TrafficSourceNode from "@/components/funnel-designer/TrafficSourceNode";
 import NodeDetailsPanel from "@/components/funnel-designer/NodeDetailsPanel";
 import BriefFiller from "@/components/funnel-brief/BriefFiller";
 import { BriefStructure, BriefValues, BriefApprovedFields } from "@/components/funnel-brief/types";
+import OfferEditor from "@/components/offers/OfferEditor";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Image, Monitor, ZoomIn, ZoomOut, Camera, ClipboardList, CheckCircle2, Circle, Save, X } from "lucide-react";
+import { Image, Monitor, ZoomIn, ZoomOut, Camera, ClipboardList, CheckCircle2, Circle, Save, Gem } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import logo from "@/assets/logo-boostmate.svg";
@@ -42,6 +43,7 @@ interface FunnelData {
   nodes: Node[];
   edges: Edge[];
   id?: string;
+  linked_offer_id?: string | null;
 }
 
 interface BriefData {
@@ -69,19 +71,23 @@ const SharedFunnelInner = () => {
   const [briefApprovedFields, setBriefApprovedFields] = useState<BriefApprovedFields>({});
   const [showBrief, setShowBrief] = useState(false);
   const [savingBrief, setSavingBrief] = useState(false);
+  const [showOffer, setShowOffer] = useState(false);
+  const [linkedOfferId, setLinkedOfferId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
     (async () => {
       const { data, error: err } = await supabase
         .from("funnels")
-        .select("id, name, nodes, edges")
+        .select("id, name, nodes, edges, linked_offer_id")
         .eq("share_token", token)
         .single();
       if (err || !data) {
         setError(true);
       } else {
-        setFunnel(data as unknown as FunnelData);
+        const fd = data as any;
+        setFunnel(fd as unknown as FunnelData);
+        setLinkedOfferId(fd.linked_offer_id || null);
         if (data.id) {
           const { data: briefRow } = await supabase
             .from("funnel_briefs")
@@ -156,7 +162,6 @@ const SharedFunnelInner = () => {
     if (canOpenReadOnlyDetails(node)) setDetailsNodeId(node.id);
   }, [canOpenReadOnlyDetails]);
 
-  // Brief can be edited if not approved
   const canEditBrief = briefData && !briefData.is_approved;
 
   const saveBriefValues = useCallback(async () => {
@@ -234,12 +239,23 @@ const SharedFunnelInner = () => {
           <span className="text-sm font-display font-bold text-foreground">{funnel.name}</span>
         </div>
         <div className="flex items-center gap-2">
+          {linkedOfferId && (
+            <Button
+              variant={showOffer ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={() => { setShowOffer(!showOffer); if (!showOffer) { setShowBrief(false); setDetailsNodeId(null); } }}
+            >
+              <Gem className="w-3.5 h-3.5" />
+              Offer
+            </Button>
+          )}
           {briefData && (
             <Button
               variant={showBrief ? "default" : "outline"}
               size="sm"
               className="h-7 text-xs gap-1.5"
-              onClick={() => { setShowBrief(!showBrief); if (!showBrief) setDetailsNodeId(null); }}
+              onClick={() => { setShowBrief(!showBrief); if (!showBrief) { setShowOffer(false); setDetailsNodeId(null); } }}
             >
               <ClipboardList className="w-3.5 h-3.5" />
               Brief
@@ -334,7 +350,7 @@ const SharedFunnelInner = () => {
           </ReactFlow>
         </div>
 
-        {detailsNode && detailsNode.type === "funnelPage" && !showBrief && (
+        {detailsNode && detailsNode.type === "funnelPage" && !showBrief && !showOffer && (
           <NodeDetailsPanel
             nodeId={detailsNode.id}
             nodeLabel={(detailsNode.data as any).label || ""}
@@ -357,6 +373,15 @@ const SharedFunnelInner = () => {
         )}
       </div>
 
+      {/* Offer fullscreen modal */}
+      <Dialog open={showOffer} onOpenChange={setShowOffer}>
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+          {linkedOfferId && (
+            <OfferEditor offerId={linkedOfferId} onBack={() => setShowOffer(false)} readOnly={false} />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Brief fullscreen modal */}
       <Dialog open={showBrief} onOpenChange={setShowBrief}>
         <DialogContent className="max-w-2xl h-[90vh] flex flex-col p-0 gap-0">
@@ -373,7 +398,6 @@ const SharedFunnelInner = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Approval status */}
                   <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${briefData.is_approved ? "bg-emerald-500/10 text-emerald-600" : "bg-muted/50 text-muted-foreground"}`}>
                     {briefData.is_approved ? <CheckCircle2 className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
                     {briefData.is_approved ? "Approved" : "Pending"}
