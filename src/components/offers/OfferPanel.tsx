@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProject } from "@/contexts/ProjectContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 import { X, ExternalLink, Link2, Unlink, Plus, Gem, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,24 +20,23 @@ interface OfferPanelProps {
 
 const OfferPanel = ({ funnelId, linkedOfferId, onLinkedOfferChange, onNavigateToOffer, onClose }: OfferPanelProps) => {
   const { user } = useAuth();
-  const { activeProject } = useProject();
+  const { activeSubAccountId } = useWorkspace();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [linkedOffer, setLinkedOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Load available offers
   useEffect(() => {
-    if (!user?.id || !activeProject?.id) return;
+    if (!user?.id || !activeSubAccountId) return;
     (async () => {
       const { data } = await supabase
         .from("offers")
         .select("*")
-        .eq("user_id", user.id)
-        .eq("project_id", activeProject.id)
+        .eq("sub_account_id", activeSubAccountId)
         .order("updated_at", { ascending: false });
       if (data) setOffers(data as unknown as Offer[]);
     })();
-  }, [user?.id, activeProject?.id]);
+  }, [user?.id, activeSubAccountId]);
 
   // Load linked offer
   useEffect(() => {
