@@ -1,56 +1,81 @@
 import { useCallback } from "react";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { BriefStructure, BriefValues, BriefField } from "./types";
+import { Button } from "@/components/ui/button";
+import { BriefStructure, BriefValues, BriefField, BriefApprovedFields } from "./types";
 
 interface BriefFillerProps {
   structure: BriefStructure;
   values: BriefValues;
   onChange: (values: BriefValues) => void;
   readOnly?: boolean;
+  approvedFields?: BriefApprovedFields;
+  onApprovedFieldsChange?: (af: BriefApprovedFields) => void;
+  canApprove?: boolean;
 }
 
-const BriefFiller = ({ structure, values, onChange, readOnly }: BriefFillerProps) => {
+const BriefFiller = ({ structure, values, onChange, readOnly, approvedFields = {}, onApprovedFieldsChange, canApprove }: BriefFillerProps) => {
   const setValue = useCallback((fieldId: string, value: any) => {
     onChange({ ...values, [fieldId]: value });
   }, [values, onChange]);
 
-  // Progress calculation
+  const toggleFieldApproval = useCallback((fieldId: string) => {
+    if (!onApprovedFieldsChange) return;
+    const newAf = { ...approvedFields, [fieldId]: !approvedFields[fieldId] };
+    if (!newAf[fieldId]) delete newAf[fieldId];
+    onApprovedFieldsChange(newAf);
+  }, [approvedFields, onApprovedFieldsChange]);
+
+  // Progress based on approved fields
   const allFields = structure.sections.flatMap((s) => s.fields);
-  const requiredFields = allFields.filter((f) => f.required);
-  const filledRequired = requiredFields.filter((f) => {
-    const v = values[f.id];
-    if (v === null || v === undefined || v === "") return false;
-    if (Array.isArray(v) && v.length === 0) return false;
-    return true;
-  });
   const totalFields = allFields.length;
-  const filledTotal = allFields.filter((f) => {
-    const v = values[f.id];
-    if (v === null || v === undefined || v === "") return false;
-    if (Array.isArray(v) && v.length === 0) return false;
-    return true;
-  }).length;
-  const progressPercent = totalFields > 0 ? Math.round((filledTotal / totalFields) * 100) : 0;
+  const approvedCount = allFields.filter((f) => approvedFields[f.id]).length;
+  const progressPercent = totalFields > 0 ? Math.round((approvedCount / totalFields) * 100) : 0;
+
+  const renderFieldValue = (field: BriefField) => {
+    const value = values[field.id];
+    const displayValue = (() => {
+      if (value === null || value === undefined || value === "") return null;
+      if (field.fieldType === "checkbox") return value ? "Yes" : "No";
+      if (Array.isArray(value)) return value.join(", ");
+      return String(value);
+    })();
+
+    if (!displayValue) return <span className="text-xs text-muted-foreground italic">Not filled</span>;
+    return <p className="text-sm text-foreground whitespace-pre-wrap">{displayValue}</p>;
+  };
 
   const renderField = (field: BriefField) => {
     const value = values[field.id];
     const fieldId = field.id;
+    const isApproved = approvedFields[fieldId];
 
+    // If field is approved, show read-only value with unapprove button
+    if (isApproved) {
+      return (
+        <div className="flex items-start gap-2">
+          <div className="flex-1">{renderFieldValue(field)}</div>
+          {canApprove && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5 text-[10px] text-muted-foreground hover:text-foreground shrink-0"
+              onClick={() => toggleFieldApproval(fieldId)}
+            >
+              <RotateCcw className="w-3 h-3 mr-0.5" /> Unapprove
+            </Button>
+          )}
+        </div>
+      );
+    }
+
+    // If readOnly (and not approved context), just show value
     if (readOnly) {
-      const displayValue = (() => {
-        if (value === null || value === undefined || value === "") return null;
-        if (field.fieldType === "checkbox") return value ? "Yes" : "No";
-        if (Array.isArray(value)) return value.join(", ");
-        return String(value);
-      })();
-
-      if (!displayValue) return <span className="text-xs text-muted-foreground italic">Not filled</span>;
-      return <p className="text-sm text-foreground whitespace-pre-wrap">{displayValue}</p>;
+      return renderFieldValue(field);
     }
 
     switch (field.fieldType) {
@@ -172,24 +197,15 @@ const BriefFiller = ({ structure, values, onChange, readOnly }: BriefFillerProps
       {/* Progress bar */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground font-medium">Completion</span>
-          <span className="font-semibold text-foreground">{progressPercent}%</span>
+          <span className="text-muted-foreground font-medium">Approved</span>
+          <span className="font-semibold text-foreground">{approvedCount}/{totalFields} fields ({progressPercent}%)</span>
         </div>
         <div className="h-2 bg-muted rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full transition-all duration-300 bg-primary"
+            className="h-full rounded-full transition-all duration-300 bg-emerald-500"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-        {requiredFields.length > 0 && (
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            {filledRequired.length === requiredFields.length
-              ? <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-              : <Circle className="w-3 h-3" />
-            }
-            <span>{filledRequired.length}/{requiredFields.length} required fields completed</span>
-          </div>
-        )}
       </div>
 
       {/* Sections */}
@@ -200,20 +216,36 @@ const BriefFiller = ({ structure, values, onChange, readOnly }: BriefFillerProps
             {section.description && <p className="text-[11px] text-muted-foreground mt-0.5">{section.description}</p>}
           </div>
           <div className="p-3 space-y-3">
-            {section.fields.map((field) => (
-              <div key={field.id} className="space-y-1">
-                {field.fieldType !== "checkbox" && (
-                  <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                    {field.label}
-                    {field.required && <span className="text-destructive">*</span>}
-                  </label>
-                )}
-                {field.description && (
-                  <p className="text-[10px] text-muted-foreground">{field.description}</p>
-                )}
-                {renderField(field)}
-              </div>
-            ))}
+            {section.fields.map((field) => {
+              const isApproved = approvedFields[field.id];
+              return (
+                <div key={field.id} className={`space-y-1 p-2 rounded-md ${isApproved ? "bg-emerald-500/5 border border-emerald-500/20" : ""}`}>
+                  <div className="flex items-center justify-between">
+                    {field.fieldType !== "checkbox" && (
+                      <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                        {isApproved && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                        {field.label}
+                        {field.required && <span className="text-destructive">*</span>}
+                      </label>
+                    )}
+                    {canApprove && !isApproved && !readOnly && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-emerald-600"
+                        onClick={() => toggleFieldApproval(field.id)}
+                      >
+                        <CheckCircle2 className="w-3 h-3 mr-0.5" /> Approve
+                      </Button>
+                    )}
+                  </div>
+                  {field.description && (
+                    <p className="text-[10px] text-muted-foreground">{field.description}</p>
+                  )}
+                  {renderField(field)}
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
