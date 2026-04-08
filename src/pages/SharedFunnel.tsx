@@ -159,6 +159,21 @@ const SharedFunnelInner = () => {
     if (canOpenReadOnlyDetails(node)) setDetailsNodeId(node.id);
   }, [canOpenReadOnlyDetails]);
 
+  // Brief editing is allowed when not approved
+  const canEditBrief = briefData && !briefData.is_approved;
+
+  const saveBriefValues = useCallback(async () => {
+    if (!briefData?.id) return;
+    setSavingBrief(true);
+    const { error } = await supabase
+      .from("funnel_briefs")
+      .update({ values: briefValues as any, updated_at: new Date().toISOString() } as any)
+      .eq("id", briefData.id);
+    if (error) toast.error("Error saving brief");
+    else toast.success("Brief saved");
+    setSavingBrief(false);
+  }, [briefData, briefValues]);
+
   const handleDownloadPng = useCallback(() => {
     const viewport = flowRef.current?.querySelector(".react-flow__viewport") as HTMLElement | null;
     if (!viewport) return;
