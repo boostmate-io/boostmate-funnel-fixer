@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,78 +20,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const currentUserIdRef = useRef<string | null>(null);
-  const recoveryInFlightRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
-    let hasRestoredInitialSession = false;
 
-    const commitSession = (nextSession: Session | null) => {
+    const applySession = (nextSession: Session | null) => {
       if (!isMounted) return;
-      currentUserIdRef.current = nextSession?.user?.id ?? null;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
     };
 
-    const recoverSession = async () => {
-      if (!isMounted || recoveryInFlightRef.current) return;
-      recoveryInFlightRef.current = true;
-
-      try {
-        const { data, error } = await supabase.auth.getSession();
+    void supabase.auth
+      .getSession()
+      .then(({ data: { session: initialSession } }) => {
         if (!isMounted) return;
-
-        if (error) {
-          commitSession(null);
-          return;
-        }
-
-        if (data.session) {
-          commitSession(data.session);
-          return;
-        }
-
-        commitSession(null);
-      } finally {
-        recoveryInFlightRef.current = false;
-        if (isMounted) setIsReady(true);
-      }
-    };
-
-    const applySession = (event: string, nextSession: Session | null) => {
-      if (!isMounted) return;
-      const hasKnownUser = !!currentUserIdRef.current;
-
-      if (!nextSession && hasKnownUser) {
-        void recoverSession();
-        return;
-      }
-
-      commitSession(nextSession);
-    };
+        applySession(initialSession);
+        setIsReady(true);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        applySession(null);
+        setIsReady(true);
+      });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      applySession(event, nextSession);
+      if (!isMounted) return;
 
-      if (hasRestoredInitialSession || event !== "INITIAL_SESSION") {
-        if (isMounted) setIsReady(true);
+      if (event === "SIGNED_OUT") {
+        applySession(null);
+        setIsReady(true);
+        return;
+      }
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
+        applySession(nextSession);
+        setIsReady(true);
       }
     });
-
-    void supabase.auth
-      .getSession()
-      .then(({ data: { session: initialSession } }) => {
-        hasRestoredInitialSession = true;
-        commitSession(initialSession);
-        if (isMounted) setIsReady(true);
-      })
-      .catch(() => {
-        hasRestoredInitialSession = true;
-        if (isMounted) setIsReady(true);
-      });
 
     return () => {
       isMounted = false;
