@@ -25,7 +25,7 @@ const AdminMainAccounts = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const { switchMainAccount } = useWorkspace();
+  const { switchMainAccount, refreshWorkspace } = useWorkspace();
 
   const load = async () => {
     setLoading(true);
@@ -48,6 +48,7 @@ const AdminMainAccounts = () => {
     const { error } = await supabase.from("main_accounts").delete().eq("id", id);
     if (error) { toast.error("Failed to delete: " + error.message); return; }
     toast.success("Main account deleted");
+    await refreshWorkspace();
     load();
   };
 
@@ -60,6 +61,7 @@ const AdminMainAccounts = () => {
     const { error } = await supabase.from("main_accounts").update({ type: newType }).eq("id", acc.id);
     if (error) { toast.error("Failed to update type: " + error.message); return; }
     toast.success(`Account type changed to ${newType}`);
+    await refreshWorkspace();
     load();
   };
 

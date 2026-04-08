@@ -33,7 +33,7 @@ const AdminSubAccounts = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterMainId, setFilterMainId] = useState("all");
-  const { switchSubAccount, switchMainAccount } = useWorkspace();
+  const { switchSubAccount, switchMainAccount, refreshWorkspace } = useWorkspace();
 
   // Migration dialog
   const [migrateTarget, setMigrateTarget] = useState<SubAccount | null>(null);
@@ -55,6 +55,11 @@ const AdminSubAccounts = () => {
 
     setSubs(enriched);
     setMainAccounts((mainData || []) as MainAccountOption[]);
+
+    if (filterMainId !== "all" && !(mainData || []).some((m: any) => m.id === filterMainId)) {
+      setFilterMainId("all");
+    }
+
     setLoading(false);
   };
 
@@ -64,7 +69,6 @@ const AdminSubAccounts = () => {
     if (!migrateTarget || !newMainAccountId) return;
     setMigrating(true);
 
-    // Update sub_account's main_account_id
     const { error: subErr } = await supabase
       .from("sub_accounts")
       .update({ main_account_id: newMainAccountId })
@@ -76,7 +80,6 @@ const AdminSubAccounts = () => {
       return;
     }
 
-    // Update all related memberships
     const { error: memErr } = await supabase
       .from("account_memberships")
       .update({ main_account_id: newMainAccountId })
@@ -91,6 +94,7 @@ const AdminSubAccounts = () => {
     setMigrateTarget(null);
     setNewMainAccountId("");
     setMigrating(false);
+    await refreshWorkspace();
     load();
   };
 
@@ -98,6 +102,7 @@ const AdminSubAccounts = () => {
     const { error } = await supabase.from("sub_accounts").delete().eq("id", sub.id);
     if (error) { toast.error("Failed to delete: " + error.message); return; }
     toast.success(`"${sub.name}" deleted`);
+    await refreshWorkspace();
     load();
   };
 

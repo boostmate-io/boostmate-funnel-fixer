@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface UserRow {
   id: string;
@@ -33,6 +34,7 @@ interface UserMembership {
 
 const AdminUsers = () => {
   const { session } = useAuth();
+  const { refreshWorkspace } = useWorkspace();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -46,7 +48,7 @@ const AdminUsers = () => {
     setLoading(true);
 
     const { data: authUsers } = await supabase.rpc("get_all_users_admin");
-    if (!authUsers || authUsers.length === 0) { setLoading(false); return; }
+    if (!authUsers || authUsers.length === 0) { setUsers([]); setLoading(false); return; }
 
     const { data: profiles } = await supabase.from("profiles").select("*");
     const profileMap = new Map<string, any>();
@@ -75,8 +77,8 @@ const AdminUsers = () => {
       }
     });
 
-    let mainNameMap = new Map<string, string>();
     const mainIds = Array.from(mainAccountIds);
+    const mainNameMap = new Map<string, string>();
     if (mainIds.length > 0) {
       const { data: mainAccs } = await supabase.from("main_accounts").select("id, name").in("id", mainIds);
       (mainAccs || []).forEach((m: any) => mainNameMap.set(m.id, m.name));
@@ -106,7 +108,6 @@ const AdminUsers = () => {
     setSelectedUser(user);
     setLoadingDetail(true);
 
-    // Load all memberships for this user
     const { data: mems } = await supabase
       .from("account_memberships")
       .select("id, main_account_id, sub_account_id, role")
@@ -161,16 +162,23 @@ const AdminUsers = () => {
     if (!selectedUser) return;
     setIsDeleting(true);
     try {
-      if (!session) { toast.error("Not authenticated"); return; }
+      if (!session) {
+        toast.error("Not authenticated");
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("delete-account", {
         headers: { Authorization: `Bearer ${session.access_token}` },
         body: { target_user_id: selectedUser.id },
       });
+
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+
       toast.success("User deleted successfully");
       setSelectedUser(null);
-      load();
+      await refreshWorkspace();
+      await load();
     } catch (err: any) {
       toast.error(err.message || "Error deleting user");
     } finally {
