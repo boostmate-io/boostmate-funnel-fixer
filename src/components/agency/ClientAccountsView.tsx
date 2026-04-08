@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import {
 
 const ClientAccountsView = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { mainAccount, subAccounts: allSubAccounts, switchSubAccount, createClientSubAccount, activeSubAccountId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -39,10 +41,9 @@ const ClientAccountsView = () => {
       return;
     }
 
-    const { data: userData } = await supabase.auth.getUser();
-    if (userData.user && mainAccount) {
+    if (user && mainAccount) {
       await supabase.from("account_memberships").insert({
-        user_id: userData.user.id,
+        user_id: user.id,
         main_account_id: mainAccount.id,
         sub_account_id: newSub.id,
         role: "workspace_admin",
@@ -50,13 +51,13 @@ const ClientAccountsView = () => {
     }
 
     const emails = newEmails.split(/[,;\n]/).map(e => e.trim()).filter(Boolean);
-    if (emails.length > 0 && userData.user && mainAccount) {
+    if (emails.length > 0 && user && mainAccount) {
       for (const email of emails) {
         await supabase.from("account_invites").insert({
           main_account_id: mainAccount.id,
           sub_account_id: newSub.id,
           email,
-          invited_by: userData.user.id,
+          invited_by: user.id,
           role: "workspace_member",
         });
       }
@@ -89,14 +90,13 @@ const ClientAccountsView = () => {
   const handleSendInvite = async () => {
     if (!inviteEmail.trim() || !inviteSubAccountId || !mainAccount) return;
     setSendingInvite(true);
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) { setSendingInvite(false); return; }
+    if (!user) { setSendingInvite(false); return; }
 
     const { error } = await supabase.from("account_invites").insert({
       main_account_id: mainAccount.id,
       sub_account_id: inviteSubAccountId,
       email: inviteEmail.trim(),
-      invited_by: userData.user.id,
+      invited_by: user.id,
       role: "workspace_member",
     });
 

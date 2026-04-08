@@ -54,7 +54,6 @@ const Index = () => {
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     const { data: project } = await supabase
