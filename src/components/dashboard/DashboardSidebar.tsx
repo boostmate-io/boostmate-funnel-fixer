@@ -2,14 +2,14 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem, ShieldCheck, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-
-import { useAgency } from "@/contexts/AgencyContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DashboardSidebarProps {
   activeModule: string;
@@ -19,7 +19,7 @@ interface DashboardSidebarProps {
 const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAgency, impersonatedUserId } = useAgency();
+  const { isAgency, isAppAdmin, subAccounts, activeSubAccountId, switchSubAccount, activeSubAccount } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
 
   const navItems = [
@@ -29,8 +29,9 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
     { id: "funnels", label: "Funnels", icon: GitBranch },
     { id: "assets-library", label: t("dashboard.sidebar.assetsLibrary"), icon: Library },
     { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: TrendingUp },
-    ...(isAgency && !impersonatedUserId ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
+    ...(isAgency ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
     { id: "settings", label: t("dashboard.sidebar.settings"), icon: Settings },
+    ...(isAppAdmin ? [{ id: "admin", label: "Admin", icon: ShieldCheck }] : []),
   ];
 
   const handleLogout = async () => {
@@ -74,7 +75,34 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
           <img src={logo} alt="Boostmate" className="h-7" />
         )}
       </div>
-      {/* Project switcher removed — 1 account = 1 project */}
+
+      {/* Sub-account switcher for agencies */}
+      {isAgency && !collapsed && subAccounts.length > 1 && (
+        <div className="px-3 py-2 border-b border-border">
+          <Select value={activeSubAccountId || ""} onValueChange={switchSubAccount}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Select workspace" />
+            </SelectTrigger>
+            <SelectContent>
+              {subAccounts.map((sub) => (
+                <SelectItem key={sub.id} value={sub.id} className="text-xs">
+                  {sub.name}{sub.is_default ? " (Internal)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Workspace indicator for non-default workspace */}
+      {isAgency && activeSubAccount && !activeSubAccount.is_default && !collapsed && (
+        <div className="mx-3 mt-2 px-2 py-1.5 bg-primary/10 rounded-md">
+          <p className="text-[10px] text-primary font-medium truncate">
+            Viewing: {activeSubAccount.name}
+          </p>
+        </div>
+      )}
+
       <nav className="flex-1 p-2 space-y-1">
         {navItems.map((item) => (
           <NavButton key={item.id} item={item} />
