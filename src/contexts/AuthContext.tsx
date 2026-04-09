@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsReady(true);
     };
 
-    const recoverSession = (delay = 1200) => {
+    const recoverSession = (delay = 400) => {
       clearRecoveryTimer();
 
       signOutRecoveryTimerRef.current = window.setTimeout(async () => {
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
 
           clearAuthState();
-        }, 1200);
+        }, 800);
       }, delay);
     };
 
