@@ -11,9 +11,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const fallbackAuth: AuthContextType = { user: null, session: null, isReady: false };
+
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  if (!ctx) {
+    console.warn("useAuth called outside AuthProvider – returning fallback");
+    return fallbackAuth;
+  }
   return ctx;
 };
 
