@@ -160,7 +160,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
       pendingWorkspaceResetRef.current = window.setTimeout(() => {
         resetWorkspaceState();
-      }, 1500);
+      }, 2500);
 
       return () => {
         clearPendingWorkspaceReset();

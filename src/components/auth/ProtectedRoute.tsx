@@ -28,7 +28,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     const timer = window.setTimeout(() => {
       setAllowRedirect(true);
-    }, 1500);
+    }, 2500);
 
     return () => window.clearTimeout(timer);
   }, [user, isReady]);

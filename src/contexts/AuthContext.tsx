@@ -22,7 +22,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  const intentionalSignOutRef = useRef(false);
   const signOutRecoveryTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -49,11 +48,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsReady(true);
     };
 
-    const originalSignOut = supabase.auth.signOut.bind(supabase.auth);
-    supabase.auth.signOut = async (...args: any[]) => {
-      intentionalSignOutRef.current = true;
+    const recoverSession = (delay = 400) => {
       clearRecoveryTimer();
-      return originalSignOut(...args);
+
+      signOutRecoveryTimerRef.current = window.setTimeout(async () => {
+        const { data, error } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        if (!error && data.session) {
+          applySession(data.session);
+          return;
+        }
+
+        signOutRecoveryTimerRef.current = window.setTimeout(async () => {
+          const { data: retryData, error: retryError } = await supabase.auth.getSession();
+          if (!isMounted) return;
+
+          if (!retryError && retryData.session) {
+            applySession(retryData.session);
+            return;
+          }
+
+          clearAuthState();
+        }, 800);
+      }, delay);
     };
 
     const {
@@ -61,56 +79,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!isMounted) return;
 
-      clearRecoveryTimer();
+      if (["INITIAL_SESSION", "SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED", "PASSWORD_RECOVERY"].includes(event)) {
+        clearRecoveryTimer();
+        applySession(nextSession);
+        return;
+      }
 
       if (event === "SIGNED_OUT") {
-        if (intentionalSignOutRef.current) {
-          intentionalSignOutRef.current = false;
-          clearAuthState();
+        if (nextSession) {
+          clearRecoveryTimer();
+          applySession(nextSession);
           return;
         }
 
-        signOutRecoveryTimerRef.current = window.setTimeout(async () => {
-          const { data, error } = await supabase.auth.getSession();
-          if (error || !data.session) {
-            clearAuthState();
-            return;
-          }
-          applySession(data.session);
-        }, 400);
+        recoverSession();
         return;
       }
 
-      if (event === "TOKEN_REFRESHED") {
+      if (nextSession) {
+        clearRecoveryTimer();
         applySession(nextSession);
         return;
       }
 
-      if (["INITIAL_SESSION", "SIGNED_IN", "USER_UPDATED", "PASSWORD_RECOVERY"].includes(event)) {
-        intentionalSignOutRef.current = false;
-        applySession(nextSession);
-        return;
-      }
-
-      applySession(nextSession);
+      recoverSession();
     });
 
     supabase.auth
       .getSession()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         if (!isMounted) return;
-        applySession(data.session ?? null);
+
+        if (error || !data.session) {
+          clearAuthState();
+          return;
+        }
+
+        applySession(data.session);
       })
       .catch(() => {
         if (!isMounted) return;
-        setIsReady(true);
+        clearAuthState();
       });
 
     return () => {
       isMounted = false;
       clearRecoveryTimer();
       subscription.unsubscribe();
-      supabase.auth.signOut = originalSignOut;
     };
   }, []);
 
