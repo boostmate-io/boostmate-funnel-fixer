@@ -360,8 +360,14 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
                 <Input value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
               </div>
               <div>
-                <Label>Email</Label>
-                <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@example.com" type="email" />
+                <Label>Channel</Label>
+                <Select value={form.outreach_channel} onValueChange={(v) => setForm({ ...form, outreach_channel: v as "dm" | "email" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dm">DM</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
