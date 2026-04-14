@@ -89,11 +89,11 @@ const OutreachAnalytics = (_props: Props) => {
       if (l.status === "closed") byChannel[ch].closed++;
     });
 
-    // Conversion rates
-    const totalSent = (byStatus.sent || 0) + (byStatus.replied || 0) + (byStatus.interested || 0) + (byStatus.closed || 0) + (byStatus.no_response || 0) + (byStatus.not_interested || 0);
-    const totalReplied = (byStatus.replied || 0) + (byStatus.interested || 0) + (byStatus.closed || 0);
-    const totalInterested = (byStatus.interested || 0) + (byStatus.closed || 0);
-    const totalClosed = byStatus.closed || 0;
+    // Conversion rates (use cumulative counts)
+    const totalSent = cumulativeStatus.sent;
+    const totalReplied = cumulativeStatus.replied;
+    const totalInterested = cumulativeStatus.interested;
+    const totalClosed = cumulativeStatus.closed;
 
     const sentToReply = totalSent > 0 ? ((totalReplied / totalSent) * 100).toFixed(1) : "0";
     const replyToInterested = totalReplied > 0 ? ((totalInterested / totalReplied) * 100).toFixed(1) : "0";
@@ -101,7 +101,7 @@ const OutreachAnalytics = (_props: Props) => {
 
     const daily = Object.entries(dailyMap).sort(([a], [b]) => a.localeCompare(b));
 
-    return { total, byStatus, bySetupType, bySource, byChannel, sentToReply, replyToInterested, interestedToClosed, daily };
+    return { total, cumulativeStatus, bySetupType, bySource, byChannel, sentToReply, replyToInterested, interestedToClosed, daily };
   }, [leads, period]);
 
   if (loading) return <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
@@ -156,7 +156,7 @@ const OutreachAnalytics = (_props: Props) => {
         {statusCards.map((sc) => (
           <Card key={sc.key}>
             <CardContent className="pt-4 pb-4 text-center">
-              <p className={`text-2xl font-bold ${sc.color}`}>{stats.byStatus[sc.key] || 0}</p>
+              <p className={`text-2xl font-bold ${sc.color}`}>{stats.cumulativeStatus[sc.key] || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">{sc.label}</p>
             </CardContent>
           </Card>
