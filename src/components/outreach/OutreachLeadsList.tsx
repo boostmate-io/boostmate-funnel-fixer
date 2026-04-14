@@ -46,8 +46,8 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
   const [updatingBulk, setUpdatingBulk] = useState(false);
 
   const [form, setForm] = useState({
-    name: "", company_name: "", niche: "", offer: "", platform: "Instagram",
-    profile_url: "", notes: "", setup_type: "", lead_source: "",
+    name: "", last_name: "", company_name: "", niche: "", offer: "", platform: "Instagram",
+    profile_url: "", profile_url_2: "", notes: "", setup_type: "", lead_source: "",
     link: "", email: "",
     outreach_channel: "dm" as "dm" | "email",
   });
@@ -74,7 +74,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     if (error) { toast.error("Failed to create lead"); setCreating(false); return; }
     toast.success("Lead created");
     setShowCreate(false);
-    setForm({ name: "", company_name: "", niche: "", offer: "", platform: "Instagram", profile_url: "", notes: "", setup_type: "", lead_source: "", link: "", email: "", outreach_channel: "dm" });
+    setForm({ name: "", last_name: "", company_name: "", niche: "", offer: "", platform: "Instagram", profile_url: "", profile_url_2: "", notes: "", setup_type: "", lead_source: "", link: "", email: "", outreach_channel: "dm" });
     setCreating(false);
     refresh();
     if (generateMessages && data) handleGenerate((data as any).id);
@@ -247,7 +247,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
                         onCheckedChange={() => toggleSelect(lead.id)}
                       />
                     </td>
-                    <td className="px-4 py-3 font-medium">{lead.name}</td>
+                    <td className="px-4 py-3 font-medium">{lead.name}{lead.last_name ? ` ${lead.last_name}` : ""}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.company_name}</td>
                     <td className="px-4 py-3">
                       <Badge variant="outline" className="text-xs uppercase">{lead.outreach_channel}</Badge>
@@ -305,22 +305,32 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
           <div className="grid gap-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Name *</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John Doe" />
+                <Label>First Name *</Label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John" />
               </div>
               <div>
-                <Label>Company</Label>
-                <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} placeholder="Acme Inc" />
+                <Label>Last Name</Label>
+                <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} placeholder="Doe" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
+                <Label>Company</Label>
+                <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} placeholder="Acme Inc" />
+              </div>
+              <div>
                 <Label>Niche</Label>
                 <Input value={form.niche} onChange={(e) => setForm({ ...form, niche: e.target.value })} placeholder="Business coaching" />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Offer</Label>
                 <Input value={form.offer} onChange={(e) => setForm({ ...form, offer: e.target.value })} placeholder="12-week program" />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@example.com" type="email" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -332,6 +342,12 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
                     {PLATFORM_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Link</Label>
+                <Input value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
               </div>
               <div>
                 <Label>Channel</Label>
@@ -346,17 +362,13 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Link</Label>
-                <Input value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
+                <Label>Profile URL</Label>
+                <Input value={form.profile_url} onChange={(e) => setForm({ ...form, profile_url: e.target.value })} placeholder="https://instagram.com/..." />
               </div>
               <div>
-                <Label>Email</Label>
-                <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@example.com" type="email" />
+                <Label>Profile URL 2</Label>
+                <Input value={form.profile_url_2} onChange={(e) => setForm({ ...form, profile_url_2: e.target.value })} placeholder="https://linkedin.com/..." />
               </div>
-            </div>
-            <div>
-              <Label>Profile URL</Label>
-              <Input value={form.profile_url} onChange={(e) => setForm({ ...form, profile_url: e.target.value })} placeholder="https://instagram.com/..." />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

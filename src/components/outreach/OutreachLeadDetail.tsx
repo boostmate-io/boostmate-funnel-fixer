@@ -164,6 +164,14 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
       {/* Lead info */}
       <div className="bg-card border border-border rounded-lg p-4 grid grid-cols-2 md:grid-cols-3 gap-4">
         <div>
+          <Label className="text-xs text-muted-foreground">First Name</Label>
+          <Input value={lead.name} onChange={(e) => updateLead({ name: e.target.value })} className="h-8 mt-1" />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Last Name</Label>
+          <Input value={lead.last_name} onChange={(e) => updateLead({ last_name: e.target.value })} className="h-8 mt-1" />
+        </div>
+        <div>
           <Label className="text-xs text-muted-foreground">Status</Label>
           <Select value={lead.status} onValueChange={(v) => updateLead({ status: v as any })}>
             <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
@@ -218,6 +226,10 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
         <div>
           <Label className="text-xs text-muted-foreground">Profile URL</Label>
           <Input value={lead.profile_url} onChange={(e) => updateLead({ profile_url: e.target.value })} className="h-8 mt-1" />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Profile URL 2</Label>
+          <Input value={lead.profile_url_2} onChange={(e) => updateLead({ profile_url_2: e.target.value })} className="h-8 mt-1" />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Link</Label>
