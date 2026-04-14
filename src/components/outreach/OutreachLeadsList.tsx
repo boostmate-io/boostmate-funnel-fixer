@@ -247,7 +247,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
                         onCheckedChange={() => toggleSelect(lead.id)}
                       />
                     </td>
-                    <td className="px-4 py-3 font-medium">{lead.name}</td>
+                    <td className="px-4 py-3 font-medium">{lead.name}{lead.last_name ? ` ${lead.last_name}` : ""}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.company_name}</td>
                     <td className="px-4 py-3">
                       <Badge variant="outline" className="text-xs uppercase">{lead.outreach_channel}</Badge>
