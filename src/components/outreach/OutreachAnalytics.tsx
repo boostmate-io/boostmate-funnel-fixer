@@ -36,7 +36,12 @@ const OutreachAnalytics = (_props: Props) => {
     });
 
     const total = periodLeads.length;
-    const byStatus: Record<string, number> = {};
+    // Cumulative status counts: a lead that reached "replied" also counts as "sent" and "new"
+    const cumulativeStatus: Record<string, number> = { new: 0, drafted: 0, ready_to_send: 0, sent: 0, replied: 0, interested: 0, closed: 0, no_response: 0, not_interested: 0 };
+    const SENT_STATUSES = ["sent", "replied", "interested", "closed", "no_response", "not_interested"];
+    const REPLIED_STATUSES = ["replied", "interested", "closed"];
+    const INTERESTED_STATUSES = ["interested", "closed"];
+
     const bySetupType: Record<string, { total: number; interested: number; closed: number }> = {};
     const bySource: Record<string, { total: number; interested: number; closed: number }> = {};
     const byChannel: Record<string, { total: number; sent: number; replied: number; interested: number; closed: number }> = {};
@@ -45,7 +50,14 @@ const OutreachAnalytics = (_props: Props) => {
     const dailyMap: Record<string, { new: number; sent: number; replied: number; interested: number; closed: number; no_response: number }> = {};
 
     periodLeads.forEach((l) => {
-      byStatus[l.status] = (byStatus[l.status] || 0) + 1;
+      // Every lead is always "new"
+      cumulativeStatus.new++;
+      if (SENT_STATUSES.includes(l.status)) cumulativeStatus.sent++;
+      if (REPLIED_STATUSES.includes(l.status)) cumulativeStatus.replied++;
+      if (INTERESTED_STATUSES.includes(l.status)) cumulativeStatus.interested++;
+      if (l.status === "closed") cumulativeStatus.closed++;
+      if (l.status === "no_response") cumulativeStatus.no_response++;
+      if (l.status === "not_interested") cumulativeStatus.not_interested++;
 
       const dayKey = new Date(l.created_at).toISOString().split("T")[0];
       if (!dailyMap[dayKey]) dailyMap[dayKey] = { new: 0, sent: 0, replied: 0, interested: 0, closed: 0, no_response: 0 };
