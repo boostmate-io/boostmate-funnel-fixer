@@ -728,6 +728,238 @@ export type Database = {
           },
         ]
       }
+      outreach_lead_sources: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          sub_account_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          sub_account_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          sub_account_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_lead_sources_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_leads: {
+        Row: {
+          company_name: string
+          created_at: string
+          id: string
+          last_contact_at: string | null
+          lead_source: string
+          main_angle: string
+          main_problem: string
+          name: string
+          next_followup_at: string | null
+          niche: string
+          notes: string
+          offer: string
+          outreach_channel: Database["public"]["Enums"]["outreach_channel"]
+          platform: string
+          profile_url: string
+          setup_type: string
+          status: Database["public"]["Enums"]["outreach_status"]
+          sub_account_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name?: string
+          created_at?: string
+          id?: string
+          last_contact_at?: string | null
+          lead_source?: string
+          main_angle?: string
+          main_problem?: string
+          name?: string
+          next_followup_at?: string | null
+          niche?: string
+          notes?: string
+          offer?: string
+          outreach_channel?: Database["public"]["Enums"]["outreach_channel"]
+          platform?: string
+          profile_url?: string
+          setup_type?: string
+          status?: Database["public"]["Enums"]["outreach_status"]
+          sub_account_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          id?: string
+          last_contact_at?: string | null
+          lead_source?: string
+          main_angle?: string
+          main_problem?: string
+          name?: string
+          next_followup_at?: string | null
+          niche?: string
+          notes?: string
+          offer?: string
+          outreach_channel?: Database["public"]["Enums"]["outreach_channel"]
+          platform?: string
+          profile_url?: string
+          setup_type?: string
+          status?: Database["public"]["Enums"]["outreach_status"]
+          sub_account_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_leads_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_messages: {
+        Row: {
+          channel: Database["public"]["Enums"]["outreach_channel"]
+          content: string
+          created_at: string
+          id: string
+          lead_id: string
+          message_type: Database["public"]["Enums"]["outreach_message_type"]
+          sent: boolean
+          sent_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel?: Database["public"]["Enums"]["outreach_channel"]
+          content?: string
+          created_at?: string
+          id?: string
+          lead_id: string
+          message_type: Database["public"]["Enums"]["outreach_message_type"]
+          sent?: boolean
+          sent_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["outreach_channel"]
+          content?: string
+          created_at?: string
+          id?: string
+          lead_id?: string
+          message_type?: Database["public"]["Enums"]["outreach_message_type"]
+          sent?: boolean
+          sent_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_settings: {
+        Row: {
+          ai_prompt_context: string
+          created_at: string
+          follow_up_templates: Json
+          id: string
+          messaging_rules: Json
+          opener_template: string
+          sub_account_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_prompt_context?: string
+          created_at?: string
+          follow_up_templates?: Json
+          id?: string
+          messaging_rules?: Json
+          opener_template?: string
+          sub_account_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_prompt_context?: string
+          created_at?: string
+          follow_up_templates?: Json
+          id?: string
+          messaging_rules?: Json
+          opener_template?: string
+          sub_account_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_settings_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: true
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_setup_types: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          sub_account_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          sub_account_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          sub_account_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_setup_types_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
@@ -921,6 +1153,23 @@ export type Database = {
         | "member"
         | "workspace_admin"
         | "workspace_member"
+      outreach_channel: "dm" | "email"
+      outreach_message_type:
+        | "opener"
+        | "opener_alt"
+        | "followup_1"
+        | "followup_2"
+        | "followup_3"
+        | "followup_4"
+      outreach_status:
+        | "new"
+        | "drafted"
+        | "ready_to_send"
+        | "sent"
+        | "replied"
+        | "interested"
+        | "closed"
+        | "no_response"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1057,6 +1306,25 @@ export const Constants = {
         "member",
         "workspace_admin",
         "workspace_member",
+      ],
+      outreach_channel: ["dm", "email"],
+      outreach_message_type: [
+        "opener",
+        "opener_alt",
+        "followup_1",
+        "followup_2",
+        "followup_3",
+        "followup_4",
+      ],
+      outreach_status: [
+        "new",
+        "drafted",
+        "ready_to_send",
+        "sent",
+        "replied",
+        "interested",
+        "closed",
+        "no_response",
       ],
     },
   },
