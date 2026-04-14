@@ -18,6 +18,7 @@ import AnalyticsModule from "@/components/analytics/AnalyticsModule";
 import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
 import OfferModule from "@/components/offers/OfferModule";
 import AdminPanel from "@/components/admin/AdminPanel";
+import OutreachModule from "@/components/outreach/OutreachModule";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -27,7 +28,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { loading } = useWorkspace();
 
-  const fullHeightModules = ["funnels", "assets-library", "funnel-audit", "analytics", "clients", "offers", "admin"];
+  const fullHeightModules = ["funnels", "assets-library", "funnel-audit", "analytics", "clients", "offers", "admin", "outreach"];
 
   if (loading) {
     return (
@@ -94,6 +95,11 @@ const Dashboard = () => {
           )}
 
           {activeModule === "clients" && <ClientManagement />}
+          {activeModule === "outreach" && (
+            <div className="h-full">
+              <OutreachModule />
+            </div>
+          )}
           {activeModule === "funnel-audit" && <AuditModule />}
           {activeModule === "funnels" && (
             <div className="h-full">
