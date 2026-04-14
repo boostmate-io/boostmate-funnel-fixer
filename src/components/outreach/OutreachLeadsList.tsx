@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Sparkles, Loader2, ExternalLink, Clock } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Search, Sparkles, Loader2, ExternalLink, Clock, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,9 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<string>("");
+  const [updatingBulk, setUpdatingBulk] = useState(false);
 
   const [form, setForm] = useState({
     name: "", company_name: "", niche: "", offer: "", platform: "Instagram",
@@ -48,7 +52,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     outreach_channel: "dm" as "dm" | "email",
   });
 
-  const handleCreate = async () => {
+  const handleCreate = async (generateMessages: boolean) => {
     if (!activeSubAccountId || !user?.id || !form.name.trim()) {
       toast.error("Name is required");
       return;
@@ -73,7 +77,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     setForm({ name: "", company_name: "", niche: "", offer: "", platform: "Instagram", profile_url: "", notes: "", setup_type: "", lead_source: "", link: "", email: "", outreach_channel: "dm" });
     setCreating(false);
     refresh();
-    if (data) handleGenerate((data as any).id);
+    if (generateMessages && data) handleGenerate((data as any).id);
   };
 
   const handleGenerate = async (leadId: string) => {
@@ -91,6 +95,41 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     } finally {
       setGenerating(null);
     }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((l) => l.id)));
+    }
+  };
+
+  const handleBulkStatusUpdate = async () => {
+    if (!bulkStatus || selectedIds.size === 0) return;
+    setUpdatingBulk(true);
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from("outreach_leads")
+      .update({ status: bulkStatus } as any)
+      .in("id", ids);
+    if (error) {
+      toast.error("Failed to update statuses");
+    } else {
+      toast.success(`${ids.length} lead(s) updated`);
+      setSelectedIds(new Set());
+      setBulkStatus("");
+      refresh();
+    }
+    setUpdatingBulk(false);
   };
 
   const filtered = leads.filter((l) => {
@@ -144,6 +183,26 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
         </Button>
       </div>
 
+      {/* Bulk actions bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 bg-muted/50 border border-border rounded-lg">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <Select value={bulkStatus} onValueChange={setBulkStatus}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Change status to..." /></SelectTrigger>
+            <SelectContent>
+              {ALL_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={handleBulkStatusUpdate} disabled={!bulkStatus || updatingBulk}>
+            {updatingBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <CheckSquare className="w-3.5 h-3.5 mr-1" />}
+            Apply
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -157,6 +216,12 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/50 border-b border-border">
+                <th className="px-3 py-3 w-10">
+                  <Checkbox
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="text-left px-4 py-3 font-medium">Name</th>
                 <th className="text-left px-4 py-3 font-medium">Company</th>
                 <th className="text-left px-4 py-3 font-medium">Channel</th>
@@ -173,9 +238,15 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
                 return (
                   <tr
                     key={lead.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
+                    className={`border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors ${selectedIds.has(lead.id) ? "bg-muted/40" : ""}`}
                     onClick={() => setSelectedLeadId(lead.id)}
                   >
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(lead.id)}
+                        onCheckedChange={() => toggleSelect(lead.id)}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium">{lead.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.company_name}</td>
                     <td className="px-4 py-3">
@@ -311,10 +382,16 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
               <Label>Notes</Label>
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Additional notes about this lead..." rows={3} />
             </div>
-            <Button onClick={handleCreate} disabled={creating} className="mt-2">
-              {creating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
-              Create & Generate Messages
-            </Button>
+            <div className="flex gap-2 mt-2">
+              <Button onClick={() => handleCreate(true)} disabled={creating} className="flex-1">
+                {creating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
+                Create & Generate Messages
+              </Button>
+              <Button onClick={() => handleCreate(false)} disabled={creating} variant="outline" className="flex-1">
+                {creating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+                Create Only
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
