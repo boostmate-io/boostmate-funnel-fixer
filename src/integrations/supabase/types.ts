@@ -768,6 +768,7 @@ export type Database = {
           company_name: string
           created_at: string
           deleted_at: string | null
+          email: string
           fu1_sent_at: string | null
           fu2_sent_at: string | null
           fu3_sent_at: string | null
@@ -775,6 +776,7 @@ export type Database = {
           id: string
           last_contact_at: string | null
           lead_source: string
+          link: string
           main_angle: string
           main_problem: string
           name: string
@@ -796,6 +798,7 @@ export type Database = {
           company_name?: string
           created_at?: string
           deleted_at?: string | null
+          email?: string
           fu1_sent_at?: string | null
           fu2_sent_at?: string | null
           fu3_sent_at?: string | null
@@ -803,6 +806,7 @@ export type Database = {
           id?: string
           last_contact_at?: string | null
           lead_source?: string
+          link?: string
           main_angle?: string
           main_problem?: string
           name?: string
@@ -824,6 +828,7 @@ export type Database = {
           company_name?: string
           created_at?: string
           deleted_at?: string | null
+          email?: string
           fu1_sent_at?: string | null
           fu2_sent_at?: string | null
           fu3_sent_at?: string | null
@@ -831,6 +836,7 @@ export type Database = {
           id?: string
           last_contact_at?: string | null
           lead_source?: string
+          link?: string
           main_angle?: string
           main_problem?: string
           name?: string

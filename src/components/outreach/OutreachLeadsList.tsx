@@ -44,6 +44,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
   const [form, setForm] = useState({
     name: "", company_name: "", niche: "", offer: "", platform: "Instagram",
     profile_url: "", notes: "", setup_type: "", lead_source: "",
+    link: "", email: "",
     outreach_channel: "dm" as "dm" | "email",
   });
 
@@ -69,7 +70,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     if (error) { toast.error("Failed to create lead"); setCreating(false); return; }
     toast.success("Lead created");
     setShowCreate(false);
-    setForm({ name: "", company_name: "", niche: "", offer: "", platform: "Instagram", profile_url: "", notes: "", setup_type: "", lead_source: "", outreach_channel: "dm" });
+    setForm({ name: "", company_name: "", niche: "", offer: "", platform: "Instagram", profile_url: "", notes: "", setup_type: "", lead_source: "", link: "", email: "", outreach_channel: "dm" });
     setCreating(false);
     refresh();
     if (data) handleGenerate((data as any).id);
@@ -270,6 +271,16 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
                     <SelectItem value="email">Email</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Link</Label>
+                <Input value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@example.com" type="email" />
               </div>
             </div>
             <div>
