@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash2 } from "lucide-react";
@@ -20,6 +21,7 @@ import { toast } from "sonner";
 const DeleteAccountSection = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [showDialog, setShowDialog] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -32,7 +34,7 @@ const DeleteAccountSection = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      await supabase.auth.signOut();
+      await signOut();
       navigate("/");
     } catch (err: any) {
       toast.error(err.message || "Error deleting account");
