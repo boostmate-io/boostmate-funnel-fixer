@@ -767,6 +767,11 @@ export type Database = {
         Row: {
           company_name: string
           created_at: string
+          deleted_at: string | null
+          fu1_sent_at: string | null
+          fu2_sent_at: string | null
+          fu3_sent_at: string | null
+          fu4_sent_at: string | null
           id: string
           last_contact_at: string | null
           lead_source: string
@@ -777,6 +782,7 @@ export type Database = {
           niche: string
           notes: string
           offer: string
+          opener_sent_at: string | null
           outreach_channel: Database["public"]["Enums"]["outreach_channel"]
           platform: string
           profile_url: string
@@ -789,6 +795,11 @@ export type Database = {
         Insert: {
           company_name?: string
           created_at?: string
+          deleted_at?: string | null
+          fu1_sent_at?: string | null
+          fu2_sent_at?: string | null
+          fu3_sent_at?: string | null
+          fu4_sent_at?: string | null
           id?: string
           last_contact_at?: string | null
           lead_source?: string
@@ -799,6 +810,7 @@ export type Database = {
           niche?: string
           notes?: string
           offer?: string
+          opener_sent_at?: string | null
           outreach_channel?: Database["public"]["Enums"]["outreach_channel"]
           platform?: string
           profile_url?: string
@@ -811,6 +823,11 @@ export type Database = {
         Update: {
           company_name?: string
           created_at?: string
+          deleted_at?: string | null
+          fu1_sent_at?: string | null
+          fu2_sent_at?: string | null
+          fu3_sent_at?: string | null
+          fu4_sent_at?: string | null
           id?: string
           last_contact_at?: string | null
           lead_source?: string
@@ -821,6 +838,7 @@ export type Database = {
           niche?: string
           notes?: string
           offer?: string
+          opener_sent_at?: string | null
           outreach_channel?: Database["public"]["Enums"]["outreach_channel"]
           platform?: string
           profile_url?: string
@@ -928,6 +946,10 @@ export type Database = {
       outreach_setup_types: {
         Row: {
           created_at: string
+          default_action: string
+          default_angle: string
+          default_problem: string
+          description: string
           id: string
           name: string
           sort_order: number
@@ -936,6 +958,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_action?: string
+          default_angle?: string
+          default_problem?: string
+          description?: string
           id?: string
           name?: string
           sort_order?: number
@@ -944,6 +970,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_action?: string
+          default_angle?: string
+          default_problem?: string
+          description?: string
           id?: string
           name?: string
           sort_order?: number
@@ -1170,6 +1200,7 @@ export type Database = {
         | "interested"
         | "closed"
         | "no_response"
+        | "not_interested"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1325,6 +1356,7 @@ export const Constants = {
         "interested",
         "closed",
         "no_response",
+        "not_interested",
       ],
     },
   },
