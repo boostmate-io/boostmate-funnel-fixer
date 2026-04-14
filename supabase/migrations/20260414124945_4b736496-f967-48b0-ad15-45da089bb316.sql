@@ -1,0 +1,3 @@
+ALTER TABLE public.outreach_leads
+  ADD COLUMN IF NOT EXISTS link text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS email text NOT NULL DEFAULT '';
