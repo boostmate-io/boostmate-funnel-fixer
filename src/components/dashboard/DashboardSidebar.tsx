@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem, ShieldCheck, Building2, Building } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem, ShieldCheck, Building2, Building, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -29,6 +29,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
     { id: "funnels", label: "Funnels", icon: GitBranch },
     { id: "assets-library", label: t("dashboard.sidebar.assetsLibrary"), icon: Library },
     { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: TrendingUp },
+    ...(isAgency ? [{ id: "outreach", label: "Outreach", icon: Send }] : []),
     ...(isAgency ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
     { id: "settings", label: t("dashboard.sidebar.settings"), icon: Settings },
     ...(isAppAdmin ? [{ id: "admin", label: "Admin", icon: ShieldCheck }] : []),
