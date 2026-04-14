@@ -8,11 +8,13 @@ export interface OutreachLead {
   sub_account_id: string;
   user_id: string;
   name: string;
+  last_name: string;
   company_name: string;
   niche: string;
   offer: string;
   platform: string;
   profile_url: string;
+  profile_url_2: string;
   notes: string;
   setup_type: string;
   main_problem: string;
