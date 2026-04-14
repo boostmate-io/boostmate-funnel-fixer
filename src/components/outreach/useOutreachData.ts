@@ -18,6 +18,8 @@ export interface OutreachLead {
   main_problem: string;
   main_angle: string;
   lead_source: string;
+  link: string;
+  email: string;
   outreach_channel: "dm" | "email";
   status: "new" | "drafted" | "ready_to_send" | "sent" | "replied" | "interested" | "closed" | "no_response" | "not_interested";
   last_contact_at: string | null;

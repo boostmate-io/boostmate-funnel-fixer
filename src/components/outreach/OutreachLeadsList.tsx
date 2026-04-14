@@ -44,6 +44,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
   const [form, setForm] = useState({
     name: "", company_name: "", niche: "", offer: "", platform: "Instagram",
     profile_url: "", notes: "", setup_type: "", lead_source: "",
+    link: "", email: "",
     outreach_channel: "dm" as "dm" | "email",
   });
 
@@ -69,7 +70,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     if (error) { toast.error("Failed to create lead"); setCreating(false); return; }
     toast.success("Lead created");
     setShowCreate(false);
-    setForm({ name: "", company_name: "", niche: "", offer: "", platform: "Instagram", profile_url: "", notes: "", setup_type: "", lead_source: "", outreach_channel: "dm" });
+    setForm({ name: "", company_name: "", niche: "", offer: "", platform: "Instagram", profile_url: "", notes: "", setup_type: "", lead_source: "", link: "", email: "", outreach_channel: "dm" });
     setCreating(false);
     refresh();
     if (data) handleGenerate((data as any).id);
