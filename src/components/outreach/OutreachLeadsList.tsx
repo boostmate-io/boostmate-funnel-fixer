@@ -343,16 +343,6 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Channel</Label>
-                <Select value={form.outreach_channel} onValueChange={(v) => setForm({ ...form, outreach_channel: v as "dm" | "email" })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dm">DM</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
