@@ -19,9 +19,15 @@ export interface OutreachLead {
   main_angle: string;
   lead_source: string;
   outreach_channel: "dm" | "email";
-  status: "new" | "drafted" | "ready_to_send" | "sent" | "replied" | "interested" | "closed" | "no_response";
+  status: "new" | "drafted" | "ready_to_send" | "sent" | "replied" | "interested" | "closed" | "no_response" | "not_interested";
   last_contact_at: string | null;
   next_followup_at: string | null;
+  deleted_at: string | null;
+  opener_sent_at: string | null;
+  fu1_sent_at: string | null;
+  fu2_sent_at: string | null;
+  fu3_sent_at: string | null;
+  fu4_sent_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +47,10 @@ export interface OutreachSetupType {
   id: string;
   sub_account_id: string;
   name: string;
+  description: string;
+  default_action: string;
+  default_problem: string;
+  default_angle: string;
   sort_order: number;
 }
 
@@ -60,6 +70,38 @@ export interface OutreachSettingsData {
   ai_prompt_context: string;
 }
 
+export const PLATFORM_OPTIONS = ["Instagram", "Facebook", "LinkedIn", "Email"] as const;
+
+export const ALL_STATUSES = [
+  "new", "drafted", "ready_to_send", "sent", "replied",
+  "interested", "closed", "no_response", "not_interested",
+] as const;
+
+export function getNextFollowUp(lead: OutreachLead): { next: string | null; isDue: boolean; label: string } {
+  if (!lead.opener_sent_at) return { next: "opener", isDue: false, label: "Opener not sent" };
+  if (!lead.fu1_sent_at) {
+    const due = new Date(lead.opener_sent_at);
+    due.setDate(due.getDate() + 1);
+    return { next: "fu1", isDue: new Date() >= due, label: "FU1" };
+  }
+  if (!lead.fu2_sent_at) {
+    const due = new Date(lead.fu1_sent_at);
+    due.setDate(due.getDate() + 1);
+    return { next: "fu2", isDue: new Date() >= due, label: "FU2" };
+  }
+  if (!lead.fu3_sent_at) {
+    const due = new Date(lead.fu2_sent_at);
+    due.setDate(due.getDate() + 1);
+    return { next: "fu3", isDue: new Date() >= due, label: "FU3" };
+  }
+  if (!lead.fu4_sent_at) {
+    const due = new Date(lead.fu3_sent_at);
+    due.setDate(due.getDate() + 1);
+    return { next: "fu4", isDue: new Date() >= due, label: "FU4" };
+  }
+  return { next: null, isDue: false, label: "All sent" };
+}
+
 export function useOutreachLeads() {
   const { activeSubAccountId } = useWorkspace();
   const [leads, setLeads] = useState<OutreachLead[]>([]);
@@ -72,6 +114,7 @@ export function useOutreachLeads() {
       .from("outreach_leads")
       .select("*")
       .eq("sub_account_id", activeSubAccountId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     if (error) { toast.error("Failed to load leads"); console.error(error); }
     setLeads((data || []) as unknown as OutreachLead[]);

@@ -2,12 +2,12 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOutreachLeads, useOutreachConfig } from "./useOutreachData";
+import { useOutreachLeads, useOutreachConfig, PLATFORM_OPTIONS, ALL_STATUSES, getNextFollowUp } from "./useOutreachData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Sparkles, Loader2, ExternalLink } from "lucide-react";
+import { Plus, Search, Sparkles, Loader2, ExternalLink, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,7 @@ const STATUS_COLORS: Record<string, string> = {
   interested: "bg-orange-100 text-orange-800",
   closed: "bg-gray-100 text-gray-800",
   no_response: "bg-red-100 text-red-800",
+  not_interested: "bg-gray-200 text-gray-600",
 };
 
 interface Props { onRefresh: () => void; }
@@ -34,13 +35,14 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
   const { setupTypes, leadSources } = useOutreachConfig();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [followUpFilter, setFollowUpFilter] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    name: "", company_name: "", niche: "", offer: "", platform: "",
+    name: "", company_name: "", niche: "", offer: "", platform: "Instagram",
     profile_url: "", notes: "", setup_type: "", lead_source: "",
     outreach_channel: "dm" as "dm" | "email",
   });
@@ -48,6 +50,10 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
   const handleCreate = async () => {
     if (!activeSubAccountId || !user?.id || !form.name.trim()) {
       toast.error("Name is required");
+      return;
+    }
+    if (!form.platform) {
+      toast.error("Platform is required");
       return;
     }
     setCreating(true);
@@ -63,14 +69,10 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     if (error) { toast.error("Failed to create lead"); setCreating(false); return; }
     toast.success("Lead created");
     setShowCreate(false);
-    setForm({ name: "", company_name: "", niche: "", offer: "", platform: "", profile_url: "", notes: "", setup_type: "", lead_source: "", outreach_channel: "dm" });
+    setForm({ name: "", company_name: "", niche: "", offer: "", platform: "Instagram", profile_url: "", notes: "", setup_type: "", lead_source: "", outreach_channel: "dm" });
     setCreating(false);
     refresh();
-
-    // Auto-generate messages
-    if (data) {
-      handleGenerate((data as any).id);
-    }
+    if (data) handleGenerate((data as any).id);
   };
 
   const handleGenerate = async (leadId: string) => {
@@ -94,7 +96,9 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) ||
       l.company_name.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
-    return matchSearch && matchStatus;
+    const fu = getNextFollowUp(l);
+    const matchFollowUp = !followUpFilter || (fu.next && fu.isDue);
+    return matchSearch && matchStatus && matchFollowUp;
   });
 
   if (selectedLeadId) {
@@ -104,15 +108,16 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
         onBack={() => { setSelectedLeadId(null); refresh(); }}
         onGenerate={() => handleGenerate(selectedLeadId)}
         generating={generating === selectedLeadId}
+        onDeleted={() => { setSelectedLeadId(null); refresh(); }}
       />
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 flex-1">
-          <div className="relative flex-1 max-w-sm">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2 flex-1 flex-wrap">
+          <div className="relative flex-1 max-w-sm min-w-48">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="pl-9" />
           </div>
@@ -120,16 +125,18 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="new">New</SelectItem>
-              <SelectItem value="drafted">Drafted</SelectItem>
-              <SelectItem value="ready_to_send">Ready to Send</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="replied">Replied</SelectItem>
-              <SelectItem value="interested">Interested</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
-              <SelectItem value="no_response">No Response</SelectItem>
+              {ALL_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
+          <Button
+            variant={followUpFilter ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFollowUpFilter(!followUpFilter)}
+          >
+            <Clock className="w-3.5 h-3.5 mr-1" /> Follow-up due
+          </Button>
         </div>
         <Button onClick={() => setShowCreate(true)}>
           <Plus className="w-4 h-4 mr-1" /> Add Lead
@@ -142,7 +149,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
-          <p>No leads yet. Add your first lead to get started.</p>
+          <p>No leads found.</p>
         </div>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
@@ -153,51 +160,65 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
                 <th className="text-left px-4 py-3 font-medium">Company</th>
                 <th className="text-left px-4 py-3 font-medium">Channel</th>
                 <th className="text-left px-4 py-3 font-medium">Status</th>
+                <th className="text-left px-4 py-3 font-medium">Follow-up</th>
                 <th className="text-left px-4 py-3 font-medium">Setup Type</th>
                 <th className="text-left px-4 py-3 font-medium">Source</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((lead) => (
-                <tr
-                  key={lead.id}
-                  className="border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
-                  onClick={() => setSelectedLeadId(lead.id)}
-                >
-                  <td className="px-4 py-3 font-medium">{lead.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{lead.company_name}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className="text-xs uppercase">{lead.outreach_channel}</Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[lead.status] || ""}`}>
-                      {lead.status.replace(/_/g, " ")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{lead.setup_type || "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{lead.lead_source || "—"}</td>
-                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1 justify-end">
-                      {lead.profile_url && (
-                        <Button size="sm" variant="ghost" asChild>
-                          <a href={lead.profile_url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        </Button>
+              {filtered.map((lead) => {
+                const fu = getNextFollowUp(lead);
+                return (
+                  <tr
+                    key={lead.id}
+                    className="border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
+                    onClick={() => setSelectedLeadId(lead.id)}
+                  >
+                    <td className="px-4 py-3 font-medium">{lead.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{lead.company_name}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant="outline" className="text-xs uppercase">{lead.outreach_channel}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[lead.status] || ""}`}>
+                        {lead.status.replace(/_/g, " ")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {fu.next ? (
+                        <Badge variant={fu.isDue ? "default" : "secondary"} className={`text-xs ${fu.isDue ? "bg-orange-500 hover:bg-orange-600" : ""}`}>
+                          {fu.isDue && <Clock className="w-3 h-3 mr-0.5" />}
+                          {fu.label}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{fu.label}</span>
                       )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleGenerate(lead.id)}
-                        disabled={generating === lead.id}
-                      >
-                        {generating === lead.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{lead.setup_type || "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{lead.lead_source || "—"}</td>
+                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1 justify-end">
+                        {lead.profile_url && (
+                          <Button size="sm" variant="ghost" asChild>
+                            <a href={lead.profile_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleGenerate(lead.id)}
+                          disabled={generating === lead.id}
+                        >
+                          {generating === lead.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -232,8 +253,13 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Platform</Label>
-                <Input value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })} placeholder="Instagram" />
+                <Label>Platform *</Label>
+                <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger>
+                  <SelectContent>
+                    {PLATFORM_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Channel</Label>
@@ -253,29 +279,21 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Setup Type</Label>
-                {setupTypes.length > 0 ? (
-                  <Select value={form.setup_type} onValueChange={(v) => setForm({ ...form, setup_type: v })}>
-                    <SelectTrigger><SelectValue placeholder="Auto-detect" /></SelectTrigger>
-                    <SelectContent>
-                      {setupTypes.map((st) => <SelectItem key={st.id} value={st.name}>{st.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input value={form.setup_type} onChange={(e) => setForm({ ...form, setup_type: e.target.value })} placeholder="Auto-detected by AI" />
-                )}
+                <Select value={form.setup_type} onValueChange={(v) => setForm({ ...form, setup_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="Auto-detect by AI" /></SelectTrigger>
+                  <SelectContent>
+                    {setupTypes.map((st) => <SelectItem key={st.id} value={st.name}>{st.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Lead Source</Label>
-                {leadSources.length > 0 ? (
-                  <Select value={form.lead_source} onValueChange={(v) => setForm({ ...form, lead_source: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
-                    <SelectContent>
-                      {leadSources.map((ls) => <SelectItem key={ls.id} value={ls.name}>{ls.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input value={form.lead_source} onChange={(e) => setForm({ ...form, lead_source: e.target.value })} placeholder="e.g. Instagram search" />
-                )}
+                <Select value={form.lead_source} onValueChange={(v) => setForm({ ...form, lead_source: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
+                  <SelectContent>
+                    {leadSources.map((ls) => <SelectItem key={ls.id} value={ls.name}>{ls.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div>

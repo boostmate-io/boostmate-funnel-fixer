@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useOutreachLeads, type OutreachLead, type OutreachMessage } from "./useOutreachData";
+import { useOutreachLeads, type OutreachLead, type OutreachMessage, getNextFollowUp } from "./useOutreachData";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Check, CheckCheck, Copy, Loader2, RefreshCw, Send, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, CheckCheck, Clock, Copy, Loader2, Send, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props { onRefresh: () => void; }
@@ -19,15 +18,21 @@ const MESSAGE_LABELS: Record<string, string> = {
   followup_4: "FU4",
 };
 
+const MSG_TO_FIELD: Record<string, string> = {
+  opener: "opener_sent_at",
+  followup_1: "fu1_sent_at",
+  followup_2: "fu2_sent_at",
+  followup_3: "fu3_sent_at",
+  followup_4: "fu4_sent_at",
+};
+
 const OutreachDraftQueue = ({ onRefresh }: Props) => {
-  const { activeSubAccountId } = useWorkspace();
   const { leads, loading } = useOutreachLeads();
   const [messagesMap, setMessagesMap] = useState<Record<string, OutreachMessage[]>>({});
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
 
-  // Filter to only drafted leads or leads with unsent messages
   const draftLeads = leads.filter((l) => ["new", "drafted", "ready_to_send"].includes(l.status));
 
   useEffect(() => {
@@ -68,10 +73,15 @@ const OutreachDraftQueue = ({ onRefresh }: Props) => {
     }
   };
 
-  const markSent = async (msgId: string, leadId: string) => {
+  const markSent = async (msgId: string, leadId: string, messageType: string) => {
     const now = new Date().toISOString();
     await supabase.from("outreach_messages").update({ sent: true, sent_at: now } as any).eq("id", msgId);
-    await supabase.from("outreach_leads").update({ last_contact_at: now, status: "sent" } as any).eq("id", leadId);
+
+    const fieldName = MSG_TO_FIELD[messageType];
+    const leadUpdate: any = { last_contact_at: now, status: "sent" };
+    if (fieldName) leadUpdate[fieldName] = now;
+
+    await supabase.from("outreach_leads").update(leadUpdate).eq("id", leadId);
     toast.success("Marked as sent");
     loadAllMessages();
   };
@@ -89,7 +99,7 @@ const OutreachDraftQueue = ({ onRefresh }: Props) => {
 
   if (loading || loadingMessages) return <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
 
-  if (draftLeads.length === 0) return <div className="text-center py-16 text-muted-foreground">No drafts to review. Add leads and generate messages first.</div>;
+  if (draftLeads.length === 0) return <div className="text-center py-16 text-muted-foreground">No drafts to review.</div>;
 
   return (
     <div className="space-y-3">
@@ -98,6 +108,7 @@ const OutreachDraftQueue = ({ onRefresh }: Props) => {
         const msgs = messagesMap[lead.id] || [];
         const isExpanded = expandedLead === lead.id;
         const unsentCount = msgs.filter((m) => !m.sent).length;
+        const fu = getNextFollowUp(lead);
 
         return (
           <div key={lead.id} className="bg-card border border-border rounded-lg overflow-hidden">
@@ -110,6 +121,11 @@ const OutreachDraftQueue = ({ onRefresh }: Props) => {
                 {lead.company_name && <span className="text-sm text-muted-foreground">{lead.company_name}</span>}
                 <Badge variant="outline" className="uppercase text-xs">{lead.outreach_channel}</Badge>
                 {unsentCount > 0 && <Badge variant="secondary" className="text-xs">{unsentCount} unsent</Badge>}
+                {fu.next && fu.isDue && (
+                  <Badge className="text-xs bg-orange-500 hover:bg-orange-600">
+                    <Clock className="w-3 h-3 mr-0.5" />{fu.label}
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleGenerate(lead.id); }} disabled={generating === lead.id}>
@@ -141,7 +157,7 @@ const OutreachDraftQueue = ({ onRefresh }: Props) => {
                         ) : (
                           <>
                             <Button size="sm" variant="ghost" onClick={() => copyMessage(msg.content)}><Copy className="w-3 h-3" /></Button>
-                            <Button size="sm" variant="ghost" onClick={() => markSent(msg.id, lead.id)}><Send className="w-3 h-3" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => markSent(msg.id, lead.id, msg.message_type)}><Send className="w-3 h-3" /></Button>
                           </>
                         )}
                       </div>

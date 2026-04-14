@@ -1,7 +1,7 @@
-import { useOutreachLeads, type OutreachLead } from "./useOutreachData";
+import { useOutreachLeads, type OutreachLead, ALL_STATUSES, getNextFollowUp } from "./useOutreachData";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 const PIPELINE_STATUSES = [
@@ -13,6 +13,7 @@ const PIPELINE_STATUSES = [
   { key: "interested", label: "Interested", color: "bg-orange-50 border-orange-200" },
   { key: "closed", label: "Closed", color: "bg-gray-50 border-gray-200" },
   { key: "no_response", label: "No Response", color: "bg-red-50 border-red-200" },
+  { key: "not_interested", label: "Not Interested", color: "bg-gray-100 border-gray-300" },
 ];
 
 interface Props { onRefresh: () => void; }
@@ -47,21 +48,29 @@ const OutreachPipeline = ({ onRefresh }: Props) => {
               <Badge variant="secondary" className="text-xs">{colLeads.length}</Badge>
             </div>
             <div className="space-y-2">
-              {colLeads.map((lead) => (
-                <div
-                  key={lead.id}
-                  draggable
-                  onDragStart={(e) => e.dataTransfer.setData("leadId", lead.id)}
-                  className="bg-card border border-border rounded-md p-3 cursor-grab active:cursor-grabbing shadow-sm hover:shadow transition-shadow"
-                >
-                  <p className="font-medium text-sm truncate">{lead.name}</p>
-                  {lead.company_name && <p className="text-xs text-muted-foreground truncate">{lead.company_name}</p>}
-                  <div className="flex items-center gap-1 mt-2">
-                    <Badge variant="outline" className="text-xs uppercase">{lead.outreach_channel}</Badge>
-                    {lead.setup_type && <Badge variant="secondary" className="text-xs truncate max-w-20">{lead.setup_type}</Badge>}
+              {colLeads.map((lead) => {
+                const fu = getNextFollowUp(lead);
+                return (
+                  <div
+                    key={lead.id}
+                    draggable
+                    onDragStart={(e) => e.dataTransfer.setData("leadId", lead.id)}
+                    className="bg-card border border-border rounded-md p-3 cursor-grab active:cursor-grabbing shadow-sm hover:shadow transition-shadow"
+                  >
+                    <p className="font-medium text-sm truncate">{lead.name}</p>
+                    {lead.company_name && <p className="text-xs text-muted-foreground truncate">{lead.company_name}</p>}
+                    <div className="flex items-center gap-1 mt-2 flex-wrap">
+                      <Badge variant="outline" className="text-xs uppercase">{lead.outreach_channel}</Badge>
+                      {lead.setup_type && <Badge variant="secondary" className="text-xs truncate max-w-20">{lead.setup_type}</Badge>}
+                      {fu.next && fu.isDue && (
+                        <Badge className="text-xs bg-orange-500 hover:bg-orange-600">
+                          <Clock className="w-3 h-3 mr-0.5" />{fu.label}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );
