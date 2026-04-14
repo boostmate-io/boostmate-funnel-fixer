@@ -775,6 +775,7 @@ export type Database = {
           fu4_sent_at: string | null
           id: string
           last_contact_at: string | null
+          last_name: string
           lead_source: string
           link: string
           main_angle: string
@@ -788,6 +789,7 @@ export type Database = {
           outreach_channel: Database["public"]["Enums"]["outreach_channel"]
           platform: string
           profile_url: string
+          profile_url_2: string
           setup_type: string
           status: Database["public"]["Enums"]["outreach_status"]
           sub_account_id: string
@@ -805,6 +807,7 @@ export type Database = {
           fu4_sent_at?: string | null
           id?: string
           last_contact_at?: string | null
+          last_name?: string
           lead_source?: string
           link?: string
           main_angle?: string
@@ -818,6 +821,7 @@ export type Database = {
           outreach_channel?: Database["public"]["Enums"]["outreach_channel"]
           platform?: string
           profile_url?: string
+          profile_url_2?: string
           setup_type?: string
           status?: Database["public"]["Enums"]["outreach_status"]
           sub_account_id: string
@@ -835,6 +839,7 @@ export type Database = {
           fu4_sent_at?: string | null
           id?: string
           last_contact_at?: string | null
+          last_name?: string
           lead_source?: string
           link?: string
           main_angle?: string
@@ -848,6 +853,7 @@ export type Database = {
           outreach_channel?: Database["public"]["Enums"]["outreach_channel"]
           platform?: string
           profile_url?: string
+          profile_url_2?: string
           setup_type?: string
           status?: Database["public"]["Enums"]["outreach_status"]
           sub_account_id?: string
