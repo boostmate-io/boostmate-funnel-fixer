@@ -23,7 +23,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Not authenticated");
 
-    const { lead_id, settings } = await req.json();
+    const { lead_id } = await req.json();
     if (!lead_id) throw new Error("lead_id is required");
 
     // Fetch lead
@@ -33,6 +33,20 @@ serve(async (req) => {
       .eq("id", lead_id)
       .single();
     if (leadError || !lead) throw new Error("Lead not found");
+
+    // Fetch setup types for this sub_account to find defaults
+    const { data: setupTypes } = await supabase
+      .from("outreach_setup_types")
+      .select("*")
+      .eq("sub_account_id", lead.sub_account_id);
+
+    // Find matching setup type for defaults
+    const matchingSetupType = (setupTypes || []).find((st: any) => st.name === lead.setup_type);
+    const setupDefaults = matchingSetupType ? {
+      action: matchingSetupType.default_action || "",
+      problem: matchingSetupType.default_problem || "",
+      angle: matchingSetupType.default_angle || "",
+    } : { action: "", problem: "", angle: "" };
 
     // Fetch outreach settings for this sub_account
     const { data: outreachSettings } = await supabase
@@ -52,16 +66,28 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Build setup type context for AI
+    const setupTypesList = (setupTypes || []).map((st: any) =>
+      `- ${st.name}${st.description ? ` (${st.description})` : ""}${st.default_action ? ` | Action: ${st.default_action}` : ""}${st.default_problem ? ` | Problem: ${st.default_problem}` : ""}${st.default_angle ? ` | Angle: ${st.default_angle}` : ""}`
+    ).join("\n");
+
     const systemPrompt = `You are an outreach message copywriter for a funnel-building agency. You write DMs and emails that are short, conversational, non-salesy, and natural. No emojis. No exclamation marks unless absolutely necessary.
 
 Your tone: ${tone}
 Max lines per message: ${maxLines}
 ${aiPromptContext ? `Additional context: ${aiPromptContext}` : ""}
 
+Available setup types and their defaults:
+${setupTypesList || "No setup types defined — detect the best fit."}
+
+${setupDefaults.action ? `The lead's setup type default action: "${setupDefaults.action}"` : ""}
+${setupDefaults.problem ? `The lead's setup type default problem: "${setupDefaults.problem}"` : ""}
+${setupDefaults.angle ? `The lead's setup type default angle: "${setupDefaults.angle}"` : ""}
+
 You will generate messages for outreach to a lead. Return a JSON object with these exact keys:
-- setup_type: detected setup type of the lead (e.g. "webinar funnel", "VSL", "direct offer page")
-- main_problem: the main conversion problem you detect based on their setup
-- main_angle: the angle you'd use to approach them
+- setup_type: detected or confirmed setup type of the lead (must be one of the available setup types if defined, otherwise suggest one)
+- main_problem: the main conversion problem (use setup type default_problem as starting point if available, adapt to lead specifics)
+- main_angle: the angle you'd use (use setup type default_angle as starting point if available, adapt to lead specifics)
 - opener: the opening DM/email message
 - opener_alt: an alternative opener
 - followup_1: first follow-up message
@@ -70,7 +96,7 @@ You will generate messages for outreach to a lead. Return a JSON object with the
 - followup_4: fourth follow-up (clean exit)
 
 OPENER STRUCTURE (follow strictly):
-Line 1: Hey [name], quick question — are you mainly [specific action based on setup] to get clients right now?
+Line 1: Hey [name], quick question — are you mainly [specific action based on setup - use default_action if available] to get clients right now?
 Line 2: Short insight about their setup causing lost conversions
 Line 3: I build sales funnels for coaches, which is basically a simple flow that solves that problem
 Line 4: Happy to map out a few ideas for your specific situation for free if you're open to it.
@@ -131,8 +157,7 @@ ${lead.main_angle ? `Current main angle: ${lead.main_angle}` : ""}`;
 
     const aiData = await aiResponse.json();
     const content = aiData.choices?.[0]?.message?.content || "";
-    
-    // Parse JSON from response (strip markdown code blocks if present)
+
     let parsed;
     try {
       const cleaned = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();

@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOutreachMessages, type OutreachLead, type OutreachMessage } from "./useOutreachData";
+import { useOutreachMessages, useOutreachConfig, type OutreachLead, PLATFORM_OPTIONS, ALL_STATUSES, getNextFollowUp } from "./useOutreachData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Check, CheckCheck, Copy, Loader2, RefreshCw, Send } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ArrowLeft, Check, CheckCheck, Clock, Copy, Loader2, RefreshCw, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const MESSAGE_LABELS: Record<string, string> = {
@@ -19,28 +20,34 @@ const MESSAGE_LABELS: Record<string, string> = {
   followup_4: "Follow-up 4",
 };
 
-const STATUSES = ["new", "drafted", "ready_to_send", "sent", "replied", "interested", "closed", "no_response"];
+const MSG_TO_FIELD: Record<string, string> = {
+  opener: "opener_sent_at",
+  followup_1: "fu1_sent_at",
+  followup_2: "fu2_sent_at",
+  followup_3: "fu3_sent_at",
+  followup_4: "fu4_sent_at",
+};
 
 interface Props {
   leadId: string;
   onBack: () => void;
   onGenerate: () => void;
   generating: boolean;
+  onDeleted: () => void;
 }
 
-const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating }: Props) => {
+const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted }: Props) => {
   const [lead, setLead] = useState<OutreachLead | null>(null);
   const [loading, setLoading] = useState(true);
   const { messages, loading: messagesLoading, refresh: refreshMessages } = useOutreachMessages(leadId);
+  const { setupTypes, leadSources } = useOutreachConfig();
   const [editedMessages, setEditedMessages] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => { loadLead(); }, [leadId]);
 
   useEffect(() => {
-    loadLead();
-  }, [leadId]);
-
-  useEffect(() => {
-    // Sync edited messages when messages load
     const map: Record<string, string> = {};
     messages.forEach((m) => { map[m.id] = m.content; });
     setEditedMessages(map);
@@ -65,10 +72,16 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating }: Props) =
     toast.success("Message updated");
   };
 
-  const markSent = async (msgId: string) => {
+  const markSent = async (msgId: string, messageType: string) => {
     const now = new Date().toISOString();
     await supabase.from("outreach_messages").update({ sent: true, sent_at: now } as any).eq("id", msgId);
-    await supabase.from("outreach_leads").update({ last_contact_at: now, status: "sent" } as any).eq("id", leadId);
+
+    // Update the corresponding sent_at field on the lead
+    const fieldName = MSG_TO_FIELD[messageType];
+    const leadUpdate: any = { last_contact_at: now, status: "sent" };
+    if (fieldName) leadUpdate[fieldName] = now;
+
+    await supabase.from("outreach_leads").update(leadUpdate).eq("id", leadId);
     refreshMessages();
     loadLead();
     toast.success("Marked as sent");
@@ -87,17 +100,66 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating }: Props) =
     toast.success("All messages accepted — ready to send");
   };
 
+  const deleteLead = async () => {
+    setDeleting(true);
+    const now = new Date().toISOString();
+    await supabase.from("outreach_leads").update({ deleted_at: now } as any).eq("id", leadId);
+    toast.success("Lead deleted");
+    setDeleting(false);
+    onDeleted();
+  };
+
   if (loading) return <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   if (!lead) return <div className="text-center py-16 text-muted-foreground">Lead not found</div>;
 
+  const fu = getNextFollowUp(lead);
+
   return (
     <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button>
-        <h2 className="text-xl font-display font-bold">{lead.name}</h2>
-        {lead.company_name && <span className="text-muted-foreground">— {lead.company_name}</span>}
-        <Badge variant="outline" className="uppercase text-xs">{lead.outreach_channel}</Badge>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button>
+          <h2 className="text-xl font-display font-bold">{lead.name}</h2>
+          {lead.company_name && <span className="text-muted-foreground">— {lead.company_name}</span>}
+          <Badge variant="outline" className="uppercase text-xs">{lead.outreach_channel}</Badge>
+        </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+              <Trash2 className="w-4 h-4 mr-1" /> Delete
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this lead?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove {lead.name} from your leads. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={deleteLead} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
+
+      {/* Follow-up indicator */}
+      {fu.next && (
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${fu.isDue ? "bg-orange-50 border border-orange-200 text-orange-800" : "bg-muted/50 text-muted-foreground"}`}>
+          <Clock className="w-4 h-4" />
+          {fu.isDue ? `Follow-up due: ${fu.label}` : `Next follow-up: ${fu.label}`}
+          <div className="flex gap-1 ml-auto">
+            {lead.opener_sent_at && <Badge variant="secondary" className="text-xs">Opener ✓</Badge>}
+            {lead.fu1_sent_at && <Badge variant="secondary" className="text-xs">FU1 ✓</Badge>}
+            {lead.fu2_sent_at && <Badge variant="secondary" className="text-xs">FU2 ✓</Badge>}
+            {lead.fu3_sent_at && <Badge variant="secondary" className="text-xs">FU3 ✓</Badge>}
+            {lead.fu4_sent_at && <Badge variant="secondary" className="text-xs">FU4 ✓</Badge>}
+          </div>
+        </div>
+      )}
 
       {/* Lead info */}
       <div className="bg-card border border-border rounded-lg p-4 grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -106,13 +168,18 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating }: Props) =
           <Select value={lead.status} onValueChange={(v) => updateLead({ status: v as any })}>
             <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {STATUSES.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
+              {ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Setup Type</Label>
-          <Input value={lead.setup_type} onChange={(e) => updateLead({ setup_type: e.target.value })} className="h-8 mt-1" />
+          <Select value={lead.setup_type || ""} onValueChange={(v) => updateLead({ setup_type: v })}>
+            <SelectTrigger className="h-8 mt-1"><SelectValue placeholder="Select..." /></SelectTrigger>
+            <SelectContent>
+              {setupTypes.map((st) => <SelectItem key={st.id} value={st.name}>{st.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Main Problem</Label>
@@ -128,7 +195,33 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating }: Props) =
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Platform</Label>
-          <Input value={lead.platform} onChange={(e) => updateLead({ platform: e.target.value })} className="h-8 mt-1" />
+          <Select value={lead.platform || ""} onValueChange={(v) => updateLead({ platform: v })}>
+            <SelectTrigger className="h-8 mt-1"><SelectValue placeholder="Select..." /></SelectTrigger>
+            <SelectContent>
+              {PLATFORM_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Lead Source</Label>
+          <Select value={lead.lead_source || ""} onValueChange={(v) => updateLead({ lead_source: v })}>
+            <SelectTrigger className="h-8 mt-1"><SelectValue placeholder="Select..." /></SelectTrigger>
+            <SelectContent>
+              {leadSources.map((ls) => <SelectItem key={ls.id} value={ls.name}>{ls.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Offer</Label>
+          <Input value={lead.offer} onChange={(e) => updateLead({ offer: e.target.value })} className="h-8 mt-1" />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Profile URL</Label>
+          <Input value={lead.profile_url} onChange={(e) => updateLead({ profile_url: e.target.value })} className="h-8 mt-1" />
+        </div>
+        <div className="col-span-2 md:col-span-3">
+          <Label className="text-xs text-muted-foreground">Notes</Label>
+          <Textarea value={lead.notes} onChange={(e) => updateLead({ notes: e.target.value })} className="mt-1" rows={2} />
         </div>
       </div>
 
@@ -167,7 +260,7 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating }: Props) =
                     <Copy className="w-3.5 h-3.5" />
                   </Button>
                   {!msg.sent && (
-                    <Button size="sm" variant="ghost" onClick={() => markSent(msg.id)}>
+                    <Button size="sm" variant="ghost" onClick={() => markSent(msg.id, msg.message_type)}>
                       <Send className="w-3.5 h-3.5" />
                     </Button>
                   )}
