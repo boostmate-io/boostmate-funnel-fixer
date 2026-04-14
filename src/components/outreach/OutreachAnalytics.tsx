@@ -50,9 +50,9 @@ const OutreachAnalytics = (_props: Props) => {
       const dayKey = new Date(l.created_at).toISOString().split("T")[0];
       if (!dailyMap[dayKey]) dailyMap[dayKey] = { new: 0, sent: 0, replied: 0, interested: 0, closed: 0, no_response: 0 };
       dailyMap[dayKey].new++;
-      if (["sent", "replied", "interested", "closed"].includes(l.status)) dailyMap[dayKey].sent++;
+      if (["sent", "replied", "interested", "closed", "no_response", "not_interested"].includes(l.status)) dailyMap[dayKey].sent++;
       if (["replied", "interested", "closed"].includes(l.status)) dailyMap[dayKey].replied++;
-      if (l.status === "interested") dailyMap[dayKey].interested++;
+      if (["interested", "closed"].includes(l.status)) dailyMap[dayKey].interested++;
       if (l.status === "closed") dailyMap[dayKey].closed++;
       if (l.status === "no_response") dailyMap[dayKey].no_response++;
 
@@ -71,14 +71,14 @@ const OutreachAnalytics = (_props: Props) => {
       const ch = l.outreach_channel;
       if (!byChannel[ch]) byChannel[ch] = { total: 0, sent: 0, replied: 0, interested: 0, closed: 0 };
       byChannel[ch].total++;
-      if (["sent", "replied", "interested", "closed"].includes(l.status)) byChannel[ch].sent++;
+      if (["sent", "replied", "interested", "closed", "no_response", "not_interested"].includes(l.status)) byChannel[ch].sent++;
       if (["replied", "interested", "closed"].includes(l.status)) byChannel[ch].replied++;
-      if (l.status === "interested") byChannel[ch].interested++;
+      if (["interested", "closed"].includes(l.status)) byChannel[ch].interested++;
       if (l.status === "closed") byChannel[ch].closed++;
     });
 
     // Conversion rates
-    const totalSent = byStatus.sent || 0 + (byStatus.replied || 0) + (byStatus.interested || 0) + (byStatus.closed || 0);
+    const totalSent = (byStatus.sent || 0) + (byStatus.replied || 0) + (byStatus.interested || 0) + (byStatus.closed || 0) + (byStatus.no_response || 0) + (byStatus.not_interested || 0);
     const totalReplied = (byStatus.replied || 0) + (byStatus.interested || 0) + (byStatus.closed || 0);
     const totalInterested = (byStatus.interested || 0) + (byStatus.closed || 0);
     const totalClosed = byStatus.closed || 0;
