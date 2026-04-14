@@ -219,6 +219,14 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
           <Label className="text-xs text-muted-foreground">Profile URL</Label>
           <Input value={lead.profile_url} onChange={(e) => updateLead({ profile_url: e.target.value })} className="h-8 mt-1" />
         </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Link</Label>
+          <Input value={lead.link} onChange={(e) => updateLead({ link: e.target.value })} className="h-8 mt-1" placeholder="https://..." />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Email</Label>
+          <Input value={lead.email} onChange={(e) => updateLead({ email: e.target.value })} className="h-8 mt-1" placeholder="john@example.com" type="email" />
+        </div>
         <div className="col-span-2 md:col-span-3">
           <Label className="text-xs text-muted-foreground">Notes</Label>
           <Textarea value={lead.notes} onChange={(e) => updateLead({ notes: e.target.value })} className="mt-1" rows={2} />
