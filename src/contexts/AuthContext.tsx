@@ -42,12 +42,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const lastKnownSessionRef = useRef<Session | null>(null);
   const unexpectedSignedOutAtRef = useRef<number | null>(null);
   const intentionalSignOutRef = useRef(false);
+  const currentUserRef = useRef<User | null>(null);
+  const currentSessionRef = useRef<Session | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const clearRecoveryTimer = () => {
-      if (recoveryTimerRef.current) {
+      if (recoveryTimerRef.current !== null) {
         window.clearTimeout(recoveryTimerRef.current);
         recoveryTimerRef.current = null;
       }
@@ -65,28 +67,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       unexpectedSignedOutAtRef.current = null;
       intentionalSignOutRef.current = false;
       lastKnownSessionRef.current = null;
+      currentSessionRef.current = null;
+      currentUserRef.current = null;
       setSession(null);
       setUser(null);
       setIsReady(true);
     };
 
-    const applySession = (nextSession: Session | null) => {
+    const applySession = (nextSession: Session | null, options?: { skipStateUpdate?: boolean }) => {
       if (!isMounted) return;
       clearRecoveryTimer();
       recoveryAttemptRef.current = 0;
       unexpectedSignedOutAtRef.current = null;
       intentionalSignOutRef.current = false;
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-      setIsReady(true);
+      currentSessionRef.current = nextSession;
+      currentUserRef.current = nextSession?.user ?? null;
       if (nextSession) {
         lastKnownSessionRef.current = nextSession;
       }
+
+      if (!options?.skipStateUpdate) {
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+      }
+
+      setIsReady(true);
     };
 
     const keepLastKnownSession = () => {
       const cachedSession = lastKnownSessionRef.current;
       if (!isMounted || !hasFreshAccessToken(cachedSession)) return false;
+      currentSessionRef.current = cachedSession;
+      currentUserRef.current = cachedSession.user;
       setSession(cachedSession);
       setUser(cachedSession.user);
       setIsReady(true);
@@ -145,7 +157,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!isMounted) return;
 
-      if (nextSession && ["INITIAL_SESSION", "SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED", "PASSWORD_RECOVERY"].includes(event)) {
+      if (event === "TOKEN_REFRESHED") {
+        if (!nextSession) {
+          startUnexpectedSignOutRecovery();
+          return;
+        }
+
+        const currentUserId = currentUserRef.current?.id ?? null;
+        const shouldSkipStateUpdate = currentUserId === nextSession.user.id;
+        applySession(nextSession, { skipStateUpdate: shouldSkipStateUpdate });
+        return;
+      }
+
+      if (nextSession && ["INITIAL_SESSION", "SIGNED_IN", "USER_UPDATED", "PASSWORD_RECOVERY"].includes(event)) {
         applySession(nextSession);
         return;
       }
@@ -219,6 +243,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     intentionalSignOutRef.current = true;
     recoveryAttemptRef.current = 0;
     unexpectedSignedOutAtRef.current = null;
+    lastKnownSessionRef.current = null;
 
     const { error } = await supabase.auth.signOut();
     if (error) {
