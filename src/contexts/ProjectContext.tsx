@@ -32,7 +32,7 @@ export const useProject = () => {
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, isReady } = useAuth();
   const userId = user?.id ?? null;
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
@@ -40,14 +40,44 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   );
   const [loading, setLoading] = useState(true);
   const loadedForUserRef = useRef<string | null>(null);
+  const pendingResetRef = useRef<number | null>(null);
+
+  const clearPendingReset = () => {
+    if (pendingResetRef.current !== null) {
+      window.clearTimeout(pendingResetRef.current);
+      pendingResetRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (!userId) {
-      setProjects([]);
-      setActiveProjectId(null);
-      localStorage.removeItem("activeProjectId");
-      setLoading(false);
-      loadedForUserRef.current = null;
+      if (!isReady) return;
+
+      clearPendingReset();
+
+      const reset = () => {
+        setProjects([]);
+        setActiveProjectId(null);
+        localStorage.removeItem("activeProjectId");
+        setLoading(false);
+        loadedForUserRef.current = null;
+      };
+
+      if (!loadedForUserRef.current) {
+        reset();
+        return;
+      }
+
+      pendingResetRef.current = window.setTimeout(reset, 2500);
+
+      return () => {
+        clearPendingReset();
+      };
+    }
+
+    clearPendingReset();
+
+    if (!isReady) {
       return;
     }
 
@@ -99,7 +129,13 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => { cancelled = true; };
-  }, [userId, t]);
+  }, [userId, isReady, t]);
+
+  useEffect(() => {
+    return () => {
+      clearPendingReset();
+    };
+  }, []);
 
   useEffect(() => {
     if (activeProjectId) localStorage.setItem("activeProjectId", activeProjectId);

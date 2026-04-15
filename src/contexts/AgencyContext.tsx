@@ -53,15 +53,22 @@ export const useAgency = () => {
 };
 
 export const AgencyProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, isReady } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [clients, setClients] = useState<AgencyClient[]>([]);
   const [invites, setInvites] = useState<AgencyInvite[]>([]);
   const [impersonatedUserId, setImpersonatedUserId] = useState<string | null>(null);
   const [impersonatedName, setImpersonatedName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const pendingResetRef = useState<number | null>(null)[0];
 
   const currentUserId = user?.id ?? null;
+
+  const clearPendingReset = useCallback(() => {
+    if (pendingResetRef !== null) {
+      window.clearTimeout(pendingResetRef);
+    }
+  }, [pendingResetRef]);
 
   const loadProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
@@ -75,12 +82,30 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!currentUserId) {
-      setProfile(null);
-      setClients([]);
-      setInvites([]);
-      setImpersonatedUserId(null);
-      setImpersonatedName(null);
-      setLoading(false);
+      if (!isReady) return;
+
+      const reset = () => {
+        setProfile(null);
+        setClients([]);
+        setInvites([]);
+        setImpersonatedUserId(null);
+        setImpersonatedName(null);
+        setLoading(false);
+      };
+
+      const hadLoadedState = profile || clients.length > 0 || invites.length > 0 || impersonatedUserId || impersonatedName;
+      if (!hadLoadedState) {
+        reset();
+        return;
+      }
+
+      const timer = window.setTimeout(reset, 2500);
+      return () => window.clearTimeout(timer);
+    }
+
+    clearPendingReset();
+
+    if (!isReady) {
       return;
     }
 
@@ -98,7 +123,7 @@ export const AgencyProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => { cancelled = true; };
-  }, [currentUserId, loadProfile]);
+  }, [currentUserId, isReady, loadProfile, profile, clients.length, invites.length, impersonatedUserId, impersonatedName, clearPendingReset]);
 
   const isAgency = profile?.account_type === "agency";
   const isClient = profile?.account_type === "client";
