@@ -499,6 +499,185 @@ export type Database = {
         }
         Relationships: []
       }
+      copy_components: {
+        Row: {
+          ai_action_slug: string
+          config: Json
+          created_at: string
+          description: string
+          id: string
+          instructions: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          ui_interface_slug: string
+          updated_at: string
+        }
+        Insert: {
+          ai_action_slug?: string
+          config?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          instructions?: string
+          is_active?: boolean
+          name?: string
+          slug: string
+          sort_order?: number
+          ui_interface_slug?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_action_slug?: string
+          config?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          instructions?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          ui_interface_slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      copy_document_components: {
+        Row: {
+          component_slug: string
+          created_at: string
+          document_id: string
+          id: string
+          inputs: Json
+          is_generated: boolean
+          outputs: Json
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          component_slug?: string
+          created_at?: string
+          document_id: string
+          id?: string
+          inputs?: Json
+          is_generated?: boolean
+          outputs?: Json
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          component_slug?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          inputs?: Json
+          is_generated?: boolean
+          outputs?: Json
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "copy_document_components_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "copy_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      copy_documents: {
+        Row: {
+          context_custom_text: string
+          context_offer_id: string | null
+          context_type: string
+          created_at: string
+          global_instructions: string
+          id: string
+          name: string
+          sub_account_id: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context_custom_text?: string
+          context_offer_id?: string | null
+          context_type?: string
+          created_at?: string
+          global_instructions?: string
+          id?: string
+          name?: string
+          sub_account_id?: string | null
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context_custom_text?: string
+          context_offer_id?: string | null
+          context_type?: string
+          created_at?: string
+          global_instructions?: string
+          id?: string
+          name?: string
+          sub_account_id?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "copy_documents_context_offer_id_fkey"
+            columns: ["context_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "copy_documents_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      copy_frameworks: {
+        Row: {
+          component_slugs: Json
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          component_slugs?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          component_slugs?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       funnel_analytics_entries: {
         Row: {
           created_at: string

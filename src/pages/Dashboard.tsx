@@ -14,6 +14,7 @@ import AgencySettings from "@/components/agency/AgencySettings";
 import { BarChart3, GitBranch, Library, TrendingUp, Gem } from "lucide-react";
 import FunnelModule from "@/components/funnel-designer/FunnelModule";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
+import CopyDocumentsModule from "@/components/copy/CopyDocumentsModule";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
 import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
 import OfferModule from "@/components/offers/OfferModule";
@@ -28,7 +29,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { loading } = useWorkspace();
 
-  const fullHeightModules = ["funnels", "assets-library", "funnel-audit", "analytics", "clients", "offers", "admin", "outreach"];
+  const fullHeightModules = ["funnels", "assets-library", "copy-documents", "funnel-audit", "analytics", "clients", "offers", "admin", "outreach"];
 
   if (loading) {
     return (
@@ -119,6 +120,11 @@ const Dashboard = () => {
           {activeModule === "assets-library" && (
             <div className="h-full">
               <AssetsLibrary />
+            </div>
+          )}
+          {activeModule === "copy-documents" && (
+            <div className="h-full">
+              <CopyDocumentsModule />
             </div>
           )}
           {activeModule === "admin" && (

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem, ShieldCheck, Building2, Building, Send } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem, ShieldCheck, Building2, Building, Send, FileText, Mail, Video, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -28,6 +28,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
     { id: "funnel-audit", label: t("dashboard.sidebar.funnelAudit"), icon: BarChart3 },
     { id: "offers", label: "Offers", icon: Gem },
     { id: "funnels", label: "Funnels", icon: GitBranch },
+    { id: "copy-documents", label: "Copy Documents", icon: FileText },
     { id: "assets-library", label: t("dashboard.sidebar.assetsLibrary"), icon: Library },
     { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: TrendingUp },
     ...(isAgency ? [{ id: "outreach", label: "Outreach", icon: Send }] : []),
