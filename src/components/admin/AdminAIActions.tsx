@@ -125,9 +125,9 @@ const AdminAIActions = () => {
         description: editing.description || "",
         type: editing.type || "generation",
         prompt_template: editing.prompt_template || "",
-        model_settings: editing.model_settings || emptyAction.model_settings,
-        input_structure: editing.input_structure || [],
-        output_structure: editing.output_structure || [],
+        model_settings: (editing.model_settings || emptyAction.model_settings) as any,
+        input_structure: (editing.input_structure || []) as any,
+        output_structure: (editing.output_structure || []) as any,
         is_active: editing.is_active ?? true,
       };
 
