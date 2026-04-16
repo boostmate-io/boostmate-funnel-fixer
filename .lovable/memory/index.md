@@ -15,7 +15,7 @@
 - [Knowledge Center](mem://features/knowledge-center) — Admin document uploads for app-wide AI reference
 - [Analytics](mem://features/analytics) — KPI overlays, Recharts 30-day trends, and native Tooltip rules
 - [Project Documentation](mem://docs/project-documentatie) — PRD sync limitations and CodeSpring workflow
-- [Auth Architecture](mem://tech/auth-architectuur) — Token refresh prevention, 2.5s grace period, RLS security
+- [Auth Architecture](mem://tech/auth-architectuur) — Token refresh prevention, 2.5s grace period, fallback objects
 - [Account Deletion](mem://features/account-deletion) — Edge function cascade cleanup and admin privileges
 - [Offer Creator](mem://features/offer-creator) — Central strategy source, 10 sections, approval workflows
 - [Funnel Brief](mem://features/funnel-brief) — Configurable strategic worksheet with per-field approval
@@ -31,4 +31,5 @@
 - [Funnel Sharing](mem://features/funnel-sharing) — Public read-only pan-nav, blocked elements logic
 - [Invites](mem://features/invites) — Agency invite flow, db triggers, and simplified registration
 - [Outreach Module](mem://features/outreach-module) — AI-first DM workflows, Kanban, and strict prompt formatting
-- [AI Infrastructure](mem://features/ai-infrastructure) — Global AI Actions system with instruction blocks and executor
+- [AI Infrastructure](mem://features/ai-infrastructure) — Global AI Actions, instruction blocks, execute edge function
+- [Copy System](mem://features/copy-system) — Section-level components, frameworks, document editor, context linking
