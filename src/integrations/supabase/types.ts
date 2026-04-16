@@ -169,6 +169,114 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_action_instruction_blocks: {
+        Row: {
+          ai_action_id: string
+          created_at: string
+          id: string
+          instruction_block_id: string
+          sort_order: number
+        }
+        Insert: {
+          ai_action_id: string
+          created_at?: string
+          id?: string
+          instruction_block_id: string
+          sort_order?: number
+        }
+        Update: {
+          ai_action_id?: string
+          created_at?: string
+          id?: string
+          instruction_block_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_instruction_blocks_ai_action_id_fkey"
+            columns: ["ai_action_id"]
+            isOneToOne: false
+            referencedRelation: "ai_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_action_instruction_blocks_instruction_block_id_fkey"
+            columns: ["instruction_block_id"]
+            isOneToOne: false
+            referencedRelation: "ai_instruction_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_actions: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          input_structure: Json
+          is_active: boolean
+          model_settings: Json
+          name: string
+          output_structure: Json
+          prompt_template: string
+          slug: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          input_structure?: Json
+          is_active?: boolean
+          model_settings?: Json
+          name?: string
+          output_structure?: Json
+          prompt_template?: string
+          slug: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          input_structure?: Json
+          is_active?: boolean
+          model_settings?: Json
+          name?: string
+          output_structure?: Json
+          prompt_template?: string
+          slug?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_instruction_blocks: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       asset_sections: {
         Row: {
           asset_id: string
