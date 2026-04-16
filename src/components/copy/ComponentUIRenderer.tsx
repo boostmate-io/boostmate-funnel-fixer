@@ -1,4 +1,5 @@
 import GenericComponentUI from "./interfaces/GenericComponentUI";
+import BigPromiseHeroUI from "./interfaces/BigPromiseHeroUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
