@@ -167,7 +167,7 @@ const BigPromiseHeroUI = ({
           <Input
             value={inputs.objection || ""}
             onChange={(e) => s("objection", e.target.value)}
-            placeholder='e.g. "I don\'t have time"'
+            placeholder={"e.g. \"I don't have time\""}
             className="text-sm"
           />
         </div>
@@ -176,7 +176,7 @@ const BigPromiseHeroUI = ({
           <Input
             value={inputs.hesitation || ""}
             onChange={(e) => s("hesitation", e.target.value)}
-            placeholder='e.g. "I\'ve tried everything"'
+            placeholder={"e.g. \"I've tried everything\""}
             className="text-sm"
           />
         </div>
