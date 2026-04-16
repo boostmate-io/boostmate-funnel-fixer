@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Layers, ShieldCheck } from "lucide-react";
+import { Building2, Users, Layers, ShieldCheck, Zap, BookOpen } from "lucide-react";
 import AdminMainAccounts from "./AdminMainAccounts";
 import AdminSubAccounts from "./AdminSubAccounts";
 import AdminUsers from "./AdminUsers";
+import AdminAIActions from "./AdminAIActions";
+import AdminInstructionBlocks from "./AdminInstructionBlocks";
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState("main-accounts");
@@ -34,6 +36,14 @@ const AdminPanel = () => {
             <Users className="w-4 h-4" />
             Users
           </TabsTrigger>
+          <TabsTrigger value="ai-actions" className="gap-2">
+            <Zap className="w-4 h-4" />
+            AI Actions
+          </TabsTrigger>
+          <TabsTrigger value="instruction-blocks" className="gap-2">
+            <BookOpen className="w-4 h-4" />
+            Instruction Blocks
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="main-accounts">
@@ -44,6 +54,12 @@ const AdminPanel = () => {
         </TabsContent>
         <TabsContent value="users">
           <AdminUsers />
+        </TabsContent>
+        <TabsContent value="ai-actions">
+          <AdminAIActions />
+        </TabsContent>
+        <TabsContent value="instruction-blocks">
+          <AdminInstructionBlocks />
         </TabsContent>
       </Tabs>
     </div>
