@@ -81,74 +81,76 @@ const Dashboard = () => {
           )}
 
           {activeModule === "overview" && (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <button onClick={() => setActiveModule("funnel-audit")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                  <BarChart3 className="w-6 h-6 text-primary-foreground" />
-                </div>
-                <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.funnelAudit.title")}</h3>
-                <p className="text-sm text-muted-foreground">{t("dashboard.funnelAudit.description")}</p>
-              </button>
-              <button onClick={() => setActiveModule("offers")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                  <Gem className="w-6 h-6 text-primary-foreground" />
-                </div>
-                <h3 className="font-display font-bold text-foreground mb-1">Offers</h3>
-                <p className="text-sm text-muted-foreground">Create and manage strategic offers for your funnels.</p>
-              </button>
-              <button onClick={() => setActiveModule("funnels")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                  <GitBranch className="w-6 h-6 text-primary-foreground" />
-                </div>
-                <h3 className="font-display font-bold text-foreground mb-1">Funnels</h3>
-                <p className="text-sm text-muted-foreground">Design and manage your marketing funnels.</p>
-              </button>
-              <button onClick={() => setActiveModule("analytics")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                  <TrendingUp className="w-6 h-6 text-primary-foreground" />
-                </div>
-                <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.analytics.title")}</h3>
-                <p className="text-sm text-muted-foreground">{t("dashboard.analytics.description")}</p>
-              </button>
-              <button onClick={() => setActiveModule("assets-library")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                  <Library className="w-6 h-6 text-primary-foreground" />
-                </div>
-                <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.assetsLibrary.title")}</h3>
-                <p className="text-sm text-muted-foreground">{t("dashboard.assetsLibrary.description")}</p>
-              </button>
-            </div>
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <button onClick={() => setActiveModule("funnel-audit")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
+                    <BarChart3 className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.funnelAudit.title")}</h3>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.funnelAudit.description")}</p>
+                </button>
+                <button onClick={() => setActiveModule("offers")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
+                    <Gem className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-foreground mb-1">Offers</h3>
+                  <p className="text-sm text-muted-foreground">Create and manage strategic offers for your funnels.</p>
+                </button>
+                <button onClick={() => setActiveModule("funnels")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
+                    <GitBranch className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-foreground mb-1">Funnels</h3>
+                  <p className="text-sm text-muted-foreground">Design and manage your marketing funnels.</p>
+                </button>
+                <button onClick={() => setActiveModule("analytics")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
+                    <TrendingUp className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.analytics.title")}</h3>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.analytics.description")}</p>
+                </button>
+                <button onClick={() => setActiveModule("assets-library")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
+                    <Library className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.assetsLibrary.title")}</h3>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.assetsLibrary.description")}</p>
+                </button>
+              </div>
 
-            {/* AI Test Widget */}
-            <div className="mt-8 bg-card rounded-xl border border-border p-6 shadow-card">
-              <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" /> AI Test Widget
-              </h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm">Context (input)</Label>
-                  <Textarea
-                    value={testContext}
-                    onChange={e => setTestContext(e.target.value)}
-                    placeholder="Typ hier je context, bv: 'Een online cursus voor beginnende fotografen'"
-                    className="min-h-[120px]"
-                  />
-                  <Button onClick={handleTestGenerate} disabled={testLoading} className="gap-2">
-                    {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    {testLoading ? "Generating..." : "Generate"}
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm">AI Output</Label>
-                  <Textarea
-                    value={testOutput}
-                    onChange={e => setTestOutput(e.target.value)}
-                    placeholder="Hier verschijnt de AI output..."
-                    className="min-h-[120px]"
-                  />
+              {/* AI Test Widget */}
+              <div className="mt-8 bg-card rounded-xl border border-border p-6 shadow-card">
+                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" /> AI Test Widget
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Context (input)</Label>
+                    <Textarea
+                      value={testContext}
+                      onChange={e => setTestContext(e.target.value)}
+                      placeholder="Typ hier je context, bv: 'Een online cursus voor beginnende fotografen'"
+                      className="min-h-[120px]"
+                    />
+                    <Button onClick={handleTestGenerate} disabled={testLoading} className="gap-2">
+                      {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      {testLoading ? "Generating..." : "Generate"}
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">AI Output</Label>
+                    <Textarea
+                      value={testOutput}
+                      onChange={e => setTestOutput(e.target.value)}
+                      placeholder="Hier verschijnt de AI output..."
+                      className="min-h-[120px]"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
 
           {activeModule === "clients" && <ClientManagement />}
