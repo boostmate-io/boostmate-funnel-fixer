@@ -9,60 +9,70 @@ import AdminInstructionBlocks from "./AdminInstructionBlocks";
 import AdminCopyComponents from "./AdminCopyComponents";
 import AdminCopyFrameworks from "./AdminCopyFrameworks";
 
-const AdminPanel = () => {
-  const [activeTab, setActiveTab] = useState("main-accounts");
+interface AdminPanelProps {
+  category?: "accounts" | "ai" | "copy";
+}
+
+const categoryConfig = {
+  accounts: {
+    title: "Accounts",
+    description: "Manage all accounts, workspaces, and users across the platform.",
+    defaultTab: "main-accounts",
+    tabs: [
+      { value: "main-accounts", label: "Main Accounts", icon: Building2, content: <AdminMainAccounts /> },
+      { value: "sub-accounts", label: "Sub Accounts", icon: Layers, content: <AdminSubAccounts /> },
+      { value: "users", label: "Users", icon: Users, content: <AdminUsers /> },
+    ],
+  },
+  ai: {
+    title: "AI",
+    description: "Manage AI actions, prompts, and instruction blocks.",
+    defaultTab: "ai-actions",
+    tabs: [
+      { value: "ai-actions", label: "AI Actions", icon: Zap, content: <AdminAIActions /> },
+      { value: "instruction-blocks", label: "Instruction Blocks", icon: BookOpen, content: <AdminInstructionBlocks /> },
+    ],
+  },
+  copy: {
+    title: "Copy",
+    description: "Manage copy components and frameworks.",
+    defaultTab: "copy-components",
+    tabs: [
+      { value: "copy-components", label: "Components", icon: Puzzle, content: <AdminCopyComponents /> },
+      { value: "copy-frameworks", label: "Frameworks", icon: LayoutList, content: <AdminCopyFrameworks /> },
+    ],
+  },
+};
+
+const AdminPanel = ({ category = "accounts" }: AdminPanelProps) => {
+  const config = categoryConfig[category];
+  const [activeTab, setActiveTab] = useState(config.defaultTab);
 
   return (
     <div className="p-8 space-y-6 max-w-6xl">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
           <ShieldCheck className="w-6 h-6" />
-          Platform Admin
+          Admin — {config.title}
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Manage all accounts, workspaces, and users across the platform.
-        </p>
+        <p className="text-muted-foreground text-sm mt-1">{config.description}</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="main-accounts" className="gap-2">
-            <Building2 className="w-4 h-4" />
-            Main Accounts
-          </TabsTrigger>
-          <TabsTrigger value="sub-accounts" className="gap-2">
-            <Layers className="w-4 h-4" />
-            Sub Accounts
-          </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2">
-            <Users className="w-4 h-4" />
-            Users
-          </TabsTrigger>
-          <TabsTrigger value="ai-actions" className="gap-2">
-            <Zap className="w-4 h-4" />
-            AI Actions
-          </TabsTrigger>
-          <TabsTrigger value="instruction-blocks" className="gap-2">
-            <BookOpen className="w-4 h-4" />
-            Instruction Blocks
-          </TabsTrigger>
-          <TabsTrigger value="copy-components" className="gap-2">
-            <Puzzle className="w-4 h-4" />
-            Copy Components
-          </TabsTrigger>
-          <TabsTrigger value="copy-frameworks" className="gap-2">
-            <LayoutList className="w-4 h-4" />
-            Copy Frameworks
-          </TabsTrigger>
+        <TabsList>
+          {config.tabs.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="main-accounts"><AdminMainAccounts /></TabsContent>
-        <TabsContent value="sub-accounts"><AdminSubAccounts /></TabsContent>
-        <TabsContent value="users"><AdminUsers /></TabsContent>
-        <TabsContent value="ai-actions"><AdminAIActions /></TabsContent>
-        <TabsContent value="instruction-blocks"><AdminInstructionBlocks /></TabsContent>
-        <TabsContent value="copy-components"><AdminCopyComponents /></TabsContent>
-        <TabsContent value="copy-frameworks"><AdminCopyFrameworks /></TabsContent>
+        {config.tabs.map((tab) => (
+          <TabsContent key={tab.value} value={tab.value}>
+            {tab.content}
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   );

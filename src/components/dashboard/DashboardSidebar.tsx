@@ -2,12 +2,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem, ShieldCheck, Building2, Building, Send, FileText, Mail, Video, Megaphone } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, ChevronDown, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -16,12 +15,21 @@ interface DashboardSidebarProps {
   onModuleChange: (module: string) => void;
 }
 
+const adminSubItems = [
+  { id: "admin-accounts", label: "Accounts", icon: Building2 },
+  { id: "admin-ai", label: "AI", icon: Zap },
+  { id: "admin-copy", label: "Copy", icon: Puzzle },
+];
+
 const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { isAgency, isAppAdmin, subAccounts, activeSubAccountId, switchSubAccount, activeSubAccount, mainAccount, allMainAccounts, switchMainAccount } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(activeModule.startsWith("admin"));
+
+  const isAdminActive = activeModule.startsWith("admin");
 
   const navItems = [
     { id: "overview", label: t("dashboard.sidebar.dashboard"), icon: LayoutDashboard },
@@ -34,7 +42,6 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
     ...(isAgency ? [{ id: "outreach", label: "Outreach", icon: Send }] : []),
     ...(isAgency ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
     { id: "settings", label: t("dashboard.sidebar.settings"), icon: Settings },
-    ...(isAppAdmin ? [{ id: "admin", label: "Admin", icon: ShieldCheck }] : []),
   ];
 
   const handleLogout = async () => {
@@ -43,7 +50,6 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
     navigate("/");
   };
 
-  // Show account switcher for agencies (multiple sub accounts) or app admins
   const showSubSwitcher = (isAgency || isAppAdmin) && subAccounts.length > 1;
   const showMainSwitcher = isAppAdmin && allMainAccounts.length > 1;
 
@@ -83,7 +89,6 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
         )}
       </div>
 
-      {/* Admin: Main Account switcher */}
       {showMainSwitcher && !collapsed && (
         <div className="px-3 pt-2 pb-1">
           <Select value={mainAccount?.id || ""} onValueChange={switchMainAccount}>
@@ -102,7 +107,6 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
         </div>
       )}
 
-      {/* Sub Account / workspace switcher */}
       {showSubSwitcher && !collapsed && (
         <div className="px-3 py-1 border-b border-border">
           <Select value={activeSubAccountId || ""} onValueChange={switchSubAccount}>
@@ -156,10 +160,68 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
         </div>
       )}
 
-      <nav className="flex-1 p-2 space-y-1">
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavButton key={item.id} item={item} />
         ))}
+
+        {/* Admin with submenu */}
+        {isAppAdmin && (
+          <div>
+            {collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => {
+                      if (!isAdminActive) onModuleChange("admin-accounts");
+                      setAdminOpen(!adminOpen);
+                    }}
+                    className={`w-full flex items-center justify-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      isAdminActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    }`}
+                  >
+                    <ShieldCheck className="w-5 h-5 shrink-0" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Admin</TooltipContent>
+              </Tooltip>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setAdminOpen(!adminOpen);
+                    if (!adminOpen && !isAdminActive) onModuleChange("admin-accounts");
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isAdminActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  }`}
+                >
+                  <ShieldCheck className="w-5 h-5 shrink-0" />
+                  <span className="flex-1 text-left">Admin</span>
+                  {adminOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+                {adminOpen && (
+                  <div className="ml-4 mt-1 space-y-0.5">
+                    {adminSubItems.map((sub) => (
+                      <button
+                        key={sub.id}
+                        onClick={() => onModuleChange(sub.id)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                          activeModule === sub.id
+                            ? "bg-sidebar-accent/70 text-sidebar-accent-foreground font-medium"
+                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/30"
+                        }`}
+                      >
+                        <sub.icon className="w-4 h-4 shrink-0" />
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </nav>
       <div className="p-2 border-t border-border">
         {collapsed ? (
@@ -184,7 +246,6 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
           </button>
         )}
       </div>
-      {/* Collapse toggle on edge — bottom */}
       <Tooltip>
         <TooltipTrigger asChild>
           <button
