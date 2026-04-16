@@ -33,6 +33,26 @@ const Dashboard = () => {
   const [activeModule, setActiveModule] = useState(initialModule);
   const { user } = useAuth();
   const { loading } = useWorkspace();
+  const [testContext, setTestContext] = useState("");
+  const [testOutput, setTestOutput] = useState("");
+  const [testLoading, setTestLoading] = useState(false);
+
+  const handleTestGenerate = async () => {
+    if (!testContext.trim()) { toast.error("Vul eerst context in"); return; }
+    setTestLoading(true);
+    try {
+      const result = await executeAIAction({
+        slug: "test-generate",
+        inputs: { context: testContext },
+      });
+      setTestOutput(result.output?.result || result.output?.raw || JSON.stringify(result.output));
+      toast.success("AI output ontvangen!");
+    } catch (e: any) {
+      toast.error(e.message || "Generatie mislukt");
+    } finally {
+      setTestLoading(false);
+    }
+  };
 
   const fullHeightModules = ["funnels", "assets-library", "copy-documents", "funnel-audit", "analytics", "clients", "offers", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
 
