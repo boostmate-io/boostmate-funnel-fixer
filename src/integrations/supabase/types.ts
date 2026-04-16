@@ -505,6 +505,7 @@ export type Database = {
           config: Json
           created_at: string
           description: string
+          icon: string
           id: string
           instructions: string
           is_active: boolean
@@ -519,6 +520,7 @@ export type Database = {
           config?: Json
           created_at?: string
           description?: string
+          icon?: string
           id?: string
           instructions?: string
           is_active?: boolean
@@ -533,6 +535,7 @@ export type Database = {
           config?: Json
           created_at?: string
           description?: string
+          icon?: string
           id?: string
           instructions?: string
           is_active?: boolean

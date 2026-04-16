@@ -1,0 +1,1 @@
+ALTER TABLE public.copy_components ADD COLUMN icon text NOT NULL DEFAULT 'Gem';
