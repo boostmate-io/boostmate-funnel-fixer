@@ -1,15 +1,44 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Settings2, Eye, PenTool, Sparkles, Loader2, GripVertical, LayoutList } from "lucide-react";
+import {
+  ArrowLeft, Plus, Trash2, Settings2, Eye, PenTool, Sparkles, Loader2,
+  GripVertical, LayoutList, ChevronUp, ChevronDown, icons,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ComponentUIRenderer from "./ComponentUIRenderer";
 import { executeAIAction } from "@/lib/api/aiActions";
+
+// Popular icons for the picker
+const ICON_OPTIONS = [
+  "Gem", "Star", "AlertTriangle", "Lightbulb", "Package", "TrendingUp", "Award",
+  "DollarSign", "Shield", "HelpCircle", "Zap", "Target", "Heart", "Eye", "Megaphone",
+  "Users", "MessageSquare", "CheckCircle2", "Gift", "Flame", "Crown", "Rocket",
+  "ThumbsUp", "Lock", "Unlock", "ArrowRight", "Sparkles", "FileText", "Globe",
+  "BarChart3", "PieChart", "Layers", "Layout", "BookOpen", "Compass", "Flag",
+  "Trophy", "Percent", "CircleDot", "Crosshair", "Puzzle", "Brain", "Cpu",
+  "Handshake", "Scale", "Timer", "Calendar", "Mail", "Phone", "Video",
+  "Camera", "Image", "Headphones", "Mic", "Play", "Volume2", "Radio",
+  "Wifi", "Cloud", "Download", "Upload", "Share2", "Link", "Bookmark",
+  "Tag", "Hash", "AtSign", "Search", "Filter", "SlidersHorizontal",
+];
+
+function LucideIcon({ name, className }: { name: string; className?: string }) {
+  const IconComp = (icons as any)[name];
+  if (!IconComp) return <Gem className={className} />;
+  return <IconComp className={className} />;
+}
+
+// Import Gem separately for fallback
+import { Gem } from "lucide-react";
 
 interface DocumentComponent {
   id: string;
@@ -51,6 +80,7 @@ interface CopyDocumentEditorProps {
 }
 
 const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: CopyDocumentEditorProps) => {
+  const { activeSubAccountId } = useWorkspace();
   const [docName, setDocName] = useState(documentName);
   const [activeView, setActiveView] = useState<"builder" | "preview" | "settings">("builder");
   const [docComponents, setDocComponents] = useState<DocumentComponent[]>([]);
@@ -64,16 +94,31 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
   const [globalInstructions, setGlobalInstructions] = useState("");
   const [generatingAll, setGeneratingAll] = useState(false);
   const [editingName, setEditingName] = useState(false);
+  // Icon map: component id -> icon name
+  const [componentIcons, setComponentIcons] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
+    const offersQuery = activeSubAccountId
+      ? supabase.from("offers").select("id, name, data").eq("sub_account_id", activeSubAccountId)
+      : supabase.from("offers").select("id, name, data");
+
     const [{ data: dc }, { data: cd }, { data: fw }, { data: of }, { data: doc }] = await Promise.all([
       supabase.from("copy_document_components").select("*").eq("document_id", documentId).order("sort_order"),
       supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug").eq("is_active", true).order("sort_order"),
       supabase.from("copy_frameworks").select("id, name, component_slugs, type").eq("is_active", true).eq("type", documentType),
-      supabase.from("offers").select("id, name, data"),
+      offersQuery,
       supabase.from("copy_documents").select("context_type, context_offer_id, context_custom_text, global_instructions, name").eq("id", documentId).single(),
     ]);
-    if (dc) setDocComponents(dc as unknown as DocumentComponent[]);
+    if (dc) {
+      const comps = dc as unknown as DocumentComponent[];
+      setDocComponents(comps);
+      // Extract icons from inputs._icon
+      const iconMap: Record<string, string> = {};
+      comps.forEach(c => {
+        if ((c.inputs as any)?._icon) iconMap[c.id] = (c.inputs as any)._icon;
+      });
+      setComponentIcons(iconMap);
+    }
     if (cd) setComponentDefs(cd as unknown as CopyComponentDef[]);
     if (fw) setFrameworks(fw as unknown as CopyFramework[]);
     if (of) setOffers(of as unknown as Offer[]);
@@ -84,11 +129,10 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
       setGlobalInstructions((doc as any).global_instructions || "");
       setDocName((doc as any).name || documentName);
     }
-  }, [documentId, documentType, documentName]);
+  }, [documentId, documentType, documentName, activeSubAccountId]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Build context string
   const getContext = useCallback(() => {
     if (contextType === "offer" && contextOfferId) {
       const offer = offers.find(o => o.id === contextOfferId);
@@ -100,6 +144,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
     return contextCustomText;
   }, [contextType, contextOfferId, contextCustomText, offers]);
 
+  // --- Component management (Settings only) ---
   const addComponent = async (slug: string) => {
     const sortOrder = docComponents.length;
     const { data, error } = await supabase
@@ -110,7 +155,6 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
     if (error) toast.error("Failed to add component");
     else if (data) {
       setDocComponents(prev => [...prev, data as unknown as DocumentComponent]);
-      setActiveComponentIdx(docComponents.length);
     }
   };
 
@@ -120,23 +164,45 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
     if (activeComponentIdx >= docComponents.length - 1) setActiveComponentIdx(Math.max(0, docComponents.length - 2));
   };
 
+  const moveComponent = async (idx: number, direction: "up" | "down") => {
+    const newIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= docComponents.length) return;
+    const updated = [...docComponents];
+    [updated[idx], updated[newIdx]] = [updated[newIdx], updated[idx]];
+    updated.forEach((c, i) => c.sort_order = i);
+    setDocComponents(updated);
+    // Persist sort orders
+    await Promise.all(updated.map(c =>
+      supabase.from("copy_document_components").update({ sort_order: c.sort_order }).eq("id", c.id)
+    ));
+  };
+
+  const setComponentIcon = async (compId: string, iconName: string) => {
+    setComponentIcons(prev => ({ ...prev, [compId]: iconName }));
+    const comp = docComponents.find(c => c.id === compId);
+    if (comp) {
+      const newInputs = { ...(comp.inputs as Record<string, any>), _icon: iconName };
+      await supabase.from("copy_document_components").update({ inputs: newInputs as any }).eq("id", compId);
+      setDocComponents(prev => prev.map(c => c.id === compId ? { ...c, inputs: newInputs } : c));
+    }
+  };
+
   const updateComponentData = async (id: string, inputs: Record<string, any>, outputs: Record<string, any>, isGenerated: boolean) => {
+    // Preserve _icon in inputs
+    const icon = componentIcons[id];
+    const finalInputs = icon ? { ...inputs, _icon: icon } : inputs;
     await supabase.from("copy_document_components").update({
-      inputs: inputs as any,
+      inputs: finalInputs as any,
       outputs: outputs as any,
       is_generated: isGenerated,
     }).eq("id", id);
-    setDocComponents(prev => prev.map(c => c.id === id ? { ...c, inputs, outputs, is_generated: isGenerated } : c));
+    setDocComponents(prev => prev.map(c => c.id === id ? { ...c, inputs: finalInputs, outputs, is_generated: isGenerated } : c));
   };
 
   const applyFramework = async (frameworkId: string) => {
     const fw = frameworks.find(f => f.id === frameworkId);
     if (!fw) return;
-
-    // Delete existing components
     await supabase.from("copy_document_components").delete().eq("document_id", documentId);
-
-    // Insert new ones
     const rows = (fw.component_slugs as string[]).map((slug, i) => ({
       document_id: documentId,
       component_slug: slug,
@@ -161,7 +227,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
       is_active: true,
     });
     if (error) toast.error("Save failed");
-    else toast.success("Framework saved");
+    else { toast.success("Framework saved"); load(); }
   };
 
   const saveSettings = async () => {
@@ -187,7 +253,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
           inputs: { ...dc.inputs, context },
           extraInstructions: [globalInstructions, def.instructions].filter(Boolean).join("\n\n"),
         });
-        await updateComponentData(dc.id, dc.inputs, result.output, true);
+        await updateComponentData(dc.id, dc.inputs as Record<string, any>, result.output, true);
       } catch (e: any) {
         toast.error(`Failed: ${def.name} — ${e.message}`);
       }
@@ -235,105 +301,80 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
+        {/* ═══ BUILDER ═══ */}
         {activeView === "builder" && (
           <div className="flex h-full">
-            {/* Left sidebar: component list */}
-            <div className="w-56 border-r border-border bg-card overflow-y-auto shrink-0">
-              <div className="p-3 border-b border-border">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Components</span>
-                </div>
-                {/* Add component */}
-                <Select onValueChange={addComponent}>
-                  <SelectTrigger className="text-xs h-7"><SelectValue placeholder="Add component..." /></SelectTrigger>
-                  <SelectContent>
-                    {componentDefs.map(cd => (
-                      <SelectItem key={cd.slug} value={cd.slug} className="text-xs">{cd.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Framework apply */}
-              {frameworks.length > 0 && docComponents.length === 0 && (
-                <div className="p-3 border-b border-border">
-                  <span className="text-xs font-medium text-muted-foreground">Or use a framework:</span>
-                  <Select onValueChange={applyFramework}>
-                    <SelectTrigger className="text-xs h-7 mt-1"><SelectValue placeholder="Select framework..." /></SelectTrigger>
-                    <SelectContent>
-                      {frameworks.map(fw => (
-                        <SelectItem key={fw.id} value={fw.id} className="text-xs">{fw.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Component list */}
-              <div className="p-1">
-                {docComponents.map((dc, idx) => {
-                  const def = componentDefs.find(d => d.slug === dc.component_slug);
-                  return (
-                    <div
-                      key={dc.id}
-                      onClick={() => setActiveComponentIdx(idx)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-xs transition-colors ${
-                        idx === activeComponentIdx
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
-                      <span className="flex-1 truncate">{def?.name || dc.component_slug}</span>
-                      {dc.is_generated && <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100"
-                        onClick={e => { e.stopPropagation(); removeComponent(dc.id); }}
-                      >
-                        <Trash2 className="w-3 h-3 text-destructive" />
-                      </Button>
+            {/* Left sidebar: component navigation (read-only, like Offer Editor) */}
+            <div className="w-64 border-r border-border bg-card shrink-0">
+              <ScrollArea className="h-full">
+                <div className="p-3 space-y-1">
+                  {docComponents.length === 0 ? (
+                    <div className="px-3 py-8 text-center">
+                      <PenTool className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-xs text-muted-foreground mb-2">No components yet</p>
+                      <p className="text-[10px] text-muted-foreground">Go to Settings to add components or apply a framework.</p>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Bottom actions */}
-              {docComponents.length > 0 && (
-                <div className="p-3 border-t border-border space-y-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full text-xs h-8 gap-1.5"
-                    onClick={generateAll}
-                    disabled={generatingAll}
-                  >
-                    {generatingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    {generatingAll ? "Generating..." : "Generate All"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs h-7 gap-1.5"
-                    onClick={saveAsFramework}
-                  >
-                    <LayoutList className="w-3.5 h-3.5" />
-                    Save as Framework
-                  </Button>
+                  ) : (
+                    docComponents.map((dc, idx) => {
+                      const def = componentDefs.find(d => d.slug === dc.component_slug);
+                      const iconName = componentIcons[dc.id] || "Gem";
+                      const isActive = idx === activeComponentIdx;
+                      return (
+                        <button
+                          key={dc.id}
+                          onClick={() => setActiveComponentIdx(idx)}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                            isActive
+                              ? "bg-primary/10 text-primary border border-primary/20"
+                              : "hover:bg-muted/50 text-foreground"
+                          }`}
+                        >
+                          <LucideIcon name={iconName} className="w-4 h-4 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{def?.name || dc.component_slug}</p>
+                            {def?.description && (
+                              <p className="text-[10px] text-muted-foreground truncate mt-0.5">{def.description}</p>
+                            )}
+                          </div>
+                          {dc.is_generated && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
-              )}
+
+                {/* Generate All button */}
+                {docComponents.length > 0 && (
+                  <div className="p-3 border-t border-border">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full text-xs h-8 gap-1.5"
+                      onClick={generateAll}
+                      disabled={generatingAll}
+                    >
+                      {generatingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {generatingAll ? "Generating..." : "Generate All"}
+                    </Button>
+                  </div>
+                )}
+              </ScrollArea>
             </div>
 
             {/* Main: active component UI */}
             <div className="flex-1 overflow-y-auto p-6">
               {activeComp && activeDef ? (
                 <div>
-                  <div className="mb-4">
-                    <h3 className="text-lg font-display font-bold text-foreground">{activeDef.name}</h3>
-                    {activeDef.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{activeDef.description}</p>
-                    )}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <LucideIcon name={componentIcons[activeComp.id] || "Gem"} className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-display font-bold text-foreground">{activeDef.name}</h3>
+                      {activeDef.description && (
+                        <p className="text-xs text-muted-foreground">{activeDef.description}</p>
+                      )}
+                    </div>
                   </div>
                   <ComponentUIRenderer
                     uiInterfaceSlug={activeDef.ui_interface_slug}
@@ -354,8 +395,11 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     <PenTool className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-display font-bold text-foreground mb-2">No components yet</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Add components manually or apply a framework to get started.
+                      Go to Settings to add components or apply a framework.
                     </p>
+                    <Button variant="outline" size="sm" onClick={() => setActiveView("settings")}>
+                      <Settings2 className="w-4 h-4 mr-1.5" /> Open Settings
+                    </Button>
                   </div>
                 </div>
               ) : (
@@ -367,6 +411,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
           </div>
         )}
 
+        {/* ═══ PREVIEW ═══ */}
         {activeView === "preview" && (
           <div className="overflow-y-auto p-6 max-w-3xl mx-auto">
             <h2 className="text-2xl font-display font-bold text-foreground mb-8">{docName}</h2>
@@ -377,7 +422,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                 {docComponents.map(dc => {
                   const def = componentDefs.find(d => d.slug === dc.component_slug);
                   const outputs = dc.outputs as Record<string, any>;
-                  const outputKeys = Object.keys(outputs).filter(k => outputs[k]);
+                  const outputKeys = Object.keys(outputs).filter(k => outputs[k] && k !== "_icon");
                   if (outputKeys.length === 0) return (
                     <div key={dc.id} className="p-6 border border-dashed border-border rounded-lg text-center text-sm text-muted-foreground">
                       {def?.name || dc.component_slug} — not generated yet
@@ -407,14 +452,17 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
           </div>
         )}
 
+        {/* ═══ SETTINGS ═══ */}
         {activeView === "settings" && (
           <div className="overflow-y-auto p-6 max-w-2xl">
-            <div className="space-y-6">
+            <div className="space-y-8">
+              {/* Document name */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Document Name</Label>
                 <Input value={docName} onChange={e => setDocName(e.target.value)} />
               </div>
 
+              {/* Context source */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Context Source</Label>
                 <Select value={contextType} onValueChange={setContextType}>
@@ -459,22 +507,90 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                 />
               </div>
 
-              {/* Framework actions */}
-              {frameworks.length > 0 && (
+              <Button onClick={saveSettings}>Save Settings</Button>
+
+              {/* ── Component Management ── */}
+              <div className="border-t border-border pt-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-display font-bold text-foreground">Components</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Add, remove, reorder, and assign icons to your document components.</p>
+                  </div>
+                </div>
+
+                {/* Apply framework */}
+                {frameworks.length > 0 && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Apply Framework</Label>
+                    <Select onValueChange={applyFramework}>
+                      <SelectTrigger className="text-sm"><SelectValue placeholder="Replace components with framework..." /></SelectTrigger>
+                      <SelectContent>
+                        {frameworks.map(fw => (
+                          <SelectItem key={fw.id} value={fw.id} className="text-sm">{fw.name} ({fw.component_slugs.length} components)</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Add component */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Apply Framework</Label>
-                  <Select onValueChange={applyFramework}>
-                    <SelectTrigger className="text-sm"><SelectValue placeholder="Replace components with framework..." /></SelectTrigger>
+                  <Label className="text-xs font-medium">Add Component</Label>
+                  <Select onValueChange={addComponent}>
+                    <SelectTrigger className="text-sm"><SelectValue placeholder="Select a component to add..." /></SelectTrigger>
                     <SelectContent>
-                      {frameworks.map(fw => (
-                        <SelectItem key={fw.id} value={fw.id} className="text-sm">{fw.name} ({fw.component_slugs.length} components)</SelectItem>
+                      {componentDefs.map(cd => (
+                        <SelectItem key={cd.slug} value={cd.slug} className="text-sm">{cd.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
 
-              <Button onClick={saveSettings}>Save Settings</Button>
+                {/* Component list with reorder, icon picker, delete */}
+                <div className="space-y-1">
+                  {docComponents.map((dc, idx) => {
+                    const def = componentDefs.find(d => d.slug === dc.component_slug);
+                    const iconName = componentIcons[dc.id] || "Gem";
+                    return (
+                      <div
+                        key={dc.id}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card"
+                      >
+                        {/* Icon picker */}
+                        <IconPicker
+                          value={iconName}
+                          onChange={(icon) => setComponentIcon(dc.id, icon)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{def?.name || dc.component_slug}</p>
+                          {def?.description && (
+                            <p className="text-[10px] text-muted-foreground truncate">{def.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-0.5">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === 0} onClick={() => moveComponent(idx, "up")}>
+                            <ChevronUp className="w-3 h-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === docComponents.length - 1} onClick={() => moveComponent(idx, "down")}>
+                            <ChevronDown className="w-3 h-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeComponent(dc.id)}>
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Save as framework */}
+                {docComponents.length > 0 && (
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={saveAsFramework}>
+                    <LayoutList className="w-3.5 h-3.5" />
+                    Save as Framework
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -482,5 +598,47 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
     </div>
   );
 };
+
+// ── Icon Picker Component ──
+function IconPicker({ value, onChange }: { value: string; onChange: (icon: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = search
+    ? ICON_OPTIONS.filter(name => name.toLowerCase().includes(search.toLowerCase()))
+    : ICON_OPTIONS;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors shrink-0">
+          <LucideIcon name={value} className="w-4 h-4 text-primary" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-2" align="start">
+        <Input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search icons..."
+          className="h-7 text-xs mb-2"
+        />
+        <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
+          {filtered.map(name => (
+            <button
+              key={name}
+              onClick={() => { onChange(name); setOpen(false); setSearch(""); }}
+              className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                value === name ? "bg-primary/20 text-primary" : "hover:bg-muted text-foreground"
+              }`}
+              title={name}
+            >
+              <LucideIcon name={name} className="w-3.5 h-3.5" />
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default CopyDocumentEditor;
