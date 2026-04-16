@@ -29,7 +29,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { loading } = useWorkspace();
 
-  const fullHeightModules = ["funnels", "assets-library", "copy-documents", "funnel-audit", "analytics", "clients", "offers", "admin", "outreach"];
+  const fullHeightModules = ["funnels", "assets-library", "copy-documents", "funnel-audit", "analytics", "clients", "offers", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
 
   if (loading) {
     return (
@@ -127,9 +127,19 @@ const Dashboard = () => {
               <CopyDocumentsModule />
             </div>
           )}
-          {activeModule === "admin" && (
+          {activeModule === "admin-accounts" && (
             <div className="h-full">
-              <AdminPanel />
+              <AdminPanel category="accounts" />
+            </div>
+          )}
+          {activeModule === "admin-ai" && (
+            <div className="h-full">
+              <AdminPanel category="ai" />
+            </div>
+          )}
+          {activeModule === "admin-copy" && (
+            <div className="h-full">
+              <AdminPanel category="copy" />
             </div>
           )}
           {activeModule === "settings" && (
