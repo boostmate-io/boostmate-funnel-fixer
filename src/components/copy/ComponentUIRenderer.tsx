@@ -1,4 +1,5 @@
 import GenericComponentUI from "./interfaces/GenericComponentUI";
+import BigPromiseHeroUI from "./interfaces/BigPromiseHeroUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
@@ -28,7 +29,8 @@ const ComponentUIRenderer = ({
   // case "faq_ui": return <FaqUI {...props} />;
 
   switch (uiInterfaceSlug) {
-    // All components fall through to generic for now (dummy phase)
+    case "big_promise_hero_ui":
+      return <BigPromiseHeroUI {...props} />;
     default:
       return <GenericComponentUI {...props} />;
   }
