@@ -118,6 +118,37 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground">{t("dashboard.assetsLibrary.description")}</p>
               </button>
             </div>
+
+            {/* AI Test Widget */}
+            <div className="mt-8 bg-card rounded-xl border border-border p-6 shadow-card">
+              <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" /> AI Test Widget
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Context (input)</Label>
+                  <Textarea
+                    value={testContext}
+                    onChange={e => setTestContext(e.target.value)}
+                    placeholder="Typ hier je context, bv: 'Een online cursus voor beginnende fotografen'"
+                    className="min-h-[120px]"
+                  />
+                  <Button onClick={handleTestGenerate} disabled={testLoading} className="gap-2">
+                    {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {testLoading ? "Generating..." : "Generate"}
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">AI Output</Label>
+                  <Textarea
+                    value={testOutput}
+                    onChange={e => setTestOutput(e.target.value)}
+                    placeholder="Hier verschijnt de AI output..."
+                    className="min-h-[120px]"
+                  />
+                </div>
+              </div>
+            </div>
           )}
 
           {activeModule === "clients" && <ClientManagement />}
