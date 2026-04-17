@@ -5,8 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Check, X } from "lucide-react";
+import { Pencil, Check, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useWorkspaceSettings } from "@/components/business-blueprint/useWorkspaceSettings";
+import BusinessTypeSelector from "@/components/business-blueprint/BusinessTypeSelector";
+import { getBusinessType, type BusinessTypeId } from "@/components/business-blueprint/businessTypes";
 
 const ProjectSettings = () => {
   const { t } = useTranslation();
