@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Gem, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, ChevronDown, ChevronRight } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, Library, TrendingUp, Users, ChevronsLeft, ChevronsRight, Sparkles, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, ChevronDown, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -33,8 +33,8 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
 
   const navItems = [
     { id: "overview", label: t("dashboard.sidebar.dashboard"), icon: LayoutDashboard },
+    { id: "business-blueprint", label: "Business Blueprint", icon: Sparkles },
     { id: "funnel-audit", label: t("dashboard.sidebar.funnelAudit"), icon: BarChart3 },
-    { id: "offers", label: "Offers", icon: Gem },
     { id: "funnels", label: "Funnels", icon: GitBranch },
     { id: "copy-documents", label: "Copy Documents", icon: FileText },
     { id: "assets-library", label: t("dashboard.sidebar.assetsLibrary"), icon: Library },

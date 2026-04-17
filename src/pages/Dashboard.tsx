@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { executeAIAction } from "@/lib/api/aiActions";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
@@ -12,19 +11,15 @@ import AuditModule from "@/components/audit/AuditModule";
 
 import ClientManagement from "@/components/agency/ClientManagement";
 import AgencySettings from "@/components/agency/AgencySettings";
-import { BarChart3, GitBranch, Library, TrendingUp, Gem, Sparkles, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { BarChart3, GitBranch, Library, TrendingUp, Sparkles } from "lucide-react";
 import FunnelModule from "@/components/funnel-designer/FunnelModule";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
 import CopyDocumentsModule from "@/components/copy/CopyDocumentsModule";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
 import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
-import OfferModule from "@/components/offers/OfferModule";
 import AdminPanel from "@/components/admin/AdminPanel";
 import OutreachModule from "@/components/outreach/OutreachModule";
+import BusinessBlueprintModule from "@/components/business-blueprint/BusinessBlueprintModule";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -33,28 +28,8 @@ const Dashboard = () => {
   const [activeModule, setActiveModule] = useState(initialModule);
   const { user } = useAuth();
   const { loading } = useWorkspace();
-  const [testContext, setTestContext] = useState("");
-  const [testOutput, setTestOutput] = useState("");
-  const [testLoading, setTestLoading] = useState(false);
 
-  const handleTestGenerate = async () => {
-    if (!testContext.trim()) { toast.error("Vul eerst context in"); return; }
-    setTestLoading(true);
-    try {
-      const result = await executeAIAction({
-        slug: "test-generate",
-        inputs: { context: testContext },
-      });
-      setTestOutput(result.output?.result || result.output?.raw || JSON.stringify(result.output));
-      toast.success("AI output ontvangen!");
-    } catch (e: any) {
-      toast.error(e.message || "Generatie mislukt");
-    } finally {
-      setTestLoading(false);
-    }
-  };
-
-  const fullHeightModules = ["funnels", "assets-library", "copy-documents", "funnel-audit", "analytics", "clients", "offers", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
+  const fullHeightModules = ["funnels", "assets-library", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
 
   if (loading) {
     return (
@@ -83,19 +58,19 @@ const Dashboard = () => {
           {activeModule === "overview" && (
             <>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <button onClick={() => setActiveModule("business-blueprint")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
+                    <Sparkles className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-foreground mb-1">Business Blueprint</h3>
+                  <p className="text-sm text-muted-foreground">Your strategic foundation: customer, offers, growth, brand & proof.</p>
+                </button>
                 <button onClick={() => setActiveModule("funnel-audit")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
                   <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
                     <BarChart3 className="w-6 h-6 text-primary-foreground" />
                   </div>
                   <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.funnelAudit.title")}</h3>
                   <p className="text-sm text-muted-foreground">{t("dashboard.funnelAudit.description")}</p>
-                </button>
-                <button onClick={() => setActiveModule("offers")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                    <Gem className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <h3 className="font-display font-bold text-foreground mb-1">Offers</h3>
-                  <p className="text-sm text-muted-foreground">Create and manage strategic offers for your funnels.</p>
                 </button>
                 <button onClick={() => setActiveModule("funnels")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
                   <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
@@ -119,37 +94,6 @@ const Dashboard = () => {
                   <p className="text-sm text-muted-foreground">{t("dashboard.assetsLibrary.description")}</p>
                 </button>
               </div>
-
-              {/* AI Test Widget */}
-              <div className="mt-8 bg-card rounded-xl border border-border p-6 shadow-card">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" /> AI Test Widget
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm">Context (input)</Label>
-                    <Textarea
-                      value={testContext}
-                      onChange={e => setTestContext(e.target.value)}
-                      placeholder="Typ hier je context, bv: 'Een online cursus voor beginnende fotografen'"
-                      className="min-h-[120px]"
-                    />
-                    <Button onClick={handleTestGenerate} disabled={testLoading} className="gap-2">
-                      {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                      {testLoading ? "Generating..." : "Generate"}
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm">AI Output</Label>
-                    <Textarea
-                      value={testOutput}
-                      onChange={e => setTestOutput(e.target.value)}
-                      placeholder="Hier verschijnt de AI output..."
-                      className="min-h-[120px]"
-                    />
-                  </div>
-                </div>
-              </div>
             </>
           )}
 
@@ -160,14 +104,14 @@ const Dashboard = () => {
             </div>
           )}
           {activeModule === "funnel-audit" && <AuditModule />}
-          {activeModule === "funnels" && (
+          {activeModule === "business-blueprint" && (
             <div className="h-full">
-              <FunnelModule onNavigateToOffer={(id) => { setActiveModule("offers"); }} />
+              <BusinessBlueprintModule />
             </div>
           )}
-          {activeModule === "offers" && (
+          {activeModule === "funnels" && (
             <div className="h-full">
-              <OfferModule />
+              <FunnelModule onNavigateToOffer={() => setActiveModule("business-blueprint")} />
             </div>
           )}
           {activeModule === "analytics" && (
