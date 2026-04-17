@@ -1485,6 +1485,53 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_settings: {
+        Row: {
+          biggest_challenge: string
+          business_type: string
+          created_at: string
+          help_achieve: string
+          id: string
+          main_goal: string
+          setup_status: string
+          sub_account_id: string
+          updated_at: string
+          who_help: string
+        }
+        Insert: {
+          biggest_challenge?: string
+          business_type?: string
+          created_at?: string
+          help_achieve?: string
+          id?: string
+          main_goal?: string
+          setup_status?: string
+          sub_account_id: string
+          updated_at?: string
+          who_help?: string
+        }
+        Update: {
+          biggest_challenge?: string
+          business_type?: string
+          created_at?: string
+          help_achieve?: string
+          id?: string
+          main_goal?: string
+          setup_status?: string
+          sub_account_id?: string
+          updated_at?: string
+          who_help?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_settings_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: true
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
