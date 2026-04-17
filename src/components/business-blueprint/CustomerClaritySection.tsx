@@ -1,33 +1,18 @@
 import { useMemo, useState } from "react";
-import { Sparkles, Lightbulb, Wand2, MessageSquare, Check, TrendingUp, Info } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Check, TrendingUp, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   calculateSubBlockProgress,
   CLARITY_FIELDS,
   type ClaritySubBlock,
   type CustomerClarityData,
 } from "./types";
-import { getClarityConfig, getFeedbackMessage, type FieldDef } from "./clarityConfig";
+import { getClarityConfig, getFeedbackMessage } from "./clarityConfig";
 import { getBusinessType } from "./businessTypes";
-import ChipsField from "./fields/ChipsField";
-import TagsField from "./fields/TagsField";
 import CoachPanel from "./CoachPanel";
-import ExamplesDialog from "./ExamplesDialog";
+import FieldCard from "./FieldCard";
 
 interface Props {
   data: CustomerClarityData;
@@ -36,35 +21,10 @@ interface Props {
   businessType?: string;
 }
 
-const renderField = (
-  field: FieldDef,
-  value: string,
-  onChange: (v: string) => void,
-) => {
-  switch (field.type) {
-    case "chips-single":
-      return <ChipsField value={value} onChange={onChange} options={field.options || []} />;
-    case "tags":
-      return <TagsField value={value} onChange={onChange} placeholder={field.placeholder} />;
-    case "textarea":
-    default:
-      return (
-        <Textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={field.placeholder}
-          rows={field.rows || 3}
-          className="resize-none"
-        />
-      );
-  }
-};
-
 const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props) => {
   const [active, setActive] = useState<ClaritySubBlock>("avatar");
   const [coachOpen, setCoachOpen] = useState(false);
-  const [examplesOpen, setExamplesOpen] = useState(false);
-  const [improveOpen, setImproveOpen] = useState(false);
+  const [coachFieldLabel, setCoachFieldLabel] = useState<string | null>(null);
 
   const bt = getBusinessType(businessType);
   const clarityConfig = useMemo(() => getClarityConfig(businessType), [businessType]);
@@ -81,13 +41,9 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
     });
   };
 
-  const handleImproveConfirm = () => {
-    setImproveOpen(false);
-    toast.info("Improve Answers — AI rewrites coming soon");
-  };
-
-  const handleGenerateDraft = () => {
-    toast.info("Generate Draft — AI generation coming soon");
+  const openCoachFor = (label: string) => {
+    setCoachFieldLabel(label);
+    setCoachOpen(true);
   };
 
   return (
@@ -161,75 +117,40 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
           </div>
         </div>
 
-        {/* Content card */}
-        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-          {/* Toolbar */}
-          <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border bg-muted/20 flex-wrap">
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="font-semibold tabular-nums text-foreground">
-                {filledCount} / {fields.length}
-              </span>
-              <span>fields completed</span>
-              <span className="text-muted-foreground/50">•</span>
-              <span className="tabular-nums">{progress}%</span>
-            </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={handleGenerateDraft}>
-                <Wand2 className="w-3.5 h-3.5" />
-                Generate Draft
-              </Button>
-              <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => setCoachOpen(true)}>
-                <MessageSquare className="w-3.5 h-3.5" />
-                Coach Me
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 h-8"
-                onClick={() => setImproveOpen(true)}
-                disabled={filledCount === 0}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Improve
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 h-8"
-                onClick={() => setExamplesOpen(true)}
-              >
-                <Lightbulb className="w-3.5 h-3.5" />
-                Examples
-              </Button>
-            </div>
-          </div>
-
-          {/* Fields grid */}
-          <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {config.fields.map((field) => (
-              <div
-                key={field.key as string}
-                className={`space-y-2 ${field.fullWidth ? "lg:col-span-2" : ""}`}
-              >
-                <Label className="text-sm font-semibold text-foreground">{field.label}</Label>
-                {renderField(
-                  field,
-                  (data[field.key] as string) || "",
-                  (v) => onChange({ [field.key]: v } as Partial<CustomerClarityData>),
-                )}
-                {field.helper && <p className="text-xs text-muted-foreground">{field.helper}</p>}
-              </div>
-            ))}
-          </div>
-
-          {/* Feedback strip */}
-          {feedback && (
-            <div className="px-6 py-3 border-t border-border bg-primary/5 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
-              <p className="text-sm text-primary font-medium">{feedback}</p>
-            </div>
-          )}
+        {/* Stats strip */}
+        <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground px-1">
+          <span className="font-semibold tabular-nums text-foreground">
+            {filledCount} / {fields.length}
+          </span>
+          <span>fields completed</span>
+          <span className="text-muted-foreground/50">•</span>
+          <span className="tabular-nums">{progress}%</span>
         </div>
+
+        {/* Modular field cards grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {config.fields.map((field) => (
+            <div
+              key={field.key as string}
+              className={field.fullWidth ? "lg:col-span-2" : ""}
+            >
+              <FieldCard
+                field={field}
+                value={(data[field.key] as string) || ""}
+                onChange={(v) => onChange({ [field.key]: v } as Partial<CustomerClarityData>)}
+                onCoach={() => openCoachFor(field.label)}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Feedback strip */}
+        {feedback && (
+          <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
+            <p className="text-sm text-primary font-medium">{feedback}</p>
+          </div>
+        )}
 
         {/* Sub-block progress bar */}
         <div className="mt-4 px-1">
@@ -240,36 +161,14 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
       {/* Coach panel */}
       <CoachPanel
         open={coachOpen}
-        onOpenChange={setCoachOpen}
-        title={config.label}
+        onOpenChange={(o) => {
+          setCoachOpen(o);
+          if (!o) setCoachFieldLabel(null);
+        }}
+        title={coachFieldLabel ?? config.label}
         questions={config.coachQuestions}
         onSubmit={handleCoachSubmit}
       />
-
-      {/* Examples dialog */}
-      <ExamplesDialog
-        open={examplesOpen}
-        onOpenChange={setExamplesOpen}
-        title={config.label}
-        examples={config.examples}
-      />
-
-      {/* Improve confirm */}
-      <AlertDialog open={improveOpen} onOpenChange={setImproveOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Improve your answers?</AlertDialogTitle>
-            <AlertDialogDescription>
-              AI will rewrite your existing answers to be clearer, more specific, and more strategic.
-              You'll be able to review changes before they replace anything.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleImproveConfirm}>Continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
