@@ -42,6 +42,20 @@ export interface BusinessTypeDef {
   exampleNotFit: string;
   /** Common stages for this business model */
   stageOptions: { value: string; label: string }[];
+  /** Niche / sub-type options shown as chips (e.g. Fitness Coach, Mindset Coach) */
+  nicheOptions: { value: string; label: string }[];
+  /** Avatar examples surfaced as placeholders / inspiration */
+  avatarExamples: string[];
+  /** Daily frustration example placeholder */
+  exampleDailyFrustration: string;
+  /** Dream scenario example placeholder */
+  exampleDreamScenario: string;
+  /** Niche/market example placeholder */
+  exampleNicheMarket: string;
+  /** Point A example placeholder */
+  examplePointA: string;
+  /** What changes externally example */
+  exampleExternal: string;
   /** Common offer types for this business model */
   offerExamples: string[];
   /** Common growth channels */
