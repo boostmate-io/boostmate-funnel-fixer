@@ -1,33 +1,18 @@
 import { useMemo, useState } from "react";
-import { Sparkles, Lightbulb, Wand2, MessageSquare, Check, TrendingUp, Info } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Check, TrendingUp, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   calculateSubBlockProgress,
   CLARITY_FIELDS,
   type ClaritySubBlock,
   type CustomerClarityData,
 } from "./types";
-import { getClarityConfig, getFeedbackMessage, type FieldDef } from "./clarityConfig";
+import { getClarityConfig, getFeedbackMessage } from "./clarityConfig";
 import { getBusinessType } from "./businessTypes";
-import ChipsField from "./fields/ChipsField";
-import TagsField from "./fields/TagsField";
 import CoachPanel from "./CoachPanel";
-import ExamplesDialog from "./ExamplesDialog";
+import FieldCard from "./FieldCard";
 
 interface Props {
   data: CustomerClarityData;
@@ -36,35 +21,10 @@ interface Props {
   businessType?: string;
 }
 
-const renderField = (
-  field: FieldDef,
-  value: string,
-  onChange: (v: string) => void,
-) => {
-  switch (field.type) {
-    case "chips-single":
-      return <ChipsField value={value} onChange={onChange} options={field.options || []} />;
-    case "tags":
-      return <TagsField value={value} onChange={onChange} placeholder={field.placeholder} />;
-    case "textarea":
-    default:
-      return (
-        <Textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={field.placeholder}
-          rows={field.rows || 3}
-          className="resize-none"
-        />
-      );
-  }
-};
-
 const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props) => {
   const [active, setActive] = useState<ClaritySubBlock>("avatar");
   const [coachOpen, setCoachOpen] = useState(false);
-  const [examplesOpen, setExamplesOpen] = useState(false);
-  const [improveOpen, setImproveOpen] = useState(false);
+  const [coachFieldLabel, setCoachFieldLabel] = useState<string | null>(null);
 
   const bt = getBusinessType(businessType);
   const clarityConfig = useMemo(() => getClarityConfig(businessType), [businessType]);
@@ -81,13 +41,9 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
     });
   };
 
-  const handleImproveConfirm = () => {
-    setImproveOpen(false);
-    toast.info("Improve Answers — AI rewrites coming soon");
-  };
-
-  const handleGenerateDraft = () => {
-    toast.info("Generate Draft — AI generation coming soon");
+  const openCoachFor = (label: string) => {
+    setCoachFieldLabel(label);
+    setCoachOpen(true);
   };
 
   return (
