@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { executeAIAction } from "@/lib/api/aiActions";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
@@ -12,19 +11,15 @@ import AuditModule from "@/components/audit/AuditModule";
 
 import ClientManagement from "@/components/agency/ClientManagement";
 import AgencySettings from "@/components/agency/AgencySettings";
-import { BarChart3, GitBranch, Library, TrendingUp, Gem, Sparkles, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { BarChart3, GitBranch, Library, TrendingUp, Sparkles } from "lucide-react";
 import FunnelModule from "@/components/funnel-designer/FunnelModule";
 import AssetsLibrary from "@/components/assets/AssetsLibrary";
 import CopyDocumentsModule from "@/components/copy/CopyDocumentsModule";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
 import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
-import OfferModule from "@/components/offers/OfferModule";
 import AdminPanel from "@/components/admin/AdminPanel";
 import OutreachModule from "@/components/outreach/OutreachModule";
+import BusinessBlueprintModule from "@/components/business-blueprint/BusinessBlueprintModule";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -33,28 +28,8 @@ const Dashboard = () => {
   const [activeModule, setActiveModule] = useState(initialModule);
   const { user } = useAuth();
   const { loading } = useWorkspace();
-  const [testContext, setTestContext] = useState("");
-  const [testOutput, setTestOutput] = useState("");
-  const [testLoading, setTestLoading] = useState(false);
 
-  const handleTestGenerate = async () => {
-    if (!testContext.trim()) { toast.error("Vul eerst context in"); return; }
-    setTestLoading(true);
-    try {
-      const result = await executeAIAction({
-        slug: "test-generate",
-        inputs: { context: testContext },
-      });
-      setTestOutput(result.output?.result || result.output?.raw || JSON.stringify(result.output));
-      toast.success("AI output ontvangen!");
-    } catch (e: any) {
-      toast.error(e.message || "Generatie mislukt");
-    } finally {
-      setTestLoading(false);
-    }
-  };
-
-  const fullHeightModules = ["funnels", "assets-library", "copy-documents", "funnel-audit", "analytics", "clients", "offers", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
+  const fullHeightModules = ["funnels", "assets-library", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
 
   if (loading) {
     return (
