@@ -437,6 +437,53 @@ export type Database = {
           },
         ]
       }
+      business_blueprints: {
+        Row: {
+          brand_strategy: Json
+          created_at: string
+          customer_clarity: Json
+          growth_system: Json
+          id: string
+          offer_stack: Json
+          proof_authority: Json
+          sub_account_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_strategy?: Json
+          created_at?: string
+          customer_clarity?: Json
+          growth_system?: Json
+          id?: string
+          offer_stack?: Json
+          proof_authority?: Json
+          sub_account_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_strategy?: Json
+          created_at?: string
+          customer_clarity?: Json
+          growth_system?: Json
+          id?: string
+          offer_stack?: Json
+          proof_authority?: Json
+          sub_account_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_blueprints_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: true
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_account_invites: {
         Row: {
           agency_user_id: string
