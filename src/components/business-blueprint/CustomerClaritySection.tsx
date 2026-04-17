@@ -117,75 +117,40 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
           </div>
         </div>
 
-        {/* Content card */}
-        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-          {/* Toolbar */}
-          <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border bg-muted/20 flex-wrap">
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="font-semibold tabular-nums text-foreground">
-                {filledCount} / {fields.length}
-              </span>
-              <span>fields completed</span>
-              <span className="text-muted-foreground/50">•</span>
-              <span className="tabular-nums">{progress}%</span>
-            </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={handleGenerateDraft}>
-                <Wand2 className="w-3.5 h-3.5" />
-                Generate Draft
-              </Button>
-              <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => setCoachOpen(true)}>
-                <MessageSquare className="w-3.5 h-3.5" />
-                Coach Me
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 h-8"
-                onClick={() => setImproveOpen(true)}
-                disabled={filledCount === 0}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Improve
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 h-8"
-                onClick={() => setExamplesOpen(true)}
-              >
-                <Lightbulb className="w-3.5 h-3.5" />
-                Examples
-              </Button>
-            </div>
-          </div>
-
-          {/* Fields grid */}
-          <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {config.fields.map((field) => (
-              <div
-                key={field.key as string}
-                className={`space-y-2 ${field.fullWidth ? "lg:col-span-2" : ""}`}
-              >
-                <Label className="text-sm font-semibold text-foreground">{field.label}</Label>
-                {renderField(
-                  field,
-                  (data[field.key] as string) || "",
-                  (v) => onChange({ [field.key]: v } as Partial<CustomerClarityData>),
-                )}
-                {field.helper && <p className="text-xs text-muted-foreground">{field.helper}</p>}
-              </div>
-            ))}
-          </div>
-
-          {/* Feedback strip */}
-          {feedback && (
-            <div className="px-6 py-3 border-t border-border bg-primary/5 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
-              <p className="text-sm text-primary font-medium">{feedback}</p>
-            </div>
-          )}
+        {/* Stats strip */}
+        <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground px-1">
+          <span className="font-semibold tabular-nums text-foreground">
+            {filledCount} / {fields.length}
+          </span>
+          <span>fields completed</span>
+          <span className="text-muted-foreground/50">•</span>
+          <span className="tabular-nums">{progress}%</span>
         </div>
+
+        {/* Modular field cards grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {config.fields.map((field) => (
+            <div
+              key={field.key as string}
+              className={field.fullWidth ? "lg:col-span-2" : ""}
+            >
+              <FieldCard
+                field={field}
+                value={(data[field.key] as string) || ""}
+                onChange={(v) => onChange({ [field.key]: v } as Partial<CustomerClarityData>)}
+                onCoach={() => openCoachFor(field.label)}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Feedback strip */}
+        {feedback && (
+          <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
+            <p className="text-sm text-primary font-medium">{feedback}</p>
+          </div>
+        )}
 
         {/* Sub-block progress bar */}
         <div className="mt-4 px-1">
@@ -196,36 +161,14 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
       {/* Coach panel */}
       <CoachPanel
         open={coachOpen}
-        onOpenChange={setCoachOpen}
-        title={config.label}
+        onOpenChange={(o) => {
+          setCoachOpen(o);
+          if (!o) setCoachFieldLabel(null);
+        }}
+        title={coachFieldLabel ?? config.label}
         questions={config.coachQuestions}
         onSubmit={handleCoachSubmit}
       />
-
-      {/* Examples dialog */}
-      <ExamplesDialog
-        open={examplesOpen}
-        onOpenChange={setExamplesOpen}
-        title={config.label}
-        examples={config.examples}
-      />
-
-      {/* Improve confirm */}
-      <AlertDialog open={improveOpen} onOpenChange={setImproveOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Improve your answers?</AlertDialogTitle>
-            <AlertDialogDescription>
-              AI will rewrite your existing answers to be clearer, more specific, and more strategic.
-              You'll be able to review changes before they replace anything.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleImproveConfirm}>Continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
