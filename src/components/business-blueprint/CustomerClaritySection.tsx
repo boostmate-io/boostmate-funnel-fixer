@@ -1,13 +1,32 @@
 import { useState } from "react";
-import { User, AlertTriangle, Target, ArrowRightLeft, Sparkles, Lightbulb, Wand2, MessageSquare, Check } from "lucide-react";
+import { Sparkles, Lightbulb, Wand2, MessageSquare, Check, TrendingUp, Info } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { calculateSubBlockProgress, type ClaritySubBlock, type CustomerClarityData } from "./types";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  calculateSubBlockProgress,
+  CLARITY_FIELDS,
+  type ClaritySubBlock,
+  type CustomerClarityData,
+} from "./types";
+import { CLARITY_CONFIG, getConfig, getFeedbackMessage, type FieldDef } from "./clarityConfig";
+import ChipsField from "./fields/ChipsField";
+import TagsField from "./fields/TagsField";
+import CoachPanel from "./CoachPanel";
+import ExamplesDialog from "./ExamplesDialog";
 
 interface Props {
   data: CustomerClarityData;
@@ -15,151 +34,56 @@ interface Props {
   saving: boolean;
 }
 
-const subBlocks: { id: ClaritySubBlock; label: string; icon: typeof User; description: string }[] = [
-  { id: "avatar", label: "Ideal Customer Avatar", icon: User, description: "Define who your ideal customer is in a practical marketing sense." },
-  { id: "pain", label: "Pain & Friction", icon: AlertTriangle, description: "Capture what your customer is struggling with right now." },
-  { id: "desire", label: "Desire & Goals", icon: Target, description: "Map what they want, externally and internally." },
-  { id: "transformation", label: "Transformation", icon: ArrowRightLeft, description: "Define the journey from current state to desired state." },
-];
-
-const FieldGroup = ({
-  label,
-  helper,
-  children,
-}: { label: string; helper?: string; children: React.ReactNode }) => (
-  <div className="space-y-2">
-    <Label className="text-sm font-semibold text-foreground">{label}</Label>
-    {children}
-    {helper && <p className="text-xs text-muted-foreground">{helper}</p>}
-  </div>
-);
-
-const AIPlaceholders = () => (
-  <div className="flex flex-wrap gap-2 pt-2 border-t border-border/60">
-    {[
-      { icon: Wand2, label: "Generate draft" },
-      { icon: Sparkles, label: "Improve" },
-      { icon: MessageSquare, label: "Coach me" },
-      { icon: Lightbulb, label: "Examples" },
-    ].map(({ icon: Icon, label }) => (
-      <Tooltip key={label}>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="sm" disabled className="gap-1.5 text-xs h-7 opacity-60">
-            <Icon className="w-3 h-3" />
-            {label}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>AI assistance coming soon</TooltipContent>
-      </Tooltip>
-    ))}
-  </div>
-);
+const renderField = (
+  field: FieldDef,
+  value: string,
+  onChange: (v: string) => void,
+) => {
+  switch (field.type) {
+    case "chips-single":
+      return <ChipsField value={value} onChange={onChange} options={field.options || []} />;
+    case "tags":
+      return <TagsField value={value} onChange={onChange} placeholder={field.placeholder} />;
+    case "textarea":
+    default:
+      return (
+        <Textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={field.placeholder}
+          rows={field.rows || 3}
+          className="resize-none"
+        />
+      );
+  }
+};
 
 const CustomerClaritySection = ({ data, onChange, saving }: Props) => {
   const [active, setActive] = useState<ClaritySubBlock>("avatar");
-  const activeBlock = subBlocks.find((b) => b.id === active)!;
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [examplesOpen, setExamplesOpen] = useState(false);
+  const [improveOpen, setImproveOpen] = useState(false);
 
-  const renderActive = () => {
-    switch (active) {
-      case "avatar":
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <FieldGroup label="Who is your ideal customer?" helper="Be specific — name, role, situation.">
-              <Textarea value={data.avatar_who || ""} onChange={(e) => onChange({ avatar_who: e.target.value })} placeholder="e.g. Solo coaches doing 5K-15K/month..." className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What type of person or business are they?">
-              <Textarea value={data.avatar_type || ""} onChange={(e) => onChange({ avatar_type: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What stage are they at right now?">
-              <Select value={data.avatar_stage || ""} onValueChange={(v) => onChange({ avatar_stage: v })}>
-                <SelectTrigger><SelectValue placeholder="Select stage" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Beginner — just starting</SelectItem>
-                  <SelectItem value="growing">Growing — gaining traction</SelectItem>
-                  <SelectItem value="established">Established — needs scaling</SelectItem>
-                  <SelectItem value="advanced">Advanced — optimizing</SelectItem>
-                </SelectContent>
-              </Select>
-            </FieldGroup>
-            <FieldGroup label="What niche / market are they in?">
-              <Textarea value={data.avatar_niche || ""} onChange={(e) => onChange({ avatar_niche: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What traits or mindset define them?">
-              <Textarea value={data.avatar_traits || ""} onChange={(e) => onChange({ avatar_traits: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="Who is NOT a good fit?" helper="Knowing who to exclude sharpens your messaging.">
-              <Textarea value={data.avatar_not_fit || ""} onChange={(e) => onChange({ avatar_not_fit: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <div className="lg:col-span-2"><AIPlaceholders /></div>
-          </div>
-        );
-      case "pain":
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <FieldGroup label="What is the main problem they are dealing with?">
-              <Textarea value={data.pain_main_problem || ""} onChange={(e) => onChange({ pain_main_problem: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What frustrations do they experience daily?">
-              <Textarea value={data.pain_daily_frustrations || ""} onChange={(e) => onChange({ pain_daily_frustrations: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What is stopping them from getting results?">
-              <Textarea value={data.pain_blockers || ""} onChange={(e) => onChange({ pain_blockers: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What have they already tried?">
-              <Textarea value={data.pain_already_tried || ""} onChange={(e) => onChange({ pain_already_tried: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="Why didn't previous attempts work?">
-              <Textarea value={data.pain_why_failed || ""} onChange={(e) => onChange({ pain_why_failed: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What are the consequences if they do nothing?" helper="Both practical and emotional consequences.">
-              <Textarea value={data.pain_consequences || ""} onChange={(e) => onChange({ pain_consequences: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <div className="lg:col-span-2"><AIPlaceholders /></div>
-          </div>
-        );
-      case "desire":
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <FieldGroup label="What result do they want most?">
-              <Textarea value={data.desire_main_result || ""} onChange={(e) => onChange({ desire_main_result: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What does their dream scenario look like?">
-              <Textarea value={data.desire_dream_scenario || ""} onChange={(e) => onChange({ desire_dream_scenario: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What emotional change do they want?">
-              <Textarea value={data.desire_emotional_change || ""} onChange={(e) => onChange({ desire_emotional_change: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What kind of freedom, identity, status, or lifestyle do they want?">
-              <Textarea value={data.desire_lifestyle || ""} onChange={(e) => onChange({ desire_lifestyle: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="Why do they want this so badly?" helper="Dig deeper than surface-level goals.">
-              <Textarea value={data.desire_why_badly || ""} onChange={(e) => onChange({ desire_why_badly: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <div className="lg:col-span-2"><AIPlaceholders /></div>
-          </div>
-        );
-      case "transformation":
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <FieldGroup label="What does Point A look like?" helper="Their current state — pain, situation, identity.">
-              <Textarea value={data.transformation_point_a || ""} onChange={(e) => onChange({ transformation_point_a: e.target.value })} className="min-h-[110px]" />
-            </FieldGroup>
-            <FieldGroup label="What does Point B look like?" helper="Their desired state — outcome, situation, new identity.">
-              <Textarea value={data.transformation_point_b || ""} onChange={(e) => onChange({ transformation_point_b: e.target.value })} className="min-h-[110px]" />
-            </FieldGroup>
-            <FieldGroup label="What changes externally?">
-              <Textarea value={data.transformation_external || ""} onChange={(e) => onChange({ transformation_external: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What changes internally?">
-              <Textarea value={data.transformation_internal || ""} onChange={(e) => onChange({ transformation_internal: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <FieldGroup label="What becomes possible once they reach the result?">
-              <Textarea value={data.transformation_possible || ""} onChange={(e) => onChange({ transformation_possible: e.target.value })} className="min-h-[90px]" />
-            </FieldGroup>
-            <div className="lg:col-span-2"><AIPlaceholders /></div>
-          </div>
-        );
-    }
+  const config = getConfig(active);
+  const Icon = config.icon;
+  const fields = CLARITY_FIELDS[active];
+  const filledCount = fields.filter((f) => (data[f] || "").toString().trim().length > 0).length;
+  const progress = calculateSubBlockProgress(data, active);
+  const feedback = getFeedbackMessage(config, progress);
+
+  const handleCoachSubmit = (answers: Record<string, string>) => {
+    toast.info("Coach mode — AI suggestions coming soon", {
+      description: `Captured ${Object.keys(answers).filter((k) => answers[k]?.trim()).length} answers.`,
+    });
+  };
+
+  const handleImproveConfirm = () => {
+    setImproveOpen(false);
+    toast.info("Improve Answers — AI rewrites coming soon");
+  };
+
+  const handleGenerateDraft = () => {
+    toast.info("Generate Draft — AI generation coming soon");
   };
 
   return (
@@ -169,22 +93,22 @@ const CustomerClaritySection = ({ data, onChange, saving }: Props) => {
         <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <activeBlock.icon className="w-5 h-5 text-primary" />
-              <h2 className="text-2xl font-display font-bold text-foreground">{activeBlock.label}</h2>
+              <Icon className="w-5 h-5 text-primary" />
+              <h2 className="text-2xl font-display font-bold text-foreground">{config.label}</h2>
             </div>
-            <p className="text-sm text-muted-foreground">{activeBlock.description}</p>
+            <p className="text-sm text-muted-foreground">{config.description}</p>
           </div>
           {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
         </div>
 
-        {/* Horizontal tabs */}
+        {/* Horizontal sub-tabs */}
         <div className="border-b border-border mb-6">
           <div className="flex gap-1 -mb-px overflow-x-auto">
-            {subBlocks.map((sb) => {
-              const progress = calculateSubBlockProgress(data, sb.id);
+            {CLARITY_CONFIG.map((sb) => {
+              const sbProgress = calculateSubBlockProgress(data, sb.id);
               const isActive = active === sb.id;
-              const Icon = sb.icon;
-              const isComplete = progress === 100;
+              const SbIcon = sb.icon;
+              const isComplete = sbProgress === 100;
               return (
                 <button
                   key={sb.id}
@@ -195,13 +119,17 @@ const CustomerClaritySection = ({ data, onChange, saving }: Props) => {
                       : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <SbIcon className="w-4 h-4" />
                   <span>{sb.label}</span>
                   {isComplete ? (
                     <Check className="w-3.5 h-3.5 text-primary" />
                   ) : (
-                    <span className={`text-[10px] tabular-nums ${isActive ? "text-primary/70" : "text-muted-foreground/70"}`}>
-                      {progress}%
+                    <span
+                      className={`text-[10px] tabular-nums ${
+                        isActive ? "text-primary/70" : "text-muted-foreground/70"
+                      }`}
+                    >
+                      {sbProgress}%
                     </span>
                   )}
                 </button>
@@ -210,16 +138,128 @@ const CustomerClaritySection = ({ data, onChange, saving }: Props) => {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
-          {renderActive()}
+        {/* Insight box */}
+        <div className="mb-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-4 flex gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Info className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wide text-primary mb-1">
+              Why this matters
+            </div>
+            <p className="text-sm text-foreground/80 leading-relaxed">{config.insight}</p>
+          </div>
         </div>
 
-        {/* Sub-block progress strip */}
+        {/* Content card */}
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border bg-muted/20 flex-wrap">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="font-semibold tabular-nums text-foreground">
+                {filledCount} / {fields.length}
+              </span>
+              <span>fields completed</span>
+              <span className="text-muted-foreground/50">•</span>
+              <span className="tabular-nums">{progress}%</span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={handleGenerateDraft}>
+                <Wand2 className="w-3.5 h-3.5" />
+                Generate Draft
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => setCoachOpen(true)}>
+                <MessageSquare className="w-3.5 h-3.5" />
+                Coach Me
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 h-8"
+                onClick={() => setImproveOpen(true)}
+                disabled={filledCount === 0}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Improve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 h-8"
+                onClick={() => setExamplesOpen(true)}
+              >
+                <Lightbulb className="w-3.5 h-3.5" />
+                Examples
+              </Button>
+            </div>
+          </div>
+
+          {/* Fields grid */}
+          <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {config.fields.map((field) => (
+              <div
+                key={field.key as string}
+                className={`space-y-2 ${field.fullWidth ? "lg:col-span-2" : ""}`}
+              >
+                <Label className="text-sm font-semibold text-foreground">{field.label}</Label>
+                {renderField(
+                  field,
+                  (data[field.key] as string) || "",
+                  (v) => onChange({ [field.key]: v } as Partial<CustomerClarityData>),
+                )}
+                {field.helper && <p className="text-xs text-muted-foreground">{field.helper}</p>}
+              </div>
+            ))}
+          </div>
+
+          {/* Feedback strip */}
+          {feedback && (
+            <div className="px-6 py-3 border-t border-border bg-emerald-500/5 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">{feedback}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Sub-block progress bar */}
         <div className="mt-4 px-1">
-          <Progress value={calculateSubBlockProgress(data, active)} className="h-1" />
+          <Progress value={progress} className="h-1" />
         </div>
       </div>
+
+      {/* Coach panel */}
+      <CoachPanel
+        open={coachOpen}
+        onOpenChange={setCoachOpen}
+        title={config.label}
+        questions={config.coachQuestions}
+        onSubmit={handleCoachSubmit}
+      />
+
+      {/* Examples dialog */}
+      <ExamplesDialog
+        open={examplesOpen}
+        onOpenChange={setExamplesOpen}
+        title={config.label}
+        examples={config.examples}
+      />
+
+      {/* Improve confirm */}
+      <AlertDialog open={improveOpen} onOpenChange={setImproveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Improve your answers?</AlertDialogTitle>
+            <AlertDialogDescription>
+              AI will rewrite your existing answers to be clearer, more specific, and more strategic.
+              You'll be able to review changes before they replace anything.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleImproveConfirm}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
