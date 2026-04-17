@@ -1,25 +1,37 @@
 import { useState } from "react";
-import { Users, Package, Workflow, Palette, Award, Loader2, Sparkles } from "lucide-react";
+import { Users, Package, Workflow, Palette, Award, Loader2, Sparkles, ArrowLeft, LayoutDashboard } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useBlueprint } from "./useBlueprint";
 import { calculateClarityProgress, type SectionId } from "./types";
 import CustomerClaritySection from "./CustomerClaritySection";
 import PlaceholderSection from "./PlaceholderSection";
+import BlueprintOverview from "./BlueprintOverview";
 
-const sections: { id: SectionId; label: string; icon: typeof Users; description: string }[] = [
-  { id: "customer-clarity", label: "Customer Clarity", icon: Users, description: "Understand the ideal customer, their pain, desires & transformation." },
-  { id: "offer-stack", label: "Offer Stack", icon: Package, description: "Define free, low-ticket, core & premium offers." },
-  { id: "growth-system", label: "Growth System", icon: Workflow, description: "Traffic, funnels, nurture, conversion & ascension." },
-  { id: "brand-strategy", label: "Brand Strategy", icon: Palette, description: "Positioning, voice, personality & messaging." },
-  { id: "proof-authority", label: "Proof & Authority", icon: Award, description: "Credibility, testimonials, case studies & founder story." },
+const sections: { id: SectionId; label: string; icon: typeof Users }[] = [
+  { id: "customer-clarity", label: "Customer Clarity", icon: Users },
+  { id: "offer-stack", label: "Offer Stack", icon: Package },
+  { id: "growth-system", label: "Growth System", icon: Workflow },
+  { id: "brand-strategy", label: "Brand Strategy", icon: Palette },
+  { id: "proof-authority", label: "Proof & Authority", icon: Award },
 ];
 
+type Mode = "overview" | "edit";
+
 const BusinessBlueprintModule = () => {
+  const [mode, setMode] = useState<Mode>("overview");
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
   const { blueprint, loading, saving, updateCustomerClarity } = useBlueprint();
 
-  const clarityProgress = blueprint ? calculateClarityProgress(blueprint.customer_clarity) : 0;
+  if (loading || !blueprint) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
+  const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
   const sectionProgress: Record<SectionId, number> = {
     "customer-clarity": clarityProgress,
     "offer-stack": 0,
@@ -28,11 +40,17 @@ const BusinessBlueprintModule = () => {
     "proof-authority": 0,
   };
 
-  if (loading || !blueprint) {
+  const handleEdit = (section?: SectionId) => {
+    if (section) setActiveSection(section);
+    setMode("edit");
+  };
+
+  if (mode === "overview") {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
+      <BlueprintOverview
+        clarity={blueprint.customer_clarity}
+        onEdit={handleEdit}
+      />
     );
   }
 
@@ -59,14 +77,22 @@ const BusinessBlueprintModule = () => {
 
   return (
     <div className="flex h-full bg-background-dashboard">
-      {/* Section nav */}
-      <div className="w-72 border-r border-border bg-card flex flex-col shrink-0">
-        <div className="p-5 border-b border-border">
-          <div className="flex items-center gap-2 mb-1">
+      {/* Top-level section nav */}
+      <div className="w-64 border-r border-border bg-card flex flex-col shrink-0">
+        <div className="p-4 border-b border-border">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMode("overview")}
+            className="w-full justify-start gap-2 mb-3 -ml-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Overview
+          </Button>
+          <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
-            <h1 className="text-lg font-display font-bold text-foreground">Business Blueprint</h1>
+            <h1 className="text-base font-display font-bold text-foreground">Business Blueprint</h1>
           </div>
-          <p className="text-xs text-muted-foreground">Your strategic foundation</p>
         </div>
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           {sections.map((s) => {
@@ -83,29 +109,33 @@ const BusinessBlueprintModule = () => {
                     : "border-transparent hover:bg-muted/60"
                 }`}
               >
-                <div className="flex items-start gap-3">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                     isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   }`}>
                     <Icon className="w-4 h-4" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`text-sm font-semibold ${isActive ? "text-foreground" : "text-foreground/85"}`}>
-                        {s.label}
-                      </span>
-                      <span className="text-[10px] font-medium text-muted-foreground tabular-nums">{prog}%</span>
-                    </div>
-                    <Progress value={prog} className="h-1 mt-2" />
-                    <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug line-clamp-2">
-                      {s.description}
-                    </p>
-                  </div>
+                  <span className={`text-sm font-semibold flex-1 ${isActive ? "text-foreground" : "text-foreground/85"}`}>
+                    {s.label}
+                  </span>
+                  <span className="text-[10px] font-medium text-muted-foreground tabular-nums">{prog}%</span>
                 </div>
+                <Progress value={prog} className="h-1" />
               </button>
             );
           })}
         </nav>
+        <div className="p-3 border-t border-border">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMode("overview")}
+            className="w-full gap-2"
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            Overview
+          </Button>
+        </div>
       </div>
 
       {/* Active section content */}
