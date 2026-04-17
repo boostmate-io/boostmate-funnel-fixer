@@ -27,19 +27,26 @@ export interface SubBlockConfig {
   feedback: { threshold: number; message: string }[];
 }
 
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const pickAvatar = (arr: string[], i: number) => arr[i % arr.length] || arr[0];
+
 /**
  * Build the Customer Clarity config dynamically based on the workspace's business type.
- * This makes placeholders, examples, chips, helper text and AI prompts adapt to the user's business.
+ * This personalizes labels, placeholders, helper text, chips and AI prompts only —
+ * it never auto-fills user content.
  */
 export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null): SubBlockConfig[] {
   const bt = getBusinessType(businessTypeId);
   const noun = bt.customerNoun;
   const nounSingular = bt.customerNounSingular;
+  const Noun = cap(noun);
+  const NounSingular = cap(nounSingular);
+  const typeLabel = bt.label.toLowerCase();
 
   return [
     {
       id: "avatar",
-      label: `Ideal ${nounSingular.charAt(0).toUpperCase() + nounSingular.slice(1)} Avatar`,
+      label: `Ideal ${NounSingular} Avatar`,
       icon: User,
       description: `Define exactly who your ideal ${nounSingular} is — the clearer, the better.`,
       insight: `The clearer your ${nounSingular} is, the better your copy, ads, funnels, and offers will perform. Vague audiences create weak marketing.`,
@@ -47,27 +54,18 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
         {
           key: "avatar_who",
           label: `Who is your ideal ${nounSingular}?`,
-          helper: "Be specific — situation, role, stage, urgency.",
-          placeholder: `Example: ${bt.exampleAvatar}`,
+          helper: "Be specific — situation, identity, stage, urgency.",
+          placeholder: `Example: ${pickAvatar(bt.avatarExamples, 0)}`,
           type: "textarea",
           fullWidth: true,
           rows: 3,
         },
         {
           key: "avatar_type",
-          label: `What type of ${noun} are they?`,
+          label: `What kind of ${typeLabel} business serves them best?`,
+          helper: `Pick the closest sub-niche of ${typeLabel} you operate in.`,
           type: "chips-single",
-          options: [
-            { value: "coach", label: "Coach" },
-            { value: "course-creator", label: "Course Creator" },
-            { value: "agency", label: "Agency" },
-            { value: "consultant", label: "Consultant" },
-            { value: "ecommerce", label: "Ecommerce" },
-            { value: "saas", label: "SaaS" },
-            { value: "service", label: "Service Business" },
-            { value: "local", label: "Local Business" },
-            { value: "other", label: "Other" },
-          ],
+          options: bt.nicheOptions,
         },
         {
           key: "avatar_stage",
@@ -78,7 +76,7 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
         {
           key: "avatar_niche",
           label: "What niche or market are they in?",
-          placeholder: `Example: ${bt.id === "ecommerce" ? "Premium clean-skincare buyers in DACH" : bt.id === "local-business" ? "Homeowners in [your city] needing fast HVAC" : "Health & fitness coaching for busy professionals"}`,
+          placeholder: `Example: ${bt.exampleNicheMarket}`,
           type: "textarea",
           rows: 2,
         },
@@ -92,7 +90,7 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
         },
         {
           key: "avatar_not_fit",
-          label: "Who is NOT a good fit?",
+          label: `Who is NOT a good fit ${noun === "customers" ? "as a customer" : `to be your ${nounSingular}`}?`,
           helper: "Knowing who to exclude sharpens your messaging.",
           placeholder: `Example: ${bt.exampleNotFit}`,
           type: "textarea",
@@ -108,16 +106,9 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
         `Which ${noun} are NOT a fit for what you offer?`,
       ],
       examples: [
-        { label: "Target Audience", value: bt.exampleAvatar },
-        {
-          label: "Niche",
-          value:
-            bt.id === "agency"
-              ? "Performance marketing for B2B SaaS in the $50–250k MRR range."
-              : bt.id === "ecommerce"
-              ? "Premium clean-skincare for women 28–45 who value sustainable ingredients."
-              : "High-ticket business coaching for service-based founders in Europe.",
-        },
+        { label: `Target ${Noun}`, value: pickAvatar(bt.avatarExamples, 0) },
+        { label: "Alternative Avatar", value: pickAvatar(bt.avatarExamples, 1) },
+        { label: "Niche", value: bt.exampleNicheMarket },
         { label: "Not a Good Fit", value: bt.exampleNotFit },
       ],
       feedback: [
@@ -131,7 +122,7 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       label: "Pain & Friction",
       icon: AlertTriangle,
       description: `Capture exactly what your ${nounSingular} is struggling with right now.`,
-      insight: `${noun.charAt(0).toUpperCase() + noun.slice(1)} buy to escape pain. The deeper you understand their friction, the more your offer will feel like the obvious solution.`,
+      insight: `${Noun} buy to escape pain. The deeper you understand their friction, the more your offer will feel like the obvious solution.`,
       fields: [
         {
           key: "pain_main_problem",
@@ -144,36 +135,36 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
         {
           key: "pain_daily_frustrations",
           label: "What frustrations do they experience daily?",
-          placeholder:
-            bt.id === "ecommerce"
-              ? "Example: Carts abandoned, low repeat purchase, ad costs creeping up…"
-              : bt.id === "agency"
-              ? "Example: Cold leads ignoring DMs, deals stalling, churn after 2 months…"
-              : "Example: Posting content with no engagement, chasing cold leads…",
+          placeholder: `Example: ${bt.exampleDailyFrustration}`,
           type: "textarea",
           rows: 3,
         },
         {
           key: "pain_blockers",
           label: "What is stopping them from getting results?",
-          placeholder: "Example: No clear funnel, weak offer, no system for follow-up",
+          placeholder: "Example: No clear path, weak offer, no support system, lack of accountability.",
           type: "textarea",
           rows: 3,
         },
         {
           key: "pain_already_tried",
           label: "What have they already tried?",
-          placeholder:
+          placeholder: `Example: ${
             bt.id === "ecommerce"
-              ? "Example: New creatives, discounts, switching agencies, more SKUs…"
-              : "Example: Cold DMs, paid ads, hiring a VA…",
+              ? "New creatives, discounts, switching agencies, more SKUs"
+              : bt.id === "coach"
+              ? "Free YouTube content, generic programs, willpower-based plans"
+              : bt.id === "agency"
+              ? "Hiring freelancers, switching tools, multiple lead gen tactics"
+              : "Different methods, courses, or providers without lasting results"
+          }`,
           type: "textarea",
           rows: 3,
         },
         {
           key: "pain_why_failed",
           label: "Why didn't previous attempts work?",
-          placeholder: "Example: No strategy, wrong audience, inconsistent execution",
+          placeholder: "Example: No personalized strategy, wrong fit, inconsistent execution.",
           type: "textarea",
           rows: 3,
         },
@@ -181,7 +172,10 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
           key: "pain_consequences",
           label: "What are the consequences if they do nothing?",
           helper: "Both practical and emotional consequences.",
-          placeholder: "Example: Stagnant revenue, burnout, losing belief in their business",
+          placeholder:
+            bt.id === "coach"
+              ? "Example: Staying stuck in the same patterns, losing confidence, drifting from who they want to be."
+              : "Example: Stagnant revenue, burnout, losing belief in their business.",
           type: "textarea",
           fullWidth: true,
           rows: 2,
@@ -196,16 +190,13 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       ],
       examples: [
         { label: "Main Problem", value: bt.examplePain },
-        {
-          label: "Daily Frustration",
-          value:
-            bt.id === "ecommerce"
-              ? "Spending more on ads each month while ROAS keeps dropping."
-              : "Spending hours on content with little to no qualified leads coming in.",
-        },
+        { label: "Daily Frustration", value: bt.exampleDailyFrustration },
         {
           label: "Consequence",
-          value: "Burnout, doubt, and slowly losing belief that their business model works.",
+          value:
+            bt.id === "coach"
+              ? "Years pass without the breakthrough they crave — and self-doubt starts to feel permanent."
+              : "Burnout, doubt, and slowly losing belief that their business model works.",
         },
       ],
       feedback: [
@@ -219,7 +210,7 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       label: "Desire & Goals",
       icon: Target,
       description: "Map what they want, externally and internally.",
-      insight: `${noun.charAt(0).toUpperCase() + noun.slice(1)} don't buy products — they buy a better version of themselves. Mapping desire is what makes your offer irresistible.`,
+      insight: `${Noun} don't buy products — they buy a better version of themselves. Mapping desire is what makes your offer irresistible.`,
       fields: [
         {
           key: "desire_main_result",
@@ -232,24 +223,27 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
         {
           key: "desire_dream_scenario",
           label: "What does their dream scenario look like?",
-          placeholder:
-            bt.id === "ecommerce"
-              ? "Example: Steady daily orders, repeat customers, brand love on social…"
-              : "Example: Waking up to booked calls and Stripe notifications…",
+          placeholder: `Example: ${bt.exampleDreamScenario}`,
           type: "textarea",
           rows: 3,
         },
         {
           key: "desire_emotional_change",
           label: "What emotional change do they want?",
-          placeholder: "Example: Confidence, calm, freedom, pride…",
+          placeholder:
+            bt.id === "coach"
+              ? "Example: Confidence, peace, self-trust, pride, freedom from old patterns."
+              : "Example: Confidence, calm, pride, freedom, certainty.",
           type: "textarea",
           rows: 3,
         },
         {
           key: "desire_lifestyle",
           label: "What freedom, identity, status, or lifestyle do they want?",
-          placeholder: "Example: Recognized authority, time freedom, location independence",
+          placeholder:
+            bt.id === "coach"
+              ? "Example: Becoming the strong, confident version of themselves they always knew was possible."
+              : "Example: Recognized authority, time freedom, location independence.",
           type: "textarea",
           rows: 3,
         },
@@ -257,7 +251,10 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
           key: "desire_why_badly",
           label: "Why do they want this so badly?",
           helper: "Dig deeper than surface-level goals.",
-          placeholder: "Example: To prove to themselves they built something real and lasting",
+          placeholder:
+            bt.id === "coach"
+              ? "Example: To finally feel proud of who they're becoming and stop carrying old wounds."
+              : "Example: To prove to themselves they built something real and lasting.",
           type: "textarea",
           fullWidth: true,
           rows: 2,
@@ -272,16 +269,13 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       ],
       examples: [
         { label: "Main Result", value: bt.exampleResult },
-        {
-          label: "Dream Scenario",
-          value:
-            bt.id === "ecommerce"
-              ? "A brand customers tag their friends in, with steady daily revenue and high repeat purchase."
-              : "Running a lean, high-margin business with 3-day work weeks and full creative control.",
-        },
+        { label: "Dream Scenario", value: bt.exampleDreamScenario },
         {
           label: "Why Badly",
-          value: "To finally feel proud, in control, and free from the survival-mode hustle.",
+          value:
+            bt.id === "coach"
+              ? "To finally feel free, proud, and at peace with who they are becoming."
+              : "To finally feel proud, in control, and free from the survival-mode hustle.",
         },
       ],
       feedback: [
@@ -301,10 +295,7 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
           key: "transformation_point_a",
           label: "Point A — current state",
           helper: "Their pain, situation, and identity today.",
-          placeholder:
-            bt.id === "ecommerce"
-              ? "Example: Brand at 10k/mo with weak retention and rising ad costs…"
-              : "Example: Stuck at €3k/month, working 60h weeks, no system…",
+          placeholder: `Example: ${bt.examplePointA}`,
           type: "textarea",
           rows: 4,
         },
@@ -319,24 +310,27 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
         {
           key: "transformation_external",
           label: "What changes externally?",
-          placeholder:
-            bt.id === "ecommerce"
-              ? "Example: Revenue, AOV, repeat rate, brand recognition"
-              : "Example: Revenue, client base, team, brand recognition",
+          placeholder: `Example: ${bt.exampleExternal}`,
           type: "textarea",
           rows: 3,
         },
         {
           key: "transformation_internal",
           label: "What changes internally?",
-          placeholder: "Example: Confidence, identity, decision-making, peace of mind",
+          placeholder:
+            bt.id === "coach"
+              ? "Example: Confidence, self-trust, sense of identity, peace of mind."
+              : "Example: Confidence, identity, decision-making, peace of mind.",
           type: "textarea",
           rows: 3,
         },
         {
           key: "transformation_possible",
           label: "What becomes possible once they reach the result?",
-          placeholder: "Example: Hire a team, launch a second offer, take real time off",
+          placeholder:
+            bt.id === "coach"
+              ? "Example: Healthier relationships, deeper purpose, the courage to take new leaps."
+              : "Example: Hire a team, launch a second offer, take real time off.",
           type: "textarea",
           fullWidth: true,
           rows: 2,
@@ -350,17 +344,14 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
         "What new doors will this open for them?",
       ],
       examples: [
-        {
-          label: "Point A",
-          value:
-            bt.id === "ecommerce"
-              ? "Store at 10k/mo, weak email flow, repeat rate under 15%, anxious about Q4."
-              : "Solo coach at €3k/month, juggling everything, no consistent lead flow, anxious about next month.",
-        },
+        { label: "Point A", value: bt.examplePointA },
         { label: "Point B", value: bt.exampleTransformation },
         {
           label: "What Becomes Possible",
-          value: "Hiring help, launching a second offer, taking real time off without revenue dropping.",
+          value:
+            bt.id === "coach"
+              ? "Stepping into a new identity — calm, confident, in alignment with who they truly want to be."
+              : "Hiring help, launching a second offer, taking real time off without revenue dropping.",
         },
       ],
       feedback: [
