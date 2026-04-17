@@ -197,6 +197,27 @@ const ProjectSettings = () => {
           </div>
         )}
       </div>
+
+      {/* Business Type */}
+      {workspaceSettings && (
+        <div className="border-t border-border pt-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <h3 className="font-display font-bold text-foreground">Business Type</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Drives examples, AI suggestions and templates across your Business Blueprint. Currently:{" "}
+            <span className="font-semibold text-foreground">{getBusinessType(workspaceSettings.business_type).label}</span>
+          </p>
+          <BusinessTypeSelector
+            value={workspaceSettings.business_type}
+            onChange={(next: BusinessTypeId) =>
+              updateWorkspaceSettings({ business_type: next }, { immediate: true })
+            }
+            variant="list"
+          />
+        </div>
+      )}
     </div>
   );
 };
