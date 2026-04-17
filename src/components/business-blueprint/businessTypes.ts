@@ -90,6 +90,35 @@ export const BUSINESS_TYPES: Record<BusinessTypeId, BusinessTypeDef> = {
       { value: "established", label: "Established (10–25k/mo)" },
       { value: "scaling", label: "Scaling (25k+/mo)" },
     ],
+    nicheOptions: [
+      { value: "mindset", label: "Mindset Coach" },
+      { value: "life", label: "Life Coach" },
+      { value: "fitness", label: "Fitness Coach" },
+      { value: "health", label: "Health & Nutrition" },
+      { value: "relationship", label: "Relationship Coach" },
+      { value: "spiritual", label: "Spiritual Coach" },
+      { value: "business", label: "Business Coach" },
+      { value: "career", label: "Career Coach" },
+      { value: "performance", label: "Performance Coach" },
+      { value: "other", label: "Other" },
+    ],
+    avatarExamples: [
+      "Women rebuilding confidence after toxic relationships",
+      "Busy men 35–50 wanting to lose weight and regain energy",
+      "Couples struggling with trust and communication",
+      "Professionals seeking clarity and purpose in their career",
+      "High-achievers stuck in burnout looking to reconnect with themselves",
+    ],
+    exampleDailyFrustration:
+      "Posting content with no engagement, doing free calls that never convert, second-guessing their pricing.",
+    exampleDreamScenario:
+      "Waking up to discovery calls booked, signing dream clients each week, and finally feeling like a respected expert.",
+    exampleNicheMarket:
+      "Transformational coaching for women rebuilding confidence and self-worth.",
+    examplePointA:
+      "Solo coach at €3k/month, posting content with little engagement, no consistent client flow, and quietly anxious about next month's income.",
+    exampleExternal:
+      "Predictable client bookings, premium pricing, recognized authority in their niche.",
     offerExamples: [
       "Free discovery call / lead magnet",
       "Low-ticket masterclass or mini-course",
