@@ -15,6 +15,7 @@ const ProjectSettings = () => {
   const { t } = useTranslation();
   const { activeSubAccount, renameSubAccount, renameMainAccount, mainAccount, memberships } = useWorkspace();
   const { user } = useAuth();
+  const { settings: workspaceSettings, update: updateWorkspaceSettings } = useWorkspaceSettings();
   const userId = user?.id ?? null;
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
