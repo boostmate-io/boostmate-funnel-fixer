@@ -5,13 +5,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Check, X } from "lucide-react";
+import { Pencil, Check, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useWorkspaceSettings } from "@/components/business-blueprint/useWorkspaceSettings";
+import BusinessTypeSelector from "@/components/business-blueprint/BusinessTypeSelector";
+import { getBusinessType, type BusinessTypeId } from "@/components/business-blueprint/businessTypes";
 
 const ProjectSettings = () => {
   const { t } = useTranslation();
   const { activeSubAccount, renameSubAccount, renameMainAccount, mainAccount, memberships } = useWorkspace();
   const { user } = useAuth();
+  const { settings: workspaceSettings, update: updateWorkspaceSettings } = useWorkspaceSettings();
   const userId = user?.id ?? null;
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -193,6 +197,27 @@ const ProjectSettings = () => {
           </div>
         )}
       </div>
+
+      {/* Business Type */}
+      {workspaceSettings && (
+        <div className="border-t border-border pt-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <h3 className="font-display font-bold text-foreground">Business Type</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Drives examples, AI suggestions and templates across your Business Blueprint. Currently:{" "}
+            <span className="font-semibold text-foreground">{getBusinessType(workspaceSettings.business_type).label}</span>
+          </p>
+          <BusinessTypeSelector
+            value={workspaceSettings.business_type}
+            onChange={(next: BusinessTypeId) =>
+              updateWorkspaceSettings({ business_type: next }, { immediate: true })
+            }
+            variant="list"
+          />
+        </div>
+      )}
     </div>
   );
 };
