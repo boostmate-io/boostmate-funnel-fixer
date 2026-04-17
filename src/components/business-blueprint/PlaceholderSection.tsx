@@ -1,13 +1,19 @@
 import { Sparkles, type LucideIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { getBusinessType } from "./businessTypes";
 
 interface Props {
   title: string;
   description: string;
   icon: LucideIcon;
   comingNext: string[];
+  businessType?: string;
 }
 
-const PlaceholderSection = ({ title, description, icon: Icon, comingNext }: Props) => {
+const PlaceholderSection = ({ title, description, icon: Icon, comingNext, businessType }: Props) => {
+  const bt = getBusinessType(businessType);
+  const BtIcon = bt.icon;
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-2xl mx-auto p-12">
@@ -17,12 +23,18 @@ const PlaceholderSection = ({ title, description, icon: Icon, comingNext }: Prop
           </div>
           <h2 className="text-3xl font-display font-bold text-foreground mb-3">{title}</h2>
           <p className="text-muted-foreground max-w-md mx-auto">{description}</p>
+          <div className="mt-4 flex justify-center">
+            <Badge variant="secondary" className="gap-1.5">
+              <BtIcon className="w-3 h-3 text-primary" />
+              <span className="text-[11px] font-medium">Tailored for {bt.label.toLowerCase()}s</span>
+            </Badge>
+          </div>
         </div>
 
         <div className="bg-card rounded-xl border border-border p-8 shadow-sm">
           <div className="flex items-center gap-2 mb-5">
             <Sparkles className="w-4 h-4 text-primary" />
-            <p className="text-sm font-semibold text-foreground">Coming next</p>
+            <p className="text-sm font-semibold text-foreground">Coming next — for your business model</p>
           </div>
           <ul className="space-y-3">
             {comingNext.map((item) => (
