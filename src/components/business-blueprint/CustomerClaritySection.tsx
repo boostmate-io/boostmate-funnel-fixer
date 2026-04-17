@@ -214,9 +214,9 @@ const CustomerClaritySection = ({ data, onChange, saving }: Props) => {
 
           {/* Feedback strip */}
           {feedback && (
-            <div className="px-6 py-3 border-t border-border bg-emerald-500/5 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">{feedback}</p>
+            <div className="px-6 py-3 border-t border-border bg-primary/5 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
+              <p className="text-sm text-primary font-medium">{feedback}</p>
             </div>
           )}
         </div>

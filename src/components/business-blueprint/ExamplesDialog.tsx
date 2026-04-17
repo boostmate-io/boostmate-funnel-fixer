@@ -18,8 +18,8 @@ const ExamplesDialog = ({ open, onOpenChange, title, examples }: Props) => (
     <DialogContent className="max-w-xl">
       <DialogHeader>
         <div className="flex items-center gap-2 mb-1">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-            <Lightbulb className="w-4 h-4 text-amber-600" />
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Lightbulb className="w-4 h-4 text-primary" />
           </div>
           <DialogTitle className="text-xl">Examples — {title}</DialogTitle>
         </div>
