@@ -5,7 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { useBlueprint } from "./useBlueprint";
 import { useWorkspaceSettings } from "./useWorkspaceSettings";
 import { calculateClarityProgress, type SectionId } from "./types";
-import { getBusinessType, type BusinessTypeId } from "./businessTypes";
+import { getBusinessType } from "./businessTypes";
 import CustomerClaritySection from "./CustomerClaritySection";
 import PlaceholderSection from "./PlaceholderSection";
 import BlueprintOverview from "./BlueprintOverview";
@@ -58,17 +58,12 @@ const BusinessBlueprintModule = () => {
     setMode("edit");
   };
 
-  const handleBusinessTypeChange = (next: BusinessTypeId) => {
-    updateSettings({ business_type: next }, { immediate: true });
-  };
-
   if (mode === "overview") {
     return (
       <>
         <BlueprintOverview
           clarity={blueprint.customer_clarity}
           businessType={settings.business_type}
-          onBusinessTypeChange={handleBusinessTypeChange}
           onEdit={handleEdit}
           onOpenSetup={() => setSetupOpen(true)}
           setupCompleted={settings.setup_status === "completed"}
@@ -109,33 +104,37 @@ const BusinessBlueprintModule = () => {
             description={`Define your full value ladder — tailored to a ${bt.label.toLowerCase()} business model.`}
             icon={Package}
             comingNext={bt.offerExamples}
+            businessType={settings.business_type}
           />
         );
       case "growth-system":
         return (
           <PlaceholderSection
             title="Growth System"
-            description="Map traffic, funnels, nurture and conversion into one coherent system."
+            description={`Map traffic, funnels, nurture and conversion — fit for a ${bt.label.toLowerCase()}.`}
             icon={Workflow}
             comingNext={bt.growthExamples}
+            businessType={settings.business_type}
           />
         );
       case "brand-strategy":
         return (
           <PlaceholderSection
             title="Brand Strategy"
-            description="Make your brand unmistakable — positioning, voice and visual direction."
+            description={`Make your ${bt.label.toLowerCase()} brand unmistakable — positioning, voice and visual direction.`}
             icon={Palette}
             comingNext={bt.brandExamples}
+            businessType={settings.business_type}
           />
         );
       case "proof-authority":
         return (
           <PlaceholderSection
             title="Proof & Authority"
-            description="Build the credibility stack that makes prospects trust you instantly."
+            description={`Build the credibility stack that makes ${bt.customerNoun} trust you instantly.`}
             icon={Award}
             comingNext={bt.proofExamples}
+            businessType={settings.business_type}
           />
         );
     }

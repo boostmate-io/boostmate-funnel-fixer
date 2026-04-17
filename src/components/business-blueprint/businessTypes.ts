@@ -42,6 +42,20 @@ export interface BusinessTypeDef {
   exampleNotFit: string;
   /** Common stages for this business model */
   stageOptions: { value: string; label: string }[];
+  /** Niche / sub-type options shown as chips (e.g. Fitness Coach, Mindset Coach) */
+  nicheOptions: { value: string; label: string }[];
+  /** Avatar examples surfaced as placeholders / inspiration */
+  avatarExamples: string[];
+  /** Daily frustration example placeholder */
+  exampleDailyFrustration: string;
+  /** Dream scenario example placeholder */
+  exampleDreamScenario: string;
+  /** Niche/market example placeholder */
+  exampleNicheMarket: string;
+  /** Point A example placeholder */
+  examplePointA: string;
+  /** What changes externally example */
+  exampleExternal: string;
   /** Common offer types for this business model */
   offerExamples: string[];
   /** Common growth channels */
@@ -76,6 +90,35 @@ export const BUSINESS_TYPES: Record<BusinessTypeId, BusinessTypeDef> = {
       { value: "established", label: "Established (10–25k/mo)" },
       { value: "scaling", label: "Scaling (25k+/mo)" },
     ],
+    nicheOptions: [
+      { value: "mindset", label: "Mindset Coach" },
+      { value: "life", label: "Life Coach" },
+      { value: "fitness", label: "Fitness Coach" },
+      { value: "health", label: "Health & Nutrition" },
+      { value: "relationship", label: "Relationship Coach" },
+      { value: "spiritual", label: "Spiritual Coach" },
+      { value: "business", label: "Business Coach" },
+      { value: "career", label: "Career Coach" },
+      { value: "performance", label: "Performance Coach" },
+      { value: "other", label: "Other" },
+    ],
+    avatarExamples: [
+      "Women rebuilding confidence after toxic relationships",
+      "Busy men 35–50 wanting to lose weight and regain energy",
+      "Couples struggling with trust and communication",
+      "Professionals seeking clarity and purpose in their career",
+      "High-achievers stuck in burnout looking to reconnect with themselves",
+    ],
+    exampleDailyFrustration:
+      "Posting content with no engagement, doing free calls that never convert, second-guessing their pricing.",
+    exampleDreamScenario:
+      "Waking up to discovery calls booked, signing dream clients each week, and finally feeling like a respected expert.",
+    exampleNicheMarket:
+      "Transformational coaching for women rebuilding confidence and self-worth.",
+    examplePointA:
+      "Solo coach at €3k/month, posting content with little engagement, no consistent client flow, and quietly anxious about next month's income.",
+    exampleExternal:
+      "Predictable client bookings, premium pricing, recognized authority in their niche.",
     offerExamples: [
       "Free discovery call / lead magnet",
       "Low-ticket masterclass or mini-course",
@@ -123,6 +166,28 @@ export const BUSINESS_TYPES: Record<BusinessTypeId, BusinessTypeDef> = {
       { value: "growing", label: "Growing (10k–50k MRR)" },
       { value: "scaling", label: "Scaling (50k+ MRR)" },
     ],
+    nicheOptions: [
+      { value: "paid-ads", label: "Paid Ads Agency" },
+      { value: "seo", label: "SEO Agency" },
+      { value: "social", label: "Social Media Agency" },
+      { value: "web-design", label: "Web / Funnel Design" },
+      { value: "content", label: "Content / Video Agency" },
+      { value: "outreach", label: "B2B Outreach Agency" },
+      { value: "ecommerce", label: "Ecommerce Growth" },
+      { value: "full-service", label: "Full-service Marketing" },
+      { value: "other", label: "Other" },
+    ],
+    avatarExamples: [
+      "B2B SaaS founders doing $50k–250k MRR who need predictable lead gen",
+      "DTC brands at $50k/mo wanting to scale paid ads profitably",
+      "Coaches & consultants who need a high-converting funnel",
+      "Local service businesses wanting consistent inbound leads",
+    ],
+    exampleDailyFrustration: "Burning ad spend with no clear ROI, churning agencies, unclear attribution, missed reporting deadlines.",
+    exampleDreamScenario: "A predictable pipeline of qualified retainer clients with case studies that close deals on autopilot.",
+    exampleNicheMarket: "Paid acquisition for B2B SaaS in the $50–250k MRR range.",
+    examplePointA: "Agency at $20k MRR, project-based work, inconsistent referrals, no clear niche.",
+    exampleExternal: "MRR, retention rate, team size, recognized authority in their vertical.",
     offerExamples: [
       "Free audit / strategy session",
       "Setup or pilot project",
@@ -170,6 +235,27 @@ export const BUSINESS_TYPES: Record<BusinessTypeId, BusinessTypeDef> = {
       { value: "established", label: "Established firm" },
       { value: "scaling", label: "Scaling / productized" },
     ],
+    nicheOptions: [
+      { value: "strategy", label: "Strategy Consultant" },
+      { value: "operations", label: "Operations Consultant" },
+      { value: "marketing", label: "Marketing Consultant" },
+      { value: "sales", label: "Sales Consultant" },
+      { value: "finance", label: "Finance / FP&A" },
+      { value: "tech", label: "Technology Consultant" },
+      { value: "hr", label: "People / HR Consultant" },
+      { value: "fractional", label: "Fractional Executive" },
+      { value: "other", label: "Other" },
+    ],
+    avatarExamples: [
+      "VP-level execs at scaling SaaS companies needing an outside operator's view",
+      "Founders of $5–30M businesses wanting a clear growth roadmap",
+      "PE-backed portfolio companies needing rapid operational improvements",
+    ],
+    exampleDailyFrustration: "Internal teams stuck firefighting, no strategic clarity, conflicting priorities from leadership.",
+    exampleDreamScenario: "A clear roadmap, aligned leadership team, and visible progress on the metrics that matter most.",
+    exampleNicheMarket: "Growth strategy for B2B SaaS companies between $5–30M ARR.",
+    examplePointA: "Independent consultant at $10k/mo per engagement, custom proposals, unpredictable pipeline.",
+    exampleExternal: "Recurring engagements, productized offer, recognized framework, premium pricing.",
     offerExamples: [
       "Free strategy diagnostic",
       "Paid audit / workshop",
@@ -217,6 +303,27 @@ export const BUSINESS_TYPES: Record<BusinessTypeId, BusinessTypeDef> = {
       { value: "evergreen", label: "Evergreen funnel" },
       { value: "scaling", label: "Scaling (50k+/mo)" },
     ],
+    nicheOptions: [
+      { value: "career", label: "Career / Skills" },
+      { value: "creative", label: "Creative / Design" },
+      { value: "tech", label: "Tech / No-code / Dev" },
+      { value: "business", label: "Business / Marketing" },
+      { value: "language", label: "Language" },
+      { value: "health", label: "Health & Fitness" },
+      { value: "personal-dev", label: "Personal Development" },
+      { value: "academic", label: "Academic / Test Prep" },
+      { value: "other", label: "Other" },
+    ],
+    avatarExamples: [
+      "Aspiring freelance designers wanting their first $3k/mo client",
+      "Career-switchers learning a new skill to land a better job",
+      "Solopreneurs wanting a step-by-step playbook to launch faster",
+    ],
+    exampleDailyFrustration: "Drowning in free tutorials, jumping between courses, never finishing what they start.",
+    exampleDreamScenario: "Completing the program, getting a real outcome, and joining a community of peers achieving the same.",
+    exampleNicheMarket: "Step-by-step program for aspiring freelance designers.",
+    examplePointA: "First launch at $5k revenue, low completion rate, manual delivery, no nurture sequence.",
+    exampleExternal: "Monthly recurring revenue, completion rates, student outcomes, community size.",
     offerExamples: [
       "Free workshop / lead magnet",
       "Tripwire mini-course",
@@ -264,6 +371,27 @@ export const BUSINESS_TYPES: Record<BusinessTypeId, BusinessTypeDef> = {
       { value: "growing", label: "Growing (25–100k/mo)" },
       { value: "scaling", label: "Scaling (100k+/mo)" },
     ],
+    nicheOptions: [
+      { value: "beauty", label: "Beauty & Skincare" },
+      { value: "apparel", label: "Apparel & Accessories" },
+      { value: "home", label: "Home & Lifestyle" },
+      { value: "wellness", label: "Health & Wellness" },
+      { value: "food", label: "Food & Beverage" },
+      { value: "pet", label: "Pet Products" },
+      { value: "kids", label: "Baby & Kids" },
+      { value: "tech", label: "Tech / Gadgets" },
+      { value: "other", label: "Other" },
+    ],
+    avatarExamples: [
+      "Eco-conscious women 28–45 buying premium skincare with clean ingredients",
+      "Active men 25–40 buying performance apparel they can wear all day",
+      "New parents looking for safe, beautifully designed baby essentials",
+    ],
+    exampleDailyFrustration: "Cart abandonment, low repeat purchase rate, ad costs creeping up, weak email flows.",
+    exampleDreamScenario: "Steady daily orders, customers tagging the brand on social, 35%+ repeat purchase rate.",
+    exampleNicheMarket: "Premium clean skincare for women 28–45 in the DACH region.",
+    examplePointA: "Store at $15k/mo, repeat rate under 15%, ROAS dropping, no SMS retention flow.",
+    exampleExternal: "Monthly revenue, AOV, repeat rate, ROAS, brand recognition.",
     offerExamples: [
       "First-purchase discount / quiz",
       "Bestseller / hero product",
@@ -311,6 +439,27 @@ export const BUSINESS_TYPES: Record<BusinessTypeId, BusinessTypeDef> = {
       { value: "established", label: "Established" },
       { value: "expanding", label: "Multi-location" },
     ],
+    nicheOptions: [
+      { value: "home-services", label: "Home Services (HVAC, Plumbing, Electric)" },
+      { value: "beauty", label: "Beauty / Salon" },
+      { value: "fitness", label: "Gym / Fitness Studio" },
+      { value: "wellness", label: "Wellness / Therapy" },
+      { value: "restaurant", label: "Restaurant / Café" },
+      { value: "retail", label: "Local Retail Store" },
+      { value: "automotive", label: "Automotive" },
+      { value: "professional", label: "Professional Services (Legal, Accounting)" },
+      { value: "other", label: "Other" },
+    ],
+    avatarExamples: [
+      "Homeowners 35–60 in our service area needing reliable HVAC service",
+      "Busy professionals nearby looking for a gym they'll actually stick with",
+      "Locals seeking a trusted neighborhood salon with consistent quality",
+    ],
+    exampleDailyFrustration: "Inconsistent bookings between seasons, low Google reviews, weak repeat business.",
+    exampleDreamScenario: "Fully booked calendar weeks ahead, glowing 5-star reviews, steady referral pipeline.",
+    exampleNicheMarket: "Homeowners 35–60 in [your city] needing fast, reliable HVAC service.",
+    examplePointA: "Booked 50% of capacity, 30 reviews on Google, no follow-up system for past customers.",
+    exampleExternal: "Bookings filled, review count, repeat customers, recognized local brand.",
     offerExamples: [
       "Free quote / consultation",
       "First-time visit special",
@@ -355,6 +504,24 @@ export const BUSINESS_TYPES: Record<BusinessTypeId, BusinessTypeDef> = {
       { value: "established", label: "Established" },
       { value: "scaling", label: "Scaling" },
     ],
+    nicheOptions: [
+      { value: "service", label: "Service Business" },
+      { value: "saas", label: "SaaS / Software" },
+      { value: "creative", label: "Creative / Freelance" },
+      { value: "nonprofit", label: "Nonprofit" },
+      { value: "community", label: "Community / Membership" },
+      { value: "media", label: "Media / Publishing" },
+      { value: "other", label: "Other" },
+    ],
+    avatarExamples: [
+      "Specific people you serve who urgently need what you do best",
+      "A clearly defined group with a shared problem you've solved repeatedly",
+    ],
+    exampleDailyFrustration: "The recurring problem they face that keeps them stuck.",
+    exampleDreamScenario: "What their ideal day or business looks like once you've helped them.",
+    exampleNicheMarket: "Be specific — who you serve and the result you deliver.",
+    examplePointA: "Where they are today — problem, situation, identity.",
+    exampleExternal: "The visible, measurable changes they'll experience.",
     offerExamples: [
       "Free entry offer / lead magnet",
       "Low-ticket starter offer",
