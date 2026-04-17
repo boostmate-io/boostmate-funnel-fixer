@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Sparkles, Lightbulb, Wand2, MessageSquare, Check, TrendingUp, Info } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,8 @@ import {
   type ClaritySubBlock,
   type CustomerClarityData,
 } from "./types";
-import { CLARITY_CONFIG, getConfig, getFeedbackMessage, type FieldDef } from "./clarityConfig";
+import { getClarityConfig, getFeedbackMessage, type FieldDef } from "./clarityConfig";
+import { getBusinessType } from "./businessTypes";
 import ChipsField from "./fields/ChipsField";
 import TagsField from "./fields/TagsField";
 import CoachPanel from "./CoachPanel";
@@ -32,6 +33,7 @@ interface Props {
   data: CustomerClarityData;
   onChange: (patch: Partial<CustomerClarityData>) => void;
   saving: boolean;
+  businessType?: string;
 }
 
 const renderField = (
@@ -58,13 +60,15 @@ const renderField = (
   }
 };
 
-const CustomerClaritySection = ({ data, onChange, saving }: Props) => {
+const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props) => {
   const [active, setActive] = useState<ClaritySubBlock>("avatar");
   const [coachOpen, setCoachOpen] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [improveOpen, setImproveOpen] = useState(false);
 
-  const config = getConfig(active);
+  const bt = getBusinessType(businessType);
+  const clarityConfig = useMemo(() => getClarityConfig(businessType), [businessType]);
+  const config = clarityConfig.find((c) => c.id === active)!;
   const Icon = config.icon;
   const fields = CLARITY_FIELDS[active];
   const filledCount = fields.filter((f) => (data[f] || "").toString().trim().length > 0).length;
@@ -98,13 +102,19 @@ const CustomerClaritySection = ({ data, onChange, saving }: Props) => {
             </div>
             <p className="text-sm text-muted-foreground">{config.description}</p>
           </div>
-          {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="gap-1.5 text-xs">
+              <bt.icon className="w-3 h-3 text-primary" />
+              {bt.label} mode
+            </Badge>
+            {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
+          </div>
         </div>
 
         {/* Horizontal sub-tabs */}
         <div className="border-b border-border mb-6">
           <div className="flex gap-1 -mb-px overflow-x-auto">
-            {CLARITY_CONFIG.map((sb) => {
+            {clarityConfig.map((sb) => {
               const sbProgress = calculateSubBlockProgress(data, sb.id);
               const isActive = active === sb.id;
               const SbIcon = sb.icon;

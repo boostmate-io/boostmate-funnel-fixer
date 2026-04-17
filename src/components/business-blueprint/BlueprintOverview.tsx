@@ -1,9 +1,11 @@
-import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Download, Wand2, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Download, Wand2, ArrowRight, CheckCircle2, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
+import { getBusinessType, type BusinessTypeId } from "./businessTypes";
+import BusinessTypeSelector from "./BusinessTypeSelector";
 
 interface SectionSummary {
   id: SectionId;
@@ -16,18 +18,23 @@ interface SectionSummary {
 
 interface Props {
   clarity: CustomerClarityData;
+  businessType: string;
+  onBusinessTypeChange: (next: BusinessTypeId) => void;
   onEdit: (section?: SectionId) => void;
+  onOpenSetup: () => void;
+  setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, onEdit }: Props) => {
+const BlueprintOverview = ({ clarity, businessType, onBusinessTypeChange, onEdit, onOpenSetup, setupCompleted }: Props) => {
+  const bt = getBusinessType(businessType);
   const clarityProgress = calculateClarityProgress(clarity);
 
   const sections: SectionSummary[] = [
     {
       id: "customer-clarity",
-      label: "Customer Clarity",
+      label: `${bt.customerNounSingular.charAt(0).toUpperCase() + bt.customerNounSingular.slice(1)} Clarity`,
       icon: Users,
-      description: "Who you serve & what they truly want.",
+      description: `Who you serve & what they truly want.`,
       progress: clarityProgress,
       items: [
         { label: "Target audience", value: clarity.avatar_who },
@@ -40,14 +47,9 @@ const BlueprintOverview = ({ clarity, onEdit }: Props) => {
       id: "offer-stack",
       label: "Offer Stack",
       icon: Package,
-      description: "Your full value ladder, end-to-end.",
+      description: `Your full value ladder — tailored to a ${bt.label.toLowerCase()}.`,
       progress: 0,
-      items: [
-        { label: "Core offer" },
-        { label: "Free / lead magnet" },
-        { label: "Low-ticket entry" },
-        { label: "Premium offer" },
-      ],
+      items: bt.offerExamples.slice(0, 4).map((label) => ({ label })),
     },
     {
       id: "growth-system",
@@ -55,11 +57,7 @@ const BlueprintOverview = ({ clarity, onEdit }: Props) => {
       icon: Workflow,
       description: "Traffic → funnels → conversion.",
       progress: 0,
-      items: [
-        { label: "Main traffic source" },
-        { label: "Funnel setup" },
-        { label: "Conversion mechanism" },
-      ],
+      items: bt.growthExamples.slice(0, 3).map((label) => ({ label })),
     },
     {
       id: "brand-strategy",
@@ -67,11 +65,7 @@ const BlueprintOverview = ({ clarity, onEdit }: Props) => {
       icon: Palette,
       description: "Positioning, voice & visual direction.",
       progress: 0,
-      items: [
-        { label: "Positioning" },
-        { label: "Voice" },
-        { label: "Style direction" },
-      ],
+      items: bt.brandExamples.slice(0, 3).map((label) => ({ label })),
     },
     {
       id: "proof-authority",
@@ -79,11 +73,7 @@ const BlueprintOverview = ({ clarity, onEdit }: Props) => {
       icon: Award,
       description: "Credibility stack & trust assets.",
       progress: 0,
-      items: [
-        { label: "Testimonials" },
-        { label: "Proof assets" },
-        { label: "Credibility metrics" },
-      ],
+      items: bt.proofExamples.slice(0, 3).map((label) => ({ label })),
     },
   ];
 
@@ -107,29 +97,51 @@ const BlueprintOverview = ({ clarity, onEdit }: Props) => {
               <h1 className="text-3xl font-display font-bold text-foreground">Business Blueprint</h1>
             </div>
             <p className="text-muted-foreground max-w-2xl">
-              Strategic overview of your business, offers, customers, and growth systems.
+              Strategic overview of your business, offers, {bt.customerNoun}, and growth systems.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <BusinessTypeSelector value={businessType} onChange={onBusinessTypeChange} />
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-60">
+                <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-60 h-8">
                   <Wand2 className="w-4 h-4" />
                   AI Analyze
                 </Button>
               </TooltipTrigger>
               <TooltipContent>AI analysis coming soon</TooltipContent>
             </Tooltip>
-            <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-60">
+            <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-60 h-8">
               <Download className="w-4 h-4" />
               Export
             </Button>
-            <Button size="sm" onClick={() => onEdit()} className="gap-1.5">
+            <Button size="sm" onClick={() => onEdit()} className="gap-1.5 h-8">
               <Pencil className="w-4 h-4" />
               Edit Blueprint
             </Button>
           </div>
         </div>
+
+        {/* Setup banner (only if user skipped or never ran) */}
+        {!setupCompleted && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
+                <Settings2 className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Personalize your Blueprint</p>
+                <p className="text-xs text-muted-foreground">
+                  Answer 5 quick questions so every example, AI suggestion and template fits your business.
+                </p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={onOpenSetup} className="gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              Start setup
+            </Button>
+          </div>
+        )}
 
         {/* Top completion card */}
         <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-2xl border border-primary/20 p-6">

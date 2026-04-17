@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Users, Package, Workflow, Palette, Award, Loader2, Sparkles, ArrowLeft, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useBlueprint } from "./useBlueprint";
+import { useWorkspaceSettings } from "./useWorkspaceSettings";
 import { calculateClarityProgress, type SectionId } from "./types";
+import { getBusinessType, type BusinessTypeId } from "./businessTypes";
 import CustomerClaritySection from "./CustomerClaritySection";
 import PlaceholderSection from "./PlaceholderSection";
 import BlueprintOverview from "./BlueprintOverview";
+import BlueprintSetupWizard from "./BlueprintSetupWizard";
 
 const sections: { id: SectionId; label: string; icon: typeof Users }[] = [
   { id: "customer-clarity", label: "Customer Clarity", icon: Users },
@@ -21,9 +24,18 @@ type Mode = "overview" | "edit";
 const BusinessBlueprintModule = () => {
   const [mode, setMode] = useState<Mode>("overview");
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
+  const [setupOpen, setSetupOpen] = useState(false);
   const { blueprint, loading, saving, updateCustomerClarity } = useBlueprint();
+  const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
 
-  if (loading || !blueprint) {
+  // First-visit: open setup wizard if pending
+  useEffect(() => {
+    if (!loadingSettings && settings && settings.setup_status === "pending") {
+      setSetupOpen(true);
+    }
+  }, [loadingSettings, settings]);
+
+  if (loading || loadingSettings || !blueprint || !settings) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -31,6 +43,7 @@ const BusinessBlueprintModule = () => {
     );
   }
 
+  const bt = getBusinessType(settings.business_type);
   const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
   const sectionProgress: Record<SectionId, number> = {
     "customer-clarity": clarityProgress,
@@ -45,12 +58,36 @@ const BusinessBlueprintModule = () => {
     setMode("edit");
   };
 
+  const handleBusinessTypeChange = (next: BusinessTypeId) => {
+    updateSettings({ business_type: next }, { immediate: true });
+  };
+
   if (mode === "overview") {
     return (
-      <BlueprintOverview
-        clarity={blueprint.customer_clarity}
-        onEdit={handleEdit}
-      />
+      <>
+        <BlueprintOverview
+          clarity={blueprint.customer_clarity}
+          businessType={settings.business_type}
+          onBusinessTypeChange={handleBusinessTypeChange}
+          onEdit={handleEdit}
+          onOpenSetup={() => setSetupOpen(true)}
+          setupCompleted={settings.setup_status === "completed"}
+        />
+        <BlueprintSetupWizard
+          open={setupOpen}
+          onOpenChange={setSetupOpen}
+          onComplete={(patch) => {
+            updateSettings(patch, { immediate: true });
+            setSetupOpen(false);
+          }}
+          onSkip={() => {
+            if (settings.setup_status === "pending") {
+              updateSettings({ setup_status: "skipped" }, { immediate: true, silent: true });
+            }
+            setSetupOpen(false);
+          }}
+        />
+      </>
     );
   }
 
@@ -62,16 +99,45 @@ const BusinessBlueprintModule = () => {
             data={blueprint.customer_clarity}
             onChange={updateCustomerClarity}
             saving={saving}
+            businessType={settings.business_type}
           />
         );
       case "offer-stack":
-        return <PlaceholderSection title="Offer Stack" description="Define your full value ladder — from lead magnet to premium core offer." icon={Package} comingNext={["Free / lead magnet offer", "Low-ticket entry offer", "Core offer & signature method", "Premium / high-ticket offer", "Value ladder & ascension flow"]} />;
+        return (
+          <PlaceholderSection
+            title="Offer Stack"
+            description={`Define your full value ladder — tailored to a ${bt.label.toLowerCase()} business model.`}
+            icon={Package}
+            comingNext={bt.offerExamples}
+          />
+        );
       case "growth-system":
-        return <PlaceholderSection title="Growth System" description="Map traffic, funnels, nurture and conversion into one coherent system." icon={Workflow} comingNext={["Traffic sources & channels", "Funnel mapping", "Nurture sequences", "Conversion mechanics", "Ascension & delivery flow"]} />;
+        return (
+          <PlaceholderSection
+            title="Growth System"
+            description="Map traffic, funnels, nurture and conversion into one coherent system."
+            icon={Workflow}
+            comingNext={bt.growthExamples}
+          />
+        );
       case "brand-strategy":
-        return <PlaceholderSection title="Brand Strategy" description="Make your brand unmistakable — positioning, voice and visual direction." icon={Palette} comingNext={["Positioning & differentiation", "Brand voice & personality", "Perception & messaging themes", "Visual direction", "Tagline & manifesto"]} />;
+        return (
+          <PlaceholderSection
+            title="Brand Strategy"
+            description="Make your brand unmistakable — positioning, voice and visual direction."
+            icon={Palette}
+            comingNext={bt.brandExamples}
+          />
+        );
       case "proof-authority":
-        return <PlaceholderSection title="Proof & Authority" description="Build the credibility stack that makes prospects trust you instantly." icon={Award} comingNext={["Testimonials & social proof", "Case studies & metrics", "Trust assets (logos, awards)", "Founder story & expertise", "Authority positioning"]} />;
+        return (
+          <PlaceholderSection
+            title="Proof & Authority"
+            description="Build the credibility stack that makes prospects trust you instantly."
+            icon={Award}
+            comingNext={bt.proofExamples}
+          />
+        );
     }
   };
 
