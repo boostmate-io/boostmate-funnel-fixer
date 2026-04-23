@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { BlueprintRow, CustomerClarityData } from "./types";
 import type { OfferDesignData } from "./offerDesignTypes";
+import type { GrowthSystemData } from "./growthSystemTypes";
 
 export function useBlueprint() {
   const { activeSubAccountId } = useWorkspace();
@@ -14,6 +15,7 @@ export function useBlueprint() {
   const [saving, setSaving] = useState(false);
   const claritySaveTimer = useRef<number | null>(null);
   const offerSaveTimer = useRef<number | null>(null);
+  const growthSaveTimer = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     if (!activeSubAccountId || !user) return;
@@ -95,5 +97,35 @@ export function useBlueprint() {
     []
   );
 
-  return { blueprint, loading, saving, updateCustomerClarity, updateOfferDesign, reload: load };
+  const updateGrowthSystem = useCallback(
+    (patch: Partial<GrowthSystemData>) => {
+      setBlueprint((prev) => {
+        if (!prev) return prev;
+        const nextGrowth = { ...(prev.growth_system as GrowthSystemData), ...patch };
+        const next = { ...prev, growth_system: nextGrowth as Record<string, any> };
+        if (growthSaveTimer.current) window.clearTimeout(growthSaveTimer.current);
+        growthSaveTimer.current = window.setTimeout(async () => {
+          setSaving(true);
+          const { error } = await supabase
+            .from("business_blueprints")
+            .update({ growth_system: nextGrowth as any })
+            .eq("id", prev.id);
+          setSaving(false);
+          if (error) toast.error("Opslaan mislukt");
+        }, 800);
+        return next;
+      });
+    },
+    []
+  );
+
+  return {
+    blueprint,
+    loading,
+    saving,
+    updateCustomerClarity,
+    updateOfferDesign,
+    updateGrowthSystem,
+    reload: load,
+  };
 }
