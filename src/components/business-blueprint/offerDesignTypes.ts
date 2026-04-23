@@ -294,15 +294,21 @@ export function calcAngleProgress(a: OfferAngleData): number {
 }
 
 export function calcStackProgress(s: OfferStackData): number {
+  if (!s) return 0;
   let score = 0;
-  if (s.deliverables.length > 0) score += 25;
-  if (s.deliverables.length >= 3) score += 10;
-  if (s.resources.length > 0) score += 15;
-  if (s.support_channels.length > 0) score += 15;
-  if (s.bonuses.length > 0) score += 10;
+  const deliverables = s.deliverables ?? [];
+  const resources = s.resources ?? [];
+  const supportChannels = s.support_channels ?? [];
+  const bonuses = s.bonuses ?? [];
+  const milestones = s.milestones ?? [];
+  if (deliverables.length > 0) score += 25;
+  if (deliverables.length >= 3) score += 10;
+  if (resources.length > 0) score += 15;
+  if (supportChannels.length > 0) score += 15;
+  if (bonuses.length > 0) score += 10;
   if (s.delivery_timeline && (s.delivery_timeline !== "custom" || s.delivery_timeline_custom?.trim())) score += 10;
-  if (s.milestones.length > 0) score += 10;
-  if (s.milestones.length >= 3) score += 5;
+  if (milestones.length > 0) score += 10;
+  if (milestones.length >= 3) score += 5;
   return Math.min(100, score);
 }
 
