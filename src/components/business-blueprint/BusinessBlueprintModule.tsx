@@ -4,9 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useBlueprint } from "./useBlueprint";
 import { useWorkspaceSettings } from "./useWorkspaceSettings";
+import { useEcosystemOffers } from "./useEcosystemOffers";
+import { useFunnelMappings } from "./useFunnelMappings";
 import { calculateClarityProgress, type SectionId } from "./types";
-import { calculateOfferDesignProgress, type OfferDesignData } from "./offerDesignTypes";
-import { calculateGrowthSystemProgress, type GrowthSystemData } from "./growthSystemTypes";
+import { calculateOfferDesignProgress } from "./offerDesignTypes";
+import {
+  calculateGrowthSystemProgress,
+  normalizeGrowthSystem,
+  type GrowthSystemData,
+} from "./growthSystemTypes";
 import { getBusinessType } from "./businessTypes";
 import CustomerClaritySection from "./CustomerClaritySection";
 import OfferDesignSection from "./OfferDesignSection";
@@ -32,6 +38,13 @@ const BusinessBlueprintModule = () => {
   const { blueprint, offerDesign, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem } = useBlueprint();
   const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
 
+  // Shared ecosystem offers + funnel mappings (used by Growth System & Overview)
+  const { offers, tierCounts } = useEcosystemOffers({
+    blueprintId: blueprint?.id ?? null,
+    offerDesign: offerDesign,
+  });
+  const { mappings } = useFunnelMappings(blueprint?.id ?? null);
+
   // First-visit: open setup wizard if pending
   useEffect(() => {
     if (!loadingSettings && settings && settings.setup_status === "pending") {
@@ -49,10 +62,10 @@ const BusinessBlueprintModule = () => {
 
   const bt = getBusinessType(settings.business_type);
   const offerData = offerDesign;
-  const growthData = (blueprint.growth_system || {}) as GrowthSystemData;
+  const growthData: GrowthSystemData = normalizeGrowthSystem(blueprint.growth_system);
   const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
-  const offerProgress = calculateOfferDesignProgress(offerData);
-  const growthProgress = calculateGrowthSystemProgress(growthData);
+  const offerProgress = calculateOfferDesignProgress(offerData, tierCounts);
+  const growthProgress = calculateGrowthSystemProgress(growthData, mappings);
   const sectionProgress: Record<SectionId, number> = {
     "customer-clarity": clarityProgress,
     "offer-design": offerProgress,
@@ -73,6 +86,9 @@ const BusinessBlueprintModule = () => {
           clarity={blueprint.customer_clarity}
           offer={offerData}
           growth={growthData}
+          mappings={mappings}
+          tierCounts={tierCounts}
+          offers={offers}
           businessType={settings.business_type}
           onEdit={handleEdit}
           onOpenSetup={() => setSetupOpen(true)}
@@ -120,8 +136,9 @@ const BusinessBlueprintModule = () => {
       case "growth-system":
         return (
           <GrowthSystemSection
+            blueprintId={blueprint.id}
             data={growthData}
-            offer={offerData}
+            offers={offers}
             onChange={updateGrowthSystem}
             saving={saving}
             businessType={settings.business_type}
