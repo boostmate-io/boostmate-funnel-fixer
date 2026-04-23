@@ -951,6 +951,80 @@ export type Database = {
           },
         ]
       }
+      growth_funnel_mappings: {
+        Row: {
+          blueprint_id: string
+          created_at: string
+          funnel_type: string
+          id: string
+          next_offer_id: string | null
+          offer_id: string | null
+          purpose: string
+          sort_order: number
+          sub_account_id: string
+          traffic_sources: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blueprint_id: string
+          created_at?: string
+          funnel_type?: string
+          id?: string
+          next_offer_id?: string | null
+          offer_id?: string | null
+          purpose?: string
+          sort_order?: number
+          sub_account_id: string
+          traffic_sources?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blueprint_id?: string
+          created_at?: string
+          funnel_type?: string
+          id?: string
+          next_offer_id?: string | null
+          offer_id?: string | null
+          purpose?: string
+          sort_order?: number
+          sub_account_id?: string
+          traffic_sources?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_funnel_mappings_blueprint_id_fkey"
+            columns: ["blueprint_id"]
+            isOneToOne: false
+            referencedRelation: "business_blueprints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_funnel_mappings_next_offer_id_fkey"
+            columns: ["next_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_funnel_mappings_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_funnel_mappings_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_documents: {
         Row: {
           created_at: string
