@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
-import { calculateOfferDesignProgress, type OfferDesignData } from "./offerDesignTypes";
+import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
 import { calculateGrowthSystemProgress, type GrowthSystemData } from "./growthSystemTypes";
 import { getBusinessType } from "./businessTypes";
 
@@ -55,10 +55,10 @@ const BlueprintOverview = ({ clarity, offer, growth, businessType, onEdit, onOpe
       description: `Angle, stack, pricing & value ladder — tailored to a ${bt.label.toLowerCase()}.`,
       progress: offerProgress,
       items: [
-        { label: "Main offer", value: offer.angle_main_offer_name },
-        { label: "Core promise", value: offer.angle_core_promise },
-        { label: "Core price", value: offer.pricing_core_price },
-        { label: "Free offer", value: offer.ladder_free_offer },
+        { label: "Main offer", value: offer.angle?.main_offer_name },
+        { label: "Core promise", value: buildPromisePreview(offer.angle?.core_promise) },
+        { label: "Core price", value: typeof offer.pricing?.core_price === "number" ? `$${offer.pricing.core_price}` : undefined },
+        { label: "Deliverables", value: offer.stack?.deliverables?.length ? `${offer.stack.deliverables.length} defined` : undefined },
       ],
     },
     {

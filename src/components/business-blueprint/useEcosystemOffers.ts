@@ -111,8 +111,12 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
           .eq("id", existingCore.id);
         if (!error) {
           lastSyncedCoreSignature.current = signature;
-          setOffers((prev) =>
-            prev.map((o) => (o.id === existingCore.id ? { ...o, name: payload.name, data: payload.data } : o)),
+    setOffers((prev) =>
+            prev.map((o) =>
+              o.id === existingCore.id
+                ? { ...o, name: payload.name, data: payload.data as EcosystemOfferRow["data"] }
+                : o,
+            ),
           );
         }
       } else {
