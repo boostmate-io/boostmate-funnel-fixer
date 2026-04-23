@@ -29,7 +29,7 @@ const BusinessBlueprintModule = () => {
   const [mode, setMode] = useState<Mode>("overview");
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
   const [setupOpen, setSetupOpen] = useState(false);
-  const { blueprint, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem } = useBlueprint();
+  const { blueprint, offerDesign, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem } = useBlueprint();
   const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
 
   // First-visit: open setup wizard if pending
@@ -48,7 +48,7 @@ const BusinessBlueprintModule = () => {
   }
 
   const bt = getBusinessType(settings.business_type);
-  const offerData = (blueprint.offer_stack || {}) as OfferDesignData;
+  const offerData = offerDesign;
   const growthData = (blueprint.growth_system || {}) as GrowthSystemData;
   const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
   const offerProgress = calculateOfferDesignProgress(offerData);
