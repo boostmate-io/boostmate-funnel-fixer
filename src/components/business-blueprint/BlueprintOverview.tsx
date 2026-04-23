@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
 import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
-import { calculateGrowthSystemProgress, type GrowthSystemData } from "./growthSystemTypes";
+import { calculateGrowthSystemProgress, getFunnelTypeLabel, type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
 import { getBusinessType } from "./businessTypes";
+
+interface OfferLite { id: string; name: string; tier?: string }
 
 interface SectionSummary {
   id: SectionId;
@@ -21,18 +23,22 @@ interface Props {
   clarity: CustomerClarityData;
   offer: OfferDesignData;
   growth: GrowthSystemData;
+  mappings: FunnelMappingRow[];
+  offers: OfferLite[];
   businessType: string;
   onEdit: (section?: SectionId) => void;
   onOpenSetup: () => void;
   setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, offer, growth, businessType, onEdit, onOpenSetup, setupCompleted }: Props) => {
+const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, onEdit, onOpenSetup, setupCompleted }: Props) => {
   const bt = getBusinessType(businessType);
   const BtIcon = bt.icon;
   const clarityProgress = calculateClarityProgress(clarity);
   const offerProgress = calculateOfferDesignProgress(offer);
-  const growthProgress = calculateGrowthSystemProgress(growth);
+  const growthProgress = calculateGrowthSystemProgress(growth, mappings);
+  const offerName = (id?: string | null) => (id ? offers.find((o) => o.id === id)?.name : undefined);
+  const firstMapping = mappings[0];
 
   const sections: SectionSummary[] = [
     {
@@ -65,13 +71,25 @@ const BlueprintOverview = ({ clarity, offer, growth, businessType, onEdit, onOpe
       id: "growth-system",
       label: "Growth System",
       icon: Workflow,
-      description: "Traffic, funnels, conversion, nurture & ascension.",
+      description: "Acquisition, funnel architecture & ascension.",
       progress: growthProgress,
       items: [
-        { label: "Primary traffic", value: growth.traffic_primary_source },
-        { label: "Core offer funnel", value: growth.funnel_core_offer },
-        { label: "Conversion mech.", value: growth.conversion_primary_mechanism },
-        { label: "Monetization gap", value: growth.ascension_monetization_gap },
+        {
+          label: "Traffic sources",
+          value: growth.acquisition?.traffic_sources?.length
+            ? `${growth.acquisition.traffic_sources.length} selected`
+            : undefined,
+        },
+        { label: "Entry offer", value: offerName(growth.acquisition?.primary_entry_offer_id) },
+        {
+          label: "Funnel mapping",
+          value: firstMapping
+            ? `${offerName(firstMapping.offer_id) ?? "Offer"} → ${getFunnelTypeLabel(firstMapping.funnel_type)}`
+            : mappings.length
+              ? `${mappings.length} mapped`
+              : undefined,
+        },
+        { label: "Next after core", value: offerName(growth.ascension?.next_offer_after_core_id) },
       ],
     },
     {

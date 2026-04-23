@@ -87,7 +87,6 @@ const BusinessBlueprintModule = () => {
           offer={offerData}
           growth={growthData}
           mappings={mappings}
-          tierCounts={tierCounts}
           offers={offers}
           businessType={settings.business_type}
           onEdit={handleEdit}
