@@ -1010,6 +1010,7 @@ export type Database = {
       }
       offers: {
         Row: {
+          blueprint_id: string | null
           completion: number
           created_at: string
           data: Json
@@ -1017,12 +1018,16 @@ export type Database = {
           name: string
           project_id: string | null
           share_token: string | null
+          sort_order: number
+          source: string
           status: string
           sub_account_id: string | null
+          tier: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          blueprint_id?: string | null
           completion?: number
           created_at?: string
           data?: Json
@@ -1030,12 +1035,16 @@ export type Database = {
           name?: string
           project_id?: string | null
           share_token?: string | null
+          sort_order?: number
+          source?: string
           status?: string
           sub_account_id?: string | null
+          tier?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          blueprint_id?: string | null
           completion?: number
           created_at?: string
           data?: Json
@@ -1043,12 +1052,22 @@ export type Database = {
           name?: string
           project_id?: string | null
           share_token?: string | null
+          sort_order?: number
+          source?: string
           status?: string
           sub_account_id?: string | null
+          tier?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "offers_blueprint_id_fkey"
+            columns: ["blueprint_id"]
+            isOneToOne: false
+            referencedRelation: "business_blueprints"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "offers_project_id_fkey"
             columns: ["project_id"]

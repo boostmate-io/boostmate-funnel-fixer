@@ -1,183 +1,130 @@
-import { useMemo, useState } from "react";
-import { Check, TrendingUp, Info } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+// =============================================================================
+// OfferDesignSection — orchestrator with tab navigation across the 4 tabs.
+// =============================================================================
+
+import { useState } from "react";
+import { Check } from "lucide-react";
 import {
-  calculateOfferSubBlockProgress,
-  OFFER_DESIGN_FIELDS,
-  type OfferSubBlock,
+  OFFER_TABS,
+  type OfferTab,
   type OfferDesignData,
+  type OfferAngleData,
+  type OfferStackData,
+  type PricingData,
+  calcAngleProgress,
+  calcStackProgress,
+  calcPricingProgress,
+  calcEcosystemProgress,
 } from "./offerDesignTypes";
-import { getOfferDesignConfig, getOfferFeedbackMessage, type OfferFieldDef } from "./offerDesignConfig";
-import { getBusinessType } from "./businessTypes";
-import CoachPanel from "./CoachPanel";
-import FieldCard from "./FieldCard";
-import type { FieldDef } from "./clarityConfig";
+import { useEcosystemOffers } from "./useEcosystemOffers";
+import OfferAngleTab from "./offer/OfferAngleTab";
+import OfferStackTab from "./offer/OfferStackTab";
+import PricingTab from "./offer/PricingTab";
+import OfferEcosystemTab from "./offer/OfferEcosystemTab";
 
 interface Props {
+  blueprintId: string | null;
   data: OfferDesignData;
   onChange: (patch: Partial<OfferDesignData>) => void;
   saving: boolean;
   businessType?: string;
 }
 
-const OfferDesignSection = ({ data, onChange, saving, businessType }: Props) => {
-  const [active, setActive] = useState<OfferSubBlock>("angle");
-  const [coachOpen, setCoachOpen] = useState(false);
-  const [coachFieldLabel, setCoachFieldLabel] = useState<string | null>(null);
+const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType }: Props) => {
+  const [active, setActive] = useState<OfferTab>("angle");
 
-  const bt = getBusinessType(businessType);
-  const offerConfig = useMemo(() => getOfferDesignConfig(businessType), [businessType]);
-  const config = offerConfig.find((c) => c.id === active)!;
-  const Icon = config.icon;
-  const fields = OFFER_DESIGN_FIELDS[active];
-  const filledCount = fields.filter((k) => (data[k] || "").toString().trim().length > 0).length;
-  const progress = calculateOfferSubBlockProgress(data, active);
-  const feedback = getOfferFeedbackMessage(config, progress);
+  // We piggyback on useEcosystemOffers here so the sub-tab nav can show ecosystem
+  // progress even when the user is not on the ecosystem tab.
+  const { tierCounts } = useEcosystemOffers({ blueprintId, offerDesign: data });
 
-  const handleCoachSubmit = (answers: Record<string, string>) => {
-    toast.info("Coach mode — AI suggestions coming soon", {
-      description: `Captured ${Object.keys(answers).filter((k) => answers[k]?.trim()).length} answers.`,
-    });
+  const tabProgress: Record<OfferTab, number> = {
+    angle: calcAngleProgress(data.angle),
+    stack: calcStackProgress(data.stack),
+    pricing: calcPricingProgress(data.pricing),
+    ecosystem: calcEcosystemProgress(tierCounts),
   };
 
-  const openCoachFor = (label: string) => {
-    setCoachFieldLabel(label);
-    setCoachOpen(true);
-  };
-
-  // FieldCard expects a FieldDef typed for CustomerClarityData. We adapt by casting
-  // the key — visual behavior is identical and the actual key is only used as a string.
-  const adaptField = (field: OfferFieldDef): FieldDef =>
-    ({
-      ...field,
-      key: field.key as unknown as FieldDef["key"],
-    }) as FieldDef;
+  const updateAngle = (patch: Partial<OfferAngleData>) =>
+    onChange({ angle: { ...data.angle, ...patch } });
+  const updateStack = (patch: Partial<OfferStackData>) =>
+    onChange({ stack: { ...data.stack, ...patch } });
+  const updatePricing = (patch: Partial<PricingData>) =>
+    onChange({ pricing: { ...data.pricing, ...patch } });
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-6xl mx-auto p-8">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Icon className="w-5 h-5 text-primary" />
-              <h2 className="text-2xl font-display font-bold text-foreground">{config.label}</h2>
-            </div>
-            <p className="text-sm text-muted-foreground">{config.description}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1.5 text-xs">
-              <bt.icon className="w-3 h-3 text-primary" />
-              {bt.label} mode
-            </Badge>
-            {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
-          </div>
-        </div>
-
-        {/* Horizontal sub-tabs */}
-        <div className="border-b border-border mb-6">
-          <div className="flex gap-1 -mb-px overflow-x-auto">
-            {offerConfig.map((sb) => {
-              const sbProgress = calculateOfferSubBlockProgress(data, sb.id);
-              const isActive = active === sb.id;
-              const SbIcon = sb.icon;
-              const isComplete = sbProgress === 100;
-              return (
-                <button
-                  key={sb.id}
-                  onClick={() => setActive(sb.id)}
-                  className={`group relative flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
-                    isActive
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                  }`}
-                >
-                  <SbIcon className="w-4 h-4" />
-                  <span>{sb.label}</span>
-                  {isComplete ? (
-                    <Check className="w-3.5 h-3.5 text-primary" />
-                  ) : (
-                    <span
-                      className={`text-[10px] tabular-nums ${
-                        isActive ? "text-primary/70" : "text-muted-foreground/70"
-                      }`}
-                    >
-                      {sbProgress}%
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Insight box */}
-        <div className="mb-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-4 flex gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Info className="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-primary mb-1">
-              Why this matters
-            </div>
-            <p className="text-sm text-foreground/80 leading-relaxed">{config.insight}</p>
-          </div>
-        </div>
-
-        {/* Stats strip */}
-        <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground px-1">
-          <span className="font-semibold tabular-nums text-foreground">
-            {filledCount} / {fields.length}
-          </span>
-          <span>fields completed</span>
-          <span className="text-muted-foreground/50">•</span>
-          <span className="tabular-nums">{progress}%</span>
-        </div>
-
-        {/* Modular field cards grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {config.fields.map((field) => (
-            <div
-              key={field.key as string}
-              className={field.fullWidth ? "lg:col-span-2" : ""}
-            >
-              <FieldCard
-                field={adaptField(field)}
-                value={(data[field.key] as string) || ""}
-                onChange={(v) => onChange({ [field.key]: v } as Partial<OfferDesignData>)}
-                onCoach={() => openCoachFor(field.label)}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Feedback strip */}
-        {feedback && (
-          <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
-            <p className="text-sm text-primary font-medium">{feedback}</p>
-          </div>
-        )}
-
-        {/* Sub-block progress bar */}
-        <div className="mt-4 px-1">
-          <Progress value={progress} className="h-1" />
+    <div className="h-full flex flex-col">
+      {/* Sub-tab navigation */}
+      <div className="border-b border-border bg-card px-8">
+        <div className="max-w-6xl mx-auto flex gap-1 -mb-px overflow-x-auto">
+          {OFFER_TABS.map((tab) => {
+            const isActive = active === tab.id;
+            const TabIcon = tab.icon;
+            const prog = tabProgress[tab.id];
+            const isComplete = prog === 100;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActive(tab.id)}
+                className={`group relative flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                  isActive
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                }`}
+              >
+                <TabIcon className="w-4 h-4" />
+                <span>{tab.label}</span>
+                {isComplete ? (
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                ) : (
+                  <span
+                    className={`text-[10px] tabular-nums ${
+                      isActive ? "text-primary/70" : "text-muted-foreground/70"
+                    }`}
+                  >
+                    {prog}%
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Coach panel */}
-      <CoachPanel
-        open={coachOpen}
-        onOpenChange={(o) => {
-          setCoachOpen(o);
-          if (!o) setCoachFieldLabel(null);
-        }}
-        title={coachFieldLabel ?? config.label}
-        questions={config.coachQuestions}
-        onSubmit={handleCoachSubmit}
-      />
+      {/* Active tab */}
+      <div className="flex-1 overflow-hidden">
+        {active === "angle" && (
+          <OfferAngleTab
+            data={data.angle}
+            onChange={updateAngle}
+            saving={saving}
+            businessType={businessType}
+          />
+        )}
+        {active === "stack" && (
+          <OfferStackTab
+            data={data.stack}
+            onChange={updateStack}
+            saving={saving}
+            businessType={businessType}
+          />
+        )}
+        {active === "pricing" && (
+          <PricingTab
+            data={data.pricing}
+            onChange={updatePricing}
+            saving={saving}
+            businessType={businessType}
+          />
+        )}
+        {active === "ecosystem" && (
+          <OfferEcosystemTab
+            blueprintId={blueprintId}
+            offerDesign={data}
+            saving={saving}
+            businessType={businessType}
+          />
+        )}
+      </div>
     </div>
   );
 };
