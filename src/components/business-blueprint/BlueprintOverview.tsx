@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
 import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
-import { calculateGrowthSystemProgress, type GrowthSystemData } from "./growthSystemTypes";
+import { calculateGrowthSystemProgress, getFunnelTypeLabel, type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
 import { getBusinessType } from "./businessTypes";
+
+interface OfferLite { id: string; name: string; tier?: string }
 
 interface SectionSummary {
   id: SectionId;
