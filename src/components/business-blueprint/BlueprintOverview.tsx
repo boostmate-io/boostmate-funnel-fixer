@@ -71,13 +71,25 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
       id: "growth-system",
       label: "Growth System",
       icon: Workflow,
-      description: "Traffic, funnels, conversion, nurture & ascension.",
+      description: "Acquisition, funnel architecture & ascension.",
       progress: growthProgress,
       items: [
-        { label: "Primary traffic", value: growth.traffic_primary_source },
-        { label: "Core offer funnel", value: growth.funnel_core_offer },
-        { label: "Conversion mech.", value: growth.conversion_primary_mechanism },
-        { label: "Monetization gap", value: growth.ascension_monetization_gap },
+        {
+          label: "Traffic sources",
+          value: growth.acquisition?.traffic_sources?.length
+            ? `${growth.acquisition.traffic_sources.length} selected`
+            : undefined,
+        },
+        { label: "Entry offer", value: offerName(growth.acquisition?.primary_entry_offer_id) },
+        {
+          label: "Funnel mapping",
+          value: firstMapping
+            ? `${offerName(firstMapping.offer_id) ?? "Offer"} → ${getFunnelTypeLabel(firstMapping.funnel_type)}`
+            : mappings.length
+              ? `${mappings.length} mapped`
+              : undefined,
+        },
+        { label: "Next after core", value: offerName(growth.ascension?.next_offer_after_core_id) },
       ],
     },
     {
