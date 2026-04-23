@@ -23,18 +23,22 @@ interface Props {
   clarity: CustomerClarityData;
   offer: OfferDesignData;
   growth: GrowthSystemData;
+  mappings: FunnelMappingRow[];
+  offers: OfferLite[];
   businessType: string;
   onEdit: (section?: SectionId) => void;
   onOpenSetup: () => void;
   setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, offer, growth, businessType, onEdit, onOpenSetup, setupCompleted }: Props) => {
+const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, onEdit, onOpenSetup, setupCompleted }: Props) => {
   const bt = getBusinessType(businessType);
   const BtIcon = bt.icon;
   const clarityProgress = calculateClarityProgress(clarity);
   const offerProgress = calculateOfferDesignProgress(offer);
-  const growthProgress = calculateGrowthSystemProgress(growth);
+  const growthProgress = calculateGrowthSystemProgress(growth, mappings);
+  const offerName = (id?: string | null) => (id ? offers.find((o) => o.id === id)?.name : undefined);
+  const firstMapping = mappings[0];
 
   const sections: SectionSummary[] = [
     {
