@@ -4,13 +4,18 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { BlueprintRow, CustomerClarityData } from "./types";
-import type { OfferDesignData } from "./offerDesignTypes";
+import {
+  type OfferDesignData,
+  emptyOfferDesign,
+  normalizeOfferDesign,
+} from "./offerDesignTypes";
 import type { GrowthSystemData } from "./growthSystemTypes";
 
 export function useBlueprint() {
   const { activeSubAccountId } = useWorkspace();
   const { user } = useAuth();
   const [blueprint, setBlueprint] = useState<BlueprintRow | null>(null);
+  const [offerDesign, setOfferDesign] = useState<OfferDesignData>(emptyOfferDesign());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const claritySaveTimer = useRef<number | null>(null);
@@ -27,11 +32,12 @@ export function useBlueprint() {
       .maybeSingle();
 
     if (error) {
-      toast.error("Kon blueprint niet laden");
+      toast.error("Could not load blueprint");
       setLoading(false);
       return;
     }
 
+    let row: BlueprintRow | null = null;
     if (!data) {
       const { data: created, error: createErr } = await supabase
         .from("business_blueprints")
@@ -39,19 +45,25 @@ export function useBlueprint() {
         .select()
         .single();
       if (createErr) {
-        toast.error("Kon blueprint niet aanmaken");
+        toast.error("Could not create blueprint");
         setLoading(false);
         return;
       }
-      setBlueprint(created as unknown as BlueprintRow);
+      row = created as unknown as BlueprintRow;
     } else {
-      setBlueprint(data as unknown as BlueprintRow);
+      row = data as unknown as BlueprintRow;
     }
+
+    // Normalize the offer_stack JSON into the v2 structured shape (clean slate
+    // for legacy free-text values).
+    const normalized = normalizeOfferDesign(row.offer_stack);
+    setOfferDesign(normalized);
+    setBlueprint(row);
     setLoading(false);
   }, [activeSubAccountId, user]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const updateCustomerClarity = useCallback(
@@ -67,34 +79,38 @@ export function useBlueprint() {
             .update({ customer_clarity: next.customer_clarity as any })
             .eq("id", prev.id);
           setSaving(false);
-          if (error) toast.error("Opslaan mislukt");
+          if (error) toast.error("Save failed");
         }, 800);
         return next;
       });
     },
-    []
+    [],
   );
 
   const updateOfferDesign = useCallback(
     (patch: Partial<OfferDesignData>) => {
-      setBlueprint((prev) => {
-        if (!prev) return prev;
-        const nextOffer = { ...(prev.offer_stack as OfferDesignData), ...patch };
-        const next = { ...prev, offer_stack: nextOffer as Record<string, any> };
+      setOfferDesign((prev) => {
+        const next: OfferDesignData = {
+          angle: { ...prev.angle, ...(patch.angle || {}) },
+          stack: { ...prev.stack, ...(patch.stack || {}) },
+          pricing: { ...prev.pricing, ...(patch.pricing || {}) },
+        };
+        const blueprintId = blueprint?.id;
         if (offerSaveTimer.current) window.clearTimeout(offerSaveTimer.current);
         offerSaveTimer.current = window.setTimeout(async () => {
+          if (!blueprintId) return;
           setSaving(true);
           const { error } = await supabase
             .from("business_blueprints")
-            .update({ offer_stack: nextOffer as any })
-            .eq("id", prev.id);
+            .update({ offer_stack: next as any })
+            .eq("id", blueprintId);
           setSaving(false);
-          if (error) toast.error("Opslaan mislukt");
+          if (error) toast.error("Save failed");
         }, 800);
         return next;
       });
     },
-    []
+    [blueprint?.id],
   );
 
   const updateGrowthSystem = useCallback(
@@ -111,16 +127,17 @@ export function useBlueprint() {
             .update({ growth_system: nextGrowth as any })
             .eq("id", prev.id);
           setSaving(false);
-          if (error) toast.error("Opslaan mislukt");
+          if (error) toast.error("Save failed");
         }, 800);
         return next;
       });
     },
-    []
+    [],
   );
 
   return {
     blueprint,
+    offerDesign,
     loading,
     saving,
     updateCustomerClarity,
