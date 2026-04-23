@@ -314,9 +314,11 @@ export function calcStackProgress(s: OfferStackData): number {
 }
 
 export function calcPricingProgress(p: PricingData): number {
+  if (!p) return 0;
   let score = 0;
+  const paymentPlans = p.payment_plans ?? [];
   if (typeof p.core_price === "number" && p.core_price > 0) score += 30;
-  if (p.payment_plans.length > 0) score += 20;
+  if (paymentPlans.length > 0) score += 20;
   if (p.recurring_enabled) {
     if (p.recurring_offer?.name?.trim() && typeof p.recurring_offer?.monthly_price === "number") score += 15;
   } else {
@@ -327,7 +329,7 @@ export function calcPricingProgress(p: PricingData): number {
   } else {
     score += 5;
   }
-  if (p.guarantee_type !== "none") {
+  if (p.guarantee_type && p.guarantee_type !== "none") {
     score += 10;
     if (p.guarantee_details?.trim()) score += 5;
   }
