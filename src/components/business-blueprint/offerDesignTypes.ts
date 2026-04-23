@@ -277,6 +277,7 @@ export function normalizeOfferDesign(raw: unknown): OfferDesignData {
 // ---------- Progress calculation --------------------------------------------
 
 export function calcAngleProgress(a: OfferAngleData): number {
+  if (!a) return 0;
   let score = 0;
   if (a.main_offer_name?.trim()) score += 10;
   if (a.short_description?.trim()) score += 10;
