@@ -65,14 +65,13 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       insight: `The clearer your ${nounSingular} is, the better your copy, ads, funnels, and offers will perform. Vague audiences create weak marketing.`,
       fields: [
         f({ key: "avatar_who", label: `Who is your ideal ${nounSingular}?`, type: "textarea", fullWidth: true, rows: 3 }),
-        f({ key: "avatar_stage", label: "What stage or situation are they currently in?", type: "textarea", rows: 3 }),
-        f({ key: "avatar_traits", label: "Traits or mindset that define them", type: "tags", fullWidth: true }),
+        f({ key: "avatar_stage", label: "What stage or situation are they currently in?", type: "textarea", fullWidth: true, rows: 3 }),
+        f({ key: "avatar_traits", label: "Traits or mindset that define them", type: "tags" }),
         f({
           key: "avatar_not_fit",
           label: `Who is NOT a good fit ${noun === "customers" ? "as a customer" : `to be your ${nounSingular}`}?`,
           type: "textarea",
-          fullWidth: true,
-          rows: 2,
+          rows: 3,
         }),
       ],
       coachQuestions: [
@@ -132,8 +131,8 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       insight: `${Noun} don't buy products — they buy a better version of themselves. Mapping desire is what makes your offer irresistible.`,
       fields: [
         f({ key: "desire_main_result", label: "What result do they want most?", type: "textarea", fullWidth: true, rows: 2 }),
-        f({ key: "desire_success_vision", label: "What would success look and feel like?", type: "textarea", fullWidth: true, rows: 4 }),
-        f({ key: "desire_why_badly", label: "Why do they want this so badly?", type: "textarea", fullWidth: true, rows: 2 }),
+        f({ key: "desire_success_vision", label: "What would success look and feel like?", type: "textarea", rows: 4 }),
+        f({ key: "desire_why_badly", label: "Why do they want this so badly?", type: "textarea", rows: 4 }),
       ],
       coachQuestions: [
         "What outcome do they want most?",
