@@ -65,14 +65,7 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       insight: `The clearer your ${nounSingular} is, the better your copy, ads, funnels, and offers will perform. Vague audiences create weak marketing.`,
       fields: [
         f({ key: "avatar_who", label: `Who is your ideal ${nounSingular}?`, type: "textarea", fullWidth: true, rows: 3 }),
-        f({
-          key: "avatar_type",
-          label: `What kind of ${typeLabel} business serves them best?`,
-          type: "chips-single",
-          options: bt.nicheOptions,
-        }),
-        f({ key: "avatar_stage", label: "What stage are they at right now?", type: "chips-single", options: bt.stageOptions }),
-        f({ key: "avatar_niche", label: "What niche or market are they in?", type: "textarea", rows: 2 }),
+        f({ key: "avatar_stage", label: "What stage or situation are they currently in?", type: "textarea", rows: 3 }),
         f({ key: "avatar_traits", label: "Traits or mindset that define them", type: "tags", fullWidth: true }),
         f({
           key: "avatar_not_fit",
@@ -109,11 +102,9 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       insight: `${Noun} buy to escape pain. The deeper you understand their friction, the more your offer will feel like the obvious solution.`,
       fields: [
         f({ key: "pain_main_problem", label: "What is the main problem they are dealing with?", type: "textarea", fullWidth: true, rows: 2 }),
-        f({ key: "pain_daily_frustrations", label: "What frustrations do they experience daily?", type: "textarea", rows: 3 }),
-        f({ key: "pain_blockers", label: "What is stopping them from getting results?", type: "textarea", rows: 3 }),
+        f({ key: "pain_daily_frustrations", label: "What frustrations do they experience because of this?", type: "textarea", rows: 3 }),
         f({ key: "pain_already_tried", label: "What have they already tried?", type: "textarea", rows: 3 }),
-        f({ key: "pain_why_failed", label: "Why didn't previous attempts work?", type: "textarea", rows: 3 }),
-        f({ key: "pain_consequences", label: "What are the consequences if they do nothing?", type: "textarea", fullWidth: true, rows: 2 }),
+        f({ key: "pain_consequences", label: "What happens if they don't solve this?", type: "textarea", fullWidth: true, rows: 2 }),
       ],
       coachQuestions: [
         `What do your ${noun} complain about most?`,
@@ -141,9 +132,7 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       insight: `${Noun} don't buy products — they buy a better version of themselves. Mapping desire is what makes your offer irresistible.`,
       fields: [
         f({ key: "desire_main_result", label: "What result do they want most?", type: "textarea", fullWidth: true, rows: 2 }),
-        f({ key: "desire_dream_scenario", label: "What does their dream scenario look like?", type: "textarea", rows: 3 }),
-        f({ key: "desire_emotional_change", label: "What emotional change do they want?", type: "textarea", rows: 3 }),
-        f({ key: "desire_lifestyle", label: "What freedom, identity, status, or lifestyle do they want?", type: "textarea", rows: 3 }),
+        f({ key: "desire_success_vision", label: "What would success look and feel like?", type: "textarea", fullWidth: true, rows: 4 }),
         f({ key: "desire_why_badly", label: "Why do they want this so badly?", type: "textarea", fullWidth: true, rows: 2 }),
       ],
       coachQuestions: [
@@ -171,11 +160,9 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       description: "Define the journey from current state to desired state.",
       insight: `Your offer is a bridge from Point A to Point B. The clearer that bridge, the more obvious the value of working with you.`,
       fields: [
-        f({ key: "transformation_point_a", label: "Point A — current state", type: "textarea", rows: 4 }),
-        f({ key: "transformation_point_b", label: "Point B — desired state", type: "textarea", rows: 4 }),
-        f({ key: "transformation_external", label: "What changes externally?", type: "textarea", rows: 3 }),
-        f({ key: "transformation_internal", label: "What changes internally?", type: "textarea", rows: 3 }),
-        f({ key: "transformation_possible", label: "What becomes possible once they reach the result?", type: "textarea", fullWidth: true, rows: 2 }),
+        f({ key: "transformation_point_a", label: "Where are they now?", type: "textarea", rows: 4 }),
+        f({ key: "transformation_point_b", label: "Where do they want to be?", type: "textarea", rows: 4 }),
+        f({ key: "transformation_process", label: "What transformation process gets them there?", type: "textarea", fullWidth: true, rows: 4 }),
       ],
       coachQuestions: [
         "Where are they today, exactly?",
