@@ -5,7 +5,7 @@
 import { Megaphone, ArrowRight } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import MultiSelectChips from "./MultiSelectChips";
+import MultiSelectChips from "../offer/MultiSelectChips";
 import {
   type AcquisitionData,
   TRAFFIC_SOURCE_OPTIONS,
