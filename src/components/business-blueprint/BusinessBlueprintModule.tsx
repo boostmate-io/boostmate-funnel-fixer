@@ -5,15 +5,17 @@ import { Progress } from "@/components/ui/progress";
 import { useBlueprint } from "./useBlueprint";
 import { useWorkspaceSettings } from "./useWorkspaceSettings";
 import { calculateClarityProgress, type SectionId } from "./types";
+import { calculateOfferDesignProgress, type OfferDesignData } from "./offerDesignTypes";
 import { getBusinessType } from "./businessTypes";
 import CustomerClaritySection from "./CustomerClaritySection";
+import OfferDesignSection from "./OfferDesignSection";
 import PlaceholderSection from "./PlaceholderSection";
 import BlueprintOverview from "./BlueprintOverview";
 import BlueprintSetupWizard from "./BlueprintSetupWizard";
 
 const sections: { id: SectionId; label: string; icon: typeof Users }[] = [
   { id: "customer-clarity", label: "Customer Clarity", icon: Users },
-  { id: "offer-stack", label: "Offer Stack", icon: Package },
+  { id: "offer-design", label: "Offer Design", icon: Package },
   { id: "growth-system", label: "Growth System", icon: Workflow },
   { id: "brand-strategy", label: "Brand Strategy", icon: Palette },
   { id: "proof-authority", label: "Proof & Authority", icon: Award },
@@ -25,7 +27,7 @@ const BusinessBlueprintModule = () => {
   const [mode, setMode] = useState<Mode>("overview");
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
   const [setupOpen, setSetupOpen] = useState(false);
-  const { blueprint, loading, saving, updateCustomerClarity } = useBlueprint();
+  const { blueprint, loading, saving, updateCustomerClarity, updateOfferDesign } = useBlueprint();
   const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
 
   // First-visit: open setup wizard if pending
@@ -44,10 +46,12 @@ const BusinessBlueprintModule = () => {
   }
 
   const bt = getBusinessType(settings.business_type);
+  const offerData = (blueprint.offer_stack || {}) as OfferDesignData;
   const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
+  const offerProgress = calculateOfferDesignProgress(offerData);
   const sectionProgress: Record<SectionId, number> = {
     "customer-clarity": clarityProgress,
-    "offer-stack": 0,
+    "offer-design": offerProgress,
     "growth-system": 0,
     "brand-strategy": 0,
     "proof-authority": 0,
@@ -63,6 +67,7 @@ const BusinessBlueprintModule = () => {
       <>
         <BlueprintOverview
           clarity={blueprint.customer_clarity}
+          offer={offerData}
           businessType={settings.business_type}
           onEdit={handleEdit}
           onOpenSetup={() => setSetupOpen(true)}
@@ -97,13 +102,12 @@ const BusinessBlueprintModule = () => {
             businessType={settings.business_type}
           />
         );
-      case "offer-stack":
+      case "offer-design":
         return (
-          <PlaceholderSection
-            title="Offer Stack"
-            description={`Define your full value ladder — tailored to a ${bt.label.toLowerCase()} business model.`}
-            icon={Package}
-            comingNext={bt.offerExamples}
+          <OfferDesignSection
+            data={offerData}
+            onChange={updateOfferDesign}
+            saving={saving}
             businessType={settings.business_type}
           />
         );
