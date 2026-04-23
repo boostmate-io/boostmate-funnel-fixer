@@ -6,9 +6,11 @@ import { useBlueprint } from "./useBlueprint";
 import { useWorkspaceSettings } from "./useWorkspaceSettings";
 import { calculateClarityProgress, type SectionId } from "./types";
 import { calculateOfferDesignProgress, type OfferDesignData } from "./offerDesignTypes";
+import { calculateGrowthSystemProgress, type GrowthSystemData } from "./growthSystemTypes";
 import { getBusinessType } from "./businessTypes";
 import CustomerClaritySection from "./CustomerClaritySection";
 import OfferDesignSection from "./OfferDesignSection";
+import GrowthSystemSection from "./GrowthSystemSection";
 import PlaceholderSection from "./PlaceholderSection";
 import BlueprintOverview from "./BlueprintOverview";
 import BlueprintSetupWizard from "./BlueprintSetupWizard";
@@ -27,7 +29,7 @@ const BusinessBlueprintModule = () => {
   const [mode, setMode] = useState<Mode>("overview");
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
   const [setupOpen, setSetupOpen] = useState(false);
-  const { blueprint, loading, saving, updateCustomerClarity, updateOfferDesign } = useBlueprint();
+  const { blueprint, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem } = useBlueprint();
   const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
 
   // First-visit: open setup wizard if pending
@@ -47,12 +49,14 @@ const BusinessBlueprintModule = () => {
 
   const bt = getBusinessType(settings.business_type);
   const offerData = (blueprint.offer_stack || {}) as OfferDesignData;
+  const growthData = (blueprint.growth_system || {}) as GrowthSystemData;
   const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
   const offerProgress = calculateOfferDesignProgress(offerData);
+  const growthProgress = calculateGrowthSystemProgress(growthData);
   const sectionProgress: Record<SectionId, number> = {
     "customer-clarity": clarityProgress,
     "offer-design": offerProgress,
-    "growth-system": 0,
+    "growth-system": growthProgress,
     "brand-strategy": 0,
     "proof-authority": 0,
   };
@@ -68,6 +72,7 @@ const BusinessBlueprintModule = () => {
         <BlueprintOverview
           clarity={blueprint.customer_clarity}
           offer={offerData}
+          growth={growthData}
           businessType={settings.business_type}
           onEdit={handleEdit}
           onOpenSetup={() => setSetupOpen(true)}
@@ -113,11 +118,11 @@ const BusinessBlueprintModule = () => {
         );
       case "growth-system":
         return (
-          <PlaceholderSection
-            title="Growth System"
-            description={`Map traffic, funnels, nurture and conversion — fit for a ${bt.label.toLowerCase()}.`}
-            icon={Workflow}
-            comingNext={bt.growthExamples}
+          <GrowthSystemSection
+            data={growthData}
+            offer={offerData}
+            onChange={updateGrowthSystem}
+            saving={saving}
             businessType={settings.business_type}
           />
         );
