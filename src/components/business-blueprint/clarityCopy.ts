@@ -22,7 +22,18 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Be specific — situation, identity, stage of life, urgency.",
     },
     avatar_type: { helper: "Pick the closest sub-niche of coaching you operate in." },
-    avatar_stage: { helper: "Where is this client in their journey right now?" },
+    avatar_stage: {
+      placeholder: "Example: Recently divorced and struggling to rebuild confidence after a toxic relationship.",
+      helper: "The specific situation, life moment, or struggle they're in right now.",
+    },
+    desire_success_vision: {
+      placeholder: "Example: Waking up calm and confident, attracting healthy relationships, finally proud of who they're becoming and trusting their own decisions.",
+      helper: "Capture the dream scenario, emotional shift, lifestyle, identity and freedom — all in one rich picture.",
+    },
+    transformation_process: {
+      placeholder: "Example: Heal old wounds → rebuild self-trust → set healthy boundaries → step into the confident new identity.",
+      helper: "The journey, method or step-by-step process you guide them through.",
+    },
     avatar_niche: {
       placeholder: "Example: Transformational coaching for women rebuilding self-worth after heartbreak.",
       helper: "One clear sentence on the market you serve.",
@@ -96,7 +107,18 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Be specific — company stage, role, urgency, deal size.",
     },
     avatar_type: { helper: "Pick the closest sub-niche of agency you operate." },
-    avatar_stage: { helper: "Their company stage tells you their priorities and budget." },
+    avatar_stage: {
+      placeholder: "Example: Stuck at $40k MRR, just lost their last agency, and need a partner who can ship results in 60 days.",
+      helper: "Their company stage, urgency and what's pushing them to act now.",
+    },
+    desire_success_vision: {
+      placeholder: "Example: A predictable acquisition engine, defendable 3x+ ROAS, weekly clear reporting, and case-study-worthy growth they can show the board.",
+      helper: "The full picture: business outcome, emotional relief, leadership identity and the lifestyle that comes with it.",
+    },
+    transformation_process: {
+      placeholder: "Example: Audit & strategy → creative & funnel build → launch & test → scale winners → ongoing optimization.",
+      helper: "The roadmap, framework or delivery process that takes them from A to B.",
+    },
     avatar_niche: {
       placeholder: "Example: Paid acquisition for B2B SaaS in the $50–250k MRR range.",
       helper: "Tight niche = sharper positioning and easier sales.",
@@ -166,7 +188,18 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Role, company size and the strategic moment they're in.",
     },
     avatar_type: { helper: "Pick the closest consulting specialty you offer." },
-    avatar_stage: { helper: "Stage of their business or the engagement they need." },
+    avatar_stage: {
+      placeholder: "Example: Newly appointed VP of Growth at a $15M ARR SaaS, under board pressure to fix pipeline in two quarters.",
+      helper: "Their role, business stage and the strategic moment they're in.",
+    },
+    desire_success_vision: {
+      placeholder: "Example: A clear 12-month roadmap, aligned leadership, visible quarterly progress — and personal recognition as the operator who turned it around.",
+      helper: "Strategic outcome, emotional confidence, identity shift and lifestyle of recognized expertise.",
+    },
+    transformation_process: {
+      placeholder: "Example: Diagnostic → roadmap → align leadership → operating cadence → quarterly review and iteration.",
+      helper: "The advisory framework or engagement structure that delivers the outcome.",
+    },
     avatar_niche: {
       placeholder: "Example: Growth strategy for B2B SaaS between $5–30M ARR.",
       helper: "Industry + stage + functional area = sharp positioning.",
@@ -234,7 +267,18 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Their level, ambition and time horizon.",
     },
     avatar_type: { helper: "Pick the closest course / education category." },
-    avatar_stage: { helper: "Where are they in the learning journey?" },
+    avatar_stage: {
+      placeholder: "Example: Working a 9–5 they hate, learning design at night, ready to land their first paying client this quarter.",
+      helper: "Their current situation, motivation and the moment they're choosing to invest.",
+    },
+    desire_success_vision: {
+      placeholder: "Example: A portfolio they're proud of, paying clients in their inbox, freedom to work from anywhere, and the identity of a real professional.",
+      helper: "Outcome + emotional pride + lifestyle + new identity, captured in one vivid picture.",
+    },
+    transformation_process: {
+      placeholder: "Example: Foundations → first project → portfolio → outreach playbook → first paying client → repeat & raise rates.",
+      helper: "The step-by-step path through your program that produces the outcome.",
+    },
     avatar_niche: {
       placeholder: "Example: Step-by-step program for aspiring freelance designers landing their first paying clients.",
       helper: "Audience + outcome makes the program impossible to ignore.",
@@ -302,7 +346,18 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Demographic + buying motivation + values.",
     },
     avatar_type: { helper: "Pick the closest product category you sell in." },
-    avatar_stage: { helper: "Where are they in the buying journey?" },
+    avatar_stage: {
+      placeholder: "Example: Busy professionals 28–40 looking for convenient, healthy meal options after burning out on cooking.",
+      helper: "The life situation or buying moment that brings them to your store.",
+    },
+    desire_success_vision: {
+      placeholder: "Example: A simple routine that actually works, visible glow, compliments from friends, a brand they're proud to recommend.",
+      helper: "Visible product result + emotional confidence + lifestyle fit + brand identity.",
+    },
+    transformation_process: {
+      placeholder: "Example: Skin quiz → starter routine → 30-day glow result → upgrade to full system → repeat & refer.",
+      helper: "The customer journey from first purchase to loyal repeat buyer.",
+    },
     avatar_niche: {
       placeholder: "Example: Premium clean skincare for women 28–45 in the DACH region.",
       helper: "Category + customer + region = sharper positioning and ad targeting.",
@@ -370,7 +425,18 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Geography + life stage + the urgency that brings them in.",
     },
     avatar_type: { helper: "Pick the closest local business category." },
-    avatar_stage: { helper: "Are they emergency, planned, or repeat customers?" },
+    avatar_stage: {
+      placeholder: "Example: Homeowners needing urgent HVAC repairs before winter — burned by a previous unreliable provider.",
+      helper: "The urgency, life moment or trigger that pushes them to call you.",
+    },
+    desire_success_vision: {
+      placeholder: "Example: A trusted local pro on speed-dial, work done right the first time, peace of mind at home, and someone they happily refer to neighbors.",
+      helper: "Practical service result + emotional relief + lifestyle ease + loyalty identity.",
+    },
+    transformation_process: {
+      placeholder: "Example: Friendly first call → fast on-site quote → quality install → follow-up check-in → annual maintenance plan.",
+      helper: "Your end-to-end customer experience that turns first-timers into loyal locals.",
+    },
     avatar_niche: {
       placeholder: "Example: Reliable residential HVAC service for homeowners in [your city].",
       helper: "Service + audience + region. Specific wins locally.",
@@ -438,7 +504,18 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Be specific — situation, identity, stage, urgency.",
     },
     avatar_type: { helper: "Pick the closest match for what you do." },
-    avatar_stage: { helper: "Where are they in their journey today?" },
+    avatar_stage: {
+      placeholder: "Example: A specific life or business moment that makes solving this urgent for them right now.",
+      helper: "The situation, life stage or trigger that brings them to you.",
+    },
+    desire_success_vision: {
+      placeholder: "Example: The full picture of what their life or business looks and feels like once they have what they want.",
+      helper: "Combine outcome, emotion, lifestyle and identity into one vivid picture.",
+    },
+    transformation_process: {
+      placeholder: "Example: Step 1 → Step 2 → Step 3 → outcome. The clear journey you guide them through.",
+      helper: "The method, framework or process that bridges current state and desired state.",
+    },
     avatar_niche: {
       placeholder: "Example: Be specific — who you serve and the result you deliver.",
     },

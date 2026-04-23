@@ -1,27 +1,30 @@
 export interface CustomerClarityData {
   // Ideal Customer Avatar
   avatar_who?: string;
-  avatar_type?: string;
   avatar_stage?: string;
-  avatar_niche?: string;
   avatar_traits?: string;
   avatar_not_fit?: string;
   // Pain & Friction
   pain_main_problem?: string;
   pain_daily_frustrations?: string;
-  pain_blockers?: string;
   pain_already_tried?: string;
-  pain_why_failed?: string;
   pain_consequences?: string;
   // Desire & Goals
   desire_main_result?: string;
-  desire_dream_scenario?: string;
-  desire_emotional_change?: string;
-  desire_lifestyle?: string;
+  desire_success_vision?: string;
   desire_why_badly?: string;
   // Transformation
   transformation_point_a?: string;
   transformation_point_b?: string;
+  transformation_process?: string;
+  // Deprecated (kept optional for backwards compatibility with existing rows)
+  avatar_type?: string;
+  avatar_niche?: string;
+  pain_blockers?: string;
+  pain_why_failed?: string;
+  desire_dream_scenario?: string;
+  desire_emotional_change?: string;
+  desire_lifestyle?: string;
   transformation_external?: string;
   transformation_internal?: string;
   transformation_possible?: string;
@@ -44,10 +47,10 @@ export type SectionId = "customer-clarity" | "offer-stack" | "growth-system" | "
 export type ClaritySubBlock = "avatar" | "pain" | "desire" | "transformation";
 
 export const CLARITY_FIELDS: Record<ClaritySubBlock, (keyof CustomerClarityData)[]> = {
-  avatar: ["avatar_who", "avatar_type", "avatar_stage", "avatar_niche", "avatar_traits", "avatar_not_fit"],
-  pain: ["pain_main_problem", "pain_daily_frustrations", "pain_blockers", "pain_already_tried", "pain_why_failed", "pain_consequences"],
-  desire: ["desire_main_result", "desire_dream_scenario", "desire_emotional_change", "desire_lifestyle", "desire_why_badly"],
-  transformation: ["transformation_point_a", "transformation_point_b", "transformation_external", "transformation_internal", "transformation_possible"],
+  avatar: ["avatar_who", "avatar_stage", "avatar_traits", "avatar_not_fit"],
+  pain: ["pain_main_problem", "pain_daily_frustrations", "pain_already_tried", "pain_consequences"],
+  desire: ["desire_main_result", "desire_success_vision", "desire_why_badly"],
+  transformation: ["transformation_point_a", "transformation_point_b", "transformation_process"],
 };
 
 export function calculateSubBlockProgress(data: CustomerClarityData, block: ClaritySubBlock): number {
