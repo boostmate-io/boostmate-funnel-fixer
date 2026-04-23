@@ -110,6 +110,7 @@ const BusinessBlueprintModule = () => {
       case "offer-design":
         return (
           <OfferDesignSection
+            blueprintId={blueprint.id}
             data={offerData}
             onChange={updateOfferDesign}
             saving={saving}

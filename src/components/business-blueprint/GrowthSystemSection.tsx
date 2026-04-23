@@ -42,14 +42,15 @@ const GrowthSystemSection = ({ data, offer, onChange, saving, businessType }: Pr
   const progress = calculateGrowthSubBlockProgress(data, active);
   const feedback = getGrowthFeedbackMessage(config, progress);
 
-  // Pre-fill ascension entry point from Offer Design free offer (only if empty)
+  // Pre-fill ascension entry point from the Offer Design main offer name (only if empty)
   useEffect(() => {
+    const fallback = (offer.angle?.main_offer_name || "").trim();
     if (
       active === "ascension" &&
       !(data.ascension_entry_point || "").trim() &&
-      (offer.ladder_free_offer || "").trim()
+      fallback
     ) {
-      onChange({ ascension_entry_point: offer.ladder_free_offer });
+      onChange({ ascension_entry_point: fallback });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
