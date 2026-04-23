@@ -167,9 +167,9 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       coachQuestions: [
         "Where are they today, exactly?",
         "Where do they want to be in 12 months?",
-        "What external changes will happen?",
-        "What internal shifts will they experience?",
-        "What new doors will this open for them?",
+        "What's the bridge between A and B?",
+        "What stages or milestones make up the journey?",
+        "What method or process do you guide them through?",
       ],
       examples: [
         { label: "Point A", value: getFieldCopy(bt.id, "transformation_point_a").placeholder?.replace(/^Example:\s*/, "") || bt.examplePointA },
