@@ -277,6 +277,7 @@ export function normalizeOfferDesign(raw: unknown): OfferDesignData {
 // ---------- Progress calculation --------------------------------------------
 
 export function calcAngleProgress(a: OfferAngleData): number {
+  if (!a) return 0;
   let score = 0;
   if (a.main_offer_name?.trim()) score += 10;
   if (a.short_description?.trim()) score += 10;
@@ -294,22 +295,30 @@ export function calcAngleProgress(a: OfferAngleData): number {
 }
 
 export function calcStackProgress(s: OfferStackData): number {
+  if (!s) return 0;
   let score = 0;
-  if (s.deliverables.length > 0) score += 25;
-  if (s.deliverables.length >= 3) score += 10;
-  if (s.resources.length > 0) score += 15;
-  if (s.support_channels.length > 0) score += 15;
-  if (s.bonuses.length > 0) score += 10;
+  const deliverables = s.deliverables ?? [];
+  const resources = s.resources ?? [];
+  const supportChannels = s.support_channels ?? [];
+  const bonuses = s.bonuses ?? [];
+  const milestones = s.milestones ?? [];
+  if (deliverables.length > 0) score += 25;
+  if (deliverables.length >= 3) score += 10;
+  if (resources.length > 0) score += 15;
+  if (supportChannels.length > 0) score += 15;
+  if (bonuses.length > 0) score += 10;
   if (s.delivery_timeline && (s.delivery_timeline !== "custom" || s.delivery_timeline_custom?.trim())) score += 10;
-  if (s.milestones.length > 0) score += 10;
-  if (s.milestones.length >= 3) score += 5;
+  if (milestones.length > 0) score += 10;
+  if (milestones.length >= 3) score += 5;
   return Math.min(100, score);
 }
 
 export function calcPricingProgress(p: PricingData): number {
+  if (!p) return 0;
   let score = 0;
+  const paymentPlans = p.payment_plans ?? [];
   if (typeof p.core_price === "number" && p.core_price > 0) score += 30;
-  if (p.payment_plans.length > 0) score += 20;
+  if (paymentPlans.length > 0) score += 20;
   if (p.recurring_enabled) {
     if (p.recurring_offer?.name?.trim() && typeof p.recurring_offer?.monthly_price === "number") score += 15;
   } else {
@@ -320,7 +329,7 @@ export function calcPricingProgress(p: PricingData): number {
   } else {
     score += 5;
   }
-  if (p.guarantee_type !== "none") {
+  if (p.guarantee_type && p.guarantee_type !== "none") {
     score += 10;
     if (p.guarantee_details?.trim()) score += 5;
   }
