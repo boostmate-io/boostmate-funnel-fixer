@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
 import { calculateOfferDesignProgress, type OfferDesignData } from "./offerDesignTypes";
+import { calculateGrowthSystemProgress, type GrowthSystemData } from "./growthSystemTypes";
 import { getBusinessType } from "./businessTypes";
 
 interface SectionSummary {
@@ -19,17 +20,19 @@ interface SectionSummary {
 interface Props {
   clarity: CustomerClarityData;
   offer: OfferDesignData;
+  growth: GrowthSystemData;
   businessType: string;
   onEdit: (section?: SectionId) => void;
   onOpenSetup: () => void;
   setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, offer, businessType, onEdit, onOpenSetup, setupCompleted }: Props) => {
+const BlueprintOverview = ({ clarity, offer, growth, businessType, onEdit, onOpenSetup, setupCompleted }: Props) => {
   const bt = getBusinessType(businessType);
   const BtIcon = bt.icon;
   const clarityProgress = calculateClarityProgress(clarity);
   const offerProgress = calculateOfferDesignProgress(offer);
+  const growthProgress = calculateGrowthSystemProgress(growth);
 
   const sections: SectionSummary[] = [
     {
@@ -62,9 +65,14 @@ const BlueprintOverview = ({ clarity, offer, businessType, onEdit, onOpenSetup, 
       id: "growth-system",
       label: "Growth System",
       icon: Workflow,
-      description: "Traffic → funnels → conversion.",
-      progress: 0,
-      items: bt.growthExamples.slice(0, 3).map((label) => ({ label })),
+      description: "Traffic, funnels, conversion, nurture & ascension.",
+      progress: growthProgress,
+      items: [
+        { label: "Primary traffic", value: growth.traffic_primary_source },
+        { label: "Core offer funnel", value: growth.funnel_core_offer },
+        { label: "Conversion mech.", value: growth.conversion_primary_mechanism },
+        { label: "Monetization gap", value: growth.ascension_monetization_gap },
+      ],
     },
     {
       id: "brand-strategy",
