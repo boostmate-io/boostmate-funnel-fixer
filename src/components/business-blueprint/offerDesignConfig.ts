@@ -2,7 +2,17 @@ import { Lightbulb, Layers, DollarSign, TrendingUp, type LucideIcon } from "luci
 import type { OfferDesignData, OfferSubBlock } from "./offerDesignTypes";
 import { getBusinessType, type BusinessTypeId } from "./businessTypes";
 import { getOfferFieldCopy } from "./offerDesignCopy";
-import type { FieldDef } from "./clarityConfig";
+import type { FieldType } from "./clarityConfig";
+
+export interface OfferFieldDef {
+  key: keyof OfferDesignData;
+  label: string;
+  helper?: string;
+  placeholder?: string;
+  type: FieldType;
+  fullWidth?: boolean;
+  rows?: number;
+}
 
 export interface OfferSubBlockConfig {
   id: OfferSubBlock;
@@ -10,7 +20,7 @@ export interface OfferSubBlockConfig {
   icon: LucideIcon;
   description: string;
   insight: string;
-  fields: (FieldDef & { key: keyof OfferDesignData })[];
+  fields: OfferFieldDef[];
   coachQuestions: string[];
   feedback: { threshold: number; message: string }[];
 }
@@ -24,13 +34,7 @@ export function getOfferDesignConfig(
   const noun = bt.customerNoun;
   const Noun = cap(noun);
 
-  const f = (
-    base: Omit<FieldDef, "placeholder" | "helper"> & {
-      key: keyof OfferDesignData;
-      placeholder?: string;
-      helper?: string;
-    },
-  ): FieldDef & { key: keyof OfferDesignData } => {
+  const f = (base: OfferFieldDef): OfferFieldDef => {
     const copy = getOfferFieldCopy(bt.id, base.key);
     return {
       ...base,
