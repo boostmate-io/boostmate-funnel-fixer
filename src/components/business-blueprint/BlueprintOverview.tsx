@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
+import { calculateOfferDesignProgress, type OfferDesignData } from "./offerDesignTypes";
 import { getBusinessType } from "./businessTypes";
 
 interface SectionSummary {
@@ -17,16 +18,18 @@ interface SectionSummary {
 
 interface Props {
   clarity: CustomerClarityData;
+  offer: OfferDesignData;
   businessType: string;
   onEdit: (section?: SectionId) => void;
   onOpenSetup: () => void;
   setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, businessType, onEdit, onOpenSetup, setupCompleted }: Props) => {
+const BlueprintOverview = ({ clarity, offer, businessType, onEdit, onOpenSetup, setupCompleted }: Props) => {
   const bt = getBusinessType(businessType);
   const BtIcon = bt.icon;
   const clarityProgress = calculateClarityProgress(clarity);
+  const offerProgress = calculateOfferDesignProgress(offer);
 
   const sections: SectionSummary[] = [
     {
@@ -43,12 +46,17 @@ const BlueprintOverview = ({ clarity, businessType, onEdit, onOpenSetup, setupCo
       ],
     },
     {
-      id: "offer-stack",
-      label: "Offer Stack",
+      id: "offer-design",
+      label: "Offer Design",
       icon: Package,
-      description: `Your full value ladder — tailored to a ${bt.label.toLowerCase()}.`,
-      progress: 0,
-      items: bt.offerExamples.slice(0, 4).map((label) => ({ label })),
+      description: `Angle, stack, pricing & value ladder — tailored to a ${bt.label.toLowerCase()}.`,
+      progress: offerProgress,
+      items: [
+        { label: "Main offer", value: offer.angle_main_offer_name },
+        { label: "Core promise", value: offer.angle_core_promise },
+        { label: "Core price", value: offer.pricing_core_price },
+        { label: "Free offer", value: offer.ladder_free_offer },
+      ],
     },
     {
       id: "growth-system",

@@ -43,7 +43,7 @@ export interface BlueprintRow {
   updated_at: string;
 }
 
-export type SectionId = "customer-clarity" | "offer-stack" | "growth-system" | "brand-strategy" | "proof-authority";
+export type SectionId = "customer-clarity" | "offer-design" | "growth-system" | "brand-strategy" | "proof-authority";
 export type ClaritySubBlock = "avatar" | "pain" | "desire" | "transformation";
 
 export const CLARITY_FIELDS: Record<ClaritySubBlock, (keyof CustomerClarityData)[]> = {
