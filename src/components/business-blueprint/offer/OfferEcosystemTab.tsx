@@ -1,7 +1,7 @@
 // =============================================================================
-// OfferEcosystemTab — Tab 4
-// Visual value ladder with grouped sections per tier. Cards live in
-// public.offers (see useEcosystemOffers).
+// OfferEcosystemTab — Tab 4 (redesigned)
+// Each card uses the same structure: Name, Price, Description, Core Outcome,
+// Delivery Type. Primary purpose removed.
 // =============================================================================
 
 import { useState } from "react";
@@ -13,12 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import SectionShell from "./SectionShell";
+import DeliveryTypePicker from "./DeliveryTypePicker";
 import {
   ECOSYSTEM_TIERS,
-  PRIMARY_PURPOSE_OPTIONS,
   calcEcosystemProgress,
   type EcosystemTier,
   type OfferDesignData,
@@ -100,38 +99,19 @@ const OfferCardRow = ({
               Core offer is auto-generated from tabs 1–3. Edit those tabs to update it.
             </p>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Price</Label>
-              <div className="flex items-center gap-1">
-                <span className="text-sm text-muted-foreground">€</span>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  value={offer.data?.price === "" || offer.data?.price === undefined ? "" : offer.data.price}
-                  onChange={(e) => onUpdate({ data: { ...offer.data, price: numberOrEmpty(e.target.value) } })}
-                  placeholder="0"
-                  className="h-9 text-sm"
-                  disabled={isCore}
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Primary Purpose</Label>
-              <Select
-                value={offer.data?.primary_purpose || ""}
-                onValueChange={(v) => onUpdate({ data: { ...offer.data, primary_purpose: v } })}
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Price</Label>
+            <div className="flex items-center gap-1 max-w-xs">
+              <span className="text-sm text-muted-foreground">€</span>
+              <Input
+                type="number"
+                inputMode="decimal"
+                value={offer.data?.price === "" || offer.data?.price === undefined ? "" : offer.data.price}
+                onChange={(e) => onUpdate({ data: { ...offer.data, price: numberOrEmpty(e.target.value) } })}
+                placeholder="0"
+                className="h-9 text-sm"
                 disabled={isCore}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Choose…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRIMARY_PURPOSE_OPTIONS.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
           </div>
           <div>
@@ -139,7 +119,7 @@ const OfferCardRow = ({
             <Textarea
               value={offer.data?.description ?? ""}
               onChange={(e) => onUpdate({ data: { ...offer.data, description: e.target.value } })}
-              placeholder="What this offer is and how it's delivered…"
+              placeholder="What this offer is in 1–2 sentences…"
               rows={2}
               className="resize-none text-sm"
               disabled={isCore}
@@ -153,6 +133,14 @@ const OfferCardRow = ({
               placeholder="What the buyer walks away with"
               className="h-9 text-sm"
               disabled={isCore}
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Delivery Type</Label>
+            <DeliveryTypePicker
+              value={offer.data?.delivery_types ?? []}
+              onChange={(v) => onUpdate({ data: { ...offer.data, delivery_types: v } })}
+              placeholder="How is it delivered?"
             />
           </div>
         </div>

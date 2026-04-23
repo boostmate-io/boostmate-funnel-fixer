@@ -1,13 +1,6 @@
 // =============================================================================
 // useEcosystemOffers — manages offers scoped to a Business Blueprint.
 // =============================================================================
-// Each ecosystem card (Free, Low Ticket, Mid Ticket, Core, Premium, Continuity)
-// is a row in public.offers tagged with `tier`, `source` and `blueprint_id`.
-//
-// - The Core offer is auto-managed: created/upserted from the blueprint
-//   Angle + Pricing data. Source = 'blueprint_core'.
-// - All other offers are manually added by the user. Source = 'blueprint_manual'.
-// =============================================================================
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,8 +20,7 @@ export interface EcosystemOfferRow {
   data: {
     description?: string;
     core_outcome?: string;
-    primary_purpose?: string;
-    delivery_methods?: string[];
+    delivery_types?: string[];
     price?: number | "";
   };
   user_id: string;
@@ -67,18 +59,28 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
     void load();
   }, [load]);
 
-  // ---- Auto-sync the Core offer from blueprint Angle + Pricing data --------
+  // ---- Auto-sync the Core offer from blueprint Angle + Stack + Pricing ------
   useEffect(() => {
     if (!blueprintId || !user || !activeSubAccountId) return;
 
-    const promise = buildPromisePreview(offerDesign.angle.core_promise);
-    const name = offerDesign.angle.main_offer_name?.trim();
+    const angle = offerDesign.angle;
+    const promise = buildPromisePreview(angle.core_promise);
+    const name = angle.main_offer_name?.trim();
+    const description = angle.short_description?.trim() || promise;
+    const coreOutcome = angle.core_outcome?.trim() || angle.core_promise?.desired_outcome?.trim() || "";
     const price = offerDesign.pricing.core_price;
 
-    // Skip auto-sync if there's nothing meaningful to represent yet.
-    if (!name && !promise && (price === "" || price === undefined)) return;
+    // Aggregate delivery types from stack: deliverables + support channels names
+    const deliveryFromDeliverables = (offerDesign.stack.deliverables ?? [])
+      .flatMap((d) => d.delivery_types ?? []);
+    const deliveryFromSupport = (offerDesign.stack.support_channels ?? [])
+      .map((s) => s.name)
+      .filter(Boolean);
+    const deliveryTypes = Array.from(new Set([...deliveryFromDeliverables, ...deliveryFromSupport]));
 
-    const signature = JSON.stringify({ name, promise, price, blueprintId });
+    if (!name && !promise && !description && (price === "" || price === undefined)) return;
+
+    const signature = JSON.stringify({ name, description, coreOutcome, price, deliveryTypes, blueprintId });
     if (signature === lastSyncedCoreSignature.current) return;
 
     const existingCore = offers.find((o) => o.source === "blueprint_core");
@@ -92,11 +94,10 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
       user_id: user.id,
       sort_order: 100,
       data: {
-        description: promise,
-        core_outcome: offerDesign.angle.core_promise?.desired_outcome,
-        primary_purpose: "Ascension",
+        description,
+        core_outcome: coreOutcome,
         price: typeof price === "number" ? price : "",
-        delivery_methods: offerDesign.stack.support_system ?? [],
+        delivery_types: deliveryTypes,
       },
     };
 
@@ -111,7 +112,7 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
           .eq("id", existingCore.id);
         if (!error) {
           lastSyncedCoreSignature.current = signature;
-    setOffers((prev) =>
+          setOffers((prev) =>
             prev.map((o) =>
               o.id === existingCore.id
                 ? { ...o, name: payload.name, data: payload.data as EcosystemOfferRow["data"] }
@@ -153,8 +154,7 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
         data: {
           description: "",
           core_outcome: "",
-          primary_purpose: "",
-          delivery_methods: [],
+          delivery_types: [],
           price: "",
         },
       };
