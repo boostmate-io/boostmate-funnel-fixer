@@ -4,6 +4,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { BlueprintRow, CustomerClarityData } from "./types";
+import type { OfferDesignData } from "./offerDesignTypes";
 
 export function useBlueprint() {
   const { activeSubAccountId } = useWorkspace();
@@ -11,7 +12,8 @@ export function useBlueprint() {
   const [blueprint, setBlueprint] = useState<BlueprintRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const saveTimer = useRef<number | null>(null);
+  const claritySaveTimer = useRef<number | null>(null);
+  const offerSaveTimer = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     if (!activeSubAccountId || !user) return;
@@ -55,8 +57,8 @@ export function useBlueprint() {
       setBlueprint((prev) => {
         if (!prev) return prev;
         const next = { ...prev, customer_clarity: { ...prev.customer_clarity, ...patch } };
-        if (saveTimer.current) window.clearTimeout(saveTimer.current);
-        saveTimer.current = window.setTimeout(async () => {
+        if (claritySaveTimer.current) window.clearTimeout(claritySaveTimer.current);
+        claritySaveTimer.current = window.setTimeout(async () => {
           setSaving(true);
           const { error } = await supabase
             .from("business_blueprints")
@@ -71,5 +73,27 @@ export function useBlueprint() {
     []
   );
 
-  return { blueprint, loading, saving, updateCustomerClarity, reload: load };
+  const updateOfferDesign = useCallback(
+    (patch: Partial<OfferDesignData>) => {
+      setBlueprint((prev) => {
+        if (!prev) return prev;
+        const nextOffer = { ...(prev.offer_stack as OfferDesignData), ...patch };
+        const next = { ...prev, offer_stack: nextOffer as Record<string, any> };
+        if (offerSaveTimer.current) window.clearTimeout(offerSaveTimer.current);
+        offerSaveTimer.current = window.setTimeout(async () => {
+          setSaving(true);
+          const { error } = await supabase
+            .from("business_blueprints")
+            .update({ offer_stack: nextOffer as any })
+            .eq("id", prev.id);
+          setSaving(false);
+          if (error) toast.error("Opslaan mislukt");
+        }, 800);
+        return next;
+      });
+    },
+    []
+  );
+
+  return { blueprint, loading, saving, updateCustomerClarity, updateOfferDesign, reload: load };
 }
