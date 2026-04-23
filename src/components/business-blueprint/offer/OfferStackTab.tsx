@@ -1,10 +1,10 @@
 // =============================================================================
-// OfferStackTab — Tab 2
-// Modular builders for Deliverables, Templates, Support, Bonuses, Timeline,
-// Milestones. No giant text fields.
+// OfferStackTab — Tab 2 (redesigned)
+// Cards everywhere. Quick-add chips create editable cards. Delivery type uses
+// the shared DELIVERY_LIBRARY picker.
 // =============================================================================
 
-import { Layers, Trash2, Package, Library, MessageCircle, Gift, Clock, Map } from "lucide-react";
+import { Layers, Trash2, Package, Library, MessageCircle, Gift, Clock, Map, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,17 +13,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SectionShell from "./SectionShell";
 import BuilderCard from "./BuilderCard";
-import MultiSelectChips from "./MultiSelectChips";
 import TimeframePicker from "./TimeframePicker";
+import DeliveryTypePicker from "./DeliveryTypePicker";
 import {
   type OfferStackData,
   type DeliverableCard,
   type BonusCard,
   type MilestoneCard,
   type DeliveryFrequency,
+  type ResourceCard,
+  type SupportChannelCard,
   FREQUENCY_OPTIONS,
-  TEMPLATE_RESOURCE_LIBRARY,
-  SUPPORT_CHANNEL_LIBRARY,
+  RESOURCE_QUICK_PICKS,
+  SUPPORT_QUICK_PICKS,
   calcStackProgress,
 } from "../offerDesignTypes";
 import { getBusinessType } from "../businessTypes";
@@ -47,13 +49,39 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
     onChange({
       deliverables: [
         ...data.deliverables,
-        { id: newId(), name: "", description: "", delivery_method: "", frequency: "weekly" },
+        { id: newId(), name: "", description: "", delivery_types: [], frequency: "weekly" },
       ],
     });
   const updateDeliverable = (id: string, patch: Partial<DeliverableCard>) =>
     onChange({ deliverables: data.deliverables.map((d) => (d.id === id ? { ...d, ...patch } : d)) });
   const removeDeliverable = (id: string) =>
     onChange({ deliverables: data.deliverables.filter((d) => d.id !== id) });
+
+  // ----- Resources -----
+  const addResource = (preset?: string) =>
+    onChange({
+      resources: [
+        ...data.resources,
+        { id: newId(), name: preset ?? "", resource_type: preset ?? "", description: "" },
+      ],
+    });
+  const updateResource = (id: string, patch: Partial<ResourceCard>) =>
+    onChange({ resources: data.resources.map((r) => (r.id === id ? { ...r, ...patch } : r)) });
+  const removeResource = (id: string) =>
+    onChange({ resources: data.resources.filter((r) => r.id !== id) });
+
+  // ----- Support Channels -----
+  const addSupport = (preset?: string) =>
+    onChange({
+      support_channels: [
+        ...data.support_channels,
+        { id: newId(), name: preset ?? "", description: "", frequency: "" },
+      ],
+    });
+  const updateSupport = (id: string, patch: Partial<SupportChannelCard>) =>
+    onChange({ support_channels: data.support_channels.map((s) => (s.id === id ? { ...s, ...patch } : s)) });
+  const removeSupport = (id: string) =>
+    onChange({ support_channels: data.support_channels.filter((s) => s.id !== id) });
 
   // ----- Bonuses -----
   const addBonus = () =>
@@ -86,6 +114,29 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
       : progress >= 50
       ? "Solid foundation. Keep adding clarity to each component."
       : null;
+
+  // ----- Quick-add chip strip -----
+  const QuickAddChips = ({
+    options,
+    onPick,
+  }: {
+    options: string[];
+    onPick: (v: string) => void;
+  }) => (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onPick(opt)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all"
+        >
+          <Plus className="w-3 h-3" />
+          {opt}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <SectionShell
@@ -141,26 +192,35 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
                     rows={2}
                     className="resize-none text-sm"
                   />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      value={d.delivery_method ?? ""}
-                      onChange={(e) => updateDeliverable(d.id, { delivery_method: e.target.value })}
-                      placeholder="Delivery method (e.g. Zoom, Slack)"
-                      className="h-9 text-sm"
-                    />
-                    <Select
-                      value={d.frequency ?? "weekly"}
-                      onValueChange={(v) => updateDeliverable(d.id, { frequency: v as DeliveryFrequency })}
-                    >
-                      <SelectTrigger className="h-9 text-sm">
-                        <SelectValue placeholder="Frequency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FREQUENCY_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                        Delivery Type
+                      </Label>
+                      <DeliveryTypePicker
+                        value={d.delivery_types ?? []}
+                        onChange={(v) => updateDeliverable(d.id, { delivery_types: v })}
+                        placeholder="Pick how it's delivered…"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                        Frequency
+                      </Label>
+                      <Select
+                        value={d.frequency ?? "weekly"}
+                        onValueChange={(v) => updateDeliverable(d.id, { frequency: v as DeliveryFrequency })}
+                      >
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder="Frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FREQUENCY_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -172,17 +232,69 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
         <BuilderCard
           icon={Library}
           title="Templates & Resources"
-          description="Pick the resources included in your offer. Add custom ones too."
-          addLabel="Add Custom"
-          onAdd={() => { /* handled inside MultiSelectChips */ }}
-          count={data.templates_resources.length}
+          description="Add resources included in your offer. Click a quick-add chip to start a card."
+          addLabel="Add Resource"
+          onAdd={() => addResource()}
+          count={data.resources.length}
+          emptyText="No resources yet. Quick-add common types below or add a custom resource."
+          emptyAction={
+            <div className="space-y-3">
+              <QuickAddChips options={RESOURCE_QUICK_PICKS.slice(0, 10)} onPick={(v) => addResource(v)} />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => addResource()}
+                className="gap-1.5 text-primary hover:bg-primary/5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Custom Resource
+              </Button>
+            </div>
+          }
         >
-          <MultiSelectChips
-            options={TEMPLATE_RESOURCE_LIBRARY}
-            value={data.templates_resources}
-            onChange={(v) => onChange({ templates_resources: v })}
-            customPlaceholder="Add custom resource type…"
-          />
+          {data.resources.length > 0 && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {data.resources.map((r) => (
+                  <div key={r.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Input
+                        value={r.name}
+                        onChange={(e) => updateResource(r.id, { name: e.target.value })}
+                        placeholder="Resource name"
+                        className="h-9 font-medium"
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeResource(r.id)}
+                        className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <Input
+                      value={r.resource_type ?? ""}
+                      onChange={(e) => updateResource(r.id, { resource_type: e.target.value })}
+                      placeholder="Type (Template, Ebook, Checklist…)"
+                      className="h-8 text-sm"
+                    />
+                    <Textarea
+                      value={r.description ?? ""}
+                      onChange={(e) => updateResource(r.id, { description: e.target.value })}
+                      placeholder="Short description…"
+                      rows={2}
+                      className="resize-none text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-border/50">
+                <p className="text-[11px] font-medium text-muted-foreground mb-2">Quick-add</p>
+                <QuickAddChips options={RESOURCE_QUICK_PICKS} onPick={(v) => addResource(v)} />
+              </div>
+            </div>
+          )}
         </BuilderCard>
 
         {/* Support System */}
@@ -190,16 +302,68 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
           icon={MessageCircle}
           title="Support System"
           description="How will clients reach you and your team?"
-          addLabel="Add Custom"
-          onAdd={() => { /* handled inside MultiSelectChips */ }}
-          count={data.support_system.length}
+          addLabel="Add Support Channel"
+          onAdd={() => addSupport()}
+          count={data.support_channels.length}
+          emptyText="No support channels yet. Quick-add common ones or add custom."
+          emptyAction={
+            <div className="space-y-3">
+              <QuickAddChips options={SUPPORT_QUICK_PICKS.slice(0, 8)} onPick={(v) => addSupport(v)} />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => addSupport()}
+                className="gap-1.5 text-primary hover:bg-primary/5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Custom Channel
+              </Button>
+            </div>
+          }
         >
-          <MultiSelectChips
-            options={SUPPORT_CHANNEL_LIBRARY}
-            value={data.support_system}
-            onChange={(v) => onChange({ support_system: v })}
-            customPlaceholder="Add custom channel…"
-          />
+          {data.support_channels.length > 0 && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {data.support_channels.map((s) => (
+                  <div key={s.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Input
+                        value={s.name}
+                        onChange={(e) => updateSupport(s.id, { name: e.target.value })}
+                        placeholder="Channel name (e.g. Slack)"
+                        className="h-9 font-medium"
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeSupport(s.id)}
+                        className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <Input
+                      value={s.frequency ?? ""}
+                      onChange={(e) => updateSupport(s.id, { frequency: e.target.value })}
+                      placeholder="Frequency / availability (e.g. Mon–Fri 9–5 CET)"
+                      className="h-8 text-sm"
+                    />
+                    <Textarea
+                      value={s.description ?? ""}
+                      onChange={(e) => updateSupport(s.id, { description: e.target.value })}
+                      placeholder="Short description…"
+                      rows={2}
+                      className="resize-none text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-border/50">
+                <p className="text-[11px] font-medium text-muted-foreground mb-2">Quick-add</p>
+                <QuickAddChips options={SUPPORT_QUICK_PICKS} onPick={(v) => addSupport(v)} />
+              </div>
+            </div>
+          )}
         </BuilderCard>
 
         {/* Bonuses */}

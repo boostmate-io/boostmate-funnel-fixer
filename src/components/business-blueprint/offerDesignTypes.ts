@@ -21,14 +21,30 @@ export interface CoreTransformationPromise {
   guarantee?: string;
 }
 
+export interface FrameworkPillar {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface SignatureFramework {
+  name?: string;
+  description?: string;
+  pillars: FrameworkPillar[];
+}
+
 export interface OfferAngleData {
+  // 🆕 Top-of-tab essentials
+  main_offer_name?: string;
+  short_description?: string;
+  core_outcome?: string;
   // Gusten 4-part differentiation
   angle_new_vehicle?: string;
   angle_better_results?: string;
   angle_faster_outcome?: string;
   angle_easier_process?: string;
-  // Single-line input
-  main_offer_name?: string;
+  // 🆕 Signature framework / mechanism
+  framework?: SignatureFramework;
   // Structured promise builder
   core_promise?: CoreTransformationPromise;
 }
@@ -42,7 +58,7 @@ export interface DeliverableCard {
   id: string;
   name: string;
   description?: string;
-  delivery_method?: string;
+  delivery_types?: string[]; // 🆕 multi-select from delivery library
   frequency?: DeliveryFrequency;
 }
 
@@ -60,10 +76,26 @@ export interface MilestoneCard {
   expected_outcome?: string;
 }
 
+// 🆕 Editable resource cards (replaces chips-only)
+export interface ResourceCard {
+  id: string;
+  name: string;
+  resource_type?: string; // optional, from delivery library
+  description?: string;
+}
+
+// 🆕 Editable support channel cards (replaces chips-only)
+export interface SupportChannelCard {
+  id: string;
+  name: string;
+  description?: string;
+  frequency?: string; // free-text e.g. "Daily 9-5", "Weekly office hours"
+}
+
 export interface OfferStackData {
   deliverables: DeliverableCard[];
-  templates_resources: string[]; // multi-select tags (with custom additions)
-  support_system: string[]; // chip selections
+  resources: ResourceCard[]; // 🆕 cards
+  support_channels: SupportChannelCard[]; // 🆕 cards
   bonuses: BonusCard[];
   delivery_timeline: TimeframeOption | "";
   delivery_timeline_custom?: string;
@@ -90,21 +122,32 @@ export type GuaranteeType =
   | "custom";
 
 export interface PremiumUpgrade {
-  name: string;
-  price: number | "";
+  name?: string;
+  price?: number | "";
   description?: string;
+  additional_value?: string; // 🆕
+}
+
+// 🆕 Structured recurring offer mini-builder
+export interface RecurringOffer {
+  name?: string;
+  monthly_price?: number | "";
+  description?: string;
+  ongoing_value?: string;
+  delivery_types?: string[];
+  interval?: "monthly" | "quarterly" | "yearly";
 }
 
 export interface PricingData {
   core_price: number | "";
   payment_plans: PaymentPlan[];
   recurring_enabled: boolean;
-  recurring_price?: number | "";
-  recurring_interval?: "monthly" | "quarterly" | "yearly";
+  recurring_offer?: RecurringOffer; // 🆕 structured
   premium_enabled: boolean;
   premium_upgrade?: PremiumUpgrade;
   guarantee_type: GuaranteeType;
-  guarantee_custom?: string;
+  guarantee_details?: string; // 🆕 explains how the guarantee works
+  guarantee_custom?: string; // legacy: only used when guarantee_type === "custom" label
 }
 
 // ---------- Top-level Offer Design Data --------------------------------------
@@ -142,11 +185,13 @@ export const OFFER_TABS: OfferTabConfig[] = [
 
 export function emptyOfferDesign(): OfferDesignData {
   return {
-    angle: {},
+    angle: {
+      framework: { pillars: [] },
+    },
     stack: {
       deliverables: [],
-      templates_resources: [],
-      support_system: [],
+      resources: [],
+      support_channels: [],
       bonuses: [],
       delivery_timeline: "",
       milestones: [],
@@ -170,59 +215,90 @@ export function normalizeOfferDesign(raw: unknown): OfferDesignData {
   if (!raw || typeof raw !== "object") return empty;
   const r = raw as Record<string, any>;
 
-  // Detect legacy format (top-level angle_* / stack_* / ladder_* string keys
-  // without the new nested objects) and discard.
+  // Detect legacy format and discard.
   const hasNewShape = r.angle && typeof r.angle === "object"
     && r.stack && typeof r.stack === "object"
     && r.pricing && typeof r.pricing === "object";
 
   if (!hasNewShape) return empty;
 
+  const angleRaw = r.angle || {};
+  const stackRaw = r.stack || {};
+  const pricingRaw = r.pricing || {};
+
   return {
-    angle: { ...empty.angle, ...(r.angle || {}) },
+    angle: {
+      ...empty.angle,
+      ...angleRaw,
+      framework: {
+        name: angleRaw.framework?.name,
+        description: angleRaw.framework?.description,
+        pillars: Array.isArray(angleRaw.framework?.pillars) ? angleRaw.framework.pillars : [],
+      },
+    },
     stack: {
       ...empty.stack,
-      ...(r.stack || {}),
-      deliverables: Array.isArray(r.stack?.deliverables) ? r.stack.deliverables : [],
-      templates_resources: Array.isArray(r.stack?.templates_resources) ? r.stack.templates_resources : [],
-      support_system: Array.isArray(r.stack?.support_system) ? r.stack.support_system : [],
-      bonuses: Array.isArray(r.stack?.bonuses) ? r.stack.bonuses : [],
-      milestones: Array.isArray(r.stack?.milestones) ? r.stack.milestones : [],
+      ...stackRaw,
+      deliverables: Array.isArray(stackRaw.deliverables) ? stackRaw.deliverables : [],
+      // 🆕 handle migration from old string[] templates_resources/support_system to card arrays
+      resources: Array.isArray(stackRaw.resources)
+        ? stackRaw.resources
+        : Array.isArray(stackRaw.templates_resources)
+          ? stackRaw.templates_resources.map((s: string) => ({
+              id: crypto.randomUUID(), name: s, resource_type: s, description: "",
+            }))
+          : [],
+      support_channels: Array.isArray(stackRaw.support_channels)
+        ? stackRaw.support_channels
+        : Array.isArray(stackRaw.support_system)
+          ? stackRaw.support_system.map((s: string) => ({
+              id: crypto.randomUUID(), name: s, description: "", frequency: "",
+            }))
+          : [],
+      bonuses: Array.isArray(stackRaw.bonuses) ? stackRaw.bonuses : [],
+      milestones: Array.isArray(stackRaw.milestones) ? stackRaw.milestones : [],
     },
     pricing: {
       ...empty.pricing,
-      ...(r.pricing || {}),
-      payment_plans: Array.isArray(r.pricing?.payment_plans) ? r.pricing.payment_plans : [],
+      ...pricingRaw,
+      payment_plans: Array.isArray(pricingRaw.payment_plans) ? pricingRaw.payment_plans : [],
+      recurring_offer: pricingRaw.recurring_offer ?? (
+        pricingRaw.recurring_enabled
+          ? {
+              monthly_price: pricingRaw.recurring_price ?? "",
+              interval: pricingRaw.recurring_interval ?? "monthly",
+            }
+          : undefined
+      ),
     },
   };
 }
 
 // ---------- Progress calculation --------------------------------------------
 
-/**
- * Each tab returns a 0–100 completion percentage.
- * Designed to feel rewarding (filling the obvious primary fields gets you to ~70%).
- */
-
 export function calcAngleProgress(a: OfferAngleData): number {
   let score = 0;
-  if (a.angle_new_vehicle?.trim()) score += 15;
-  if (a.angle_better_results?.trim()) score += 15;
-  if (a.angle_faster_outcome?.trim()) score += 15;
-  if (a.angle_easier_process?.trim()) score += 15;
-  if (a.main_offer_name?.trim()) score += 15;
+  if (a.main_offer_name?.trim()) score += 10;
+  if (a.short_description?.trim()) score += 10;
+  if (a.core_outcome?.trim()) score += 10;
+  if (a.angle_new_vehicle?.trim()) score += 10;
+  if (a.angle_better_results?.trim()) score += 10;
+  if (a.angle_faster_outcome?.trim()) score += 10;
+  if (a.angle_easier_process?.trim()) score += 10;
+  if (a.framework?.name?.trim()) score += 8;
+  if ((a.framework?.pillars?.length ?? 0) >= 3) score += 7;
   const p = a.core_promise;
-  if (p?.desired_outcome?.trim()) score += 15;
-  if (p?.timeframe && (p.timeframe !== "custom" || p.timeframe_custom?.trim())) score += 10;
+  if (p?.desired_outcome?.trim()) score += 10;
+  if (p?.timeframe && (p.timeframe !== "custom" || p.timeframe_custom?.trim())) score += 5;
   return Math.min(100, score);
 }
 
 export function calcStackProgress(s: OfferStackData): number {
   let score = 0;
-  if (s.deliverables.length > 0) score += 30;
+  if (s.deliverables.length > 0) score += 25;
   if (s.deliverables.length >= 3) score += 10;
-  if (s.templates_resources.length > 0) score += 10;
-  if (s.support_system.length > 0) score += 15;
+  if (s.resources.length > 0) score += 15;
+  if (s.support_channels.length > 0) score += 15;
   if (s.bonuses.length > 0) score += 10;
   if (s.delivery_timeline && (s.delivery_timeline !== "custom" || s.delivery_timeline_custom?.trim())) score += 10;
   if (s.milestones.length > 0) score += 10;
@@ -232,20 +308,25 @@ export function calcStackProgress(s: OfferStackData): number {
 
 export function calcPricingProgress(p: PricingData): number {
   let score = 0;
-  if (typeof p.core_price === "number" && p.core_price > 0) score += 35;
+  if (typeof p.core_price === "number" && p.core_price > 0) score += 30;
   if (p.payment_plans.length > 0) score += 20;
-  if (p.recurring_enabled && typeof p.recurring_price === "number" && p.recurring_price > 0) score += 15;
-  if (!p.recurring_enabled) score += 5; // explicit "no" still counts as a decision
-  if (p.premium_enabled && p.premium_upgrade?.name?.trim()) score += 15;
-  if (!p.premium_enabled) score += 5;
-  if (p.guarantee_type !== "none") score += 10;
+  if (p.recurring_enabled) {
+    if (p.recurring_offer?.name?.trim() && typeof p.recurring_offer?.monthly_price === "number") score += 15;
+  } else {
+    score += 5;
+  }
+  if (p.premium_enabled) {
+    if (p.premium_upgrade?.name?.trim()) score += 15;
+  } else {
+    score += 5;
+  }
+  if (p.guarantee_type !== "none") {
+    score += 10;
+    if (p.guarantee_details?.trim()) score += 5;
+  }
   return Math.min(100, score);
 }
 
-/**
- * Ecosystem progress is computed from the offers count (passed in by caller).
- * 0 offers = 0%. 1 core offer = 30%. Each additional tier adds ~14%.
- */
 export function calcEcosystemProgress(tierCounts: Record<string, number>): number {
   const tiers = ["free", "low_ticket", "mid_ticket", "core", "premium", "continuity"];
   const filled = tiers.filter((t) => (tierCounts[t] || 0) > 0).length;
@@ -312,15 +393,69 @@ export const GUARANTEE_OPTIONS: { value: GuaranteeType; label: string }[] = [
   { value: "custom", label: "Custom" },
 ];
 
-export const TEMPLATE_RESOURCE_LIBRARY = [
-  "Templates", "Ebooks", "Scripts", "Checklists", "Guides", "Swipe Files",
-  "Vaults", "Calculators", "Calendars", "Workbooks", "Frameworks", "SOPs",
-  "Resource Lists", "Blueprints", "Roadmaps", "Playbooks",
+// ---------- 🆕 SHARED DELIVERY LIBRARY (used across all tabs) ---------------
+
+export interface DeliveryCategory {
+  id: string;
+  label: string;
+  items: string[];
+}
+
+export const DELIVERY_LIBRARY: DeliveryCategory[] = [
+  {
+    id: "resources",
+    label: "Cheatsheets / Resources",
+    items: [
+      "Templates", "Ebooks", "Scripts", "Checklists", "Guides", "Swipe Files",
+      "Vaults", "Calculators", "Calendars", "Workbooks", "Frameworks", "SOPs",
+      "Resource Lists", "Blueprints", "Roadmaps", "Playbooks",
+    ],
+  },
+  {
+    id: "case_studies",
+    label: "Case Studies / Content",
+    items: [
+      "Transformations", "VSL", "Customer Results", "Webinars", "BTS",
+      "Project Walkthroughs", "Breakdowns", "Reports", "Deep Dives", "Documentary",
+    ],
+  },
+  {
+    id: "courses",
+    label: "Courses",
+    items: [
+      "Masterclasses", "Trainings", "Workshops", "Tutorials", "Events",
+      "Video Courses", "Summits", "Cohorts", "Bootcamps", "Guest Experts",
+    ],
+  },
+  {
+    id: "community",
+    label: "Community",
+    items: [
+      "Private Community", "Challenges", "Gamified Assignments", "Awards",
+      "Certifications", "Accountability Groups", "VIP Groups", "Masterminds",
+      "Progress Tracking", "Meetups", "Interviews",
+    ],
+  },
+  {
+    id: "coaching",
+    label: "Coaching",
+    items: [
+      "Onboarding Calls", "Kickoff Calls", "1:1 Coaching Calls",
+      "Consulting Calls", "Implementation Calls", "Q&A Calls", "Walkthrough Calls",
+      "Mastermind Calls", "Group Calls", "Feedback Calls", "Intensives",
+    ],
+  },
 ];
 
-export const SUPPORT_CHANNEL_LIBRARY = [
+// Flat list helper (for autocomplete fallbacks)
+export const DELIVERY_LIBRARY_FLAT = DELIVERY_LIBRARY.flatMap((c) => c.items);
+
+// Quick subsets for tabs that want focused chips
+export const RESOURCE_QUICK_PICKS = DELIVERY_LIBRARY.find((c) => c.id === "resources")!.items;
+export const SUPPORT_QUICK_PICKS = [
   "Slack", "WhatsApp", "Telegram", "Discord", "Email Support",
-  "Community", "Weekly Calls", "Office Hours", "Voxer",
+  "Private Community", "Weekly Calls", "Office Hours", "Voxer",
+  "Q&A Calls", "1:1 Coaching Calls",
 ];
 
 // ---------- Promise preview --------------------------------------------------
@@ -396,14 +531,4 @@ export const ECOSYSTEM_TIERS: EcosystemTierConfig[] = [
     addLabel: "Add Continuity Offer",
     emptyHint: "No continuity offers yet. Generate recurring revenue ideas.",
   },
-];
-
-export const PRIMARY_PURPOSE_OPTIONS = [
-  "Lead Generation",
-  "Buyer Qualification",
-  "Ascension",
-  "Retention",
-  "Cash Flow",
-  "Authority Building",
-  "Other",
 ];

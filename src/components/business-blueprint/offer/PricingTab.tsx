@@ -1,7 +1,7 @@
 // =============================================================================
-// PricingTab — Tab 3
-// Numeric core price, payment plan builder, recurring & premium toggles,
-// guarantee dropdown.
+// PricingTab — Tab 3 (redesigned)
+// Structured Premium Upgrade and Recurring Offer mini-builders.
+// Guarantee details textarea added.
 // =============================================================================
 
 import { DollarSign, Trash2, Repeat, Crown, Shield } from "lucide-react";
@@ -14,11 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SectionShell from "./SectionShell";
 import BuilderCard from "./BuilderCard";
+import DeliveryTypePicker from "./DeliveryTypePicker";
 import {
   type PricingData,
   type PaymentPlan,
   type PaymentPlanType,
   type GuaranteeType,
+  type PremiumUpgrade,
+  type RecurringOffer,
   PAYMENT_PLAN_TYPES,
   GUARANTEE_OPTIONS,
   calcPricingProgress,
@@ -53,6 +56,24 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
     onChange({ payment_plans: data.payment_plans.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
   const removePlan = (id: string) =>
     onChange({ payment_plans: data.payment_plans.filter((p) => p.id !== id) });
+
+  // Premium upgrade
+  const updatePremium = (patch: Partial<PremiumUpgrade>) =>
+    onChange({
+      premium_upgrade: {
+        ...(data.premium_upgrade ?? {}),
+        ...patch,
+      },
+    });
+
+  // Recurring offer
+  const updateRecurring = (patch: Partial<RecurringOffer>) =>
+    onChange({
+      recurring_offer: {
+        ...(data.recurring_offer ?? { interval: "monthly" }),
+        ...patch,
+      },
+    });
 
   const feedback =
     progress >= 100
@@ -174,62 +195,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
           )}
         </BuilderCard>
 
-        {/* Recurring */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-start justify-between gap-4 mb-1">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <Repeat className="w-4 h-4" />
-              </div>
-              <div>
-                <Label className="text-sm font-semibold text-foreground">Recurring Option</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Does this offer have a recurring continuation offer?
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={data.recurring_enabled}
-              onCheckedChange={(v) => onChange({ recurring_enabled: v })}
-            />
-          </div>
-          {data.recurring_enabled && (
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Recurring price</Label>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm text-muted-foreground">€</span>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    value={data.recurring_price === "" || data.recurring_price === undefined ? "" : data.recurring_price}
-                    onChange={(e) => onChange({ recurring_price: numberOrEmpty(e.target.value) })}
-                    placeholder="297"
-                    className="h-9 text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Interval</Label>
-                <Select
-                  value={data.recurring_interval ?? "monthly"}
-                  onValueChange={(v) => onChange({ recurring_interval: v as PricingData["recurring_interval"] })}
-                >
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Premium upsell */}
+        {/* Premium upsell — structured card */}
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-start justify-between gap-4 mb-1">
             <div className="flex items-start gap-3">
@@ -249,21 +215,13 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
             />
           </div>
           {data.premium_enabled && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 rounded-lg border border-border bg-background p-4 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Name</Label>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Upgrade Name</Label>
                   <Input
                     value={data.premium_upgrade?.name ?? ""}
-                    onChange={(e) =>
-                      onChange({
-                        premium_upgrade: {
-                          name: e.target.value,
-                          price: data.premium_upgrade?.price ?? "",
-                          description: data.premium_upgrade?.description,
-                        },
-                      })
-                    }
+                    onChange={(e) => updatePremium({ name: e.target.value })}
                     placeholder="VIP Day, Done-for-You package…"
                     className="h-9 text-sm"
                   />
@@ -276,15 +234,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                       type="number"
                       inputMode="decimal"
                       value={data.premium_upgrade?.price === "" || data.premium_upgrade?.price === undefined ? "" : data.premium_upgrade?.price}
-                      onChange={(e) =>
-                        onChange({
-                          premium_upgrade: {
-                            name: data.premium_upgrade?.name ?? "",
-                            price: numberOrEmpty(e.target.value),
-                            description: data.premium_upgrade?.description,
-                          },
-                        })
-                      }
+                      onChange={(e) => updatePremium({ price: numberOrEmpty(e.target.value) })}
                       placeholder="7500"
                       className="h-9 text-sm"
                     />
@@ -295,19 +245,121 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                 <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</Label>
                 <Textarea
                   value={data.premium_upgrade?.description ?? ""}
-                  onChange={(e) =>
-                    onChange({
-                      premium_upgrade: {
-                        name: data.premium_upgrade?.name ?? "",
-                        price: data.premium_upgrade?.price ?? "",
-                        description: e.target.value,
-                      },
-                    })
-                  }
+                  onChange={(e) => updatePremium({ description: e.target.value })}
                   placeholder="What's included in the premium tier?"
                   rows={2}
                   className="resize-none text-sm"
                 />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  Additional Value / Outcome
+                </Label>
+                <Textarea
+                  value={data.premium_upgrade?.additional_value ?? ""}
+                  onChange={(e) => updatePremium({ additional_value: e.target.value })}
+                  placeholder="What additional outcome does this unlock?"
+                  rows={2}
+                  className="resize-none text-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Recurring — structured offer card */}
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-start justify-between gap-4 mb-1">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Repeat className="w-4 h-4" />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-foreground">Recurring Option</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Does this offer have a recurring continuation offer?
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={data.recurring_enabled}
+              onCheckedChange={(v) => onChange({ recurring_enabled: v })}
+            />
+          </div>
+          {data.recurring_enabled && (
+            <div className="mt-4 rounded-lg border border-border bg-background p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Offer Name</Label>
+                  <Input
+                    value={data.recurring_offer?.name ?? ""}
+                    onChange={(e) => updateRecurring({ name: e.target.value })}
+                    placeholder="e.g. Inner Circle Membership"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Monthly Price</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-muted-foreground">€</span>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      value={data.recurring_offer?.monthly_price === "" || data.recurring_offer?.monthly_price === undefined ? "" : data.recurring_offer?.monthly_price}
+                      onChange={(e) => updateRecurring({ monthly_price: numberOrEmpty(e.target.value) })}
+                      placeholder="297"
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</Label>
+                <Textarea
+                  value={data.recurring_offer?.description ?? ""}
+                  onChange={(e) => updateRecurring({ description: e.target.value })}
+                  placeholder="What is the recurring offer?"
+                  rows={2}
+                  className="resize-none text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  Ongoing Value Delivered
+                </Label>
+                <Textarea
+                  value={data.recurring_offer?.ongoing_value ?? ""}
+                  onChange={(e) => updateRecurring({ ongoing_value: e.target.value })}
+                  placeholder="What value is delivered every month?"
+                  rows={2}
+                  className="resize-none text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Delivery Type</Label>
+                  <DeliveryTypePicker
+                    value={data.recurring_offer?.delivery_types ?? []}
+                    onChange={(v) => updateRecurring({ delivery_types: v })}
+                    placeholder="How is it delivered?"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Interval</Label>
+                  <Select
+                    value={data.recurring_offer?.interval ?? "monthly"}
+                    onValueChange={(v) => updateRecurring({ interval: v as RecurringOffer["interval"] })}
+                  >
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="quarterly">Quarterly</SelectItem>
+                      <SelectItem value="yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           )}
@@ -324,28 +376,37 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
               <p className="text-xs text-muted-foreground mt-0.5">How you remove the risk of saying yes.</p>
             </div>
           </div>
-          <div className="max-w-md space-y-3">
-            <Select
-              value={data.guarantee_type}
-              onValueChange={(v) => onChange({ guarantee_type: v as GuaranteeType })}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {GUARANTEE_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {data.guarantee_type === "custom" && (
-              <Textarea
-                value={data.guarantee_custom ?? ""}
-                onChange={(e) => onChange({ guarantee_custom: e.target.value })}
-                placeholder="Describe your custom guarantee…"
-                rows={3}
-                className="resize-none text-sm"
-              />
+          <div className="space-y-3 max-w-2xl">
+            <div className="max-w-xs">
+              <Select
+                value={data.guarantee_type}
+                onValueChange={(v) => onChange({ guarantee_type: v as GuaranteeType })}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GUARANTEE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {data.guarantee_type !== "none" && (
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  Guarantee Details / Terms
+                </Label>
+                <Textarea
+                  value={data.guarantee_details ?? ""}
+                  onChange={(e) => onChange({ guarantee_details: e.target.value })}
+                  placeholder={
+                    'e.g. "Complete all modules and attend weekly calls. If you don\'t see measurable progress within 90 days, we continue coaching for free."'
+                  }
+                  rows={4}
+                  className="resize-none text-sm"
+                />
+              </div>
             )}
           </div>
         </div>

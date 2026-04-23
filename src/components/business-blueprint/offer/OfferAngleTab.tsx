@@ -1,18 +1,21 @@
 // =============================================================================
-// OfferAngleTab — Tab 1
-// 4 Gusten differentiation cards + Main Offer Name + Promise Builder.
+// OfferAngleTab — Tab 1 (redesigned)
+// Order: Main Offer Name → Short Description → Core Outcome →
+//        New/Better/Faster/Easier → Signature Framework → Core Promise
 // =============================================================================
 
 import { useState } from "react";
-import { Lightbulb, Wand2, Loader2, Sparkles, Shield } from "lucide-react";
+import { Lightbulb, Wand2, Loader2, Sparkles, Shield, FileText, Target } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import SectionShell from "./SectionShell";
 import AngleField from "./AngleField";
 import TimeframePicker from "./TimeframePicker";
+import FrameworkSection from "./FrameworkSection";
 import {
   type OfferAngleData,
   buildPromisePreview,
@@ -88,7 +91,74 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
         </Badge>
       }
     >
-      {/* 4-part Gusten differentiation grid */}
+      {/* 1. Main Offer Name */}
+      <div className="rounded-xl border border-border bg-card p-5 mb-4">
+        <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+          <div>
+            <Label className="text-sm font-semibold text-foreground">Main Offer Name</Label>
+            <p className="text-xs text-muted-foreground mt-1">What is your flagship offer called?</p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleGenerateNames}
+            disabled={genNamesBusy}
+            className="gap-1.5 h-8"
+          >
+            {genNamesBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+            Generate Names
+          </Button>
+        </div>
+        <Input
+          value={data.main_offer_name ?? ""}
+          onChange={(e) => onChange({ main_offer_name: e.target.value })}
+          placeholder="e.g. The Confidence Reset, Lead Engine 90, Scale Sprint…"
+          className="h-10"
+        />
+      </div>
+
+      {/* 2. Short Offer Description + 3. Core Outcome */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 mb-1.5">
+            <FileText className="w-4 h-4 text-primary" />
+            <Label className="text-sm font-semibold text-foreground">Short Offer Description</Label>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            1–2 sentences explaining what the offer actually is.
+          </p>
+          <Textarea
+            value={data.short_description ?? ""}
+            onChange={(e) => onChange({ short_description: e.target.value })}
+            placeholder={`e.g. A 90-day coaching program that helps ${noun} rebuild confidence after toxic relationships.`}
+            rows={3}
+            className="resize-none text-sm"
+          />
+        </div>
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Target className="w-4 h-4 text-primary" />
+            <Label className="text-sm font-semibold text-foreground">Core Outcome</Label>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            The primary transformation result.
+          </p>
+          <Textarea
+            value={data.core_outcome ?? ""}
+            onChange={(e) => onChange({ core_outcome: e.target.value })}
+            placeholder="e.g. Rebuild self-trust and confidently attract healthy relationships."
+            rows={3}
+            className="resize-none text-sm"
+          />
+        </div>
+      </div>
+
+      {/* 4. Gusten 4-part differentiation grid */}
+      <div className="mb-2">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+          Differentiation — what makes your method different
+        </h3>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <AngleField
           label="New Vehicle"
@@ -124,33 +194,15 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
         />
       </div>
 
-      {/* Main Offer Name */}
-      <div className="rounded-xl border border-border bg-card p-5 mb-4">
-        <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
-          <div>
-            <Label className="text-sm font-semibold text-foreground">Main Offer Name</Label>
-            <p className="text-xs text-muted-foreground mt-1">What is your flagship offer called?</p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleGenerateNames}
-            disabled={genNamesBusy}
-            className="gap-1.5 h-8"
-          >
-            {genNamesBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-            Generate Names
-          </Button>
-        </div>
-        <Input
-          value={data.main_offer_name ?? ""}
-          onChange={(e) => onChange({ main_offer_name: e.target.value })}
-          placeholder="e.g. The Confidence Reset, Lead Engine 90, Scale Sprint…"
-          className="h-10"
+      {/* 5. Signature Framework */}
+      <div className="mb-6">
+        <FrameworkSection
+          value={data.framework}
+          onChange={(framework) => onChange({ framework })}
         />
       </div>
 
-      {/* Core Transformation Promise builder */}
+      {/* 6. Core Transformation Promise builder */}
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-primary" />
