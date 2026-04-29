@@ -91,9 +91,13 @@ const BlueprintSetupWizard = ({ open, onOpenChange, onComplete, onSkip, initialV
               <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-display">Let's personalize your Blueprint</DialogTitle>
+              <DialogTitle className="text-xl font-display">
+                {isEdit ? "Edit your Business Snapshot" : "Let's personalize your Blueprint"}
+              </DialogTitle>
               <DialogDescription className="text-xs">
-                2 minutes — answers tailor every example, AI suggestion, and template to your business.
+                {isEdit
+                  ? "Update your answers — they tailor every example, AI suggestion, and template."
+                  : "2 minutes — answers tailor every example, AI suggestion, and template to your business."}
               </DialogDescription>
             </div>
           </div>
