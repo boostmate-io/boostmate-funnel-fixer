@@ -210,7 +210,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
           </div>
           {data.premium_enabled && (
             <div className="mt-4 rounded-lg border border-border bg-background p-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Upgrade Name</Label>
                   <Input
@@ -282,7 +282,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
           </div>
           {data.recurring_enabled && (
             <div className="mt-4 rounded-lg border border-border bg-background p-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Offer Name</Label>
                   <Input
@@ -329,7 +329,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                   className="resize-none text-sm"
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Delivery Type</Label>
                   <DeliveryTypePicker

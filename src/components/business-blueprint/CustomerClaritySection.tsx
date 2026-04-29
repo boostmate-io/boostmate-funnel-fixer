@@ -124,7 +124,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
         </div>
 
         {/* Modular field cards grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="space-y-4">
           {config.fields.map((field) => (
             <div
               key={field.key as string}

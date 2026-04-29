@@ -53,7 +53,7 @@ const FrameworkSection = ({ value, onChange }: Props) => {
       </div>
 
       <div className="p-5 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div>
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
               Framework / Method Name

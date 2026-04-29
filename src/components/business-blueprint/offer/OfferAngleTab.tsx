@@ -112,7 +112,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
       </div>
 
       {/* 2. Short Offer Description + 3. Core Outcome */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="space-y-4 mb-6">
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-1.5">
             <FileText className="w-4 h-4 text-primary" />
@@ -153,7 +153,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
           Differentiation — what makes your method different
         </h3>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div className="space-y-4 mb-6">
         <AngleField
           label="New Vehicle"
           helper="What makes your method genuinely new compared to what they already tried?"
@@ -206,7 +206,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
           Build a precise outcome promise. The preview below is what {noun} will see.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div className="md:col-span-2">
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
               Desired Outcome

@@ -186,7 +186,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
                     rows={2}
                     className="resize-none text-sm"
                   />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     <div>
                       <Label className="text-[11px] font-medium text-muted-foreground mb-1 block">
                         Delivery Type
@@ -248,7 +248,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
         >
           {data.resources.length > 0 && (
             <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 {data.resources.map((r) => (
                   <div key={r.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
                     <div className="flex items-start gap-2">
@@ -317,7 +317,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
         >
           {data.support_channels.length > 0 && (
             <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 {data.support_channels.map((s) => (
                   <div key={s.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
                     <div className="flex items-start gap-2">
@@ -371,7 +371,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
           emptyText="No bonuses yet. Add 1–3 high-value bonuses to anchor perceived value."
         >
           {data.bonuses.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-3">
               {data.bonuses.map((b) => (
                 <div key={b.id} className="rounded-lg border border-border bg-background p-4 space-y-3">
                   <div className="flex items-start gap-2">
@@ -468,7 +468,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="space-y-2">
                         <AutoTextarea
                           value={m.description ?? ""}
                           onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
