@@ -1583,6 +1583,7 @@ export type Database = {
           biggest_challenge: string
           business_type: string
           created_at: string
+          currency: string
           help_achieve: string
           id: string
           main_goal: string
@@ -1595,6 +1596,7 @@ export type Database = {
           biggest_challenge?: string
           business_type?: string
           created_at?: string
+          currency?: string
           help_achieve?: string
           id?: string
           main_goal?: string
@@ -1607,6 +1609,7 @@ export type Database = {
           biggest_challenge?: string
           business_type?: string
           created_at?: string
+          currency?: string
           help_achieve?: string
           id?: string
           main_goal?: string
