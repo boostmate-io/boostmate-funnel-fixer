@@ -245,6 +245,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: P
                       key={offer.id}
                       offer={offer}
                       isCore={offer.source === "blueprint_core"}
+                      cur={cur}
                       onUpdate={(patch) => updateOffer(offer.id, patch)}
                       onDelete={() => deleteOffer(offer.id)}
                     />
