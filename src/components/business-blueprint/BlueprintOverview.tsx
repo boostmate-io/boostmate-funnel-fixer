@@ -128,19 +128,6 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <Sparkles className="w-5 h-5 text-primary" />
               <h1 className="text-3xl font-display font-bold text-foreground">Business Blueprint</h1>
-              {setupCompleted && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="gap-1.5 ml-1">
-                      <BtIcon className="w-3 h-3 text-primary" />
-                      <span className="text-[11px] font-medium">{bt.label} Mode</span>
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Your blueprint is personalized for a {bt.label.toLowerCase()}. Change in Settings.
-                  </TooltipContent>
-                </Tooltip>
-              )}
             </div>
             <p className="text-muted-foreground max-w-2xl">
               Strategic overview of your business, offers, {bt.customerNoun}, and growth systems.

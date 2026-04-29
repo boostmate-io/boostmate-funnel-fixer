@@ -59,10 +59,6 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
             <p className="text-sm text-muted-foreground">{config.description}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1.5 text-xs">
-              <bt.icon className="w-3 h-3 text-primary" />
-              {bt.label} mode
-            </Badge>
             {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
           </div>
         </div>
