@@ -124,6 +124,12 @@ const BusinessBlueprintModule = () => {
           mappings={mappings}
           offers={offers}
           businessType={settings.business_type}
+          snapshot={{
+            help_achieve: settings.help_achieve,
+            who_help: settings.who_help,
+            main_goal: settings.main_goal,
+            biggest_challenge: settings.biggest_challenge,
+          }}
           onEdit={handleEdit}
           onView={() => setMode("view")}
           onShare={() => setShareOpen(true)}
@@ -133,6 +139,14 @@ const BusinessBlueprintModule = () => {
         <BlueprintSetupWizard
           open={setupOpen}
           onOpenChange={setSetupOpen}
+          isEdit={settings.setup_status === "completed"}
+          initialValues={{
+            business_type: settings.business_type,
+            help_achieve: settings.help_achieve,
+            who_help: settings.who_help,
+            main_goal: settings.main_goal,
+            biggest_challenge: settings.biggest_challenge,
+          }}
           onComplete={(patch) => {
             updateSettings(patch, { immediate: true });
             setSetupOpen(false);
