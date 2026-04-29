@@ -258,29 +258,83 @@ const BlueprintViewMode = ({
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-background-dashboard">
-      {/* Top bar */}
-      <div className="sticky top-0 z-10 backdrop-blur bg-card/80 border-b border-border">
-        <div className="max-w-4xl mx-auto px-8 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+    <div ref={scrollContainerRef} className="h-full overflow-y-auto bg-background-dashboard">
+      {/* Sticky section navigation bar */}
+      <div className="sticky top-0 z-10 backdrop-blur bg-card/90 border-b border-border">
+        <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center gap-4">
+          {/* Left: title */}
+          <div className="flex items-center gap-2 shrink-0">
             {onBack && (
-              <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 gap-1.5">
+              <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 gap-1.5 h-8">
                 <ArrowLeft className="w-4 h-4" />
-                Back
+                <span className="hidden sm:inline">Back</span>
               </Button>
             )}
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-display font-bold text-foreground">
+            <span className="text-sm font-display font-bold text-foreground hidden md:inline">
               Business Blueprint
             </span>
             {isPublic && (
-              <Badge variant="secondary" className="text-[10px]">Read-only</Badge>
+              <Badge variant="secondary" className="text-[10px] hidden lg:inline-flex">Read-only</Badge>
             )}
           </div>
+
+          {/* Center: section navigation (desktop) */}
+          <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center overflow-x-auto">
+            {navSections.map((s) => {
+              const isActive = activeId === s.id;
+              const isMuted = !s.hasContent;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => scrollTo(s.id)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : isMuted
+                        ? "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/40"
+                        : "text-foreground/70 hover:text-foreground hover:bg-muted/60"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Mobile / tablet: dropdown */}
+          <div className="flex-1 flex justify-end lg:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 h-8">
+                  {navSections.find((s) => s.id === activeId)?.label ?? "Sections"}
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-50 bg-popover">
+                {navSections.map((s) => (
+                  <DropdownMenuItem
+                    key={s.id}
+                    onClick={() => scrollTo(s.id)}
+                    className={`text-sm ${activeId === s.id ? "text-primary font-semibold" : ""} ${
+                      !s.hasContent ? "opacity-60" : ""
+                    }`}
+                  >
+                    {s.label}
+                    {!s.hasContent && (
+                      <span className="ml-2 text-[10px] text-muted-foreground">empty</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Right: share */}
           {onShare && (
-            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8">
+            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8 shrink-0 hidden sm:inline-flex">
               <Share2 className="w-4 h-4" />
-              Share
+              <span className="hidden md:inline">Share</span>
             </Button>
           )}
         </div>
