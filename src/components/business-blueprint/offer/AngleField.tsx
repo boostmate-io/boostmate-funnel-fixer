@@ -35,7 +35,7 @@ const AngleField = ({ label, helper, placeholder, value, onChange, onCoach }: Pr
     <div className="rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex flex-col h-full">
       <div className="px-5 pt-4 pb-2">
         <div className="flex items-center gap-2">
-          <Label className="text-sm font-semibold text-foreground leading-snug">{label}</Label>
+          <Label className="text-lg font-display font-bold text-foreground leading-snug">{label}</Label>
           {hasContent && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
         </div>
         {helper && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{helper}</p>}

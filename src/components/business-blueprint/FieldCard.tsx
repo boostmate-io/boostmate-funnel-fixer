@@ -66,7 +66,7 @@ const FieldCard = ({ field, value, onChange, onCoach }: Props) => {
       <div className="px-5 pt-4 pb-2 flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <Label className="text-sm font-semibold text-foreground leading-snug">
+            <Label className="text-lg font-display font-bold text-foreground leading-snug">
               {field.label}
             </Label>
             {hasContent && (
