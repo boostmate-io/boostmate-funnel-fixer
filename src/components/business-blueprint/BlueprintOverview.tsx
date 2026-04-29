@@ -1,4 +1,5 @@
-import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Download, Wand2, ArrowRight, CheckCircle2, Settings2 } from "lucide-react";
+import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Download, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2 } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";

@@ -109,7 +109,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
             </div>
           </div>
           <div className="flex items-center gap-2 max-w-xs">
-            <span className="text-lg font-semibold text-muted-foreground">€</span>
+            <span className="text-lg font-semibold text-muted-foreground">{cur}</span>
             <Input
               type="number"
               inputMode="decimal"
@@ -156,7 +156,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <div className="flex items-center gap-1">
-                      <span className="text-sm text-muted-foreground">€</span>
+                      <span className="text-sm text-muted-foreground">{cur}</span>
                       <Input
                         type="number"
                         inputMode="decimal"
@@ -225,7 +225,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Price</Label>
                   <div className="flex items-center gap-1">
-                    <span className="text-sm text-muted-foreground">€</span>
+                    <span className="text-sm text-muted-foreground">{cur}</span>
                     <Input
                       type="number"
                       inputMode="decimal"
@@ -297,7 +297,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Monthly Price</Label>
                   <div className="flex items-center gap-1">
-                    <span className="text-sm text-muted-foreground">€</span>
+                    <span className="text-sm text-muted-foreground">{cur}</span>
                     <Input
                       type="number"
                       inputMode="decimal"
