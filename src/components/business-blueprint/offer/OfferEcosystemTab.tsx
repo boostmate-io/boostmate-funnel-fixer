@@ -153,6 +153,7 @@ const OfferCardRow = ({
 };
 
 const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: Props) => {
+  const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const { offers, addOffer, updateOffer, deleteOffer, tierCounts } = useEcosystemOffers({
     blueprintId,
