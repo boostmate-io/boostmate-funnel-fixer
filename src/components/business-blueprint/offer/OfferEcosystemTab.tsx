@@ -15,6 +15,7 @@ import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import SectionShell from "./SectionShell";
+import { useCurrency } from "@/hooks/useCurrency";
 import DeliveryTypePicker from "./DeliveryTypePicker";
 import {
   ECOSYSTEM_TIERS,
@@ -43,11 +44,13 @@ const OfferCardRow = ({
   onUpdate,
   onDelete,
   isCore,
+  cur,
 }: {
   offer: EcosystemOfferRow;
   onUpdate: (patch: Partial<Pick<EcosystemOfferRow, "name" | "data">>) => void;
   onDelete: () => void;
   isCore: boolean;
+  cur: string;
 }) => {
   const [open, setOpen] = useState(false);
 
