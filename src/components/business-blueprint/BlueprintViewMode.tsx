@@ -55,15 +55,17 @@ interface Props {
 // ---------- Tiny presentation helpers ---------------------------------------
 
 const Section = ({
+  id,
   title,
   icon: Icon,
   children,
 }: {
+  id?: string;
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   children: React.ReactNode;
 }) => (
-  <section className="mb-12 scroll-mt-24">
+  <section id={id} data-section={id} className="mb-12 scroll-mt-24">
     <div className="flex items-center gap-3 mb-6 pb-3 border-b border-border">
       <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
         <Icon className="w-5 h-5" />
