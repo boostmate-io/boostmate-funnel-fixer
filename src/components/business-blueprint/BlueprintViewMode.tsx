@@ -704,6 +704,24 @@ const BlueprintViewMode = ({
           </SubBlock>
         </Section>
 
+        {/* ============= BRAND STRATEGY (placeholder) ============= */}
+        <Section id="brand-strategy" title="Brand Strategy" icon={Palette}>
+          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-5 py-8 text-center">
+            <p className="text-sm text-muted-foreground italic">
+              Brand strategy hasn't been defined yet.
+            </p>
+          </div>
+        </Section>
+
+        {/* ============= PROOF & AUTHORITY (placeholder) ============= */}
+        <Section id="proof-authority" title="Proof & Authority" icon={Award}>
+          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-5 py-8 text-center">
+            <p className="text-sm text-muted-foreground italic">
+              Proof & authority assets haven't been added yet.
+            </p>
+          </div>
+        </Section>
+
         <footer className="mt-16 pt-8 border-t border-border text-center text-xs text-muted-foreground">
           Strategic Business Blueprint · Generated with Boostmate
         </footer>
