@@ -28,11 +28,14 @@ interface Props {
   offers: OfferLite[];
   businessType: string;
   onEdit: (section?: SectionId) => void;
+  onView: () => void;
+  onShare: () => void;
   onOpenSetup: () => void;
   setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, onEdit, onOpenSetup, setupCompleted }: Props) => {
+const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
+  const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const BtIcon = bt.icon;
   const clarityProgress = calculateClarityProgress(clarity);
@@ -64,7 +67,7 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
       items: [
         { label: "Main offer", value: offer.angle?.main_offer_name },
         { label: "Core promise", value: buildPromisePreview(offer.angle?.core_promise) },
-        { label: "Core price", value: typeof offer.pricing?.core_price === "number" ? `$${offer.pricing.core_price}` : undefined },
+        { label: "Core price", value: typeof offer.pricing?.core_price === "number" ? `${cur}${offer.pricing.core_price.toLocaleString()}` : undefined },
         { label: "Deliverables", value: offer.stack?.deliverables?.length ? `${offer.stack.deliverables.length} defined` : undefined },
       ],
     },
@@ -144,9 +147,13 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
               </TooltipTrigger>
               <TooltipContent>AI analysis coming soon</TooltipContent>
             </Tooltip>
-            <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-60 h-8">
-              <Download className="w-4 h-4" />
-              Export
+            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8">
+              <Share2 className="w-4 h-4" />
+              Share
+            </Button>
+            <Button variant="outline" size="sm" onClick={onView} className="gap-1.5 h-8">
+              <Eye className="w-4 h-4" />
+              View Blueprint
             </Button>
             <Button size="sm" onClick={() => onEdit()} className="gap-1.5 h-8">
               <Pencil className="w-4 h-4" />
