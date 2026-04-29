@@ -6,6 +6,7 @@ import { useBlueprint } from "./useBlueprint";
 import { useWorkspaceSettings } from "./useWorkspaceSettings";
 import { useEcosystemOffers } from "./useEcosystemOffers";
 import { useFunnelMappings } from "./useFunnelMappings";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { calculateClarityProgress, type SectionId } from "./types";
 import { calculateOfferDesignProgress } from "./offerDesignTypes";
 import {
@@ -20,6 +21,8 @@ import GrowthSystemSection from "./GrowthSystemSection";
 import PlaceholderSection from "./PlaceholderSection";
 import BlueprintOverview from "./BlueprintOverview";
 import BlueprintSetupWizard from "./BlueprintSetupWizard";
+import BlueprintViewMode from "./BlueprintViewMode";
+import BlueprintShareDialog from "./BlueprintShareDialog";
 
 const sections: { id: SectionId; label: string; icon: typeof Users }[] = [
   { id: "customer-clarity", label: "Customer Clarity", icon: Users },
@@ -29,23 +32,23 @@ const sections: { id: SectionId; label: string; icon: typeof Users }[] = [
   { id: "proof-authority", label: "Proof & Authority", icon: Award },
 ];
 
-type Mode = "overview" | "edit";
+type Mode = "overview" | "edit" | "view";
 
 const BusinessBlueprintModule = () => {
   const [mode, setMode] = useState<Mode>("overview");
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
   const [setupOpen, setSetupOpen] = useState(false);
-  const { blueprint, offerDesign, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem } = useBlueprint();
+  const [shareOpen, setShareOpen] = useState(false);
+  const { blueprint, offerDesign, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, setShareToken } = useBlueprint();
   const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
+  const { activeSubAccount } = useWorkspace() as any;
 
-  // Shared ecosystem offers + funnel mappings (used by Growth System & Overview)
   const { offers, tierCounts } = useEcosystemOffers({
     blueprintId: blueprint?.id ?? null,
     offerDesign: offerDesign,
   });
   const { mappings } = useFunnelMappings(blueprint?.id ?? null);
 
-  // First-visit: open setup wizard if pending
   useEffect(() => {
     if (!loadingSettings && settings && settings.setup_status === "pending") {
       setSetupOpen(true);
@@ -79,6 +82,38 @@ const BusinessBlueprintModule = () => {
     setMode("edit");
   };
 
+  if (mode === "view") {
+    return (
+      <>
+        <BlueprintViewMode
+          workspaceName={activeSubAccount?.name}
+          workspace={{
+            business_type: settings.business_type,
+            currency: settings.currency,
+            help_achieve: settings.help_achieve,
+            who_help: settings.who_help,
+            main_goal: settings.main_goal,
+            biggest_challenge: settings.biggest_challenge,
+          }}
+          clarity={blueprint.customer_clarity}
+          offer={offerData}
+          growth={growthData}
+          mappings={mappings}
+          offers={offers}
+          onBack={() => setMode("overview")}
+          onShare={() => setShareOpen(true)}
+        />
+        <BlueprintShareDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          blueprintId={blueprint.id}
+          shareToken={blueprint.share_token}
+          onShareTokenChange={setShareToken}
+        />
+      </>
+    );
+  }
+
   if (mode === "overview") {
     return (
       <>
@@ -90,6 +125,8 @@ const BusinessBlueprintModule = () => {
           offers={offers}
           businessType={settings.business_type}
           onEdit={handleEdit}
+          onView={() => setMode("view")}
+          onShare={() => setShareOpen(true)}
           onOpenSetup={() => setSetupOpen(true)}
           setupCompleted={settings.setup_status === "completed"}
         />
@@ -106,6 +143,13 @@ const BusinessBlueprintModule = () => {
             }
             setSetupOpen(false);
           }}
+        />
+        <BlueprintShareDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          blueprintId={blueprint.id}
+          shareToken={blueprint.share_token}
+          onShareTokenChange={setShareToken}
         />
       </>
     );
@@ -168,7 +212,6 @@ const BusinessBlueprintModule = () => {
 
   return (
     <div className="flex h-full bg-background-dashboard">
-      {/* Top-level section nav */}
       <div className="w-64 border-r border-border bg-card flex flex-col shrink-0">
         <div className="p-4 border-b border-border">
           <Button
@@ -229,7 +272,6 @@ const BusinessBlueprintModule = () => {
         </div>
       </div>
 
-      {/* Active section content */}
       <div className="flex-1 overflow-hidden">{renderActive()}</div>
     </div>
   );
