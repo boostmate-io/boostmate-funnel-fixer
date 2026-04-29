@@ -74,7 +74,7 @@ const OfferCardRow = ({
         />
         {typeof offer.data?.price === "number" && offer.data.price > 0 && (
           <Badge variant="secondary" className="text-xs tabular-nums shrink-0">
-            €{offer.data.price.toLocaleString()}
+            {cur}{offer.data.price.toLocaleString()}
           </Badge>
         )}
         {isCore ? (
@@ -105,7 +105,7 @@ const OfferCardRow = ({
           <div>
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Price</Label>
             <div className="flex items-center gap-1 max-w-xs">
-              <span className="text-sm text-muted-foreground">€</span>
+              <span className="text-sm text-muted-foreground">{cur}</span>
               <Input
                 type="number"
                 inputMode="decimal"

@@ -135,6 +135,10 @@ export function useBlueprint() {
     [],
   );
 
+  const setShareToken = useCallback((token: string | null) => {
+    setBlueprint((prev) => (prev ? { ...prev, share_token: token } : prev));
+  }, []);
+
   return {
     blueprint,
     offerDesign,
@@ -143,6 +147,7 @@ export function useBlueprint() {
     updateCustomerClarity,
     updateOfferDesign,
     updateGrowthSystem,
+    setShareToken,
     reload: load,
   };
 }

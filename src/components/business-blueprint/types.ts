@@ -39,6 +39,7 @@ export interface BlueprintRow {
   growth_system: Record<string, any>;
   brand_strategy: Record<string, any>;
   proof_authority: Record<string, any>;
+  share_token: string | null;
   created_at: string;
   updated_at: string;
 }

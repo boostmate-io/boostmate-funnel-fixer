@@ -47,110 +47,113 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
   };
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-6xl mx-auto p-8">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Icon className="w-5 h-5 text-primary" />
-              <h2 className="text-2xl font-display font-bold text-foreground">{config.label}</h2>
+    <div className="h-full flex flex-col">
+      {/* Sub-tab navigation (sticky like Offer Design) */}
+      <div className="border-b border-border bg-card px-8 shrink-0">
+        <div className="max-w-6xl mx-auto flex gap-1 -mb-px overflow-x-auto">
+          {clarityConfig.map((sb) => {
+            const sbProgress = calculateSubBlockProgress(data, sb.id);
+            const isActive = active === sb.id;
+            const SbIcon = sb.icon;
+            const isComplete = sbProgress === 100;
+            return (
+              <button
+                key={sb.id}
+                onClick={() => setActive(sb.id)}
+                className={`group relative flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                  isActive
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                }`}
+              >
+                <SbIcon className="w-4 h-4" />
+                <span>{sb.label}</span>
+                {isComplete ? (
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                ) : (
+                  <span
+                    className={`text-[10px] tabular-nums ${
+                      isActive ? "text-primary/70" : "text-muted-foreground/70"
+                    }`}
+                  >
+                    {sbProgress}%
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-8">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Icon className="w-5 h-5 text-primary" />
+                <h2 className="text-2xl font-display font-bold text-foreground">{config.label}</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">{config.description}</p>
             </div>
-            <p className="text-sm text-muted-foreground">{config.description}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
-          </div>
-        </div>
-
-        {/* Horizontal sub-tabs */}
-        <div className="border-b border-border mb-6">
-          <div className="flex gap-1 -mb-px overflow-x-auto">
-            {clarityConfig.map((sb) => {
-              const sbProgress = calculateSubBlockProgress(data, sb.id);
-              const isActive = active === sb.id;
-              const SbIcon = sb.icon;
-              const isComplete = sbProgress === 100;
-              return (
-                <button
-                  key={sb.id}
-                  onClick={() => setActive(sb.id)}
-                  className={`group relative flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
-                    isActive
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                  }`}
-                >
-                  <SbIcon className="w-4 h-4" />
-                  <span>{sb.label}</span>
-                  {isComplete ? (
-                    <Check className="w-3.5 h-3.5 text-primary" />
-                  ) : (
-                    <span
-                      className={`text-[10px] tabular-nums ${
-                        isActive ? "text-primary/70" : "text-muted-foreground/70"
-                      }`}
-                    >
-                      {sbProgress}%
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Insight box */}
-        <div className="mb-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-4 flex gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Info className="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-primary mb-1">
-              Why this matters
+            <div className="flex items-center gap-2">
+              {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
             </div>
-            <p className="text-sm text-foreground/80 leading-relaxed">{config.insight}</p>
           </div>
-        </div>
 
-        {/* Stats strip */}
-        <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground px-1">
-          <span className="font-semibold tabular-nums text-foreground">
-            {filledCount} / {fields.length}
-          </span>
-          <span>fields completed</span>
-          <span className="text-muted-foreground/50">•</span>
-          <span className="tabular-nums">{progress}%</span>
-        </div>
-
-        {/* Modular field cards grid */}
-        <div className="space-y-4">
-          {config.fields.map((field) => (
-            <div
-              key={field.key as string}
-              className={field.fullWidth ? "lg:col-span-2" : ""}
-            >
-              <FieldCard
-                field={field}
-                value={(data[field.key] as string) || ""}
-                onChange={(v) => onChange({ [field.key]: v } as Partial<CustomerClarityData>)}
-                onCoach={() => openCoachFor(field.label)}
-              />
+          {/* Insight box */}
+          <div className="mb-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-4 flex gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Info className="w-4 h-4 text-primary" />
             </div>
-          ))}
-        </div>
-
-        {/* Feedback strip */}
-        {feedback && (
-          <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
-            <p className="text-sm text-primary font-medium">{feedback}</p>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-primary mb-1">
+                Why this matters
+              </div>
+              <p className="text-sm text-foreground/80 leading-relaxed">{config.insight}</p>
+            </div>
           </div>
-        )}
 
-        {/* Sub-block progress bar */}
-        <div className="mt-4 px-1">
-          <Progress value={progress} className="h-1" />
+          {/* Stats strip */}
+          <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground px-1">
+            <span className="font-semibold tabular-nums text-foreground">
+              {filledCount} / {fields.length}
+            </span>
+            <span>fields completed</span>
+            <span className="text-muted-foreground/50">•</span>
+            <span className="tabular-nums">{progress}%</span>
+          </div>
+
+          {/* Modular field cards grid */}
+          <div className="space-y-4">
+            {config.fields.map((field) => (
+              <div
+                key={field.key as string}
+                className={field.fullWidth ? "lg:col-span-2" : ""}
+              >
+                <FieldCard
+                  field={field}
+                  value={(data[field.key] as string) || ""}
+                  onChange={(v) => onChange({ [field.key]: v } as Partial<CustomerClarityData>)}
+                  onCoach={() => openCoachFor(field.label)}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Feedback strip */}
+          {feedback && (
+            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
+              <p className="text-sm text-primary font-medium">{feedback}</p>
+            </div>
+          )}
+
+          {/* Sub-block progress bar */}
+          <div className="mt-4 px-1">
+            <Progress value={progress} className="h-1" />
+          </div>
         </div>
       </div>
 
