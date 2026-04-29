@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,11 +7,21 @@ import { Sparkles, ArrowRight, ArrowLeft } from "lucide-react";
 import { BUSINESS_TYPE_LIST, type BusinessTypeId } from "./businessTypes";
 import type { WorkspaceSettingsPatch } from "./useWorkspaceSettings";
 
+interface InitialValues {
+  business_type?: string;
+  help_achieve?: string;
+  who_help?: string;
+  main_goal?: string;
+  biggest_challenge?: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: (patch: WorkspaceSettingsPatch) => void;
   onSkip: () => void;
+  initialValues?: InitialValues;
+  isEdit?: boolean;
 }
 
 const GOALS = [
