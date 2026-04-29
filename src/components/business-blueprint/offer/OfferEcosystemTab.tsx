@@ -190,7 +190,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: P
               <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm font-semibold text-foreground">{tier.label}</h3>
+                    <h3 className="text-lg font-display font-bold text-foreground">{tier.label}</h3>
                     {tierOffers.length > 0 && (
                       <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                         {tierOffers.length}

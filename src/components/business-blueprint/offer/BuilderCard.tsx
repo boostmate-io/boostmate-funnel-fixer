@@ -45,7 +45,7 @@ const BuilderCard = ({
           )}
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+              <h3 className="text-lg font-display font-bold text-foreground">{title}</h3>
               {typeof count === "number" && count > 0 && (
                 <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                   {count}
