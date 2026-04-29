@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,11 +7,21 @@ import { Sparkles, ArrowRight, ArrowLeft } from "lucide-react";
 import { BUSINESS_TYPE_LIST, type BusinessTypeId } from "./businessTypes";
 import type { WorkspaceSettingsPatch } from "./useWorkspaceSettings";
 
+interface InitialValues {
+  business_type?: string;
+  help_achieve?: string;
+  who_help?: string;
+  main_goal?: string;
+  biggest_challenge?: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: (patch: WorkspaceSettingsPatch) => void;
   onSkip: () => void;
+  initialValues?: InitialValues;
+  isEdit?: boolean;
 }
 
 const GOALS = [
@@ -23,13 +33,26 @@ const GOALS = [
   { value: "launch", label: "Launch something new" },
 ];
 
-const BlueprintSetupWizard = ({ open, onOpenChange, onComplete, onSkip }: Props) => {
+const BlueprintSetupWizard = ({ open, onOpenChange, onComplete, onSkip, initialValues, isEdit }: Props) => {
   const [step, setStep] = useState(0);
-  const [businessType, setBusinessType] = useState<BusinessTypeId>("coach");
-  const [helpAchieve, setHelpAchieve] = useState("");
-  const [whoHelp, setWhoHelp] = useState("");
-  const [mainGoal, setMainGoal] = useState("");
-  const [biggestChallenge, setBiggestChallenge] = useState("");
+  const [businessType, setBusinessType] = useState<BusinessTypeId>((initialValues?.business_type as BusinessTypeId) || "coach");
+  const [helpAchieve, setHelpAchieve] = useState(initialValues?.help_achieve || "");
+  const [whoHelp, setWhoHelp] = useState(initialValues?.who_help || "");
+  const [mainGoal, setMainGoal] = useState(initialValues?.main_goal || "");
+  const [biggestChallenge, setBiggestChallenge] = useState(initialValues?.biggest_challenge || "");
+
+  // Re-sync when reopened with new initial values
+  useEffect(() => {
+    if (open) {
+      setStep(0);
+      setBusinessType((initialValues?.business_type as BusinessTypeId) || "coach");
+      setHelpAchieve(initialValues?.help_achieve || "");
+      setWhoHelp(initialValues?.who_help || "");
+      setMainGoal(initialValues?.main_goal || "");
+      setBiggestChallenge(initialValues?.biggest_challenge || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const totalSteps = 5;
   const canNext = (() => {
@@ -68,9 +91,13 @@ const BlueprintSetupWizard = ({ open, onOpenChange, onComplete, onSkip }: Props)
               <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-display">Let's personalize your Blueprint</DialogTitle>
+              <DialogTitle className="text-xl font-display">
+                {isEdit ? "Edit your Business Snapshot" : "Let's personalize your Blueprint"}
+              </DialogTitle>
               <DialogDescription className="text-xs">
-                2 minutes — answers tailor every example, AI suggestion, and template to your business.
+                {isEdit
+                  ? "Update your answers — they tailor every example, AI suggestion, and template."
+                  : "2 minutes — answers tailor every example, AI suggestion, and template to your business."}
               </DialogDescription>
             </div>
           </div>
@@ -192,7 +219,7 @@ const BlueprintSetupWizard = ({ open, onOpenChange, onComplete, onSkip }: Props)
         {/* Footer */}
         <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border bg-muted/20">
           <Button variant="ghost" size="sm" onClick={handleSkip} className="text-muted-foreground">
-            Skip for now
+            {isEdit ? "Cancel" : "Skip for now"}
           </Button>
           <div className="flex items-center gap-2">
             {step > 0 && (
@@ -214,7 +241,7 @@ const BlueprintSetupWizard = ({ open, onOpenChange, onComplete, onSkip }: Props)
             ) : (
               <Button size="sm" onClick={handleFinish} disabled={!canNext} className="gap-1.5">
                 <Sparkles className="w-4 h-4" />
-                Finish setup
+                {isEdit ? "Save changes" : "Finish setup"}
               </Button>
             )}
           </div>

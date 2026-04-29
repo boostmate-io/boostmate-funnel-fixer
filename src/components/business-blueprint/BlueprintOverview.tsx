@@ -1,4 +1,4 @@
-import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Download, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2 } from "lucide-react";
+import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Download, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2, Zap } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -8,6 +8,15 @@ import { calculateClarityProgress, type SectionId, type CustomerClarityData } fr
 import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
 import { calculateGrowthSystemProgress, getFunnelTypeLabel, type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
 import { getBusinessType } from "./businessTypes";
+
+const GOAL_LABELS: Record<string, string> = {
+  "more-leads": "More leads",
+  "more-sales": "More sales",
+  "build-funnel": "Build a funnel",
+  "improve-conversion": "Improve conversion",
+  "clarify-offer": "Clarify my offer",
+  "launch": "Launch something new",
+};
 
 interface OfferLite { id: string; name: string; tier?: string }
 
@@ -27,6 +36,12 @@ interface Props {
   mappings: FunnelMappingRow[];
   offers: OfferLite[];
   businessType: string;
+  snapshot?: {
+    help_achieve?: string;
+    who_help?: string;
+    main_goal?: string;
+    biggest_challenge?: string;
+  };
   onEdit: (section?: SectionId) => void;
   onView: () => void;
   onShare: () => void;
@@ -34,7 +49,7 @@ interface Props {
   setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
+const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, snapshot, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const BtIcon = bt.icon;
@@ -162,8 +177,8 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
           </div>
         </div>
 
-        {/* Setup banner (only if user skipped or never ran) */}
-        {!setupCompleted && (
+        {/* Setup banner — always visible, switches state */}
+        {!setupCompleted ? (
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
@@ -180,6 +195,45 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
               <Sparkles className="w-3.5 h-3.5" />
               Start setup
             </Button>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-primary/25 bg-gradient-to-br from-primary/5 to-transparent p-5">
+            <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                  <BtIcon className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-display font-bold text-foreground">Business Snapshot</h3>
+                  <Badge variant="secondary" className="mt-1 gap-1 text-[10px]">
+                    <Zap className="w-3 h-3" />
+                    Powers your AI recommendations
+                  </Badge>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" onClick={onOpenSetup} className="gap-1.5 h-8">
+                <Pencil className="w-3.5 h-3.5" />
+                Edit Snapshot
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {[
+                { label: "Business Type", value: bt.label },
+                { label: "Helping", value: snapshot?.help_achieve },
+                { label: "Audience", value: snapshot?.who_help },
+                { label: "Primary Goal", value: snapshot?.main_goal ? (GOAL_LABELS[snapshot.main_goal] ?? snapshot.main_goal) : undefined },
+                { label: "Biggest Challenge", value: snapshot?.biggest_challenge },
+              ].map((item) => (
+                <div key={item.label} className="rounded-lg bg-card border border-border px-3 py-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                    {item.label}
+                  </p>
+                  <p className={`text-xs leading-snug line-clamp-3 ${item.value ? "text-foreground" : "text-muted-foreground/60 italic"}`}>
+                    {item.value?.trim() || "Not set"}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

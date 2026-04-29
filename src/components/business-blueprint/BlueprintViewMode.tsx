@@ -7,14 +7,17 @@
 // in feel to a Notion page or a consulting deliverable.
 // =============================================================================
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Sparkles, Users, Package, Workflow, Megaphone,
   TrendingUp, DollarSign, Lightbulb, Layers, Network, Target,
-  AlertTriangle, ArrowRightLeft, Share2,
+  AlertTriangle, ArrowRightLeft, Share2, Palette, Award, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getCurrencySymbol } from "@/lib/currency";
 import type { CustomerClarityData } from "./types";
 import {
@@ -52,15 +55,17 @@ interface Props {
 // ---------- Tiny presentation helpers ---------------------------------------
 
 const Section = ({
+  id,
   title,
   icon: Icon,
   children,
 }: {
+  id?: string;
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   children: React.ReactNode;
 }) => (
-  <section className="mb-12 scroll-mt-24">
+  <section id={id} data-section={id} className="mb-12 scroll-mt-24">
     <div className="flex items-center gap-3 mb-6 pb-3 border-b border-border">
       <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
         <Icon className="w-5 h-5" />
@@ -178,30 +183,158 @@ const BlueprintViewMode = ({
     continuity: "Continuity",
   };
 
+  // ----- Section navigation (scroll-spy) -----
+  const hasOverview = Boolean(
+    workspaceName || workspace.business_type || workspace.who_help ||
+    workspace.main_goal || workspace.biggest_challenge || workspace.help_achieve,
+  );
+  const hasClarity = Object.values(clarity || {}).some((v) => typeof v === "string" && v.trim());
+  const hasOffer = Boolean(
+    offer.angle?.main_offer_name || offer.angle?.core_outcome ||
+    offer.angle?.short_description || offer.angle?.framework?.name ||
+    (offer.stack?.deliverables?.length ?? 0) > 0 ||
+    (offer.stack?.bonuses?.length ?? 0) > 0 ||
+    (offer.stack?.milestones?.length ?? 0) > 0 ||
+    typeof offer.pricing?.core_price === "number" ||
+    offers.length > 0,
+  );
+  const hasGrowth = Boolean(
+    (growth.acquisition?.traffic_sources?.length ?? 0) > 0 ||
+    growth.acquisition?.primary_entry_offer_id ||
+    growth.acquisition?.lead_capture_method ||
+    mappings.length > 0 ||
+    growth.ascension?.next_offer_after_core_id ||
+    growth.ascension?.retention_offer_id ||
+    growth.ascension?.referral_enabled ||
+    growth.ascension?.reactivation_enabled,
+  );
+
+  const navSections = [
+    { id: "overview", label: "Overview", hasContent: hasOverview },
+    { id: "customer-clarity", label: "Customer Clarity", hasContent: hasClarity },
+    { id: "offer-design", label: "Offer Design", hasContent: hasOffer },
+    { id: "growth-system", label: "Growth System", hasContent: hasGrowth },
+    { id: "brand-strategy", label: "Brand Strategy", hasContent: false },
+    { id: "proof-authority", label: "Proof & Authority", hasContent: false },
+  ];
+
+  const [activeId, setActiveId] = useState<string>("overview");
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const root = scrollContainerRef.current ?? undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the entry closest to the top that's intersecting
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) {
+          const id = (visible[0].target as HTMLElement).dataset.section;
+          if (id) setActiveId(id);
+        }
+      },
+      {
+        root,
+        // Trigger when section enters the area just below the sticky bar
+        rootMargin: "-80px 0px -60% 0px",
+        threshold: 0,
+      },
+    );
+    navSections.forEach((s) => {
+      const el = document.getElementById(s.id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveId(id);
+    }
+  };
+
   return (
-    <div className="h-full overflow-y-auto bg-background-dashboard">
-      {/* Top bar */}
-      <div className="sticky top-0 z-10 backdrop-blur bg-card/80 border-b border-border">
-        <div className="max-w-4xl mx-auto px-8 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+    <div ref={scrollContainerRef} className="h-full overflow-y-auto bg-background-dashboard">
+      {/* Sticky section navigation bar */}
+      <div className="sticky top-0 z-10 backdrop-blur bg-card/90 border-b border-border">
+        <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center gap-4">
+          {/* Left: title */}
+          <div className="flex items-center gap-2 shrink-0">
             {onBack && (
-              <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 gap-1.5">
+              <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 gap-1.5 h-8">
                 <ArrowLeft className="w-4 h-4" />
-                Back
+                <span className="hidden sm:inline">Back</span>
               </Button>
             )}
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-display font-bold text-foreground">
+            <span className="text-sm font-display font-bold text-foreground hidden md:inline">
               Business Blueprint
             </span>
             {isPublic && (
-              <Badge variant="secondary" className="text-[10px]">Read-only</Badge>
+              <Badge variant="secondary" className="text-[10px] hidden lg:inline-flex">Read-only</Badge>
             )}
           </div>
+
+          {/* Center: section navigation (desktop) */}
+          <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center overflow-x-auto">
+            {navSections.map((s) => {
+              const isActive = activeId === s.id;
+              const isMuted = !s.hasContent;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => scrollTo(s.id)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : isMuted
+                        ? "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/40"
+                        : "text-foreground/70 hover:text-foreground hover:bg-muted/60"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Mobile / tablet: dropdown */}
+          <div className="flex-1 flex justify-end lg:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 h-8">
+                  {navSections.find((s) => s.id === activeId)?.label ?? "Sections"}
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-50 bg-popover">
+                {navSections.map((s) => (
+                  <DropdownMenuItem
+                    key={s.id}
+                    onClick={() => scrollTo(s.id)}
+                    className={`text-sm ${activeId === s.id ? "text-primary font-semibold" : ""} ${
+                      !s.hasContent ? "opacity-60" : ""
+                    }`}
+                  >
+                    {s.label}
+                    {!s.hasContent && (
+                      <span className="ml-2 text-[10px] text-muted-foreground">empty</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Right: share */}
           {onShare && (
-            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8">
+            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8 shrink-0 hidden sm:inline-flex">
               <Share2 className="w-4 h-4" />
-              Share
+              <span className="hidden md:inline">Share</span>
             </Button>
           )}
         </div>
@@ -230,7 +363,7 @@ const BlueprintViewMode = ({
         </header>
 
         {/* ============= BUSINESS OVERVIEW ============= */}
-        <Section title="Business Overview" icon={Sparkles}>
+        <Section id="overview" title="Business Overview" icon={Sparkles}>
           <KeyValueGrid
             items={[
               { label: "Business Name", value: workspaceName },
@@ -244,7 +377,7 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= CUSTOMER CLARITY ============= */}
-        <Section title="Customer Clarity" icon={Users}>
+        <Section id="customer-clarity" title="Customer Clarity" icon={Users}>
           <SubBlock title="Ideal Client Avatar">
             <Field label="Who is your ideal client" value={clarity.avatar_who} />
             <Field label="Their current stage" value={clarity.avatar_stage} />
@@ -273,7 +406,7 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= OFFER DESIGN ============= */}
-        <Section title="Offer Design" icon={Package}>
+        <Section id="offer-design" title="Offer Design" icon={Package}>
           <SubBlock title="Offer Angle">
             <KeyValueGrid
               items={[
@@ -481,7 +614,7 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= GROWTH SYSTEM ============= */}
-        <Section title="Growth System" icon={Workflow}>
+        <Section id="growth-system" title="Growth System" icon={Workflow}>
           <SubBlock title="Acquisition">
             <KeyValueGrid
               items={[
@@ -569,6 +702,24 @@ const BlueprintViewMode = ({
               value={growth.ascension?.reactivation_description}
             />
           </SubBlock>
+        </Section>
+
+        {/* ============= BRAND STRATEGY (placeholder) ============= */}
+        <Section id="brand-strategy" title="Brand Strategy" icon={Palette}>
+          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-5 py-8 text-center">
+            <p className="text-sm text-muted-foreground italic">
+              Brand strategy hasn't been defined yet.
+            </p>
+          </div>
+        </Section>
+
+        {/* ============= PROOF & AUTHORITY (placeholder) ============= */}
+        <Section id="proof-authority" title="Proof & Authority" icon={Award}>
+          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-5 py-8 text-center">
+            <p className="text-sm text-muted-foreground italic">
+              Proof & authority assets haven't been added yet.
+            </p>
+          </div>
         </Section>
 
         <footer className="mt-16 pt-8 border-t border-border text-center text-xs text-muted-foreground">
