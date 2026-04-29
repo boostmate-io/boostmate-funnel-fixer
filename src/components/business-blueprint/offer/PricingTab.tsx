@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Badge } from "@/components/ui/badge";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SectionShell from "./SectionShell";
 import BuilderCard from "./BuilderCard";
@@ -44,6 +45,7 @@ const numberOrEmpty = (raw: string): number | "" => {
 };
 
 const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
+  const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const progress = calcPricingProgress(data);
 
