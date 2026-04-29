@@ -1,4 +1,4 @@
-import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Download, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2 } from "lucide-react";
+import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Download, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2, Zap } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -8,6 +8,15 @@ import { calculateClarityProgress, type SectionId, type CustomerClarityData } fr
 import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
 import { calculateGrowthSystemProgress, getFunnelTypeLabel, type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
 import { getBusinessType } from "./businessTypes";
+
+const GOAL_LABELS: Record<string, string> = {
+  "more-leads": "More leads",
+  "more-sales": "More sales",
+  "build-funnel": "Build a funnel",
+  "improve-conversion": "Improve conversion",
+  "clarify-offer": "Clarify my offer",
+  "launch": "Launch something new",
+};
 
 interface OfferLite { id: string; name: string; tier?: string }
 
