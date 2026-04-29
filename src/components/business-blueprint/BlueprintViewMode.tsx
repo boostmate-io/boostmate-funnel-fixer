@@ -7,14 +7,17 @@
 // in feel to a Notion page or a consulting deliverable.
 // =============================================================================
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Sparkles, Users, Package, Workflow, Megaphone,
   TrendingUp, DollarSign, Lightbulb, Layers, Network, Target,
-  AlertTriangle, ArrowRightLeft, Share2,
+  AlertTriangle, ArrowRightLeft, Share2, Palette, Award, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getCurrencySymbol } from "@/lib/currency";
 import type { CustomerClarityData } from "./types";
 import {
