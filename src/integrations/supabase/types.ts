@@ -446,6 +446,7 @@ export type Database = {
           id: string
           offer_stack: Json
           proof_authority: Json
+          share_token: string | null
           sub_account_id: string
           updated_at: string
           user_id: string
@@ -458,6 +459,7 @@ export type Database = {
           id?: string
           offer_stack?: Json
           proof_authority?: Json
+          share_token?: string | null
           sub_account_id: string
           updated_at?: string
           user_id: string
@@ -470,6 +472,7 @@ export type Database = {
           id?: string
           offer_stack?: Json
           proof_authority?: Json
+          share_token?: string | null
           sub_account_id?: string
           updated_at?: string
           user_id?: string
