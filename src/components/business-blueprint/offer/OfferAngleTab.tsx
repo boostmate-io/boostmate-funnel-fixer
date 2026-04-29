@@ -84,12 +84,6 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
       progress={progress}
       saving={saving}
       feedback={feedback}
-      rightBadge={
-        <Badge variant="outline" className="gap-1.5 text-xs">
-          <bt.icon className="w-3 h-3 text-primary" />
-          {bt.label} mode
-        </Badge>
-      }
     >
       {/* 1. Main Offer Name */}
       <div className="rounded-xl border border-border bg-card p-5 mb-4">
@@ -289,7 +283,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
           "What friction or complexity have you removed?",
           "What outcome do you confidently promise?",
         ]}
-        onSubmit={() => toast.info("Coach mode — AI suggestions coming soon")}
+        onSubmit={() => toast.info("AI suggestions coming soon")}
       />
     </SectionShell>
   );

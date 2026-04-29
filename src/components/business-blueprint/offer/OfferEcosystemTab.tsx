@@ -179,12 +179,6 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: P
       progress={progress}
       saving={saving}
       feedback={feedback}
-      rightBadge={
-        <Badge variant="outline" className="gap-1.5 text-xs">
-          <bt.icon className="w-3 h-3 text-primary" />
-          {bt.label} mode
-        </Badge>
-      }
     >
       <div className="space-y-5">
         {ECOSYSTEM_TIERS.map((tier) => {

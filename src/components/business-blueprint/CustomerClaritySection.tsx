@@ -36,7 +36,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
   const feedback = getFeedbackMessage(config, progress);
 
   const handleCoachSubmit = (answers: Record<string, string>) => {
-    toast.info("Coach mode — AI suggestions coming soon", {
+    toast.info("AI suggestions coming soon", {
       description: `Captured ${Object.keys(answers).filter((k) => answers[k]?.trim()).length} answers.`,
     });
   };
