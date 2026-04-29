@@ -36,6 +36,12 @@ interface Props {
   mappings: FunnelMappingRow[];
   offers: OfferLite[];
   businessType: string;
+  snapshot?: {
+    help_achieve?: string;
+    who_help?: string;
+    main_goal?: string;
+    biggest_challenge?: string;
+  };
   onEdit: (section?: SectionId) => void;
   onView: () => void;
   onShare: () => void;
@@ -43,7 +49,7 @@ interface Props {
   setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
+const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, snapshot, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const BtIcon = bt.icon;
