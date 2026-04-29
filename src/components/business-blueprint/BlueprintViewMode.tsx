@@ -183,6 +183,80 @@ const BlueprintViewMode = ({
     continuity: "Continuity",
   };
 
+  // ----- Section navigation (scroll-spy) -----
+  const hasOverview = Boolean(
+    workspaceName || workspace.business_type || workspace.who_help ||
+    workspace.main_goal || workspace.biggest_challenge || workspace.help_achieve,
+  );
+  const hasClarity = Object.values(clarity || {}).some((v) => typeof v === "string" && v.trim());
+  const hasOffer = Boolean(
+    offer.angle?.main_offer_name || offer.angle?.core_outcome ||
+    offer.angle?.short_description || offer.angle?.framework?.name ||
+    (offer.stack?.deliverables?.length ?? 0) > 0 ||
+    (offer.stack?.bonuses?.length ?? 0) > 0 ||
+    (offer.stack?.milestones?.length ?? 0) > 0 ||
+    typeof offer.pricing?.core_price === "number" ||
+    offers.length > 0,
+  );
+  const hasGrowth = Boolean(
+    (growth.acquisition?.traffic_sources?.length ?? 0) > 0 ||
+    growth.acquisition?.primary_entry_offer_id ||
+    growth.acquisition?.lead_capture_method ||
+    mappings.length > 0 ||
+    growth.ascension?.next_offer_after_core_id ||
+    growth.ascension?.retention_offer_id ||
+    growth.ascension?.referral_enabled ||
+    growth.ascension?.reactivation_enabled,
+  );
+
+  const navSections = [
+    { id: "overview", label: "Overview", hasContent: hasOverview },
+    { id: "customer-clarity", label: "Customer Clarity", hasContent: hasClarity },
+    { id: "offer-design", label: "Offer Design", hasContent: hasOffer },
+    { id: "growth-system", label: "Growth System", hasContent: hasGrowth },
+    { id: "brand-strategy", label: "Brand Strategy", hasContent: false },
+    { id: "proof-authority", label: "Proof & Authority", hasContent: false },
+  ];
+
+  const [activeId, setActiveId] = useState<string>("overview");
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const root = scrollContainerRef.current ?? undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the entry closest to the top that's intersecting
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) {
+          const id = (visible[0].target as HTMLElement).dataset.section;
+          if (id) setActiveId(id);
+        }
+      },
+      {
+        root,
+        // Trigger when section enters the area just below the sticky bar
+        rootMargin: "-80px 0px -60% 0px",
+        threshold: 0,
+      },
+    );
+    navSections.forEach((s) => {
+      const el = document.getElementById(s.id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveId(id);
+    }
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-background-dashboard">
       {/* Top bar */}
