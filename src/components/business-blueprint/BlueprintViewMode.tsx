@@ -235,7 +235,7 @@ const BlueprintViewMode = ({
         </header>
 
         {/* ============= BUSINESS OVERVIEW ============= */}
-        <Section title="Business Overview" icon={Sparkles}>
+        <Section id="overview" title="Business Overview" icon={Sparkles}>
           <KeyValueGrid
             items={[
               { label: "Business Name", value: workspaceName },
@@ -249,7 +249,7 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= CUSTOMER CLARITY ============= */}
-        <Section title="Customer Clarity" icon={Users}>
+        <Section id="customer-clarity" title="Customer Clarity" icon={Users}>
           <SubBlock title="Ideal Client Avatar">
             <Field label="Who is your ideal client" value={clarity.avatar_who} />
             <Field label="Their current stage" value={clarity.avatar_stage} />
@@ -278,7 +278,7 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= OFFER DESIGN ============= */}
-        <Section title="Offer Design" icon={Package}>
+        <Section id="offer-design" title="Offer Design" icon={Package}>
           <SubBlock title="Offer Angle">
             <KeyValueGrid
               items={[
@@ -486,7 +486,7 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= GROWTH SYSTEM ============= */}
-        <Section title="Growth System" icon={Workflow}>
+        <Section id="growth-system" title="Growth System" icon={Workflow}>
           <SubBlock title="Acquisition">
             <KeyValueGrid
               items={[
