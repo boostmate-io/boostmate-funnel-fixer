@@ -12,6 +12,7 @@ export interface WorkspaceSettings {
   main_goal: string;
   biggest_challenge: string;
   setup_status: "pending" | "completed" | "skipped";
+  currency: string;
   created_at: string;
   updated_at: string;
 }

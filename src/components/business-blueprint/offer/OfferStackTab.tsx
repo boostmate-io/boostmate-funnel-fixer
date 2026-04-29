@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SectionShell from "./SectionShell";
 import BuilderCard from "./BuilderCard";
@@ -147,12 +147,6 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
       progress={progress}
       saving={saving}
       feedback={feedback}
-      rightBadge={
-        <Badge variant="outline" className="gap-1.5 text-xs">
-          <bt.icon className="w-3 h-3 text-primary" />
-          {bt.label} mode
-        </Badge>
-      }
     >
       <div className="space-y-5">
         {/* Core Deliverables */}
@@ -185,14 +179,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                  <Textarea
+                  <AutoTextarea
                     value={d.description ?? ""}
                     onChange={(e) => updateDeliverable(d.id, { description: e.target.value })}
                     placeholder="Short description…"
                     rows={2}
                     className="resize-none text-sm"
                   />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     <div>
                       <Label className="text-[11px] font-medium text-muted-foreground mb-1 block">
                         Delivery Type
@@ -254,7 +248,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
         >
           {data.resources.length > 0 && (
             <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 {data.resources.map((r) => (
                   <div key={r.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
                     <div className="flex items-start gap-2">
@@ -279,7 +273,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
                       placeholder="Type (Template, Ebook, Checklist…)"
                       className="h-8 text-sm"
                     />
-                    <Textarea
+                    <AutoTextarea
                       value={r.description ?? ""}
                       onChange={(e) => updateResource(r.id, { description: e.target.value })}
                       placeholder="Short description…"
@@ -323,7 +317,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
         >
           {data.support_channels.length > 0 && (
             <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 {data.support_channels.map((s) => (
                   <div key={s.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
                     <div className="flex items-start gap-2">
@@ -348,7 +342,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
                       placeholder="Frequency / availability (e.g. Mon–Fri 9–5 CET)"
                       className="h-8 text-sm"
                     />
-                    <Textarea
+                    <AutoTextarea
                       value={s.description ?? ""}
                       onChange={(e) => updateSupport(s.id, { description: e.target.value })}
                       placeholder="Short description…"
@@ -377,7 +371,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
           emptyText="No bonuses yet. Add 1–3 high-value bonuses to anchor perceived value."
         >
           {data.bonuses.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-3">
               {data.bonuses.map((b) => (
                 <div key={b.id} className="rounded-lg border border-border bg-background p-4 space-y-3">
                   <div className="flex items-start gap-2">
@@ -396,7 +390,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                  <Textarea
+                  <AutoTextarea
                     value={b.description ?? ""}
                     onChange={(e) => updateBonus(b.id, { description: e.target.value })}
                     placeholder="Short description…"
@@ -422,7 +416,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <Label className="text-sm font-semibold text-foreground">Delivery Timeline</Label>
+              <Label className="text-lg font-display font-bold text-foreground">Delivery Timeline</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Over what timeframe is the value delivered?
               </p>
@@ -474,15 +468,15 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <Textarea
+                      <div className="space-y-2">
+                        <AutoTextarea
                           value={m.description ?? ""}
                           onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
                           placeholder="Description"
                           rows={2}
                           className="resize-none text-sm"
                         />
-                        <Textarea
+                        <AutoTextarea
                           value={m.expected_outcome ?? ""}
                           onChange={(e) => updateMilestone(m.id, { expected_outcome: e.target.value })}
                           placeholder="Expected outcome"

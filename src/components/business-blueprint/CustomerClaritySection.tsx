@@ -36,7 +36,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
   const feedback = getFeedbackMessage(config, progress);
 
   const handleCoachSubmit = (answers: Record<string, string>) => {
-    toast.info("Coach mode — AI suggestions coming soon", {
+    toast.info("AI suggestions coming soon", {
       description: `Captured ${Object.keys(answers).filter((k) => answers[k]?.trim()).length} answers.`,
     });
   };
@@ -59,10 +59,6 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
             <p className="text-sm text-muted-foreground">{config.description}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1.5 text-xs">
-              <bt.icon className="w-3 h-3 text-primary" />
-              {bt.label} mode
-            </Badge>
             {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
           </div>
         </div>
@@ -128,7 +124,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
         </div>
 
         {/* Modular field cards grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="space-y-4">
           {config.fields.map((field) => (
             <div
               key={field.key as string}

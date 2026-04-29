@@ -7,7 +7,7 @@ import { Layers3, Trash2, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import type { SignatureFramework, FrameworkPillar } from "../offerDesignTypes";
 
 const newId = () => crypto.randomUUID();
@@ -45,7 +45,7 @@ const FrameworkSection = ({ value, onChange }: Props) => {
           <Layers3 className="w-4 h-4" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Signature Mechanism / Framework</h3>
+          <h3 className="text-lg font-display font-bold text-foreground">Signature Mechanism / Framework</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Give your method a name and structure. This is what makes your offer ownable.
           </p>
@@ -53,7 +53,7 @@ const FrameworkSection = ({ value, onChange }: Props) => {
       </div>
 
       <div className="p-5 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div>
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
               Framework / Method Name
@@ -124,7 +124,7 @@ const FrameworkSection = ({ value, onChange }: Props) => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                      <Textarea
+                      <AutoTextarea
                         value={p.description ?? ""}
                         onChange={(e) => updatePillar(p.id, { description: e.target.value })}
                         placeholder="What happens in this pillar?"

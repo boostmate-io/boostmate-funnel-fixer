@@ -30,7 +30,7 @@ const SectionShell = ({
 }) => (
   <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
     <div className="mb-4">
-      <h3 className="font-display font-bold text-foreground">{title}</h3>
+      <h3 className="text-lg font-display font-bold text-foreground">{title}</h3>
       {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
     </div>
     {children}

@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Badge } from "@/components/ui/badge";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SectionShell from "./SectionShell";
 import BuilderCard from "./BuilderCard";
@@ -44,6 +45,7 @@ const numberOrEmpty = (raw: string): number | "" => {
 };
 
 const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
+  const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const progress = calcPricingProgress(data);
 
@@ -93,12 +95,6 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
       progress={progress}
       saving={saving}
       feedback={feedback}
-      rightBadge={
-        <Badge variant="outline" className="gap-1.5 text-xs">
-          <bt.icon className="w-3 h-3 text-primary" />
-          {bt.label} mode
-        </Badge>
-      }
     >
       <div className="space-y-5">
         {/* Core Price */}
@@ -108,7 +104,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
               <DollarSign className="w-4 h-4" />
             </div>
             <div>
-              <Label className="text-sm font-semibold text-foreground">Core Price</Label>
+              <Label className="text-lg font-display font-bold text-foreground">Core Price</Label>
               <p className="text-xs text-muted-foreground mt-0.5">The headline price for your main offer.</p>
             </div>
           </div>
@@ -203,7 +199,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                 <Crown className="w-4 h-4" />
               </div>
               <div>
-                <Label className="text-sm font-semibold text-foreground">Premium Upgrade Option</Label>
+                <Label className="text-lg font-display font-bold text-foreground">Premium Upgrade Option</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Does this offer have a premium upsell that anchors the core price?
                 </p>
@@ -216,7 +212,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
           </div>
           {data.premium_enabled && (
             <div className="mt-4 rounded-lg border border-border bg-background p-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Upgrade Name</Label>
                   <Input
@@ -243,7 +239,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
               </div>
               <div>
                 <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</Label>
-                <Textarea
+                <AutoTextarea
                   value={data.premium_upgrade?.description ?? ""}
                   onChange={(e) => updatePremium({ description: e.target.value })}
                   placeholder="What's included in the premium tier?"
@@ -255,7 +251,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                 <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                   Additional Value / Outcome
                 </Label>
-                <Textarea
+                <AutoTextarea
                   value={data.premium_upgrade?.additional_value ?? ""}
                   onChange={(e) => updatePremium({ additional_value: e.target.value })}
                   placeholder="What additional outcome does this unlock?"
@@ -275,7 +271,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                 <Repeat className="w-4 h-4" />
               </div>
               <div>
-                <Label className="text-sm font-semibold text-foreground">Recurring Option</Label>
+                <Label className="text-lg font-display font-bold text-foreground">Recurring Option</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Does this offer have a recurring continuation offer?
                 </p>
@@ -288,7 +284,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
           </div>
           {data.recurring_enabled && (
             <div className="mt-4 rounded-lg border border-border bg-background p-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Offer Name</Label>
                   <Input
@@ -315,7 +311,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
               </div>
               <div>
                 <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</Label>
-                <Textarea
+                <AutoTextarea
                   value={data.recurring_offer?.description ?? ""}
                   onChange={(e) => updateRecurring({ description: e.target.value })}
                   placeholder="What is the recurring offer?"
@@ -327,7 +323,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                 <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                   Ongoing Value Delivered
                 </Label>
-                <Textarea
+                <AutoTextarea
                   value={data.recurring_offer?.ongoing_value ?? ""}
                   onChange={(e) => updateRecurring({ ongoing_value: e.target.value })}
                   placeholder="What value is delivered every month?"
@@ -335,7 +331,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                   className="resize-none text-sm"
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Delivery Type</Label>
                   <DeliveryTypePicker
@@ -372,7 +368,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
               <Shield className="w-4 h-4" />
             </div>
             <div>
-              <Label className="text-sm font-semibold text-foreground">Risk Reversal / Guarantee</Label>
+              <Label className="text-lg font-display font-bold text-foreground">Risk Reversal / Guarantee</Label>
               <p className="text-xs text-muted-foreground mt-0.5">How you remove the risk of saying yes.</p>
             </div>
           </div>
@@ -397,7 +393,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                 <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                   Guarantee Details / Terms
                 </Label>
-                <Textarea
+                <AutoTextarea
                   value={data.guarantee_details ?? ""}
                   onChange={(e) => onChange({ guarantee_details: e.target.value })}
                   placeholder={

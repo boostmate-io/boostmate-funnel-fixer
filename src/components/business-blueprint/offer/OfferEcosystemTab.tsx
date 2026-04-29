@@ -11,10 +11,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import SectionShell from "./SectionShell";
+import { useCurrency } from "@/hooks/useCurrency";
 import DeliveryTypePicker from "./DeliveryTypePicker";
 import {
   ECOSYSTEM_TIERS,
@@ -43,11 +44,13 @@ const OfferCardRow = ({
   onUpdate,
   onDelete,
   isCore,
+  cur,
 }: {
   offer: EcosystemOfferRow;
   onUpdate: (patch: Partial<Pick<EcosystemOfferRow, "name" | "data">>) => void;
   onDelete: () => void;
   isCore: boolean;
+  cur: string;
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -116,7 +119,7 @@ const OfferCardRow = ({
           </div>
           <div>
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</Label>
-            <Textarea
+            <AutoTextarea
               value={offer.data?.description ?? ""}
               onChange={(e) => onUpdate({ data: { ...offer.data, description: e.target.value } })}
               placeholder="What this offer is in 1–2 sentences…"
@@ -150,6 +153,7 @@ const OfferCardRow = ({
 };
 
 const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: Props) => {
+  const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const { offers, addOffer, updateOffer, deleteOffer, tierCounts } = useEcosystemOffers({
     blueprintId,
@@ -179,12 +183,6 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: P
       progress={progress}
       saving={saving}
       feedback={feedback}
-      rightBadge={
-        <Badge variant="outline" className="gap-1.5 text-xs">
-          <bt.icon className="w-3 h-3 text-primary" />
-          {bt.label} mode
-        </Badge>
-      }
     >
       <div className="space-y-5">
         {ECOSYSTEM_TIERS.map((tier) => {
@@ -196,7 +194,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: P
               <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm font-semibold text-foreground">{tier.label}</h3>
+                    <h3 className="text-lg font-display font-bold text-foreground">{tier.label}</h3>
                     {tierOffers.length > 0 && (
                       <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                         {tierOffers.length}
@@ -247,6 +245,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: P
                       key={offer.id}
                       offer={offer}
                       isCore={offer.source === "blueprint_core"}
+                      cur={cur}
                       onUpdate={(patch) => updateOffer(offer.id, patch)}
                       onDelete={() => deleteOffer(offer.id)}
                     />

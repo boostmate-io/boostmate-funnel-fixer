@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Wand2, MessageSquare, Sparkles, Loader2, Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { toast } from "sonner";
 import type { FieldDef } from "./clarityConfig";
 import ChipsField from "./fields/ChipsField";
@@ -28,7 +28,7 @@ const renderInput = (
     case "textarea":
     default:
       return (
-        <Textarea
+        <AutoTextarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
@@ -66,7 +66,7 @@ const FieldCard = ({ field, value, onChange, onCoach }: Props) => {
       <div className="px-5 pt-4 pb-2 flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <Label className="text-sm font-semibold text-foreground leading-snug">
+            <Label className="text-lg font-display font-bold text-foreground leading-snug">
               {field.label}
             </Label>
             {hasContent && (

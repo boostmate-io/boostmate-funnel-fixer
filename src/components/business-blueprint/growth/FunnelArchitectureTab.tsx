@@ -4,7 +4,7 @@
 
 import { Plus, Trash2, Workflow, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   FUNNEL_TYPES,
@@ -59,7 +59,7 @@ const FunnelArchitectureTab = ({
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h3 className="font-display font-bold text-foreground">Offer ↔ Funnel Mappings</h3>
+          <h3 className="text-lg font-display font-bold text-foreground">Offer ↔ Funnel Mappings</h3>
           <p className="text-xs text-muted-foreground mt-1">
             Define which funnel sells each of your offers. Used later by the Funnel Builder.
           </p>
@@ -161,7 +161,7 @@ const FunnelArchitectureTab = ({
               <label className="text-xs font-medium text-foreground mb-1.5 block">
                 Why this funnel exists
               </label>
-              <Textarea
+              <AutoTextarea
                 value={m.purpose}
                 onChange={(e) => onUpdate(m.id, { purpose: e.target.value })}
                 placeholder="e.g. Convert cold traffic into buyers before pitching the core offer."

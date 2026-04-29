@@ -9,7 +9,7 @@ import { Lightbulb, Wand2, Loader2, Sparkles, Shield, FileText, Target } from "l
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import SectionShell from "./SectionShell";
@@ -84,18 +84,12 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
       progress={progress}
       saving={saving}
       feedback={feedback}
-      rightBadge={
-        <Badge variant="outline" className="gap-1.5 text-xs">
-          <bt.icon className="w-3 h-3 text-primary" />
-          {bt.label} mode
-        </Badge>
-      }
     >
       {/* 1. Main Offer Name */}
       <div className="rounded-xl border border-border bg-card p-5 mb-4">
         <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
           <div>
-            <Label className="text-sm font-semibold text-foreground">Main Offer Name</Label>
+            <Label className="text-lg font-display font-bold text-foreground">Main Offer Name</Label>
             <p className="text-xs text-muted-foreground mt-1">What is your flagship offer called?</p>
           </div>
           <Button
@@ -118,16 +112,16 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
       </div>
 
       {/* 2. Short Offer Description + 3. Core Outcome */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="space-y-4 mb-6">
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-1.5">
             <FileText className="w-4 h-4 text-primary" />
-            <Label className="text-sm font-semibold text-foreground">Short Offer Description</Label>
+            <Label className="text-lg font-display font-bold text-foreground">Short Offer Description</Label>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             1–2 sentences explaining what the offer actually is.
           </p>
-          <Textarea
+          <AutoTextarea
             value={data.short_description ?? ""}
             onChange={(e) => onChange({ short_description: e.target.value })}
             placeholder={`e.g. A 90-day coaching program that helps ${noun} rebuild confidence after toxic relationships.`}
@@ -138,12 +132,12 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-1.5">
             <Target className="w-4 h-4 text-primary" />
-            <Label className="text-sm font-semibold text-foreground">Core Outcome</Label>
+            <Label className="text-lg font-display font-bold text-foreground">Core Outcome</Label>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             The primary transformation result.
           </p>
-          <Textarea
+          <AutoTextarea
             value={data.core_outcome ?? ""}
             onChange={(e) => onChange({ core_outcome: e.target.value })}
             placeholder="e.g. Rebuild self-trust and confidently attract healthy relationships."
@@ -159,7 +153,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
           Differentiation — what makes your method different
         </h3>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div className="space-y-4 mb-6">
         <AngleField
           label="New Vehicle"
           helper="What makes your method genuinely new compared to what they already tried?"
@@ -206,13 +200,13 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-primary" />
-          <Label className="text-sm font-semibold text-foreground">Core Transformation Promise</Label>
+          <Label className="text-lg font-display font-bold text-foreground">Core Transformation Promise</Label>
         </div>
         <p className="text-xs text-muted-foreground mb-4">
           Build a precise outcome promise. The preview below is what {noun} will see.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div className="md:col-span-2">
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
               Desired Outcome
@@ -289,7 +283,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
           "What friction or complexity have you removed?",
           "What outcome do you confidently promise?",
         ]}
-        onSubmit={() => toast.info("Coach mode — AI suggestions coming soon")}
+        onSubmit={() => toast.info("AI suggestions coming soon")}
       />
     </SectionShell>
   );

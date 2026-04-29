@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Wand2, MessageSquare, Sparkles, Loader2, Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { toast } from "sonner";
 
 interface Props {
@@ -35,13 +35,13 @@ const AngleField = ({ label, helper, placeholder, value, onChange, onCoach }: Pr
     <div className="rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex flex-col h-full">
       <div className="px-5 pt-4 pb-2">
         <div className="flex items-center gap-2">
-          <Label className="text-sm font-semibold text-foreground leading-snug">{label}</Label>
+          <Label className="text-lg font-display font-bold text-foreground leading-snug">{label}</Label>
           {hasContent && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
         </div>
         {helper && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{helper}</p>}
       </div>
       <div className="px-5 py-2 flex-1">
-        <Textarea
+        <AutoTextarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
