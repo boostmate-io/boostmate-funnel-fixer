@@ -102,7 +102,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
               <DollarSign className="w-4 h-4" />
             </div>
             <div>
-              <Label className="text-sm font-semibold text-foreground">Core Price</Label>
+              <Label className="text-lg font-display font-bold text-foreground">Core Price</Label>
               <p className="text-xs text-muted-foreground mt-0.5">The headline price for your main offer.</p>
             </div>
           </div>
@@ -197,7 +197,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                 <Crown className="w-4 h-4" />
               </div>
               <div>
-                <Label className="text-sm font-semibold text-foreground">Premium Upgrade Option</Label>
+                <Label className="text-lg font-display font-bold text-foreground">Premium Upgrade Option</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Does this offer have a premium upsell that anchors the core price?
                 </p>
@@ -269,7 +269,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
                 <Repeat className="w-4 h-4" />
               </div>
               <div>
-                <Label className="text-sm font-semibold text-foreground">Recurring Option</Label>
+                <Label className="text-lg font-display font-bold text-foreground">Recurring Option</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Does this offer have a recurring continuation offer?
                 </p>
@@ -366,7 +366,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
               <Shield className="w-4 h-4" />
             </div>
             <div>
-              <Label className="text-sm font-semibold text-foreground">Risk Reversal / Guarantee</Label>
+              <Label className="text-lg font-display font-bold text-foreground">Risk Reversal / Guarantee</Label>
               <p className="text-xs text-muted-foreground mt-0.5">How you remove the risk of saying yes.</p>
             </div>
           </div>

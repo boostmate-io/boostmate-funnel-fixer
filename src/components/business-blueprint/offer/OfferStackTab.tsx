@@ -416,7 +416,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <Label className="text-sm font-semibold text-foreground">Delivery Timeline</Label>
+              <Label className="text-lg font-display font-bold text-foreground">Delivery Timeline</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Over what timeframe is the value delivered?
               </p>

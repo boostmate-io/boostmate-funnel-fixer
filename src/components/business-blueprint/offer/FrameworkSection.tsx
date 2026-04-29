@@ -45,7 +45,7 @@ const FrameworkSection = ({ value, onChange }: Props) => {
           <Layers3 className="w-4 h-4" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Signature Mechanism / Framework</h3>
+          <h3 className="text-lg font-display font-bold text-foreground">Signature Mechanism / Framework</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Give your method a name and structure. This is what makes your offer ownable.
           </p>

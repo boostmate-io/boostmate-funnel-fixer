@@ -89,7 +89,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
       <div className="rounded-xl border border-border bg-card p-5 mb-4">
         <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
           <div>
-            <Label className="text-sm font-semibold text-foreground">Main Offer Name</Label>
+            <Label className="text-lg font-display font-bold text-foreground">Main Offer Name</Label>
             <p className="text-xs text-muted-foreground mt-1">What is your flagship offer called?</p>
           </div>
           <Button
@@ -116,7 +116,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-1.5">
             <FileText className="w-4 h-4 text-primary" />
-            <Label className="text-sm font-semibold text-foreground">Short Offer Description</Label>
+            <Label className="text-lg font-display font-bold text-foreground">Short Offer Description</Label>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             1–2 sentences explaining what the offer actually is.
@@ -132,7 +132,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-1.5">
             <Target className="w-4 h-4 text-primary" />
-            <Label className="text-sm font-semibold text-foreground">Core Outcome</Label>
+            <Label className="text-lg font-display font-bold text-foreground">Core Outcome</Label>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             The primary transformation result.
@@ -200,7 +200,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-primary" />
-          <Label className="text-sm font-semibold text-foreground">Core Transformation Promise</Label>
+          <Label className="text-lg font-display font-bold text-foreground">Core Transformation Promise</Label>
         </div>
         <p className="text-xs text-muted-foreground mb-4">
           Build a precise outcome promise. The preview below is what {noun} will see.
