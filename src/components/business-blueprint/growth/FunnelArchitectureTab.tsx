@@ -59,7 +59,7 @@ const FunnelArchitectureTab = ({
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h3 className="font-display font-bold text-foreground">Offer ↔ Funnel Mappings</h3>
+          <h3 className="text-lg font-display font-bold text-foreground">Offer ↔ Funnel Mappings</h3>
           <p className="text-xs text-muted-foreground mt-1">
             Define which funnel sells each of your offers. Used later by the Funnel Builder.
           </p>
