@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { useWorkspaceSettings } from "@/components/business-blueprint/useWorkspaceSettings";
 import BusinessTypeSelector from "@/components/business-blueprint/BusinessTypeSelector";
 import { getBusinessType, type BusinessTypeId } from "@/components/business-blueprint/businessTypes";
+import { CURRENCIES } from "@/lib/currency";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ProjectSettings = () => {
   const { t } = useTranslation();
@@ -216,6 +218,31 @@ const ProjectSettings = () => {
             }
             variant="list"
           />
+        </div>
+      )}
+
+      {/* Currency */}
+      {workspaceSettings && (
+        <div className="border-t border-border pt-6 space-y-3">
+          <h3 className="font-display font-bold text-foreground">Currency</h3>
+          <p className="text-sm text-muted-foreground">
+            Used everywhere money is shown or entered across your workspace.
+          </p>
+          <Select
+            value={workspaceSettings.currency || "EUR"}
+            onValueChange={(v) => updateWorkspaceSettings({ currency: v }, { immediate: true })}
+          >
+            <SelectTrigger className="max-w-xs h-10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENCIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
     </div>
