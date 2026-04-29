@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Wand2, MessageSquare, Sparkles, Loader2, Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { toast } from "sonner";
 import type { FieldDef } from "./clarityConfig";
 import ChipsField from "./fields/ChipsField";
@@ -28,7 +28,7 @@ const renderInput = (
     case "textarea":
     default:
       return (
-        <Textarea
+        <AutoTextarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}

@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import SectionShell from "./SectionShell";
@@ -116,7 +116,7 @@ const OfferCardRow = ({
           </div>
           <div>
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</Label>
-            <Textarea
+            <AutoTextarea
               value={offer.data?.description ?? ""}
               onChange={(e) => onUpdate({ data: { ...offer.data, description: e.target.value } })}
               placeholder="What this offer is in 1–2 sentences…"

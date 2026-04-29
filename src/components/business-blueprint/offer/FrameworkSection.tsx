@@ -7,7 +7,7 @@ import { Layers3, Trash2, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import type { SignatureFramework, FrameworkPillar } from "../offerDesignTypes";
 
 const newId = () => crypto.randomUUID();
@@ -124,7 +124,7 @@ const FrameworkSection = ({ value, onChange }: Props) => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                      <Textarea
+                      <AutoTextarea
                         value={p.description ?? ""}
                         onChange={(e) => updatePillar(p.id, { description: e.target.value })}
                         placeholder="What happens in this pillar?"

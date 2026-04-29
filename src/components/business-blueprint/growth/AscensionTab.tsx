@@ -4,7 +4,7 @@
 
 import { TrendingUp, ArrowRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AscensionData } from "../growthSystemTypes";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
@@ -118,7 +118,7 @@ const AscensionTab = ({ data, onChange, offers }: Props) => {
           </span>
         </div>
         {data.referral_enabled && (
-          <Textarea
+          <AutoTextarea
             value={data.referral_description || ""}
             onChange={(e) => onChange({ referral_description: e.target.value })}
             placeholder="How do clients refer others? e.g. Affiliate link, in-product share, referral bonus."
@@ -139,7 +139,7 @@ const AscensionTab = ({ data, onChange, offers }: Props) => {
           </span>
         </div>
         {data.reactivation_enabled && (
-          <Textarea
+          <AutoTextarea
             value={data.reactivation_description || ""}
             onChange={(e) => onChange({ reactivation_description: e.target.value })}
             placeholder="How do inactive leads/customers re-enter your ecosystem? e.g. Win-back campaign, free workshop."

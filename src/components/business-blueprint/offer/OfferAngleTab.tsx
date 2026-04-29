@@ -9,7 +9,7 @@ import { Lightbulb, Wand2, Loader2, Sparkles, Shield, FileText, Target } from "l
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import SectionShell from "./SectionShell";
@@ -121,7 +121,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
           <p className="text-xs text-muted-foreground mb-3">
             1–2 sentences explaining what the offer actually is.
           </p>
-          <Textarea
+          <AutoTextarea
             value={data.short_description ?? ""}
             onChange={(e) => onChange({ short_description: e.target.value })}
             placeholder={`e.g. A 90-day coaching program that helps ${noun} rebuild confidence after toxic relationships.`}
@@ -137,7 +137,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
           <p className="text-xs text-muted-foreground mb-3">
             The primary transformation result.
           </p>
-          <Textarea
+          <AutoTextarea
             value={data.core_outcome ?? ""}
             onChange={(e) => onChange({ core_outcome: e.target.value })}
             placeholder="e.g. Rebuild self-trust and confidently attract healthy relationships."

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Wand2, MessageSquare, Sparkles, Loader2, Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { toast } from "sonner";
 
 interface Props {
@@ -41,7 +41,7 @@ const AngleField = ({ label, helper, placeholder, value, onChange, onCoach }: Pr
         {helper && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{helper}</p>}
       </div>
       <div className="px-5 py-2 flex-1">
-        <Textarea
+        <AutoTextarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
