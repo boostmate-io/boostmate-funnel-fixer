@@ -219,7 +219,7 @@ const BlueprintSetupWizard = ({ open, onOpenChange, onComplete, onSkip, initialV
         {/* Footer */}
         <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border bg-muted/20">
           <Button variant="ghost" size="sm" onClick={handleSkip} className="text-muted-foreground">
-            Skip for now
+            {isEdit ? "Cancel" : "Skip for now"}
           </Button>
           <div className="flex items-center gap-2">
             {step > 0 && (
@@ -241,7 +241,7 @@ const BlueprintSetupWizard = ({ open, onOpenChange, onComplete, onSkip, initialV
             ) : (
               <Button size="sm" onClick={handleFinish} disabled={!canNext} className="gap-1.5">
                 <Sparkles className="w-4 h-4" />
-                Finish setup
+                {isEdit ? "Save changes" : "Finish setup"}
               </Button>
             )}
           </div>
