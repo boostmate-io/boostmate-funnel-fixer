@@ -33,13 +33,26 @@ const GOALS = [
   { value: "launch", label: "Launch something new" },
 ];
 
-const BlueprintSetupWizard = ({ open, onOpenChange, onComplete, onSkip }: Props) => {
+const BlueprintSetupWizard = ({ open, onOpenChange, onComplete, onSkip, initialValues, isEdit }: Props) => {
   const [step, setStep] = useState(0);
-  const [businessType, setBusinessType] = useState<BusinessTypeId>("coach");
-  const [helpAchieve, setHelpAchieve] = useState("");
-  const [whoHelp, setWhoHelp] = useState("");
-  const [mainGoal, setMainGoal] = useState("");
-  const [biggestChallenge, setBiggestChallenge] = useState("");
+  const [businessType, setBusinessType] = useState<BusinessTypeId>((initialValues?.business_type as BusinessTypeId) || "coach");
+  const [helpAchieve, setHelpAchieve] = useState(initialValues?.help_achieve || "");
+  const [whoHelp, setWhoHelp] = useState(initialValues?.who_help || "");
+  const [mainGoal, setMainGoal] = useState(initialValues?.main_goal || "");
+  const [biggestChallenge, setBiggestChallenge] = useState(initialValues?.biggest_challenge || "");
+
+  // Re-sync when reopened with new initial values
+  useEffect(() => {
+    if (open) {
+      setStep(0);
+      setBusinessType((initialValues?.business_type as BusinessTypeId) || "coach");
+      setHelpAchieve(initialValues?.help_achieve || "");
+      setWhoHelp(initialValues?.who_help || "");
+      setMainGoal(initialValues?.main_goal || "");
+      setBiggestChallenge(initialValues?.biggest_challenge || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const totalSteps = 5;
   const canNext = (() => {
