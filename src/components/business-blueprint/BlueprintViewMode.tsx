@@ -377,10 +377,10 @@ const BlueprintViewMode = ({
         </div>
       </div>
 
-      <article className="max-w-4xl mx-auto px-8 py-12">
+      <article className="max-w-4xl mx-auto px-8 py-12 print-article">
         {/* Document title */}
-        <header className="mb-12 pb-8 border-b border-border">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-3">
+        <header className="mb-12 pb-8 border-b border-border print-header">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-3 print-eyebrow">
             Strategic Blueprint
           </p>
           <h1 className="text-5xl font-display font-bold text-foreground mb-3 leading-tight">
@@ -391,12 +391,15 @@ const BlueprintViewMode = ({
               {offer.angle.short_description}
             </p>
           )}
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2 print-badges">
             <Badge variant="secondary">{bt.label}</Badge>
             {workspace.main_goal && (
               <Badge variant="outline">Goal: {workspace.main_goal}</Badge>
             )}
           </div>
+          <p className="hidden print-date text-xs text-muted-foreground mt-4">
+            Generated {new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+          </p>
         </header>
 
         {/* ============= BUSINESS OVERVIEW ============= */}
