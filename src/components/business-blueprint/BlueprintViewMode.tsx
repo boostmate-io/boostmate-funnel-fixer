@@ -773,25 +773,9 @@ const BlueprintViewMode = ({
           </SubBlock>
         </Section>
 
-        {/* ============= BRAND STRATEGY (placeholder) ============= */}
-        <Section id="brand-strategy" title="Brand Strategy" icon={Palette}>
-          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-5 py-8 text-center">
-            <p className="text-sm text-muted-foreground italic">
-              Brand strategy hasn't been defined yet.
-            </p>
-          </div>
-        </Section>
-
         {/* ============= PROOF & AUTHORITY ============= */}
-        <Section id="proof-authority" title="Proof & Authority" icon={Award}>
-          {!hasProof ? (
-            <div className="rounded-lg border border-dashed border-border bg-muted/20 px-5 py-8 text-center">
-              <p className="text-sm text-muted-foreground italic">
-                Proof & authority assets haven't been added yet.
-              </p>
-            </div>
-          ) : (
-            <>
+        <Section id="proof-authority" title="Proof & Authority" icon={Award} show={hasProof}>
+          <>
               {/* Authority Positioning */}
               {(proof.authority.authority_types.length > 0 ||
                 proof.authority.credibility_foundations.length > 0 ||
