@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import {
-  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight,
+  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight, Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,11 +15,13 @@ import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import SectionShell from "./SectionShell";
+import CoreOfferDialog from "./CoreOfferDialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import DeliveryTypePicker from "./DeliveryTypePicker";
 import {
   ECOSYSTEM_TIERS,
   calcEcosystemProgress,
+  emptyOfferDesign,
   type EcosystemTier,
   type OfferDesignData,
 } from "../offerDesignTypes";
@@ -29,6 +31,7 @@ import { getBusinessType } from "../businessTypes";
 interface Props {
   blueprintId: string | null;
   offerDesign: OfferDesignData;
+  onChangeOfferDesign?: (patch: Partial<OfferDesignData>) => void;
   saving: boolean;
   businessType?: string;
 }
@@ -152,7 +155,7 @@ const OfferCardRow = ({
   );
 };
 
-const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: Props) => {
+const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, saving, businessType }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const { offers, addOffer, updateOffer, deleteOffer, tierCounts } = useEcosystemOffers({
@@ -161,9 +164,70 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: P
   });
   const progress = calcEcosystemProgress(tierCounts);
 
+  const [editing, setEditing] = useState<{ id: string; isPrimary: boolean } | null>(null);
+
   const handleGenerateIdeas = (tier: EcosystemTier) => {
     toast.info(`Generate ${tier.replace("_", " ")} ideas — AI coming soon`);
   };
+
+  const handleAddCore = async () => {
+    const id = await addOffer("core");
+    if (id) {
+      // Seed an empty design snapshot
+      await updateOffer(id, {
+        name: "New Core Offer",
+        data: { design: emptyOfferDesign() } as any,
+      });
+      setEditing({ id, isPrimary: false });
+    }
+  };
+
+  // Build initial OfferDesignData for the dialog
+  const dialogInitial = (() => {
+    if (!editing) return emptyOfferDesign();
+    if (editing.isPrimary) return offerDesign;
+    const row = offers.find((o) => o.id === editing.id);
+    const stored = (row?.data as any)?.design as OfferDesignData | undefined;
+    return stored ?? emptyOfferDesign();
+  })();
+
+  const handleDialogChange = (next: OfferDesignData) => {
+    if (!editing) return;
+    if (editing.isPrimary) {
+      // Update the blueprint — this auto-syncs to the primary core offer row.
+      onChangeOfferDesign?.(next);
+    } else {
+      // Keep all 3-tab fields inside the offer row's data.design.
+      const row = offers.find((o) => o.id === editing.id);
+      if (!row) return;
+      const name = next.angle.main_offer_name?.trim() || row.name || "Untitled Core Offer";
+      const description = next.angle.short_description?.trim() || "";
+      const coreOutcome = next.angle.core_outcome?.trim() || "";
+      const price = next.pricing.core_price;
+      const deliveryTypes = Array.from(new Set([
+        ...(next.stack.deliverables ?? []).flatMap((d) => d.delivery_types ?? []),
+        ...(next.stack.support_channels ?? []).map((s) => s.name).filter(Boolean),
+      ]));
+      void updateOffer(editing.id, {
+        name,
+        data: {
+          ...(row.data as any),
+          description,
+          core_outcome: coreOutcome,
+          price: typeof price === "number" ? price : "",
+          delivery_types: deliveryTypes,
+          design: next,
+        } as any,
+      });
+    }
+  };
+
+  const dialogTitle = (() => {
+    if (!editing) return "";
+    if (editing.isPrimary) return "Edit Primary Core Offer";
+    const row = offers.find((o) => o.id === editing.id);
+    return row?.name || "Edit Core Offer";
+  })();
 
   const feedback =
     progress >= 100
@@ -200,17 +264,22 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: P
                         {tierOffers.length}
                       </span>
                     )}
-                    {isCoreSection && (
-                      <Badge variant="outline" className="gap-1 text-[10px]">
-                        <Lock className="w-3 h-3" />
-                        Auto
-                      </Badge>
-                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{tier.description}</p>
                   <p className="text-[11px] text-muted-foreground/70 mt-0.5 italic">{tier.examples}</p>
                 </div>
-                {!isCoreSection && (
+                {isCoreSection ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAddCore}
+                    className="gap-1.5 h-8 shrink-0"
+                    disabled={!blueprintId}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Core Offer
+                  </Button>
+                ) : (
                   <Button
                     size="sm"
                     variant="outline"
@@ -239,12 +308,61 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: P
                       </Button>
                     )}
                   </div>
+                ) : isCoreSection ? (
+                  tierOffers.map((offer) => {
+                    const isPrimary = offer.source === "blueprint_core";
+                    return (
+                      <div
+                        key={offer.id}
+                        className="flex items-center gap-2 p-3 rounded-lg border border-border bg-background"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm truncate">{offer.name}</span>
+                            {typeof offer.data?.price === "number" && offer.data.price > 0 && (
+                              <Badge variant="secondary" className="text-xs tabular-nums">
+                                {cur}{offer.data.price.toLocaleString()}
+                              </Badge>
+                            )}
+                            {isPrimary && (
+                              <Badge variant="outline" className="gap-1 text-[10px]">
+                                <Lock className="w-3 h-3" />
+                                Primary (synced with tabs)
+                              </Badge>
+                            )}
+                          </div>
+                          {offer.data?.description && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{offer.data.description}</p>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 h-8 shrink-0"
+                          onClick={() => setEditing({ id: offer.id, isPrimary })}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </Button>
+                        {!isPrimary && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => deleteOffer(offer.id)}
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })
                 ) : (
                   tierOffers.map((offer) => (
                     <OfferCardRow
                       key={offer.id}
                       offer={offer}
-                      isCore={offer.source === "blueprint_core"}
+                      isCore={false}
                       cur={cur}
                       onUpdate={(patch) => updateOffer(offer.id, patch)}
                       onDelete={() => deleteOffer(offer.id)}
@@ -256,6 +374,16 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, saving, businessType }: P
           );
         })}
       </div>
+
+      <CoreOfferDialog
+        open={!!editing}
+        onOpenChange={(o) => { if (!o) setEditing(null); }}
+        title={dialogTitle}
+        initial={dialogInitial}
+        onChange={handleDialogChange}
+        saving={saving}
+        businessType={businessType}
+      />
     </SectionShell>
   );
 };
