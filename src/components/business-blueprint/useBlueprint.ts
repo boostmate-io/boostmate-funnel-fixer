@@ -65,6 +65,7 @@ export function useBlueprint() {
     // for legacy free-text values).
     const normalized = normalizeOfferDesign(row.offer_stack);
     setOfferDesign(normalized);
+    setProofAuthority(normalizeProofAuthority(row.proof_authority));
     setBlueprint(row);
     setLoading(false);
   }, [activeSubAccountId, user]);
