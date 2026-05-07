@@ -38,6 +38,7 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
   const [offers, setOffers] = useState<EcosystemOfferRow[]>([]);
   const [loading, setLoading] = useState(true);
   const lastSyncedCoreSignature = useRef<string>("");
+  const coreSyncInFlight = useRef<boolean>(false);
 
   const load = useCallback(async () => {
     if (!blueprintId) return;
