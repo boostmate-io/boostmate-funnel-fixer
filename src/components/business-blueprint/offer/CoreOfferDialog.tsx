@@ -66,28 +66,31 @@ export default function CoreOfferDialog({
           <DialogTitle className="text-xl font-display">{title}</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1">
-          <div className="px-2 py-2 space-y-8">
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 py-4 space-y-6">
             <OfferAngleTab
               data={data.angle}
               onChange={updateAngle}
               saving={!!saving}
               businessType={businessType}
+              embedded
             />
             <OfferStackTab
               data={data.stack}
               onChange={updateStack}
               saving={!!saving}
               businessType={businessType}
+              embedded
             />
             <PricingTab
               data={data.pricing}
               onChange={updatePricing}
               saving={!!saving}
               businessType={businessType}
+              embedded
             />
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="px-6 py-3 border-t border-border shrink-0">
           <Button onClick={() => onOpenChange(false)}>Done</Button>
