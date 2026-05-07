@@ -498,7 +498,15 @@ const BlueprintViewMode = ({
             )}
           </SubBlock>
 
-          <SubBlock title="Offer Stack">
+          <SubBlock
+            title="Offer Stack"
+            show={Boolean(
+              (offer.stack?.deliverables?.length ?? 0) > 0 ||
+              (offer.stack?.bonuses?.length ?? 0) > 0 ||
+              (offer.stack?.milestones?.length ?? 0) > 0 ||
+              offer.stack?.delivery_timeline,
+            )}
+          >
             {(offer.stack?.deliverables?.length ?? 0) > 0 && (
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
