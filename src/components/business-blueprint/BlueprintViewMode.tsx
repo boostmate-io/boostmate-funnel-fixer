@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Sparkles, Users, Package, Workflow, Megaphone,
   TrendingUp, DollarSign, Lightbulb, Layers, Network, Target,
-  AlertTriangle, ArrowRightLeft, Share2, Palette, Award, ChevronDown,
+  AlertTriangle, ArrowRightLeft, Share2, Palette, Award, ChevronDown, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
