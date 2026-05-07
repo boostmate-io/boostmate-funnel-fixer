@@ -919,9 +919,7 @@ const BlueprintViewMode = ({
 
               {/* Stories & Educational Assets */}
               {(proof.authority.founder_stories.length > 0 ||
-                proof.educational.lessons.length > 0 ||
-                proof.educational.mistakes.length > 0 ||
-                proof.educational.belief_shifts.length > 0) && (
+                proof.educational.lessons.length > 0) && (
                 <SubBlock title="Stories & Educational Assets">
                   {proof.authority.founder_stories.length > 0 && (
                     <div>
