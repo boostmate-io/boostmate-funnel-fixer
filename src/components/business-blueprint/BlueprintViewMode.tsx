@@ -354,13 +354,26 @@ const BlueprintViewMode = ({
             </DropdownMenu>
           </div>
 
-          {/* Right: share */}
-          {onShare && (
-            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8 shrink-0 hidden sm:inline-flex">
-              <Share2 className="w-4 h-4" />
-              <span className="hidden md:inline">Share</span>
+          {/* Right: actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              className="gap-1.5 h-8 hidden sm:inline-flex no-print"
+              title="Download as PDF (use 'Save as PDF' in the print dialog)"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden md:inline">Download PDF</span>
             </Button>
-          )}
+            {onShare && (
+              <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8 hidden sm:inline-flex no-print">
+                <Share2 className="w-4 h-4" />
+                <span className="hidden md:inline">Share</span>
+              </Button>
+            )}
+          </div>
+
         </div>
       </div>
 
