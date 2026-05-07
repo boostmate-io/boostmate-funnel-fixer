@@ -105,15 +105,16 @@ const SubBlock = ({
 
 const hasText = (v?: string | null) => Boolean(v && v.toString().trim());
 
-const findScrollableParent = (el: HTMLElement): HTMLElement | Window => {
+const getScrollableParents = (el: HTMLElement): HTMLElement[] => {
+  const parents: HTMLElement[] = [];
   let parent = el.parentElement;
   while (parent && parent !== document.body) {
     const { overflowY } = window.getComputedStyle(parent);
     const canScroll = /(auto|scroll|overlay)/.test(overflowY);
-    if (canScroll && parent.scrollHeight > parent.clientHeight + 1) return parent;
+    if (canScroll && parent.scrollHeight > parent.clientHeight + 1) parents.push(parent);
     parent = parent.parentElement;
   }
-  return window;
+  return parents;
 };
 
 const Field = ({ label, value }: { label: string; value?: string | null }) => {
@@ -300,23 +301,24 @@ const BlueprintViewMode = ({
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const scroller = findScrollableParent(el);
     const topbar = document.querySelector<HTMLElement>("[data-blueprint-topbar]");
     const offset = (topbar?.getBoundingClientRect().height ?? 56) + 16;
+    const scrollParents = getScrollableParents(el);
 
-    if (scroller === window) {
-      window.scrollTo({
-        top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - offset),
-        behavior: "smooth",
-      });
-    } else {
-      const scrollElement = scroller as HTMLElement;
+    // In-app view can have nested scroll containers (dashboard main + blueprint root).
+    // Reset inner containers first so the final window/outer scroll calculation is exact.
+    scrollParents.forEach((scrollElement) => {
       const scrollerRect = scrollElement.getBoundingClientRect();
       scrollElement.scrollTo({
         top: Math.max(0, scrollElement.scrollTop + el.getBoundingClientRect().top - scrollerRect.top - offset),
-        behavior: "smooth",
+        behavior: "auto",
       });
-    }
+    });
+
+    window.scrollTo({
+      top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - offset),
+      behavior: "smooth",
+    });
     setActiveId(id);
   };
 
