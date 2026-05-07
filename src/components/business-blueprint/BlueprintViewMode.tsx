@@ -976,38 +976,6 @@ const BlueprintViewMode = ({
                       </div>
                     </div>
                   )}
-                  {proof.educational.mistakes.length > 0 && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                        Common mistakes
-                      </p>
-                      <div className="space-y-2">
-                        {proof.educational.mistakes.map((m) => (
-                          <div key={m.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                            {m.mistake && <p className="text-sm font-semibold text-foreground">{m.mistake}</p>}
-                            {m.why_made && <p className="text-xs text-muted-foreground mt-1">Why: {m.why_made}</p>}
-                            {m.better_approach && <p className="text-xs text-primary mt-1">Better: {m.better_approach}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {proof.educational.belief_shifts.length > 0 && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                        Belief shifts
-                      </p>
-                      <div className="space-y-2">
-                        {proof.educational.belief_shifts.map((b) => (
-                          <div key={b.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                            {b.old_belief && <p className="text-sm text-muted-foreground"><span className="font-medium text-foreground/80">Old:</span> {b.old_belief}</p>}
-                            {b.new_belief && <p className="text-sm text-primary mt-1"><span className="font-medium">New:</span> {b.new_belief}</p>}
-                            {b.why_matters && <p className="text-xs text-muted-foreground mt-1">{b.why_matters}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </SubBlock>
               )}
           </>
