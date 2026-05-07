@@ -238,12 +238,11 @@ export function calcProofAuthorityProgress(d: ProofAuthorityData): number {
   let score = 0;
   let total = 0;
   // Authority
-  total += 5;
+  total += 4;
   if (d.authority.authority_types.length > 0) score++;
   if (d.authority.credibility_foundations.length > 0) score++;
   if (hasText(d.authority.trust_reason)) score++;
   if (hasText(d.authority.signature_proof)) score++;
-  if (d.authority.founder_stories.length > 0) score++;
   // Social proof
   total += 4;
   if (d.social_proof.metrics.length > 0) score++;
@@ -251,14 +250,11 @@ export function calcProofAuthorityProgress(d: ProofAuthorityData): number {
   if (d.social_proof.testimonials.length > 0) score++;
   if (d.social_proof.authority_assets.length > 0) score++;
   // Objections
-  total += 3;
+  total += 1;
   if (d.objections.objections.length > 0) score++;
-  if (d.objections.failed_solutions.length > 0) score++;
-  if (d.objections.faqs.length > 0) score++;
-  // Educational
-  total += 3;
+  // Stories & Educational
+  total += 2;
+  if (d.authority.founder_stories.length > 0) score++;
   if (d.educational.lessons.length > 0) score++;
-  if (d.educational.mistakes.length > 0) score++;
-  if (d.educational.belief_shifts.length > 0) score++;
   return Math.round((score / total) * 100);
 }
