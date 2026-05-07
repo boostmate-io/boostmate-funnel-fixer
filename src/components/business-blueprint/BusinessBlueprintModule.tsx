@@ -41,7 +41,7 @@ const BusinessBlueprintModule = () => {
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
   const [setupOpen, setSetupOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const { blueprint, offerDesign, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, setShareToken } = useBlueprint();
+  const { blueprint, offerDesign, proofAuthority, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, updateProofAuthority, setShareToken } = useBlueprint();
   const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
   const { activeSubAccount } = useWorkspace() as any;
 
