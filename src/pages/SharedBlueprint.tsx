@@ -131,6 +131,7 @@ const SharedBlueprint = () => {
         growth={growth}
         mappings={mappings}
         offers={offers}
+        proofAuthority={proofAuthority}
         isPublic
       />
     </div>
