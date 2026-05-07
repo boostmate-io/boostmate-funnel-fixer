@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Sparkles, Users, Package, Workflow, Megaphone,
   TrendingUp, DollarSign, Lightbulb, Layers, Network, Target,
-  AlertTriangle, ArrowRightLeft, Share2, Palette, Award, ChevronDown,
+  AlertTriangle, ArrowRightLeft, Share2, Palette, Award, ChevronDown, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,9 +69,9 @@ const Section = ({
   icon: React.ComponentType<{ className?: string }>;
   children: React.ReactNode;
 }) => (
-  <section id={id} data-section={id} className="mb-12 scroll-mt-24">
-    <div className="flex items-center gap-3 mb-6 pb-3 border-b border-border">
-      <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+  <section id={id} data-section={id} className="mb-12 scroll-mt-24 print-section">
+    <div className="flex items-center gap-3 mb-6 pb-3 border-b border-border print-section-header">
+      <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center print-section-icon">
         <Icon className="w-5 h-5" />
       </div>
       <h2 className="text-3xl font-display font-bold text-foreground">{title}</h2>
@@ -282,9 +282,9 @@ const BlueprintViewMode = ({
   };
 
   return (
-    <div ref={scrollContainerRef} className="h-full overflow-y-auto bg-background-dashboard">
+    <div ref={scrollContainerRef} className="h-full overflow-y-auto bg-background-dashboard print-root">
       {/* Sticky section navigation bar */}
-      <div className="sticky top-0 z-10 backdrop-blur bg-card/90 border-b border-border">
+      <div className="sticky top-0 z-10 backdrop-blur bg-card/90 border-b border-border no-print">
         <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center gap-4">
           {/* Left: title */}
           <div className="flex items-center gap-2 shrink-0">
@@ -354,20 +354,33 @@ const BlueprintViewMode = ({
             </DropdownMenu>
           </div>
 
-          {/* Right: share */}
-          {onShare && (
-            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8 shrink-0 hidden sm:inline-flex">
-              <Share2 className="w-4 h-4" />
-              <span className="hidden md:inline">Share</span>
+          {/* Right: actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              className="gap-1.5 h-8 hidden sm:inline-flex no-print"
+              title="Download as PDF (use 'Save as PDF' in the print dialog)"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden md:inline">Download PDF</span>
             </Button>
-          )}
+            {onShare && (
+              <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8 hidden sm:inline-flex no-print">
+                <Share2 className="w-4 h-4" />
+                <span className="hidden md:inline">Share</span>
+              </Button>
+            )}
+          </div>
+
         </div>
       </div>
 
-      <article className="max-w-4xl mx-auto px-8 py-12">
+      <article className="max-w-4xl mx-auto px-8 py-12 print-article">
         {/* Document title */}
-        <header className="mb-12 pb-8 border-b border-border">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-3">
+        <header className="mb-12 pb-8 border-b border-border print-header">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-3 print-eyebrow">
             Strategic Blueprint
           </p>
           <h1 className="text-5xl font-display font-bold text-foreground mb-3 leading-tight">
@@ -378,12 +391,15 @@ const BlueprintViewMode = ({
               {offer.angle.short_description}
             </p>
           )}
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2 print-badges">
             <Badge variant="secondary">{bt.label}</Badge>
             {workspace.main_goal && (
               <Badge variant="outline">Goal: {workspace.main_goal}</Badge>
             )}
           </div>
+          <p className="hidden print-date text-xs text-muted-foreground mt-4">
+            Generated {new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+          </p>
         </header>
 
         {/* ============= BUSINESS OVERVIEW ============= */}

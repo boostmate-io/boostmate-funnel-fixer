@@ -109,3 +109,162 @@
   stroke: hsl(252, 100%, 64%) !important;
   stroke-width: 3 !important;
 }
+
+/* =========================================================================
+   Print styles for Business Blueprint (View Mode + Shared link)
+   Transforms the on-screen card-based view into a clean B/W document
+   suitable for "Save as PDF" via the browser print dialog.
+   ========================================================================= */
+@media print {
+  @page {
+    size: A4;
+    margin: 18mm 16mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #111 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide everything outside the printable blueprint */
+  body * {
+    visibility: hidden;
+  }
+  .print-root, .print-root * {
+    visibility: visible;
+  }
+  .print-root {
+    position: absolute;
+    inset: 0;
+    overflow: visible !important;
+    height: auto !important;
+    background: #ffffff !important;
+  }
+
+  /* Hide UI chrome */
+  .no-print { display: none !important; }
+
+  /* Reset container chrome */
+  .print-article {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #111 !important;
+  }
+
+  .print-header {
+    border-bottom: 1px solid #000 !important;
+    margin-bottom: 24pt !important;
+    padding-bottom: 12pt !important;
+    page-break-after: avoid;
+  }
+  .print-header h1 {
+    font-size: 28pt !important;
+    color: #000 !important;
+    line-height: 1.15 !important;
+  }
+  .print-eyebrow {
+    color: #555 !important;
+    letter-spacing: 0.18em !important;
+  }
+  .print-date {
+    display: block !important;
+    color: #555 !important;
+  }
+  .print-badges { display: none !important; }
+
+  /* Major sections start on a new page (except first) */
+  .print-section {
+    page-break-before: always;
+    break-before: page;
+    margin-bottom: 18pt !important;
+  }
+  .print-section:first-of-type {
+    page-break-before: auto;
+    break-before: auto;
+  }
+  .print-section-header {
+    border-bottom: 1px solid #000 !important;
+    padding-bottom: 6pt !important;
+    margin-bottom: 14pt !important;
+    page-break-after: avoid;
+  }
+  .print-section-header h2 {
+    font-size: 20pt !important;
+    color: #000 !important;
+  }
+  .print-section-icon { display: none !important; }
+
+  .print-root h3 {
+    font-size: 13pt !important;
+    color: #000 !important;
+    margin-top: 10pt !important;
+    margin-bottom: 6pt !important;
+    page-break-after: avoid;
+  }
+
+  /* Strip card styling: borders, backgrounds, shadows */
+  .print-root [class*="rounded-"],
+  .print-root [class*="bg-card"],
+  .print-root [class*="bg-muted"],
+  .print-root [class*="bg-primary"],
+  .print-root [class*="border-"] {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  .print-root .bg-card,
+  .print-root [class~="rounded-lg"] {
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  /* Field cards become labeled blocks */
+  .print-root [class~="rounded-lg"][class*="border-border"] {
+    border: none !important;
+    border-left: 2px solid #999 !important;
+    padding: 2pt 0 2pt 10pt !important;
+    margin-bottom: 8pt !important;
+    background: transparent !important;
+    page-break-inside: avoid;
+  }
+
+  /* Labels (small uppercase) */
+  .print-root .uppercase {
+    color: #444 !important;
+    font-size: 8pt !important;
+    letter-spacing: 0.08em !important;
+  }
+
+  /* Body text */
+  .print-root p, .print-root li, .print-root span {
+    color: #111 !important;
+    font-size: 10.5pt !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Badges → inline plain text */
+  .print-root [class*="badge"], .print-root .Badge {
+    background: transparent !important;
+    color: #111 !important;
+    border: 1px solid #999 !important;
+    padding: 1pt 4pt !important;
+    font-weight: 500 !important;
+  }
+
+  /* Avoid splitting sub-blocks awkwardly */
+  .print-root section > div > div {
+    page-break-inside: avoid;
+  }
+
+  /* Grids stay 2-col on print */
+  .print-root .grid { display: grid !important; }
+
+  /* Hide muted dashed placeholders */
+  .print-root .border-dashed { display: none !important; }
+
+  /* Links readable */
+  .print-root a { color: #111 !important; text-decoration: underline; }
+}
