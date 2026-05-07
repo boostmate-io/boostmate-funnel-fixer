@@ -310,9 +310,10 @@ const BlueprintViewMode = ({
         behavior: "smooth",
       });
     } else {
-      const scrollerRect = scroller.getBoundingClientRect();
-      scroller.scrollTo({
-        top: Math.max(0, scroller.scrollTop + el.getBoundingClientRect().top - scrollerRect.top - offset),
+      const scrollElement = scroller as HTMLElement;
+      const scrollerRect = scrollElement.getBoundingClientRect();
+      scrollElement.scrollTo({
+        top: Math.max(0, scrollElement.scrollTop + el.getBoundingClientRect().top - scrollerRect.top - offset),
         behavior: "smooth",
       });
     }
