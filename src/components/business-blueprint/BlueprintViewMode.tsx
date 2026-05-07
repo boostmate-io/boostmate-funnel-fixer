@@ -282,9 +282,9 @@ const BlueprintViewMode = ({
   };
 
   return (
-    <div ref={scrollContainerRef} className="h-full overflow-y-auto bg-background-dashboard">
+    <div ref={scrollContainerRef} className="h-full overflow-y-auto bg-background-dashboard print-root">
       {/* Sticky section navigation bar */}
-      <div className="sticky top-0 z-10 backdrop-blur bg-card/90 border-b border-border">
+      <div className="sticky top-0 z-10 backdrop-blur bg-card/90 border-b border-border no-print">
         <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center gap-4">
           {/* Left: title */}
           <div className="flex items-center gap-2 shrink-0">
