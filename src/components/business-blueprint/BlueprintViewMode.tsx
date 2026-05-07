@@ -389,7 +389,7 @@ const BlueprintViewMode = ({
         </header>
 
         {/* ============= BUSINESS OVERVIEW ============= */}
-        <Section id="overview" title="Business Overview" icon={Sparkles}>
+        <Section id="overview" title="Business Overview" icon={Sparkles} show={hasOverview}>
           <KeyValueGrid
             items={[
               { label: "Business Name", value: workspaceName },
@@ -403,28 +403,40 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= CUSTOMER CLARITY ============= */}
-        <Section id="customer-clarity" title="Customer Clarity" icon={Users}>
-          <SubBlock title="Ideal Client Avatar">
+        <Section id="customer-clarity" title="Customer Clarity" icon={Users} show={hasClarity}>
+          <SubBlock
+            title="Ideal Client Avatar"
+            show={hasText(clarity.avatar_who) || hasText(clarity.avatar_stage) || hasText(clarity.avatar_traits) || hasText(clarity.avatar_not_fit)}
+          >
             <Field label="Who is your ideal client" value={clarity.avatar_who} />
             <Field label="Their current stage" value={clarity.avatar_stage} />
             <Field label="Defining traits" value={clarity.avatar_traits} />
             <Field label="Not a fit" value={clarity.avatar_not_fit} />
           </SubBlock>
 
-          <SubBlock title="Pain & Friction">
+          <SubBlock
+            title="Pain & Friction"
+            show={hasText(clarity.pain_main_problem) || hasText(clarity.pain_daily_frustrations) || hasText(clarity.pain_already_tried) || hasText(clarity.pain_consequences)}
+          >
             <Field label="Main problem" value={clarity.pain_main_problem} />
             <Field label="Daily frustrations" value={clarity.pain_daily_frustrations} />
             <Field label="What they have already tried" value={clarity.pain_already_tried} />
             <Field label="Consequences of inaction" value={clarity.pain_consequences} />
           </SubBlock>
 
-          <SubBlock title="Desire & Goals">
+          <SubBlock
+            title="Desire & Goals"
+            show={hasText(clarity.desire_main_result) || hasText(clarity.desire_success_vision) || hasText(clarity.desire_why_badly)}
+          >
             <Field label="Main result they want" value={clarity.desire_main_result} />
             <Field label="What success looks like" value={clarity.desire_success_vision} />
             <Field label="Why they want it badly" value={clarity.desire_why_badly} />
           </SubBlock>
 
-          <SubBlock title="Transformation">
+          <SubBlock
+            title="Transformation"
+            show={hasText(clarity.transformation_point_a) || hasText(clarity.transformation_point_b) || hasText(clarity.transformation_process)}
+          >
             <Field label="Where they are now (Point A)" value={clarity.transformation_point_a} />
             <Field label="Where they want to be (Point B)" value={clarity.transformation_point_b} />
             <Field label="The transformation process" value={clarity.transformation_process} />
