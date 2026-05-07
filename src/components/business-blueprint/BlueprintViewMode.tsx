@@ -638,42 +638,36 @@ const BlueprintViewMode = ({
             <Field label="Guarantee details" value={offer.pricing?.guarantee_details} />
           </SubBlock>
 
-          <SubBlock title="Offer Ecosystem">
-            {Object.keys(ecosystemByTier).length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">
-                No ecosystem offers defined yet.
-              </p>
-            ) : (
-              ["free", "low_ticket", "mid_ticket", "core", "premium", "continuity"]
-                .filter((t) => ecosystemByTier[t]?.length)
-                .map((t) => (
-                  <div key={t}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                      {tierLabels[t]}
-                    </p>
-                    <div className="space-y-2">
-                      {ecosystemByTier[t].map((o) => (
-                        <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-sm font-semibold text-foreground">{o.name}</p>
-                            {typeof o.data?.price === "number" && o.data.price > 0 && (
-                              <Badge variant="secondary" className="text-xs tabular-nums">
-                                {cur}{o.data.price.toLocaleString()}
-                              </Badge>
-                            )}
-                          </div>
-                          {o.data?.description && (
-                            <p className="text-sm text-muted-foreground mt-1">{o.data.description}</p>
-                          )}
-                          {o.data?.core_outcome && (
-                            <p className="text-xs text-primary mt-1">→ {o.data.core_outcome}</p>
+          <SubBlock title="Offer Ecosystem" show={Object.keys(ecosystemByTier).length > 0}>
+            {["free", "low_ticket", "mid_ticket", "core", "premium", "continuity"]
+              .filter((t) => ecosystemByTier[t]?.length)
+              .map((t) => (
+                <div key={t}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    {tierLabels[t]}
+                  </p>
+                  <div className="space-y-2">
+                    {ecosystemByTier[t].map((o) => (
+                      <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-foreground">{o.name}</p>
+                          {typeof o.data?.price === "number" && o.data.price > 0 && (
+                            <Badge variant="secondary" className="text-xs tabular-nums">
+                              {cur}{o.data.price.toLocaleString()}
+                            </Badge>
                           )}
                         </div>
-                      ))}
-                    </div>
+                        {o.data?.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{o.data.description}</p>
+                        )}
+                        {o.data?.core_outcome && (
+                          <p className="text-xs text-primary mt-1">→ {o.data.core_outcome}</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))
-            )}
+                </div>
+              ))}
           </SubBlock>
         </Section>
 
