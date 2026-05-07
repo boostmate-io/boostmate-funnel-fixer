@@ -103,40 +103,62 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
     };
 
     const sync = async () => {
-      if (existingCore) {
-        const { error } = await supabase
+      if (coreSyncInFlight.current) return;
+      coreSyncInFlight.current = true;
+      try {
+        // Re-check DB for an existing core to avoid duplicate inserts under
+        // races (state may be stale).
+        const { data: existingRows } = await supabase
           .from("offers")
-          .update({
-            name: payload.name,
-            data: payload.data,
-          })
-          .eq("id", existingCore.id);
-        if (!error) {
-          lastSyncedCoreSignature.current = signature;
-          setOffers((prev) =>
-            prev.map((o) =>
-              o.id === existingCore.id
-                ? { ...o, name: payload.name, data: payload.data as EcosystemOfferRow["data"] }
-                : o,
-            ),
-          );
+          .select("id")
+          .eq("blueprint_id", blueprintId)
+          .eq("source", "blueprint_core")
+          .limit(1);
+        const existingId = existingRows?.[0]?.id ?? existingCore?.id;
+
+        if (existingId) {
+          const { error } = await supabase
+            .from("offers")
+            .update({ name: payload.name, data: payload.data })
+            .eq("id", existingId);
+          if (!error) {
+            lastSyncedCoreSignature.current = signature;
+            setOffers((prev) => {
+              const exists = prev.some((o) => o.id === existingId);
+              if (!exists) return prev;
+              return prev.map((o) =>
+                o.id === existingId
+                  ? { ...o, name: payload.name, data: payload.data as EcosystemOfferRow["data"] }
+                  : o,
+              );
+            });
+          }
+        } else {
+          const { data, error } = await supabase
+            .from("offers")
+            .insert(payload as any)
+            .select("id,name,tier,source,blueprint_id,sort_order,data,user_id,sub_account_id")
+            .single();
+          if (!error && data) {
+            lastSyncedCoreSignature.current = signature;
+            setOffers((prev) =>
+              prev.some((o) => o.id === (data as any).id)
+                ? prev
+                : [...prev, data as unknown as EcosystemOfferRow],
+            );
+          } else if (error) {
+            // Likely unique-index conflict — reload to pick up the existing row.
+            await load();
+          }
         }
-      } else {
-        const { data, error } = await supabase
-          .from("offers")
-          .insert(payload as any)
-          .select("id,name,tier,source,blueprint_id,sort_order,data,user_id,sub_account_id")
-          .single();
-        if (!error && data) {
-          lastSyncedCoreSignature.current = signature;
-          setOffers((prev) => [...prev, data as unknown as EcosystemOfferRow]);
-        }
+      } finally {
+        coreSyncInFlight.current = false;
       }
     };
 
     const timer = window.setTimeout(sync, 600);
     return () => window.clearTimeout(timer);
-  }, [blueprintId, user, activeSubAccountId, offerDesign, offers]);
+  }, [blueprintId, user, activeSubAccountId, offerDesign, offers, load]);
 
   // ---- CRUD for manual offers ---------------------------------------------
 
