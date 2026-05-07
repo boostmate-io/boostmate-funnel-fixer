@@ -143,6 +143,28 @@ export function useBlueprint() {
     [],
   );
 
+  const updateProofAuthority = useCallback(
+    (patch: Partial<ProofAuthorityData>) => {
+      const blueprintId = blueprint?.id;
+      setProofAuthority((prev) => {
+        const next: ProofAuthorityData = { ...prev, ...patch };
+        if (proofSaveTimer.current) window.clearTimeout(proofSaveTimer.current);
+        proofSaveTimer.current = window.setTimeout(async () => {
+          if (!blueprintId) return;
+          setSaving(true);
+          const { error } = await supabase
+            .from("business_blueprints")
+            .update({ proof_authority: next as any })
+            .eq("id", blueprintId);
+          setSaving(false);
+          if (error) toast.error("Save failed");
+        }, 800);
+        return next;
+      });
+    },
+    [blueprint?.id],
+  );
+
   const setShareToken = useCallback((token: string | null) => {
     setBlueprint((prev) => (prev ? { ...prev, share_token: token } : prev));
   }, []);
@@ -150,11 +172,13 @@ export function useBlueprint() {
   return {
     blueprint,
     offerDesign,
+    proofAuthority,
     loading,
     saving,
     updateCustomerClarity,
     updateOfferDesign,
     updateGrowthSystem,
+    updateProofAuthority,
     setShareToken,
     reload: load,
   };
