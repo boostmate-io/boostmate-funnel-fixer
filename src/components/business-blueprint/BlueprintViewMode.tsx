@@ -256,7 +256,6 @@ const BlueprintViewMode = ({
     { id: "customer-clarity", label: "Customer Clarity", hasContent: hasClarity },
     { id: "offer-design", label: "Offer Design", hasContent: hasOffer },
     { id: "growth-system", label: "Growth System", hasContent: hasGrowth },
-    { id: "brand-strategy", label: "Brand Strategy", hasContent: false },
     { id: "proof-authority", label: "Proof & Authority", hasContent: hasProof },
   ];
 
