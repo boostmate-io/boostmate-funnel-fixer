@@ -244,11 +244,7 @@ const BlueprintViewMode = ({
     (proof.social_proof?.testimonials?.length ?? 0) > 0 ||
     (proof.social_proof?.authority_assets?.length ?? 0) > 0 ||
     (proof.objections?.objections?.length ?? 0) > 0 ||
-    (proof.objections?.failed_solutions?.length ?? 0) > 0 ||
-    (proof.objections?.faqs?.length ?? 0) > 0 ||
-    (proof.educational?.lessons?.length ?? 0) > 0 ||
-    (proof.educational?.mistakes?.length ?? 0) > 0 ||
-    (proof.educational?.belief_shifts?.length ?? 0) > 0,
+    (proof.educational?.lessons?.length ?? 0) > 0,
   );
 
   const navSections = [
