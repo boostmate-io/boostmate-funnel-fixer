@@ -71,12 +71,13 @@ const BusinessBlueprintModule = () => {
   const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
   const offerProgress = calculateOfferDesignProgress(offerData, tierCounts);
   const growthProgress = calculateGrowthSystemProgress(growthData, mappings);
+  const proofProgress = calcProofAuthorityProgress(proofAuthority);
   const sectionProgress: Record<SectionId, number> = {
     "customer-clarity": clarityProgress,
     "offer-design": offerProgress,
     "growth-system": growthProgress,
     "brand-strategy": 0,
-    "proof-authority": 0,
+    "proof-authority": proofProgress,
   };
 
   const handleEdit = (section?: SectionId) => {
