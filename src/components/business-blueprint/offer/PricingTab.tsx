@@ -96,6 +96,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
       progress={progress}
       saving={saving}
       feedback={feedback}
+      embedded={embedded}
     >
       <div className="space-y-5">
         {/* Core Price */}
