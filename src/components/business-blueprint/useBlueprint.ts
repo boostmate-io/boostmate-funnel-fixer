@@ -21,11 +21,13 @@ export function useBlueprint() {
   const { user } = useAuth();
   const [blueprint, setBlueprint] = useState<BlueprintRow | null>(null);
   const [offerDesign, setOfferDesign] = useState<OfferDesignData>(emptyOfferDesign());
+  const [proofAuthority, setProofAuthority] = useState<ProofAuthorityData>(emptyProofAuthority());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const claritySaveTimer = useRef<number | null>(null);
   const offerSaveTimer = useRef<number | null>(null);
   const growthSaveTimer = useRef<number | null>(null);
+  const proofSaveTimer = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     if (!activeSubAccountId || !user) return;
