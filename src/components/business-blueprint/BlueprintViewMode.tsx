@@ -62,30 +62,48 @@ const Section = ({
   id,
   title,
   icon: Icon,
+  show = true,
   children,
 }: {
   id?: string;
   title: string;
   icon: React.ComponentType<{ className?: string }>;
+  show?: boolean;
   children: React.ReactNode;
-}) => (
-  <section id={id} data-section={id} className="mb-12 scroll-mt-24 print-section">
-    <div className="flex items-center gap-3 mb-6 pb-3 border-b border-border print-section-header">
-      <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center print-section-icon">
-        <Icon className="w-5 h-5" />
+}) => {
+  if (!show) return null;
+  return (
+    <section id={id} data-section={id} className="mb-12 scroll-mt-24 print-section">
+      <div className="flex items-center gap-3 mb-6 pb-3 border-b border-border print-section-header">
+        <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center print-section-icon">
+          <Icon className="w-5 h-5" />
+        </div>
+        <h2 className="text-3xl font-display font-bold text-foreground">{title}</h2>
       </div>
-      <h2 className="text-3xl font-display font-bold text-foreground">{title}</h2>
-    </div>
-    <div className="space-y-8">{children}</div>
-  </section>
-);
+      <div className="space-y-8">{children}</div>
+    </section>
+  );
+};
 
-const SubBlock = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div>
-    <h3 className="text-xl font-display font-semibold text-foreground mb-4">{title}</h3>
-    <div className="space-y-4">{children}</div>
-  </div>
-);
+const SubBlock = ({
+  title,
+  show = true,
+  children,
+}: {
+  title: string;
+  show?: boolean;
+  children: React.ReactNode;
+}) => {
+  if (!show) return null;
+  return (
+    <div>
+      <h3 className="text-xl font-display font-semibold text-foreground mb-4">{title}</h3>
+      <div className="space-y-4">{children}</div>
+    </div>
+  );
+};
+
+const hasText = (v?: string | null) => Boolean(v && v.toString().trim());
 
 const Field = ({ label, value }: { label: string; value?: string | null }) => {
   if (!value || !value.toString().trim()) return null;
@@ -238,7 +256,6 @@ const BlueprintViewMode = ({
     { id: "customer-clarity", label: "Customer Clarity", hasContent: hasClarity },
     { id: "offer-design", label: "Offer Design", hasContent: hasOffer },
     { id: "growth-system", label: "Growth System", hasContent: hasGrowth },
-    { id: "brand-strategy", label: "Brand Strategy", hasContent: false },
     { id: "proof-authority", label: "Proof & Authority", hasContent: hasProof },
   ];
 
@@ -285,17 +302,17 @@ const BlueprintViewMode = ({
     <div ref={scrollContainerRef} className="h-full overflow-y-auto bg-background-dashboard print-root">
       {/* Sticky section navigation bar */}
       <div className="sticky top-0 z-10 backdrop-blur bg-card/90 border-b border-border no-print">
-        <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center gap-4">
-          {/* Left: title */}
-          <div className="flex items-center gap-2 shrink-0">
+        <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center gap-3">
+          {/* Left: back + title */}
+          <div className="flex items-center gap-2 shrink-0 mr-auto min-w-0">
             {onBack && (
               <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 gap-1.5 h-8">
                 <ArrowLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Back</span>
               </Button>
             )}
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-display font-bold text-foreground hidden md:inline">
+            <Sparkles className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-sm font-display font-bold text-foreground truncate">
               Business Blueprint
             </span>
             {isPublic && (
@@ -303,77 +320,45 @@ const BlueprintViewMode = ({
             )}
           </div>
 
-          {/* Center: section navigation (desktop) */}
-          <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center overflow-x-auto">
-            {navSections.map((s) => {
-              const isActive = activeId === s.id;
-              const isMuted = !s.hasContent;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => scrollTo(s.id)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : isMuted
-                        ? "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/40"
-                        : "text-foreground/70 hover:text-foreground hover:bg-muted/60"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Mobile / tablet: dropdown */}
-          <div className="flex-1 flex justify-end lg:hidden">
+          {/* Right: section dropdown + actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-1.5 h-8">
-                  {navSections.find((s) => s.id === activeId)?.label ?? "Sections"}
+                  <span className="hidden sm:inline">{navSections.find((s) => s.id === activeId)?.label ?? "Sections"}</span>
+                  <span className="sm:hidden">Sections</span>
                   <ChevronDown className="w-3.5 h-3.5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="z-50 bg-popover">
-                {navSections.map((s) => (
+                {navSections.filter((s) => s.hasContent).map((s) => (
                   <DropdownMenuItem
                     key={s.id}
                     onClick={() => scrollTo(s.id)}
-                    className={`text-sm ${activeId === s.id ? "text-primary font-semibold" : ""} ${
-                      !s.hasContent ? "opacity-60" : ""
-                    }`}
+                    className={`text-sm ${activeId === s.id ? "text-primary font-semibold" : ""}`}
                   >
                     {s.label}
-                    {!s.hasContent && (
-                      <span className="ml-2 text-[10px] text-muted-foreground">empty</span>
-                    )}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-
-          {/* Right: actions */}
-          <div className="flex items-center gap-1.5 shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => window.print()}
-              className="gap-1.5 h-8 hidden sm:inline-flex no-print"
+              className="gap-1.5 h-8 no-print"
               title="Download as PDF (use 'Save as PDF' in the print dialog)"
             >
               <Download className="w-4 h-4" />
               <span className="hidden md:inline">Download PDF</span>
             </Button>
             {onShare && (
-              <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8 hidden sm:inline-flex no-print">
+              <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8 no-print">
                 <Share2 className="w-4 h-4" />
                 <span className="hidden md:inline">Share</span>
               </Button>
             )}
           </div>
-
         </div>
       </div>
 
@@ -403,7 +388,7 @@ const BlueprintViewMode = ({
         </header>
 
         {/* ============= BUSINESS OVERVIEW ============= */}
-        <Section id="overview" title="Business Overview" icon={Sparkles}>
+        <Section id="overview" title="Business Overview" icon={Sparkles} show={hasOverview}>
           <KeyValueGrid
             items={[
               { label: "Business Name", value: workspaceName },
@@ -417,28 +402,40 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= CUSTOMER CLARITY ============= */}
-        <Section id="customer-clarity" title="Customer Clarity" icon={Users}>
-          <SubBlock title="Ideal Client Avatar">
+        <Section id="customer-clarity" title="Customer Clarity" icon={Users} show={hasClarity}>
+          <SubBlock
+            title="Ideal Client Avatar"
+            show={hasText(clarity.avatar_who) || hasText(clarity.avatar_stage) || hasText(clarity.avatar_traits) || hasText(clarity.avatar_not_fit)}
+          >
             <Field label="Who is your ideal client" value={clarity.avatar_who} />
             <Field label="Their current stage" value={clarity.avatar_stage} />
             <Field label="Defining traits" value={clarity.avatar_traits} />
             <Field label="Not a fit" value={clarity.avatar_not_fit} />
           </SubBlock>
 
-          <SubBlock title="Pain & Friction">
+          <SubBlock
+            title="Pain & Friction"
+            show={hasText(clarity.pain_main_problem) || hasText(clarity.pain_daily_frustrations) || hasText(clarity.pain_already_tried) || hasText(clarity.pain_consequences)}
+          >
             <Field label="Main problem" value={clarity.pain_main_problem} />
             <Field label="Daily frustrations" value={clarity.pain_daily_frustrations} />
             <Field label="What they have already tried" value={clarity.pain_already_tried} />
             <Field label="Consequences of inaction" value={clarity.pain_consequences} />
           </SubBlock>
 
-          <SubBlock title="Desire & Goals">
+          <SubBlock
+            title="Desire & Goals"
+            show={hasText(clarity.desire_main_result) || hasText(clarity.desire_success_vision) || hasText(clarity.desire_why_badly)}
+          >
             <Field label="Main result they want" value={clarity.desire_main_result} />
             <Field label="What success looks like" value={clarity.desire_success_vision} />
             <Field label="Why they want it badly" value={clarity.desire_why_badly} />
           </SubBlock>
 
-          <SubBlock title="Transformation">
+          <SubBlock
+            title="Transformation"
+            show={hasText(clarity.transformation_point_a) || hasText(clarity.transformation_point_b) || hasText(clarity.transformation_process)}
+          >
             <Field label="Where they are now (Point A)" value={clarity.transformation_point_a} />
             <Field label="Where they want to be (Point B)" value={clarity.transformation_point_b} />
             <Field label="The transformation process" value={clarity.transformation_process} />
@@ -446,8 +443,16 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= OFFER DESIGN ============= */}
-        <Section id="offer-design" title="Offer Design" icon={Package}>
-          <SubBlock title="Offer Angle">
+        <Section id="offer-design" title="Offer Design" icon={Package} show={hasOffer}>
+          <SubBlock
+            title="Offer Angle"
+            show={Boolean(
+              offer.angle?.main_offer_name || offer.angle?.core_outcome || promise ||
+              offer.angle?.short_description || offer.angle?.angle_new_vehicle ||
+              offer.angle?.angle_better_results || offer.angle?.angle_faster_outcome ||
+              offer.angle?.angle_easier_process || offer.angle?.framework?.name,
+            )}
+          >
             <KeyValueGrid
               items={[
                 { label: "Main offer", value: offer.angle?.main_offer_name },
@@ -492,7 +497,15 @@ const BlueprintViewMode = ({
             )}
           </SubBlock>
 
-          <SubBlock title="Offer Stack">
+          <SubBlock
+            title="Offer Stack"
+            show={Boolean(
+              (offer.stack?.deliverables?.length ?? 0) > 0 ||
+              (offer.stack?.bonuses?.length ?? 0) > 0 ||
+              (offer.stack?.milestones?.length ?? 0) > 0 ||
+              offer.stack?.delivery_timeline,
+            )}
+          >
             {(offer.stack?.deliverables?.length ?? 0) > 0 && (
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
@@ -571,7 +584,17 @@ const BlueprintViewMode = ({
             )}
           </SubBlock>
 
-          <SubBlock title="Pricing">
+          <SubBlock
+            title="Pricing"
+            show={Boolean(
+              corePrice ||
+              (offer.pricing?.payment_plans?.length ?? 0) > 0 ||
+              offer.pricing?.premium_enabled ||
+              offer.pricing?.recurring_enabled ||
+              (offer.pricing?.guarantee_type && offer.pricing.guarantee_type !== "none") ||
+              hasText(offer.pricing?.guarantee_details),
+            )}
+          >
             <KeyValueGrid
               items={[
                 { label: "Core price", value: corePrice },
@@ -614,48 +637,49 @@ const BlueprintViewMode = ({
             <Field label="Guarantee details" value={offer.pricing?.guarantee_details} />
           </SubBlock>
 
-          <SubBlock title="Offer Ecosystem">
-            {Object.keys(ecosystemByTier).length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">
-                No ecosystem offers defined yet.
-              </p>
-            ) : (
-              ["free", "low_ticket", "mid_ticket", "core", "premium", "continuity"]
-                .filter((t) => ecosystemByTier[t]?.length)
-                .map((t) => (
-                  <div key={t}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                      {tierLabels[t]}
-                    </p>
-                    <div className="space-y-2">
-                      {ecosystemByTier[t].map((o) => (
-                        <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-sm font-semibold text-foreground">{o.name}</p>
-                            {typeof o.data?.price === "number" && o.data.price > 0 && (
-                              <Badge variant="secondary" className="text-xs tabular-nums">
-                                {cur}{o.data.price.toLocaleString()}
-                              </Badge>
-                            )}
-                          </div>
-                          {o.data?.description && (
-                            <p className="text-sm text-muted-foreground mt-1">{o.data.description}</p>
-                          )}
-                          {o.data?.core_outcome && (
-                            <p className="text-xs text-primary mt-1">→ {o.data.core_outcome}</p>
+          <SubBlock title="Offer Ecosystem" show={Object.keys(ecosystemByTier).length > 0}>
+            {["free", "low_ticket", "mid_ticket", "core", "premium", "continuity"]
+              .filter((t) => ecosystemByTier[t]?.length)
+              .map((t) => (
+                <div key={t}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    {tierLabels[t]}
+                  </p>
+                  <div className="space-y-2">
+                    {ecosystemByTier[t].map((o) => (
+                      <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-foreground">{o.name}</p>
+                          {typeof o.data?.price === "number" && o.data.price > 0 && (
+                            <Badge variant="secondary" className="text-xs tabular-nums">
+                              {cur}{o.data.price.toLocaleString()}
+                            </Badge>
                           )}
                         </div>
-                      ))}
-                    </div>
+                        {o.data?.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{o.data.description}</p>
+                        )}
+                        {o.data?.core_outcome && (
+                          <p className="text-xs text-primary mt-1">→ {o.data.core_outcome}</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))
-            )}
+                </div>
+              ))}
           </SubBlock>
         </Section>
 
         {/* ============= GROWTH SYSTEM ============= */}
-        <Section id="growth-system" title="Growth System" icon={Workflow}>
-          <SubBlock title="Acquisition">
+        <Section id="growth-system" title="Growth System" icon={Workflow} show={hasGrowth}>
+          <SubBlock
+            title="Acquisition"
+            show={Boolean(
+              (growth.acquisition?.traffic_sources?.length ?? 0) > 0 ||
+              growth.acquisition?.primary_entry_offer_id ||
+              hasText(growth.acquisition?.lead_capture_method),
+            )}
+          >
             <KeyValueGrid
               items={[
                 {
@@ -674,45 +698,49 @@ const BlueprintViewMode = ({
             />
           </SubBlock>
 
-          <SubBlock title="Funnel Architecture">
-            {mappings.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">
-                No funnel mappings defined yet.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {mappings.map((m) => (
-                  <div key={m.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                    <div className="flex items-center gap-2 flex-wrap text-sm">
-                      <span className="font-semibold text-foreground">
-                        {offerName(m.offer_id) ?? "Untitled offer"}
-                      </span>
-                      <span className="text-muted-foreground">→</span>
-                      <Badge variant="outline">{getFunnelTypeLabel(m.funnel_type)}</Badge>
-                      {m.next_offer_id && (
-                        <>
-                          <span className="text-muted-foreground">→</span>
-                          <span className="text-foreground/80">{offerName(m.next_offer_id)}</span>
-                        </>
-                      )}
-                    </div>
-                    {m.purpose && (
-                      <p className="text-xs text-muted-foreground mt-1.5">{m.purpose}</p>
-                    )}
-                    {(m.traffic_sources?.length ?? 0) > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {m.traffic_sources.map((s) => (
-                          <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
-                        ))}
-                      </div>
+          <SubBlock title="Funnel Architecture" show={mappings.length > 0}>
+            <div className="space-y-3">
+              {mappings.map((m) => (
+                <div key={m.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                  <div className="flex items-center gap-2 flex-wrap text-sm">
+                    <span className="font-semibold text-foreground">
+                      {offerName(m.offer_id) ?? "Untitled offer"}
+                    </span>
+                    <span className="text-muted-foreground">→</span>
+                    <Badge variant="outline">{getFunnelTypeLabel(m.funnel_type)}</Badge>
+                    {m.next_offer_id && (
+                      <>
+                        <span className="text-muted-foreground">→</span>
+                        <span className="text-foreground/80">{offerName(m.next_offer_id)}</span>
+                      </>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
+                  {m.purpose && (
+                    <p className="text-xs text-muted-foreground mt-1.5">{m.purpose}</p>
+                  )}
+                  {(m.traffic_sources?.length ?? 0) > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {m.traffic_sources.map((s) => (
+                        <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </SubBlock>
 
-          <SubBlock title="Ascension">
+          <SubBlock
+            title="Ascension"
+            show={Boolean(
+              growth.ascension?.next_offer_after_core_id ||
+              growth.ascension?.retention_offer_id ||
+              growth.ascension?.referral_enabled ||
+              growth.ascension?.reactivation_enabled ||
+              hasText(growth.ascension?.referral_description) ||
+              hasText(growth.ascension?.reactivation_description),
+            )}
+          >
             <KeyValueGrid
               items={[
                 {
@@ -744,25 +772,9 @@ const BlueprintViewMode = ({
           </SubBlock>
         </Section>
 
-        {/* ============= BRAND STRATEGY (placeholder) ============= */}
-        <Section id="brand-strategy" title="Brand Strategy" icon={Palette}>
-          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-5 py-8 text-center">
-            <p className="text-sm text-muted-foreground italic">
-              Brand strategy hasn't been defined yet.
-            </p>
-          </div>
-        </Section>
-
         {/* ============= PROOF & AUTHORITY ============= */}
-        <Section id="proof-authority" title="Proof & Authority" icon={Award}>
-          {!hasProof ? (
-            <div className="rounded-lg border border-dashed border-border bg-muted/20 px-5 py-8 text-center">
-              <p className="text-sm text-muted-foreground italic">
-                Proof & authority assets haven't been added yet.
-              </p>
-            </div>
-          ) : (
-            <>
+        <Section id="proof-authority" title="Proof & Authority" icon={Award} show={hasProof}>
+          <>
               {/* Authority Positioning */}
               {(proof.authority.authority_types.length > 0 ||
                 proof.authority.credibility_foundations.length > 0 ||
@@ -1033,8 +1045,7 @@ const BlueprintViewMode = ({
                   )}
                 </SubBlock>
               )}
-            </>
-          )}
+          </>
         </Section>
 
         <footer className="mt-16 pt-8 border-t border-border text-center text-xs text-muted-foreground">
