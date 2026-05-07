@@ -62,6 +62,7 @@ const SharedBlueprint = () => {
       setClarity((bp.customer_clarity as any) || {});
       setOffer(normalizeOfferDesign(bp.offer_stack));
       setGrowth(normalizeGrowthSystem(bp.growth_system));
+      setProofAuthority(normalizeProofAuthority((bp as any).proof_authority));
 
       const [{ data: mappingRows }, { data: offerRows }, { data: ws }, { data: sub }] =
         await Promise.all([
