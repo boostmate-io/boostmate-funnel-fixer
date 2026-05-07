@@ -1046,8 +1046,7 @@ const BlueprintViewMode = ({
                   )}
                 </SubBlock>
               )}
-            </>
-          )}
+          </>
         </Section>
 
         <footer className="mt-16 pt-8 border-t border-border text-center text-xs text-muted-foreground">
