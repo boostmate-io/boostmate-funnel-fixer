@@ -26,6 +26,9 @@ import {
 import {
   type GrowthSystemData, type FunnelMappingRow, getFunnelTypeLabel,
 } from "./growthSystemTypes";
+import {
+  type ProofAuthorityData, emptyProofAuthority,
+} from "./proofAuthorityTypes";
 import { getBusinessType } from "./businessTypes";
 import type { EcosystemOfferRow } from "./useEcosystemOffers";
 
@@ -46,6 +49,7 @@ interface Props {
   growth: GrowthSystemData;
   mappings: FunnelMappingRow[];
   offers: EcosystemOfferRow[];
+  proofAuthority?: ProofAuthorityData;
   /** When set, shows a "Back" button calling this. */
   onBack?: () => void;
   onShare?: () => void;
