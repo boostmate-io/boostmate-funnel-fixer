@@ -149,10 +149,12 @@ const BlueprintViewMode = ({
   growth,
   mappings,
   offers,
+  proofAuthority,
   onBack,
   onShare,
   isPublic,
 }: Props) => {
+  const proof = proofAuthority ?? emptyProofAuthority();
   const bt = getBusinessType(workspace.business_type);
   const cur = getCurrencySymbol(workspace.currency);
   const offerName = (id?: string | null) =>
