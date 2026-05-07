@@ -672,8 +672,15 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= GROWTH SYSTEM ============= */}
-        <Section id="growth-system" title="Growth System" icon={Workflow}>
-          <SubBlock title="Acquisition">
+        <Section id="growth-system" title="Growth System" icon={Workflow} show={hasGrowth}>
+          <SubBlock
+            title="Acquisition"
+            show={Boolean(
+              (growth.acquisition?.traffic_sources?.length ?? 0) > 0 ||
+              growth.acquisition?.primary_entry_offer_id ||
+              hasText(growth.acquisition?.lead_capture_method),
+            )}
+          >
             <KeyValueGrid
               items={[
                 {
@@ -692,45 +699,49 @@ const BlueprintViewMode = ({
             />
           </SubBlock>
 
-          <SubBlock title="Funnel Architecture">
-            {mappings.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">
-                No funnel mappings defined yet.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {mappings.map((m) => (
-                  <div key={m.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                    <div className="flex items-center gap-2 flex-wrap text-sm">
-                      <span className="font-semibold text-foreground">
-                        {offerName(m.offer_id) ?? "Untitled offer"}
-                      </span>
-                      <span className="text-muted-foreground">→</span>
-                      <Badge variant="outline">{getFunnelTypeLabel(m.funnel_type)}</Badge>
-                      {m.next_offer_id && (
-                        <>
-                          <span className="text-muted-foreground">→</span>
-                          <span className="text-foreground/80">{offerName(m.next_offer_id)}</span>
-                        </>
-                      )}
-                    </div>
-                    {m.purpose && (
-                      <p className="text-xs text-muted-foreground mt-1.5">{m.purpose}</p>
-                    )}
-                    {(m.traffic_sources?.length ?? 0) > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {m.traffic_sources.map((s) => (
-                          <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
-                        ))}
-                      </div>
+          <SubBlock title="Funnel Architecture" show={mappings.length > 0}>
+            <div className="space-y-3">
+              {mappings.map((m) => (
+                <div key={m.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                  <div className="flex items-center gap-2 flex-wrap text-sm">
+                    <span className="font-semibold text-foreground">
+                      {offerName(m.offer_id) ?? "Untitled offer"}
+                    </span>
+                    <span className="text-muted-foreground">→</span>
+                    <Badge variant="outline">{getFunnelTypeLabel(m.funnel_type)}</Badge>
+                    {m.next_offer_id && (
+                      <>
+                        <span className="text-muted-foreground">→</span>
+                        <span className="text-foreground/80">{offerName(m.next_offer_id)}</span>
+                      </>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
+                  {m.purpose && (
+                    <p className="text-xs text-muted-foreground mt-1.5">{m.purpose}</p>
+                  )}
+                  {(m.traffic_sources?.length ?? 0) > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {m.traffic_sources.map((s) => (
+                        <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </SubBlock>
 
-          <SubBlock title="Ascension">
+          <SubBlock
+            title="Ascension"
+            show={Boolean(
+              growth.ascension?.next_offer_after_core_id ||
+              growth.ascension?.retention_offer_id ||
+              growth.ascension?.referral_enabled ||
+              growth.ascension?.reactivation_enabled ||
+              hasText(growth.ascension?.referral_description) ||
+              hasText(growth.ascension?.reactivation_description),
+            )}
+          >
             <KeyValueGrid
               items={[
                 {
