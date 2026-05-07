@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import {
-  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight,
+  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight, Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,11 +15,13 @@ import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import SectionShell from "./SectionShell";
+import CoreOfferDialog from "./CoreOfferDialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import DeliveryTypePicker from "./DeliveryTypePicker";
 import {
   ECOSYSTEM_TIERS,
   calcEcosystemProgress,
+  emptyOfferDesign,
   type EcosystemTier,
   type OfferDesignData,
 } from "../offerDesignTypes";
@@ -29,6 +31,7 @@ import { getBusinessType } from "../businessTypes";
 interface Props {
   blueprintId: string | null;
   offerDesign: OfferDesignData;
+  onChangeOfferDesign?: (patch: Partial<OfferDesignData>) => void;
   saving: boolean;
   businessType?: string;
 }
