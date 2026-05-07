@@ -23,6 +23,8 @@ import BlueprintOverview from "./BlueprintOverview";
 import BlueprintSetupWizard from "./BlueprintSetupWizard";
 import BlueprintViewMode from "./BlueprintViewMode";
 import BlueprintShareDialog from "./BlueprintShareDialog";
+import ProofAuthoritySection from "./ProofAuthoritySection";
+import { calcProofAuthorityProgress } from "./proofAuthorityTypes";
 
 const sections: { id: SectionId; label: string; icon: typeof Users }[] = [
   { id: "customer-clarity", label: "Customer Clarity", icon: Users },
