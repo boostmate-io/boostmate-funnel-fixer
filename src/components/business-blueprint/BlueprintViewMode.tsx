@@ -303,17 +303,17 @@ const BlueprintViewMode = ({
     <div ref={scrollContainerRef} className="h-full overflow-y-auto bg-background-dashboard print-root">
       {/* Sticky section navigation bar */}
       <div className="sticky top-0 z-10 backdrop-blur bg-card/90 border-b border-border no-print">
-        <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center gap-4">
-          {/* Left: title */}
-          <div className="flex items-center gap-2 shrink-0">
+        <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center gap-3">
+          {/* Left: back + title */}
+          <div className="flex items-center gap-2 shrink-0 mr-auto min-w-0">
             {onBack && (
               <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 gap-1.5 h-8">
                 <ArrowLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Back</span>
               </Button>
             )}
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-display font-bold text-foreground hidden md:inline">
+            <Sparkles className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-sm font-display font-bold text-foreground truncate">
               Business Blueprint
             </span>
             {isPublic && (
@@ -321,77 +321,45 @@ const BlueprintViewMode = ({
             )}
           </div>
 
-          {/* Center: section navigation (desktop) */}
-          <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center overflow-x-auto">
-            {navSections.map((s) => {
-              const isActive = activeId === s.id;
-              const isMuted = !s.hasContent;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => scrollTo(s.id)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : isMuted
-                        ? "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/40"
-                        : "text-foreground/70 hover:text-foreground hover:bg-muted/60"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Mobile / tablet: dropdown */}
-          <div className="flex-1 flex justify-end lg:hidden">
+          {/* Right: section dropdown + actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-1.5 h-8">
-                  {navSections.find((s) => s.id === activeId)?.label ?? "Sections"}
+                  <span className="hidden sm:inline">{navSections.find((s) => s.id === activeId)?.label ?? "Sections"}</span>
+                  <span className="sm:hidden">Sections</span>
                   <ChevronDown className="w-3.5 h-3.5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="z-50 bg-popover">
-                {navSections.map((s) => (
+                {navSections.filter((s) => s.hasContent).map((s) => (
                   <DropdownMenuItem
                     key={s.id}
                     onClick={() => scrollTo(s.id)}
-                    className={`text-sm ${activeId === s.id ? "text-primary font-semibold" : ""} ${
-                      !s.hasContent ? "opacity-60" : ""
-                    }`}
+                    className={`text-sm ${activeId === s.id ? "text-primary font-semibold" : ""}`}
                   >
                     {s.label}
-                    {!s.hasContent && (
-                      <span className="ml-2 text-[10px] text-muted-foreground">empty</span>
-                    )}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-
-          {/* Right: actions */}
-          <div className="flex items-center gap-1.5 shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => window.print()}
-              className="gap-1.5 h-8 hidden sm:inline-flex no-print"
+              className="gap-1.5 h-8 no-print"
               title="Download as PDF (use 'Save as PDF' in the print dialog)"
             >
               <Download className="w-4 h-4" />
               <span className="hidden md:inline">Download PDF</span>
             </Button>
             {onShare && (
-              <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8 hidden sm:inline-flex no-print">
+              <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8 no-print">
                 <Share2 className="w-4 h-4" />
                 <span className="hidden md:inline">Share</span>
               </Button>
             )}
           </div>
-
         </div>
       </div>
 
