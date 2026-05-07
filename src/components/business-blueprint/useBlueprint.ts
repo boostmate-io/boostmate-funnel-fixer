@@ -10,6 +10,11 @@ import {
   normalizeOfferDesign,
 } from "./offerDesignTypes";
 import type { GrowthSystemData } from "./growthSystemTypes";
+import {
+  type ProofAuthorityData,
+  emptyProofAuthority,
+  normalizeProofAuthority,
+} from "./proofAuthorityTypes";
 
 export function useBlueprint() {
   const { activeSubAccountId } = useWorkspace();
