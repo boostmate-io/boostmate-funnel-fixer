@@ -120,6 +120,7 @@ const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType 
           <OfferEcosystemTab
             blueprintId={blueprintId}
             offerDesign={data}
+            onChangeOfferDesign={onChange}
             saving={saving}
             businessType={businessType}
           />
