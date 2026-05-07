@@ -901,54 +901,19 @@ const BlueprintViewMode = ({
               )}
 
               {/* Objections & Beliefs */}
-              {(proof.objections.objections.length > 0 ||
-                proof.objections.failed_solutions.length > 0 ||
-                proof.objections.faqs.length > 0) && (
+              {proof.objections.objections.length > 0 && (
                 <SubBlock title="Objections & Beliefs">
-                  {proof.objections.objections.length > 0 && (
-                    <div className="space-y-2">
-                      {proof.objections.objections.map((o) => (
-                        <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                          {o.objection && <p className="text-sm font-semibold text-foreground">"{o.objection}"</p>}
-                          {o.why_believed && <p className="text-xs text-muted-foreground mt-1"><span className="font-medium">Why believed:</span> {o.why_believed}</p>}
-                          {o.reframe && <p className="text-sm text-primary mt-1"><span className="font-medium">Reframe:</span> {o.reframe}</p>}
-                          {o.supporting_proof && <p className="text-xs text-foreground/80 mt-1"><span className="font-medium">Proof:</span> {o.supporting_proof}</p>}
-                          {o.emotional_concern && <p className="text-xs text-muted-foreground mt-1 italic">{o.emotional_concern}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {proof.objections.failed_solutions.length > 0 && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                        Failed previous solutions
-                      </p>
-                      <div className="space-y-2">
-                        {proof.objections.failed_solutions.map((s) => (
-                          <div key={s.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                            {s.what_tried && <p className="text-sm font-semibold text-foreground">{s.what_tried}</p>}
-                            {s.why_failed && <p className="text-xs text-muted-foreground mt-1">Why it failed: {s.why_failed}</p>}
-                            {s.why_different && <p className="text-xs text-primary mt-1">Why we're different: {s.why_different}</p>}
-                          </div>
-                        ))}
+                  <div className="space-y-2">
+                    {proof.objections.objections.map((o) => (
+                      <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                        {o.objection && <p className="text-sm font-semibold text-foreground">"{o.objection}"</p>}
+                        {o.why_believed && <p className="text-xs text-muted-foreground mt-1"><span className="font-medium">Why believed:</span> {o.why_believed}</p>}
+                        {o.reframe && <p className="text-sm text-primary mt-1"><span className="font-medium">Reframe:</span> {o.reframe}</p>}
+                        {o.supporting_proof && <p className="text-xs text-foreground/80 mt-1"><span className="font-medium">Proof:</span> {o.supporting_proof}</p>}
+                        {o.emotional_concern && <p className="text-xs text-muted-foreground mt-1 italic">{o.emotional_concern}</p>}
                       </div>
-                    </div>
-                  )}
-                  {proof.objections.faqs.length > 0 && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                        FAQs
-                      </p>
-                      <div className="space-y-2">
-                        {proof.objections.faqs.map((f) => (
-                          <div key={f.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                            {f.question && <p className="text-sm font-semibold text-foreground">Q: {f.question}</p>}
-                            {f.answer && <p className="text-sm text-muted-foreground mt-1">A: {f.answer}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </SubBlock>
               )}
 
