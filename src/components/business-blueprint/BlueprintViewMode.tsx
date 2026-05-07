@@ -105,6 +105,18 @@ const SubBlock = ({
 
 const hasText = (v?: string | null) => Boolean(v && v.toString().trim());
 
+const getScrollableParents = (el: HTMLElement): HTMLElement[] => {
+  const parents: HTMLElement[] = [];
+  let parent = el.parentElement;
+  while (parent && parent !== document.body) {
+    const { overflowY } = window.getComputedStyle(parent);
+    const canScroll = /(auto|scroll|overlay)/.test(overflowY);
+    if (canScroll && parent.scrollHeight > parent.clientHeight + 1) parents.push(parent);
+    parent = parent.parentElement;
+  }
+  return parents;
+};
+
 const Field = ({ label, value }: { label: string; value?: string | null }) => {
   if (!value || !value.toString().trim()) return null;
   // Detect bullet-style content (lines starting with `- `)
@@ -287,14 +299,24 @@ const BlueprintViewMode = ({
   }, []);
 
   const scrollTo = (id: string) => {
-    const container = scrollContainerRef.current;
     const el = document.getElementById(id);
-    if (!el || !container) return;
-    const containerTop = container.getBoundingClientRect().top;
-    const elTop = el.getBoundingClientRect().top;
-    const offset = 72; // sticky header height
-    container.scrollTo({
-      top: container.scrollTop + (elTop - containerTop) - offset,
+    if (!el) return;
+    const topbar = document.querySelector<HTMLElement>("[data-blueprint-topbar]");
+    const offset = (topbar?.getBoundingClientRect().height ?? 56) + 16;
+    const scrollParents = getScrollableParents(el);
+
+    // In-app view can have nested scroll containers (dashboard main + blueprint root).
+    // Reset inner containers first so the final window/outer scroll calculation is exact.
+    scrollParents.forEach((scrollElement) => {
+      const scrollerRect = scrollElement.getBoundingClientRect();
+      scrollElement.scrollTo({
+        top: Math.max(0, scrollElement.scrollTop + el.getBoundingClientRect().top - scrollerRect.top - offset),
+        behavior: "auto",
+      });
+    });
+
+    window.scrollTo({
+      top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - offset),
       behavior: "smooth",
     });
     setActiveId(id);
@@ -303,7 +325,7 @@ const BlueprintViewMode = ({
   return (
     <div ref={scrollContainerRef} className="h-full overflow-y-auto bg-background-dashboard print-root">
       {/* Sticky section navigation bar */}
-      <div className="sticky top-0 z-10 backdrop-blur bg-card/90 border-b border-border no-print">
+      <div data-blueprint-topbar className="sticky top-0 z-10 backdrop-blur bg-card/90 border-b border-border no-print">
         <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center gap-3">
           {/* Left: back + title */}
           <div className="flex items-center gap-2 shrink-0 mr-auto min-w-0">
