@@ -103,6 +103,7 @@ const BusinessBlueprintModule = () => {
           growth={growthData}
           mappings={mappings}
           offers={offers}
+          proofAuthority={proofAuthority}
           onBack={() => setMode("overview")}
           onShare={() => setShareOpen(true)}
         />

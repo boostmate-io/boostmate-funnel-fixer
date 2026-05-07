@@ -26,6 +26,9 @@ import {
 import {
   type GrowthSystemData, type FunnelMappingRow, getFunnelTypeLabel,
 } from "./growthSystemTypes";
+import {
+  type ProofAuthorityData, emptyProofAuthority,
+} from "./proofAuthorityTypes";
 import { getBusinessType } from "./businessTypes";
 import type { EcosystemOfferRow } from "./useEcosystemOffers";
 
@@ -46,6 +49,7 @@ interface Props {
   growth: GrowthSystemData;
   mappings: FunnelMappingRow[];
   offers: EcosystemOfferRow[];
+  proofAuthority?: ProofAuthorityData;
   /** When set, shows a "Back" button calling this. */
   onBack?: () => void;
   onShare?: () => void;
@@ -145,10 +149,12 @@ const BlueprintViewMode = ({
   growth,
   mappings,
   offers,
+  proofAuthority,
   onBack,
   onShare,
   isPublic,
 }: Props) => {
+  const proof = proofAuthority ?? emptyProofAuthority();
   const bt = getBusinessType(workspace.business_type);
   const cur = getCurrencySymbol(workspace.currency);
   const offerName = (id?: string | null) =>
@@ -209,13 +215,31 @@ const BlueprintViewMode = ({
     growth.ascension?.reactivation_enabled,
   );
 
+  const hasProof = Boolean(
+    (proof.authority?.authority_types?.length ?? 0) > 0 ||
+    (proof.authority?.credibility_foundations?.length ?? 0) > 0 ||
+    (proof.authority?.trust_reason && proof.authority.trust_reason.trim()) ||
+    (proof.authority?.signature_proof && proof.authority.signature_proof.trim()) ||
+    (proof.authority?.founder_stories?.length ?? 0) > 0 ||
+    (proof.social_proof?.metrics?.length ?? 0) > 0 ||
+    (proof.social_proof?.client_results?.length ?? 0) > 0 ||
+    (proof.social_proof?.testimonials?.length ?? 0) > 0 ||
+    (proof.social_proof?.authority_assets?.length ?? 0) > 0 ||
+    (proof.objections?.objections?.length ?? 0) > 0 ||
+    (proof.objections?.failed_solutions?.length ?? 0) > 0 ||
+    (proof.objections?.faqs?.length ?? 0) > 0 ||
+    (proof.educational?.lessons?.length ?? 0) > 0 ||
+    (proof.educational?.mistakes?.length ?? 0) > 0 ||
+    (proof.educational?.belief_shifts?.length ?? 0) > 0,
+  );
+
   const navSections = [
     { id: "overview", label: "Overview", hasContent: hasOverview },
     { id: "customer-clarity", label: "Customer Clarity", hasContent: hasClarity },
     { id: "offer-design", label: "Offer Design", hasContent: hasOffer },
     { id: "growth-system", label: "Growth System", hasContent: hasGrowth },
     { id: "brand-strategy", label: "Brand Strategy", hasContent: false },
-    { id: "proof-authority", label: "Proof & Authority", hasContent: false },
+    { id: "proof-authority", label: "Proof & Authority", hasContent: hasProof },
   ];
 
   const [activeId, setActiveId] = useState<string>("overview");
@@ -713,13 +737,288 @@ const BlueprintViewMode = ({
           </div>
         </Section>
 
-        {/* ============= PROOF & AUTHORITY (placeholder) ============= */}
+        {/* ============= PROOF & AUTHORITY ============= */}
         <Section id="proof-authority" title="Proof & Authority" icon={Award}>
-          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-5 py-8 text-center">
-            <p className="text-sm text-muted-foreground italic">
-              Proof & authority assets haven't been added yet.
-            </p>
-          </div>
+          {!hasProof ? (
+            <div className="rounded-lg border border-dashed border-border bg-muted/20 px-5 py-8 text-center">
+              <p className="text-sm text-muted-foreground italic">
+                Proof & authority assets haven't been added yet.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Authority Positioning */}
+              {(proof.authority.authority_types.length > 0 ||
+                proof.authority.credibility_foundations.length > 0 ||
+                proof.authority.trust_reason ||
+                proof.authority.signature_proof) && (
+                <SubBlock title="Authority Positioning">
+                  {proof.authority.authority_types.length > 0 && (
+                    <div className="rounded-lg border border-border bg-card px-5 py-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Authority types
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {proof.authority.authority_types.map((t) => (
+                          <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {proof.authority.credibility_foundations.length > 0 && (
+                    <div className="rounded-lg border border-border bg-card px-5 py-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Credibility foundations
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {proof.authority.credibility_foundations.map((t) => (
+                          <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <Field label="Trust reason" value={proof.authority.trust_reason} />
+                  <Field label="Signature proof" value={proof.authority.signature_proof} />
+                </SubBlock>
+              )}
+
+              {/* Social Proof Library */}
+              {(proof.social_proof.metrics.length > 0 ||
+                proof.social_proof.client_results.length > 0 ||
+                proof.social_proof.testimonials.length > 0 ||
+                proof.social_proof.authority_assets.length > 0) && (
+                <SubBlock title="Social Proof Library">
+                  {proof.social_proof.metrics.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Credibility metrics
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {proof.social_proof.metrics.map((m) => (
+                          <div key={m.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                            <p className="text-base font-semibold text-foreground">{m.value || "—"}</p>
+                            <p className="text-sm text-muted-foreground">{m.metric}</p>
+                            {m.context && <p className="text-xs text-muted-foreground/80 mt-1">{m.context}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {proof.social_proof.client_results.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Client results
+                      </p>
+                      <div className="space-y-2">
+                        {proof.social_proof.client_results.map((r) => (
+                          <div key={r.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              {r.client_type && <p className="text-sm font-semibold text-foreground">{r.client_type}</p>}
+                              {r.proof_type && <Badge variant="outline" className="text-[10px]">{r.proof_type}</Badge>}
+                            </div>
+                            {r.problem && <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-foreground/80">Problem:</span> {r.problem}</p>}
+                            {r.result_achieved && <p className="text-sm text-primary mt-1"><span className="font-medium">Result:</span> {r.result_achieved}{r.timeframe ? ` (${r.timeframe})` : ""}</p>}
+                            {r.measurable_outcome && <p className="text-xs text-muted-foreground mt-1">{r.measurable_outcome}</p>}
+                            {r.explanation && <p className="text-sm text-foreground/80 mt-1">{r.explanation}</p>}
+                            {r.quote && <blockquote className="text-sm italic text-foreground/80 mt-2 border-l-2 border-primary/40 pl-3">"{r.quote}"</blockquote>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {proof.social_proof.testimonials.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Testimonials
+                      </p>
+                      <div className="space-y-2">
+                        {proof.social_proof.testimonials.map((t) => (
+                          <div key={t.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                            {t.quote && <blockquote className="text-sm italic text-foreground/90 border-l-2 border-primary/40 pl-3">"{t.quote}"</blockquote>}
+                            <div className="mt-2 flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                              {t.client_name && <span className="font-medium text-foreground/80">— {t.client_name}</span>}
+                              {t.client_type && <span>· {t.client_type}</span>}
+                              {t.tone && <Badge variant="secondary" className="text-[10px]">{t.tone}</Badge>}
+                            </div>
+                            {t.main_outcome && <p className="text-xs text-primary mt-1">→ {t.main_outcome}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {proof.social_proof.authority_assets.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Authority assets
+                      </p>
+                      <div className="space-y-2">
+                        {proof.social_proof.authority_assets.map((a) => (
+                          <div key={a.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                            {a.name && <p className="text-sm font-semibold text-foreground">{a.name}</p>}
+                            {a.description && <p className="text-sm text-muted-foreground mt-0.5">{a.description}</p>}
+                            {a.why_it_matters && <p className="text-xs text-primary mt-1">{a.why_it_matters}</p>}
+                            {a.external_link && (
+                              <a href={a.external_link} target="_blank" rel="noreferrer" className="text-xs text-primary underline mt-1 inline-block break-all">
+                                {a.external_link}
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </SubBlock>
+              )}
+
+              {/* Objections & Beliefs */}
+              {(proof.objections.objections.length > 0 ||
+                proof.objections.failed_solutions.length > 0 ||
+                proof.objections.faqs.length > 0) && (
+                <SubBlock title="Objections & Beliefs">
+                  {proof.objections.objections.length > 0 && (
+                    <div className="space-y-2">
+                      {proof.objections.objections.map((o) => (
+                        <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                          {o.objection && <p className="text-sm font-semibold text-foreground">"{o.objection}"</p>}
+                          {o.why_believed && <p className="text-xs text-muted-foreground mt-1"><span className="font-medium">Why believed:</span> {o.why_believed}</p>}
+                          {o.reframe && <p className="text-sm text-primary mt-1"><span className="font-medium">Reframe:</span> {o.reframe}</p>}
+                          {o.supporting_proof && <p className="text-xs text-foreground/80 mt-1"><span className="font-medium">Proof:</span> {o.supporting_proof}</p>}
+                          {o.emotional_concern && <p className="text-xs text-muted-foreground mt-1 italic">{o.emotional_concern}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {proof.objections.failed_solutions.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Failed previous solutions
+                      </p>
+                      <div className="space-y-2">
+                        {proof.objections.failed_solutions.map((s) => (
+                          <div key={s.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                            {s.what_tried && <p className="text-sm font-semibold text-foreground">{s.what_tried}</p>}
+                            {s.why_failed && <p className="text-xs text-muted-foreground mt-1">Why it failed: {s.why_failed}</p>}
+                            {s.why_different && <p className="text-xs text-primary mt-1">Why we're different: {s.why_different}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {proof.objections.faqs.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        FAQs
+                      </p>
+                      <div className="space-y-2">
+                        {proof.objections.faqs.map((f) => (
+                          <div key={f.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                            {f.question && <p className="text-sm font-semibold text-foreground">Q: {f.question}</p>}
+                            {f.answer && <p className="text-sm text-muted-foreground mt-1">A: {f.answer}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </SubBlock>
+              )}
+
+              {/* Stories & Educational Assets */}
+              {(proof.authority.founder_stories.length > 0 ||
+                proof.educational.lessons.length > 0 ||
+                proof.educational.mistakes.length > 0 ||
+                proof.educational.belief_shifts.length > 0) && (
+                <SubBlock title="Stories & Educational Assets">
+                  {proof.authority.founder_stories.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Founder stories
+                      </p>
+                      <div className="space-y-2">
+                        {proof.authority.founder_stories.map((s) => (
+                          <div key={s.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                            {s.title && <p className="text-sm font-semibold text-foreground">{s.title}</p>}
+                            {s.before && <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-foreground/80">Before:</span> {s.before}</p>}
+                            {s.challenge && <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-foreground/80">Challenge:</span> {s.challenge}</p>}
+                            {s.breakthrough && <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-foreground/80">Breakthrough:</span> {s.breakthrough}</p>}
+                            {s.learned && <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-foreground/80">Learned:</span> {s.learned}</p>}
+                            {s.after && <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-foreground/80">After:</span> {s.after}</p>}
+                            {s.core_lesson && <p className="text-sm text-primary mt-1">→ {s.core_lesson}</p>}
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                              {s.emotional_theme && <Badge variant="secondary" className="text-[10px]">{s.emotional_theme}</Badge>}
+                              {s.external_link && (
+                                <a href={s.external_link} target="_blank" rel="noreferrer" className="text-xs text-primary underline break-all">
+                                  {s.external_link}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {proof.educational.lessons.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Value lessons
+                      </p>
+                      <div className="space-y-2">
+                        {proof.educational.lessons.map((l) => (
+                          <div key={l.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                            {l.title && <p className="text-sm font-semibold text-foreground">{l.title}</p>}
+                            {l.main_topic && <p className="text-xs text-muted-foreground mt-0.5">{l.main_topic}</p>}
+                            {l.common_challenge && <p className="text-sm text-foreground/80 mt-1"><span className="font-medium">Challenge:</span> {l.common_challenge}</p>}
+                            {l.core_insight && <p className="text-sm text-primary mt-1"><span className="font-medium">Insight:</span> {l.core_insight}</p>}
+                            {l.why_matters && <p className="text-xs text-muted-foreground mt-1">{l.why_matters}</p>}
+                            {l.breakthrough_lesson && <p className="text-sm text-foreground/80 mt-1">→ {l.breakthrough_lesson}</p>}
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                              {l.cta_goal && <Badge variant="secondary" className="text-[10px]">{l.cta_goal}</Badge>}
+                              {l.external_link && (
+                                <a href={l.external_link} target="_blank" rel="noreferrer" className="text-xs text-primary underline break-all">
+                                  {l.external_link}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {proof.educational.mistakes.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Common mistakes
+                      </p>
+                      <div className="space-y-2">
+                        {proof.educational.mistakes.map((m) => (
+                          <div key={m.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                            {m.mistake && <p className="text-sm font-semibold text-foreground">{m.mistake}</p>}
+                            {m.why_made && <p className="text-xs text-muted-foreground mt-1">Why: {m.why_made}</p>}
+                            {m.better_approach && <p className="text-xs text-primary mt-1">Better: {m.better_approach}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {proof.educational.belief_shifts.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Belief shifts
+                      </p>
+                      <div className="space-y-2">
+                        {proof.educational.belief_shifts.map((b) => (
+                          <div key={b.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                            {b.old_belief && <p className="text-sm text-muted-foreground"><span className="font-medium text-foreground/80">Old:</span> {b.old_belief}</p>}
+                            {b.new_belief && <p className="text-sm text-primary mt-1"><span className="font-medium">New:</span> {b.new_belief}</p>}
+                            {b.why_matters && <p className="text-xs text-muted-foreground mt-1">{b.why_matters}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </SubBlock>
+              )}
+            </>
+          )}
         </Section>
 
         <footer className="mt-16 pt-8 border-t border-border text-center text-xs text-muted-foreground">

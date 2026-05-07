@@ -15,6 +15,9 @@ import {
 import {
   normalizeGrowthSystem, type GrowthSystemData, type FunnelMappingRow,
 } from "@/components/business-blueprint/growthSystemTypes";
+import {
+  normalizeProofAuthority, type ProofAuthorityData,
+} from "@/components/business-blueprint/proofAuthorityTypes";
 import type { CustomerClarityData } from "@/components/business-blueprint/types";
 import type { EcosystemOfferRow } from "@/components/business-blueprint/useEcosystemOffers";
 
@@ -26,6 +29,7 @@ const SharedBlueprint = () => {
   const [clarity, setClarity] = useState<CustomerClarityData>({});
   const [offer, setOffer] = useState<OfferDesignData>(normalizeOfferDesign(null));
   const [growth, setGrowth] = useState<GrowthSystemData>(normalizeGrowthSystem(null));
+  const [proofAuthority, setProofAuthority] = useState<ProofAuthorityData>(normalizeProofAuthority(null));
   const [mappings, setMappings] = useState<FunnelMappingRow[]>([]);
   const [offers, setOffers] = useState<EcosystemOfferRow[]>([]);
   const [workspace, setWorkspace] = useState<{
@@ -58,6 +62,7 @@ const SharedBlueprint = () => {
       setClarity((bp.customer_clarity as any) || {});
       setOffer(normalizeOfferDesign(bp.offer_stack));
       setGrowth(normalizeGrowthSystem(bp.growth_system));
+      setProofAuthority(normalizeProofAuthority((bp as any).proof_authority));
 
       const [{ data: mappingRows }, { data: offerRows }, { data: ws }, { data: sub }] =
         await Promise.all([
@@ -126,6 +131,7 @@ const SharedBlueprint = () => {
         growth={growth}
         mappings={mappings}
         offers={offers}
+        proofAuthority={proofAuthority}
         isPublic
       />
     </div>
