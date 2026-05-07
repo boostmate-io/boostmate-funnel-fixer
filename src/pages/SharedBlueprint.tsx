@@ -29,6 +29,7 @@ const SharedBlueprint = () => {
   const [clarity, setClarity] = useState<CustomerClarityData>({});
   const [offer, setOffer] = useState<OfferDesignData>(normalizeOfferDesign(null));
   const [growth, setGrowth] = useState<GrowthSystemData>(normalizeGrowthSystem(null));
+  const [proofAuthority, setProofAuthority] = useState<ProofAuthorityData>(normalizeProofAuthority(null));
   const [mappings, setMappings] = useState<FunnelMappingRow[]>([]);
   const [offers, setOffers] = useState<EcosystemOfferRow[]>([]);
   const [workspace, setWorkspace] = useState<{
