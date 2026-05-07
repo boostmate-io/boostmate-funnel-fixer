@@ -15,6 +15,9 @@ import {
 import {
   normalizeGrowthSystem, type GrowthSystemData, type FunnelMappingRow,
 } from "@/components/business-blueprint/growthSystemTypes";
+import {
+  normalizeProofAuthority, type ProofAuthorityData,
+} from "@/components/business-blueprint/proofAuthorityTypes";
 import type { CustomerClarityData } from "@/components/business-blueprint/types";
 import type { EcosystemOfferRow } from "@/components/business-blueprint/useEcosystemOffers";
 
