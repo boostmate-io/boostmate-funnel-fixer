@@ -29,9 +29,10 @@ interface Props {
   onChange: (patch: Partial<OfferAngleData>) => void;
   saving: boolean;
   businessType?: string;
+  embedded?: boolean;
 }
 
-const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
+const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
   const bt = getBusinessType(businessType);
   const noun = bt.customerNoun;
   const progress = calcAngleProgress(data);
