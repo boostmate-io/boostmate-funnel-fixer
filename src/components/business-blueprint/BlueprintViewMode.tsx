@@ -291,11 +291,17 @@ const BlueprintViewMode = ({
   }, []);
 
   const scrollTo = (id: string) => {
+    const container = scrollContainerRef.current;
     const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-      setActiveId(id);
-    }
+    if (!el || !container) return;
+    const containerTop = container.getBoundingClientRect().top;
+    const elTop = el.getBoundingClientRect().top;
+    const offset = 72; // sticky header height
+    container.scrollTo({
+      top: container.scrollTop + (elTop - containerTop) - offset,
+      behavior: "smooth",
+    });
+    setActiveId(id);
   };
 
   return (
