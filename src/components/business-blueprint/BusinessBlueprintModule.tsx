@@ -216,12 +216,10 @@ const BusinessBlueprintModule = () => {
         );
       case "proof-authority":
         return (
-          <PlaceholderSection
-            title="Proof & Authority"
-            description={`Build the credibility stack that makes ${bt.customerNoun} trust you instantly.`}
-            icon={Award}
-            comingNext={bt.proofExamples}
-            businessType={settings.business_type}
+          <ProofAuthoritySection
+            data={proofAuthority}
+            onChange={updateProofAuthority}
+            saving={saving}
           />
         );
     }
