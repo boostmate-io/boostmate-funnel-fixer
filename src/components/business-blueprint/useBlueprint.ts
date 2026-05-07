@@ -10,17 +10,24 @@ import {
   normalizeOfferDesign,
 } from "./offerDesignTypes";
 import type { GrowthSystemData } from "./growthSystemTypes";
+import {
+  type ProofAuthorityData,
+  emptyProofAuthority,
+  normalizeProofAuthority,
+} from "./proofAuthorityTypes";
 
 export function useBlueprint() {
   const { activeSubAccountId } = useWorkspace();
   const { user } = useAuth();
   const [blueprint, setBlueprint] = useState<BlueprintRow | null>(null);
   const [offerDesign, setOfferDesign] = useState<OfferDesignData>(emptyOfferDesign());
+  const [proofAuthority, setProofAuthority] = useState<ProofAuthorityData>(emptyProofAuthority());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const claritySaveTimer = useRef<number | null>(null);
   const offerSaveTimer = useRef<number | null>(null);
   const growthSaveTimer = useRef<number | null>(null);
+  const proofSaveTimer = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     if (!activeSubAccountId || !user) return;
@@ -58,6 +65,7 @@ export function useBlueprint() {
     // for legacy free-text values).
     const normalized = normalizeOfferDesign(row.offer_stack);
     setOfferDesign(normalized);
+    setProofAuthority(normalizeProofAuthority(row.proof_authority));
     setBlueprint(row);
     setLoading(false);
   }, [activeSubAccountId, user]);
@@ -135,6 +143,28 @@ export function useBlueprint() {
     [],
   );
 
+  const updateProofAuthority = useCallback(
+    (patch: Partial<ProofAuthorityData>) => {
+      const blueprintId = blueprint?.id;
+      setProofAuthority((prev) => {
+        const next: ProofAuthorityData = { ...prev, ...patch };
+        if (proofSaveTimer.current) window.clearTimeout(proofSaveTimer.current);
+        proofSaveTimer.current = window.setTimeout(async () => {
+          if (!blueprintId) return;
+          setSaving(true);
+          const { error } = await supabase
+            .from("business_blueprints")
+            .update({ proof_authority: next as any })
+            .eq("id", blueprintId);
+          setSaving(false);
+          if (error) toast.error("Save failed");
+        }, 800);
+        return next;
+      });
+    },
+    [blueprint?.id],
+  );
+
   const setShareToken = useCallback((token: string | null) => {
     setBlueprint((prev) => (prev ? { ...prev, share_token: token } : prev));
   }, []);
@@ -142,11 +172,13 @@ export function useBlueprint() {
   return {
     blueprint,
     offerDesign,
+    proofAuthority,
     loading,
     saving,
     updateCustomerClarity,
     updateOfferDesign,
     updateGrowthSystem,
+    updateProofAuthority,
     setShareToken,
     reload: load,
   };

@@ -29,9 +29,10 @@ interface Props {
   onChange: (patch: Partial<OfferAngleData>) => void;
   saving: boolean;
   businessType?: string;
+  embedded?: boolean;
 }
 
-const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
+const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
   const bt = getBusinessType(businessType);
   const noun = bt.customerNoun;
   const progress = calcAngleProgress(data);
@@ -84,6 +85,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType }: Props) => {
       progress={progress}
       saving={saving}
       feedback={feedback}
+      embedded={embedded}
     >
       {/* 1. Main Offer Name */}
       <div className="rounded-xl border border-border bg-card p-5 mb-4">

@@ -36,6 +36,7 @@ interface Props {
   onChange: (patch: Partial<PricingData>) => void;
   saving: boolean;
   businessType?: string;
+  embedded?: boolean;
 }
 
 const numberOrEmpty = (raw: string): number | "" => {
@@ -44,7 +45,7 @@ const numberOrEmpty = (raw: string): number | "" => {
   return Number.isFinite(n) ? n : "";
 };
 
-const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
+const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const progress = calcPricingProgress(data);
@@ -95,6 +96,7 @@ const PricingTab = ({ data, onChange, saving, businessType }: Props) => {
       progress={progress}
       saving={saving}
       feedback={feedback}
+      embedded={embedded}
     >
       <div className="space-y-5">
         {/* Core Price */}

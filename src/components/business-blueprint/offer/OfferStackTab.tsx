@@ -37,9 +37,10 @@ interface Props {
   onChange: (patch: Partial<OfferStackData>) => void;
   saving: boolean;
   businessType?: string;
+  embedded?: boolean;
 }
 
-const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
+const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
   const bt = getBusinessType(businessType);
   const noun = bt.customerNoun;
   const progress = calcStackProgress(data);
@@ -147,6 +148,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType }: Props) => {
       progress={progress}
       saving={saving}
       feedback={feedback}
+      embedded={embedded}
     >
       <div className="space-y-5">
         {/* Core Deliverables */}

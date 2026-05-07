@@ -23,6 +23,8 @@ import BlueprintOverview from "./BlueprintOverview";
 import BlueprintSetupWizard from "./BlueprintSetupWizard";
 import BlueprintViewMode from "./BlueprintViewMode";
 import BlueprintShareDialog from "./BlueprintShareDialog";
+import ProofAuthoritySection from "./ProofAuthoritySection";
+import { calcProofAuthorityProgress } from "./proofAuthorityTypes";
 
 const sections: { id: SectionId; label: string; icon: typeof Users }[] = [
   { id: "customer-clarity", label: "Customer Clarity", icon: Users },
@@ -39,7 +41,7 @@ const BusinessBlueprintModule = () => {
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
   const [setupOpen, setSetupOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const { blueprint, offerDesign, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, setShareToken } = useBlueprint();
+  const { blueprint, offerDesign, proofAuthority, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, updateProofAuthority, setShareToken } = useBlueprint();
   const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
   const { activeSubAccount } = useWorkspace() as any;
 
@@ -69,12 +71,13 @@ const BusinessBlueprintModule = () => {
   const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
   const offerProgress = calculateOfferDesignProgress(offerData, tierCounts);
   const growthProgress = calculateGrowthSystemProgress(growthData, mappings);
+  const proofProgress = calcProofAuthorityProgress(proofAuthority);
   const sectionProgress: Record<SectionId, number> = {
     "customer-clarity": clarityProgress,
     "offer-design": offerProgress,
     "growth-system": growthProgress,
     "brand-strategy": 0,
-    "proof-authority": 0,
+    "proof-authority": proofProgress,
   };
 
   const handleEdit = (section?: SectionId) => {
@@ -213,12 +216,10 @@ const BusinessBlueprintModule = () => {
         );
       case "proof-authority":
         return (
-          <PlaceholderSection
-            title="Proof & Authority"
-            description={`Build the credibility stack that makes ${bt.customerNoun} trust you instantly.`}
-            icon={Award}
-            comingNext={bt.proofExamples}
-            businessType={settings.business_type}
+          <ProofAuthoritySection
+            data={proofAuthority}
+            onChange={updateProofAuthority}
+            saving={saving}
           />
         );
     }
