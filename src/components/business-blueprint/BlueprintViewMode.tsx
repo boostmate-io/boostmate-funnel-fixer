@@ -215,13 +215,31 @@ const BlueprintViewMode = ({
     growth.ascension?.reactivation_enabled,
   );
 
+  const hasProof = Boolean(
+    (proof.authority?.authority_types?.length ?? 0) > 0 ||
+    (proof.authority?.credibility_foundations?.length ?? 0) > 0 ||
+    (proof.authority?.trust_reason && proof.authority.trust_reason.trim()) ||
+    (proof.authority?.signature_proof && proof.authority.signature_proof.trim()) ||
+    (proof.authority?.founder_stories?.length ?? 0) > 0 ||
+    (proof.social_proof?.metrics?.length ?? 0) > 0 ||
+    (proof.social_proof?.client_results?.length ?? 0) > 0 ||
+    (proof.social_proof?.testimonials?.length ?? 0) > 0 ||
+    (proof.social_proof?.authority_assets?.length ?? 0) > 0 ||
+    (proof.objections?.objections?.length ?? 0) > 0 ||
+    (proof.objections?.failed_solutions?.length ?? 0) > 0 ||
+    (proof.objections?.faqs?.length ?? 0) > 0 ||
+    (proof.educational?.lessons?.length ?? 0) > 0 ||
+    (proof.educational?.mistakes?.length ?? 0) > 0 ||
+    (proof.educational?.belief_shifts?.length ?? 0) > 0,
+  );
+
   const navSections = [
     { id: "overview", label: "Overview", hasContent: hasOverview },
     { id: "customer-clarity", label: "Customer Clarity", hasContent: hasClarity },
     { id: "offer-design", label: "Offer Design", hasContent: hasOffer },
     { id: "growth-system", label: "Growth System", hasContent: hasGrowth },
     { id: "brand-strategy", label: "Brand Strategy", hasContent: false },
-    { id: "proof-authority", label: "Proof & Authority", hasContent: false },
+    { id: "proof-authority", label: "Proof & Authority", hasContent: hasProof },
   ];
 
   const [activeId, setActiveId] = useState<string>("overview");
