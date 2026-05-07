@@ -61,12 +61,15 @@ export default function CoreOfferDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl p-0 gap-0 max-h-[92vh] flex flex-col">
+      <DialogContent
+        className="max-w-5xl p-0 gap-0 max-h-[92vh] flex flex-col"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader className="px-6 py-4 border-b border-border shrink-0">
           <DialogTitle className="text-xl font-display">{title}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
+        <div key={open ? "open" : "closed"} className="flex-1 overflow-y-auto">
           <div className="px-4 py-4 space-y-6">
             <OfferAngleTab
               data={data.angle}

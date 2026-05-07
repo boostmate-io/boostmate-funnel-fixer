@@ -1,14 +1,15 @@
 // =============================================================================
-// ProofAuthoritySection — 4-tab strategic Trust/Proof/Persuasion module.
+// ProofAuthoritySection — Trust / Proof / Persuasion module.
+// Uses the SAME sticky sub-tab layout as CustomerClaritySection / OfferDesign.
+// 4 tabs: Authority Positioning · Social Proof · Objections & Beliefs · Stories & Educational
 // Text-first. No file uploads. Optional external links only.
 // =============================================================================
 
-import { useCallback } from "react";
+import { useState } from "react";
 import {
   Award, Users2, MessageSquareWarning, BookOpen, Plus, Trash2, Link as LinkIcon,
-  Sparkles, Shield, Star, BadgeCheck, BarChart3, Quote, Trophy, Lightbulb, AlertTriangle, RefreshCw,
+  Sparkles, Shield, Star, BadgeCheck, BarChart3, Quote, Trophy, Lightbulb, Check, Info,
 } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,11 +30,7 @@ import {
   type Testimonial,
   type AuthorityAsset,
   type Objection,
-  type FailedSolution,
-  type FAQ,
   type ValueLesson,
-  type CommonMistake,
-  type BeliefShift,
   AUTHORITY_TYPE_OPTIONS,
   CREDIBILITY_FOUNDATION_OPTIONS,
   EMOTIONAL_THEME_OPTIONS,
@@ -51,16 +48,43 @@ interface Props {
 
 const newId = () => crypto.randomUUID();
 
-// ----- Shared building blocks -----
+type TabId = "authority" | "social" | "objections" | "stories";
+
+const TABS: { id: TabId; label: string; icon: typeof Award; description: string; insight: string }[] = [
+  {
+    id: "authority",
+    label: "Authority Positioning",
+    icon: BadgeCheck,
+    description: "Define how your authority should be perceived in the market.",
+    insight: "Strong positioning is the foundation. Without clarity on your authority type and credibility, all other proof feels generic.",
+  },
+  {
+    id: "social",
+    label: "Social Proof Library",
+    icon: Users2,
+    description: "Reusable proof assets — metrics, results, testimonials and authority signals.",
+    insight: "AI copy is only as persuasive as the proof you feed it. Specific numbers, named clients and structured outcomes outperform vague claims every time.",
+  },
+  {
+    id: "objections",
+    label: "Objections & Beliefs",
+    icon: MessageSquareWarning,
+    description: "Capture the doubts that block buying — and the reframes that dissolve them.",
+    insight: "Sales pages and emails convert when they address the exact objections in the prospect's head. The more specific, the better.",
+  },
+  {
+    id: "stories",
+    label: "Stories & Educational Assets",
+    icon: BookOpen,
+    description: "Reusable narrative arcs and value lessons for nurture, VSLs, webinars and content.",
+    insight: "Stories and lessons are the raw material of every great campaign. Capture them once, reuse them everywhere.",
+  },
+];
+
+// ===== Shared building blocks =====
 
 const SectionCard = ({
-  icon: Icon,
-  title,
-  description,
-  count,
-  onAdd,
-  addLabel,
-  children,
+  icon: Icon, title, description, count, onAdd, addLabel, children,
 }: {
   icon: any;
   title: string;
@@ -102,10 +126,7 @@ const EmptyHint = ({ text }: { text: string }) => (
 );
 
 const EntryShell = ({
-  index,
-  onDelete,
-  children,
-  badge,
+  index, onDelete, children, badge,
 }: {
   index?: number;
   onDelete: () => void;
@@ -123,9 +144,7 @@ const EntryShell = ({
         {badge}
       </div>
       <Button
-        size="icon"
-        variant="ghost"
-        onClick={onDelete}
+        size="icon" variant="ghost" onClick={onDelete}
         className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
       >
         <Trash2 className="w-4 h-4" />
@@ -136,9 +155,7 @@ const EntryShell = ({
 );
 
 const Field = ({
-  label,
-  hint,
-  children,
+  label, hint, children,
 }: {
   label: string;
   hint?: string;
@@ -152,8 +169,7 @@ const Field = ({
 );
 
 const LinkField = ({
-  value,
-  onChange,
+  value, onChange,
 }: {
   value?: string;
   onChange: (v: string) => void;
@@ -176,174 +192,77 @@ const LinkField = ({
 // ============================================================================
 
 const AuthorityTab = ({
-  data,
-  onChange,
+  data, onChange,
 }: {
   data: AuthorityPositioningData;
   onChange: (patch: Partial<AuthorityPositioningData>) => void;
-}) => {
-  const stories = data.founder_stories;
-  const updateStory = (id: string, patch: Partial<FounderStory>) =>
-    onChange({ founder_stories: stories.map((s) => (s.id === id ? { ...s, ...patch } : s)) });
-  const removeStory = (id: string) => onChange({ founder_stories: stories.filter((s) => s.id !== id) });
-  const addStory = () =>
-    onChange({ founder_stories: [...stories, { id: newId() }] });
+}) => (
+  <div className="space-y-5">
+    <SectionCard icon={BadgeCheck} title="Authority Type" description="How would your authority best be described?">
+      <MultiSelectChips
+        options={AUTHORITY_TYPE_OPTIONS}
+        value={data.authority_types}
+        onChange={(authority_types) => onChange({ authority_types })}
+        allowCustom
+      />
+    </SectionCard>
 
-  return (
-    <div className="space-y-5">
-      <SectionCard icon={BadgeCheck} title="Authority Type" description="How would your authority best be described?">
-        <MultiSelectChips
-          options={AUTHORITY_TYPE_OPTIONS}
-          value={data.authority_types}
-          onChange={(authority_types) => onChange({ authority_types })}
-        />
-      </SectionCard>
+    <SectionCard icon={Shield} title="Credibility Foundations" description="What underpins your credibility? Pick all that apply.">
+      <MultiSelectChips
+        options={CREDIBILITY_FOUNDATION_OPTIONS}
+        value={data.credibility_foundations}
+        onChange={(credibility_foundations) => onChange({ credibility_foundations })}
+        allowCustom
+      />
+    </SectionCard>
 
-      <SectionCard icon={Shield} title="Credibility Foundations" description="What underpins your credibility?">
-        <MultiSelectChips
-          options={CREDIBILITY_FOUNDATION_OPTIONS}
-          value={data.credibility_foundations}
-          onChange={(credibility_foundations) => onChange({ credibility_foundations })}
-        />
-      </SectionCard>
+    <SectionCard icon={Sparkles} title="Why Should Clients Trust You?" description="The narrative reason prospects should choose you over the alternatives.">
+      <AutoTextarea
+        value={data.trust_reason ?? ""}
+        onChange={(e) => onChange({ trust_reason: e.target.value })}
+        placeholder="e.g. I've spent the last 8 years inside 40+ coaching businesses, helping them go from inconsistent launches to predictable $50K months — using the exact systems I now teach."
+        rows={4}
+        className="text-sm resize-none"
+      />
+    </SectionCard>
 
-      <SectionCard icon={Sparkles} title="Why should clients trust you?">
-        <AutoTextarea
-          value={data.trust_reason ?? ""}
-          onChange={(e) => onChange({ trust_reason: e.target.value })}
-          placeholder="Explain in your own words why prospects should trust you over alternatives…"
-          rows={4}
-          className="text-sm resize-none"
-        />
-      </SectionCard>
-
-      <SectionCard icon={Star} title="Signature Proof" description="The single strongest piece of proof or credibility your business has.">
-        <AutoTextarea
-          value={data.signature_proof ?? ""}
-          onChange={(e) => onChange({ signature_proof: e.target.value })}
-          placeholder="e.g. Helped 312 SaaS founders go from $0 to $30K MRR using the same playbook."
-          rows={3}
-          className="text-sm resize-none"
-        />
-      </SectionCard>
-
-      <SectionCard
-        icon={BookOpen}
-        title="Founder Stories"
-        description="Reusable narrative arcs the AI can draw from for ads, VSLs, emails…"
-        count={stories.length}
-        onAdd={addStory}
-        addLabel="Add Story"
-      >
-        {stories.length === 0 ? (
-          <EmptyHint text="No founder stories yet. Add the most defining moments of your journey." />
-        ) : (
-          stories.map((s, i) => (
-            <EntryShell key={s.id} index={i} onDelete={() => removeStory(s.id)}>
-              <Field label="Story Title">
-                <Input
-                  value={s.title ?? ""}
-                  onChange={(e) => updateStory(s.id, { title: e.target.value })}
-                  placeholder="e.g. From burnout to building my first 7-figure offer"
-                  className="h-9 text-sm"
-                />
-              </Field>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Before Situation">
-                  <AutoTextarea
-                    value={s.before ?? ""}
-                    onChange={(e) => updateStory(s.id, { before: e.target.value })}
-                    rows={2}
-                    className="text-sm resize-none"
-                  />
-                </Field>
-                <Field label="Main Challenge">
-                  <AutoTextarea
-                    value={s.challenge ?? ""}
-                    onChange={(e) => updateStory(s.id, { challenge: e.target.value })}
-                    rows={2}
-                    className="text-sm resize-none"
-                  />
-                </Field>
-                <Field label="Breakthrough Moment">
-                  <AutoTextarea
-                    value={s.breakthrough ?? ""}
-                    onChange={(e) => updateStory(s.id, { breakthrough: e.target.value })}
-                    rows={2}
-                    className="text-sm resize-none"
-                  />
-                </Field>
-                <Field label="What Was Learned">
-                  <AutoTextarea
-                    value={s.learned ?? ""}
-                    onChange={(e) => updateStory(s.id, { learned: e.target.value })}
-                    rows={2}
-                    className="text-sm resize-none"
-                  />
-                </Field>
-                <Field label="After Situation">
-                  <AutoTextarea
-                    value={s.after ?? ""}
-                    onChange={(e) => updateStory(s.id, { after: e.target.value })}
-                    rows={2}
-                    className="text-sm resize-none"
-                  />
-                </Field>
-                <Field label="Core Lesson">
-                  <AutoTextarea
-                    value={s.core_lesson ?? ""}
-                    onChange={(e) => updateStory(s.id, { core_lesson: e.target.value })}
-                    rows={2}
-                    className="text-sm resize-none"
-                  />
-                </Field>
-              </div>
-              <Field label="Emotional Theme">
-                <MultiSelectChips
-                  options={EMOTIONAL_THEME_OPTIONS}
-                  value={s.emotional_theme ? [s.emotional_theme] : []}
-                  onChange={(v) => updateStory(s.id, { emotional_theme: v[v.length - 1] ?? "" })}
-                />
-              </Field>
-              <LinkField value={s.external_link} onChange={(v) => updateStory(s.id, { external_link: v })} />
-            </EntryShell>
-          ))
-        )}
-      </SectionCard>
-    </div>
-  );
-};
+    <SectionCard icon={Star} title="Signature Proof" description="The single strongest piece of proof or credibility your business has.">
+      <AutoTextarea
+        value={data.signature_proof ?? ""}
+        onChange={(e) => onChange({ signature_proof: e.target.value })}
+        placeholder="e.g. Helped 312 SaaS founders go from $0 to $30K MRR using the same playbook — featured in TechCrunch and Forbes."
+        rows={3}
+        className="text-sm resize-none"
+      />
+    </SectionCard>
+  </div>
+);
 
 // ============================================================================
 // Tab 2 — Social Proof Library
 // ============================================================================
 
 const SocialProofTab = ({
-  data,
-  onChange,
+  data, onChange,
 }: {
   data: SocialProofData;
   onChange: (patch: Partial<SocialProofData>) => void;
 }) => {
-  // Metrics
   const updateMetric = (id: string, patch: Partial<CredibilityMetric>) =>
     onChange({ metrics: data.metrics.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
   const removeMetric = (id: string) => onChange({ metrics: data.metrics.filter((m) => m.id !== id) });
   const addMetric = () => onChange({ metrics: [...data.metrics, { id: newId() }] });
 
-  // Client results
   const updateResult = (id: string, patch: Partial<ClientResult>) =>
     onChange({ client_results: data.client_results.map((r) => (r.id === id ? { ...r, ...patch } : r)) });
   const removeResult = (id: string) => onChange({ client_results: data.client_results.filter((r) => r.id !== id) });
   const addResult = () => onChange({ client_results: [...data.client_results, { id: newId() }] });
 
-  // Testimonials
   const updateTesti = (id: string, patch: Partial<Testimonial>) =>
     onChange({ testimonials: data.testimonials.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
   const removeTesti = (id: string) => onChange({ testimonials: data.testimonials.filter((t) => t.id !== id) });
   const addTesti = () => onChange({ testimonials: [...data.testimonials, { id: newId() }] });
 
-  // Authority assets
   const updateAsset = (id: string, patch: Partial<AuthorityAsset>) =>
     onChange({ authority_assets: data.authority_assets.map((a) => (a.id === id ? { ...a, ...patch } : a)) });
   const removeAsset = (id: string) => onChange({ authority_assets: data.authority_assets.filter((a) => a.id !== id) });
@@ -354,26 +273,20 @@ const SocialProofTab = ({
       <SectionCard
         icon={BarChart3}
         title="Credibility Metrics"
-        description="Hard numbers that anchor your authority."
+        description="Hard numbers that anchor your authority — years in business, clients helped, revenue generated, audience size…"
         count={data.metrics.length}
         onAdd={addMetric}
         addLabel="Add Metric"
       >
         {data.metrics.length === 0 ? (
-          <EmptyHint text="e.g. years in business, clients helped, revenue generated…" />
+          <EmptyHint text="e.g. years in business, clients helped, revenue generated, audience size, retention rate…" />
         ) : (
           data.metrics.map((m, i) => (
             <EntryShell key={m.id} index={i} onDelete={() => removeMetric(m.id)}>
               <div className="grid md:grid-cols-3 gap-3">
-                <Field label="Metric">
-                  <Input value={m.metric ?? ""} onChange={(e) => updateMetric(m.id, { metric: e.target.value })} placeholder="Clients helped" className="h-9 text-sm" />
-                </Field>
-                <Field label="Value">
-                  <Input value={m.value ?? ""} onChange={(e) => updateMetric(m.id, { value: e.target.value })} placeholder="312" className="h-9 text-sm" />
-                </Field>
-                <Field label="Short Context">
-                  <Input value={m.context ?? ""} onChange={(e) => updateMetric(m.id, { context: e.target.value })} placeholder="…in the last 24 months" className="h-9 text-sm" />
-                </Field>
+                <Field label="Metric"><Input value={m.metric ?? ""} onChange={(e) => updateMetric(m.id, { metric: e.target.value })} placeholder="Clients helped" className="h-9 text-sm" /></Field>
+                <Field label="Value"><Input value={m.value ?? ""} onChange={(e) => updateMetric(m.id, { value: e.target.value })} placeholder="312" className="h-9 text-sm" /></Field>
+                <Field label="Short Context"><Input value={m.context ?? ""} onChange={(e) => updateMetric(m.id, { context: e.target.value })} placeholder="…in the last 24 months" className="h-9 text-sm" /></Field>
               </div>
             </EntryShell>
           ))
@@ -383,34 +296,34 @@ const SocialProofTab = ({
       <SectionCard
         icon={Trophy}
         title="Client Results"
-        description="Structured case-study-ready outcomes."
+        description="Structured case-study-ready outcomes you can plug into pages, ads and emails."
         count={data.client_results.length}
         onAdd={addResult}
         addLabel="Add Result"
       >
         {data.client_results.length === 0 ? (
-          <EmptyHint text="Add the wins you reach for in sales calls." />
+          <EmptyHint text="Add the wins you reach for in sales calls. The more specific, the more usable." />
         ) : (
           data.client_results.map((r, i) => (
             <EntryShell key={r.id} index={i} onDelete={() => removeResult(r.id)}>
               <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Client Type"><Input value={r.client_type ?? ""} onChange={(e) => updateResult(r.id, { client_type: e.target.value })} className="h-9 text-sm" /></Field>
+                <Field label="Client Type"><Input value={r.client_type ?? ""} onChange={(e) => updateResult(r.id, { client_type: e.target.value })} placeholder="SaaS founder, $0–$10K MRR" className="h-9 text-sm" /></Field>
                 <Field label="Timeframe"><Input value={r.timeframe ?? ""} onChange={(e) => updateResult(r.id, { timeframe: e.target.value })} placeholder="90 days" className="h-9 text-sm" /></Field>
                 <Field label="Problem">
-                  <AutoTextarea value={r.problem ?? ""} onChange={(e) => updateResult(r.id, { problem: e.target.value })} rows={2} className="text-sm resize-none" />
+                  <AutoTextarea value={r.problem ?? ""} onChange={(e) => updateResult(r.id, { problem: e.target.value })} placeholder="Stuck under $5K MRR, no consistent acquisition channel…" rows={2} className="text-sm resize-none" />
                 </Field>
                 <Field label="Result Achieved">
-                  <AutoTextarea value={r.result_achieved ?? ""} onChange={(e) => updateResult(r.id, { result_achieved: e.target.value })} rows={2} className="text-sm resize-none" />
+                  <AutoTextarea value={r.result_achieved ?? ""} onChange={(e) => updateResult(r.id, { result_achieved: e.target.value })} placeholder="Hit $32K MRR with one repeatable channel" rows={2} className="text-sm resize-none" />
                 </Field>
                 <Field label="Short Explanation">
-                  <AutoTextarea value={r.explanation ?? ""} onChange={(e) => updateResult(r.id, { explanation: e.target.value })} rows={2} className="text-sm resize-none" />
+                  <AutoTextarea value={r.explanation ?? ""} onChange={(e) => updateResult(r.id, { explanation: e.target.value })} placeholder="We rebuilt their ICP, redesigned the offer and installed an outbound system." rows={2} className="text-sm resize-none" />
                 </Field>
                 <Field label="Measurable Outcome">
-                  <Input value={r.measurable_outcome ?? ""} onChange={(e) => updateResult(r.id, { measurable_outcome: e.target.value })} placeholder="+312% MRR" className="h-9 text-sm" />
+                  <Input value={r.measurable_outcome ?? ""} onChange={(e) => updateResult(r.id, { measurable_outcome: e.target.value })} placeholder="+540% MRR in 12 weeks" className="h-9 text-sm" />
                 </Field>
               </div>
               <Field label="Quote / Testimonial">
-                <AutoTextarea value={r.quote ?? ""} onChange={(e) => updateResult(r.id, { quote: e.target.value })} rows={2} className="text-sm resize-none" />
+                <AutoTextarea value={r.quote ?? ""} onChange={(e) => updateResult(r.id, { quote: e.target.value })} placeholder={`"This was the first system that actually moved the needle for us."`} rows={2} className="text-sm resize-none" />
               </Field>
               <div className="grid md:grid-cols-2 gap-3">
                 <Field label="Proof Type">
@@ -431,7 +344,7 @@ const SocialProofTab = ({
       <SectionCard
         icon={Quote}
         title="Testimonials"
-        description="Reusable quotes by tone and outcome."
+        description="Reusable quotes — categorized by tone and main outcome."
         count={data.testimonials.length}
         onAdd={addTesti}
         addLabel="Add Testimonial"
@@ -442,15 +355,15 @@ const SocialProofTab = ({
           data.testimonials.map((t, i) => (
             <EntryShell key={t.id} index={i} onDelete={() => removeTesti(t.id)}>
               <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Client Name"><Input value={t.client_name ?? ""} onChange={(e) => updateTesti(t.id, { client_name: e.target.value })} className="h-9 text-sm" /></Field>
-                <Field label="Client Type"><Input value={t.client_type ?? ""} onChange={(e) => updateTesti(t.id, { client_type: e.target.value })} className="h-9 text-sm" /></Field>
+                <Field label="Client Name"><Input value={t.client_name ?? ""} onChange={(e) => updateTesti(t.id, { client_name: e.target.value })} placeholder="Sarah K." className="h-9 text-sm" /></Field>
+                <Field label="Client Type"><Input value={t.client_type ?? ""} onChange={(e) => updateTesti(t.id, { client_type: e.target.value })} placeholder="Health coach, 2 yrs in" className="h-9 text-sm" /></Field>
               </div>
               <Field label="Testimonial Quote">
-                <AutoTextarea value={t.quote ?? ""} onChange={(e) => updateTesti(t.id, { quote: e.target.value })} rows={3} className="text-sm resize-none" />
+                <AutoTextarea value={t.quote ?? ""} onChange={(e) => updateTesti(t.id, { quote: e.target.value })} placeholder={`"I went from chasing leads on Instagram to a fully booked calendar in under 60 days."`} rows={3} className="text-sm resize-none" />
               </Field>
               <div className="grid md:grid-cols-2 gap-3">
                 <Field label="Main Outcome">
-                  <Input value={t.main_outcome ?? ""} onChange={(e) => updateTesti(t.id, { main_outcome: e.target.value })} className="h-9 text-sm" />
+                  <Input value={t.main_outcome ?? ""} onChange={(e) => updateTesti(t.id, { main_outcome: e.target.value })} placeholder="Booked-out calendar in 60 days" className="h-9 text-sm" />
                 </Field>
                 <Field label="Tone">
                   <Select value={t.tone ?? ""} onValueChange={(v) => updateTesti(t.id, { tone: v })}>
@@ -470,7 +383,7 @@ const SocialProofTab = ({
       <SectionCard
         icon={BadgeCheck}
         title="Authority Assets"
-        description="Press, podcasts, awards, certifications, partnerships…"
+        description="Podcasts, talks, certifications, awards, press mentions, collaborations, books, media features…"
         count={data.authority_assets.length}
         onAdd={addAsset}
         addLabel="Add Asset"
@@ -481,13 +394,13 @@ const SocialProofTab = ({
           data.authority_assets.map((a, i) => (
             <EntryShell key={a.id} index={i} onDelete={() => removeAsset(a.id)}>
               <Field label="Asset Name">
-                <Input value={a.name ?? ""} onChange={(e) => updateAsset(a.id, { name: e.target.value })} placeholder="My First Million podcast appearance" className="h-9 text-sm" />
+                <Input value={a.name ?? ""} onChange={(e) => updateAsset(a.id, { name: e.target.value })} placeholder="Guest on My First Million podcast" className="h-9 text-sm" />
               </Field>
               <Field label="Description">
-                <AutoTextarea value={a.description ?? ""} onChange={(e) => updateAsset(a.id, { description: e.target.value })} rows={2} className="text-sm resize-none" />
+                <AutoTextarea value={a.description ?? ""} onChange={(e) => updateAsset(a.id, { description: e.target.value })} placeholder="60-min interview about our founder-led GTM playbook." rows={2} className="text-sm resize-none" />
               </Field>
               <Field label="Why It Matters">
-                <AutoTextarea value={a.why_it_matters ?? ""} onChange={(e) => updateAsset(a.id, { why_it_matters: e.target.value })} rows={2} className="text-sm resize-none" />
+                <AutoTextarea value={a.why_it_matters ?? ""} onChange={(e) => updateAsset(a.id, { why_it_matters: e.target.value })} placeholder="Validates our methodology in front of a 2M+ founder audience." rows={2} className="text-sm resize-none" />
               </Field>
               <LinkField value={a.external_link} onChange={(v) => updateAsset(a.id, { external_link: v })} />
             </EntryShell>
@@ -499,12 +412,11 @@ const SocialProofTab = ({
 };
 
 // ============================================================================
-// Tab 3 — Objections & Beliefs
+// Tab 3 — Objections & Beliefs (only Common Objections)
 // ============================================================================
 
 const ObjectionsTab = ({
-  data,
-  onChange,
+  data, onChange,
 }: {
   data: ObjectionsBeliefsData;
   onChange: (patch: Partial<ObjectionsBeliefsData>) => void;
@@ -514,100 +426,38 @@ const ObjectionsTab = ({
   const removeObj = (id: string) => onChange({ objections: data.objections.filter((o) => o.id !== id) });
   const addObj = () => onChange({ objections: [...data.objections, { id: newId() }] });
 
-  const updateFail = (id: string, patch: Partial<FailedSolution>) =>
-    onChange({ failed_solutions: data.failed_solutions.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
-  const removeFail = (id: string) => onChange({ failed_solutions: data.failed_solutions.filter((o) => o.id !== id) });
-  const addFail = () => onChange({ failed_solutions: [...data.failed_solutions, { id: newId() }] });
-
-  const updateFaq = (id: string, patch: Partial<FAQ>) =>
-    onChange({ faqs: data.faqs.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
-  const removeFaq = (id: string) => onChange({ faqs: data.faqs.filter((o) => o.id !== id) });
-  const addFaq = () => onChange({ faqs: [...data.faqs, { id: newId() }] });
-
   return (
     <div className="space-y-5">
       <SectionCard
         icon={MessageSquareWarning}
         title="Common Objections"
-        description="Capture objections + how to reframe them."
+        description={`The top doubts blocking the buy — paired with the reframe, proof and emotional concern behind them.`}
         count={data.objections.length}
         onAdd={addObj}
         addLabel="Add Objection"
       >
         {data.objections.length === 0 ? (
-          <EmptyHint text={`e.g. "I don't have time" — capture the belief, the rebuttal and the proof.`} />
+          <EmptyHint text={`e.g. "I don't have time", "I've tried this before", "What if it doesn't work for me?"`} />
         ) : (
           data.objections.map((o, i) => (
             <EntryShell key={o.id} index={i} onDelete={() => removeObj(o.id)}>
               <Field label="Objection">
-                <Input value={o.objection ?? ""} onChange={(e) => updateObj(o.id, { objection: e.target.value })} className="h-9 text-sm" />
+                <Input value={o.objection ?? ""} onChange={(e) => updateObj(o.id, { objection: e.target.value })} placeholder={`"I don't have time to implement another system."`} className="h-9 text-sm" />
               </Field>
               <div className="grid md:grid-cols-2 gap-3">
                 <Field label="Why People Believe This">
-                  <AutoTextarea value={o.why_believed ?? ""} onChange={(e) => updateObj(o.id, { why_believed: e.target.value })} rows={2} className="text-sm resize-none" />
+                  <AutoTextarea value={o.why_believed ?? ""} onChange={(e) => updateObj(o.id, { why_believed: e.target.value })} placeholder="They've been burned by complex tools that promised speed and delivered overhead." rows={2} className="text-sm resize-none" />
                 </Field>
                 <Field label="Reframe / Rebuttal">
-                  <AutoTextarea value={o.reframe ?? ""} onChange={(e) => updateObj(o.id, { reframe: e.target.value })} rows={2} className="text-sm resize-none" />
+                  <AutoTextarea value={o.reframe ?? ""} onChange={(e) => updateObj(o.id, { reframe: e.target.value })} placeholder="The system replaces 4 hours/week of manual work — most clients save time in the first 7 days." rows={2} className="text-sm resize-none" />
                 </Field>
                 <Field label="Supporting Proof">
-                  <AutoTextarea value={o.supporting_proof ?? ""} onChange={(e) => updateObj(o.id, { supporting_proof: e.target.value })} rows={2} className="text-sm resize-none" />
+                  <AutoTextarea value={o.supporting_proof ?? ""} onChange={(e) => updateObj(o.id, { supporting_proof: e.target.value })} placeholder="Sarah went from 8h to 1h/week on lead follow-up in week 1." rows={2} className="text-sm resize-none" />
                 </Field>
                 <Field label="Emotional Concern Behind It">
-                  <AutoTextarea value={o.emotional_concern ?? ""} onChange={(e) => updateObj(o.id, { emotional_concern: e.target.value })} rows={2} className="text-sm resize-none" />
+                  <AutoTextarea value={o.emotional_concern ?? ""} onChange={(e) => updateObj(o.id, { emotional_concern: e.target.value })} placeholder="Fear of starting yet another thing they can't keep up with." rows={2} className="text-sm resize-none" />
                 </Field>
               </div>
-            </EntryShell>
-          ))
-        )}
-      </SectionCard>
-
-      <SectionCard
-        icon={AlertTriangle}
-        title="Failed Previous Solutions"
-        description="What they tried before and why your approach is different."
-        count={data.failed_solutions.length}
-        onAdd={addFail}
-        addLabel="Add Solution"
-      >
-        {data.failed_solutions.length === 0 ? (
-          <EmptyHint text="Knowing what didn't work helps the AI position you against alternatives." />
-        ) : (
-          data.failed_solutions.map((o, i) => (
-            <EntryShell key={o.id} index={i} onDelete={() => removeFail(o.id)}>
-              <Field label="What They Tried">
-                <Input value={o.what_tried ?? ""} onChange={(e) => updateFail(o.id, { what_tried: e.target.value })} className="h-9 text-sm" />
-              </Field>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Why It Failed">
-                  <AutoTextarea value={o.why_failed ?? ""} onChange={(e) => updateFail(o.id, { why_failed: e.target.value })} rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="Why Your Approach Is Different">
-                  <AutoTextarea value={o.why_different ?? ""} onChange={(e) => updateFail(o.id, { why_different: e.target.value })} rows={2} className="text-sm resize-none" />
-                </Field>
-              </div>
-            </EntryShell>
-          ))
-        )}
-      </SectionCard>
-
-      <SectionCard
-        icon={MessageSquareWarning}
-        title="FAQ / Common Questions"
-        count={data.faqs.length}
-        onAdd={addFaq}
-        addLabel="Add FAQ"
-      >
-        {data.faqs.length === 0 ? (
-          <EmptyHint text="Pre-empt the questions people always ask." />
-        ) : (
-          data.faqs.map((o, i) => (
-            <EntryShell key={o.id} index={i} onDelete={() => removeFaq(o.id)}>
-              <Field label="Question">
-                <Input value={o.question ?? ""} onChange={(e) => updateFaq(o.id, { question: e.target.value })} className="h-9 text-sm" />
-              </Field>
-              <Field label="Answer">
-                <AutoTextarea value={o.answer ?? ""} onChange={(e) => updateFaq(o.id, { answer: e.target.value })} rows={3} className="text-sm resize-none" />
-              </Field>
             </EntryShell>
           ))
         )}
@@ -617,62 +467,153 @@ const ObjectionsTab = ({
 };
 
 // ============================================================================
-// Tab 4 — Educational Messaging
+// Tab 4 — Stories & Educational Assets
 // ============================================================================
 
-const EducationalTab = ({
-  data,
-  onChange,
+const StoriesTab = ({
+  authority, educational, onChangeAuthority, onChangeEducational,
 }: {
-  data: EducationalMessagingData;
-  onChange: (patch: Partial<EducationalMessagingData>) => void;
+  authority: AuthorityPositioningData;
+  educational: EducationalMessagingData;
+  onChangeAuthority: (patch: Partial<AuthorityPositioningData>) => void;
+  onChangeEducational: (patch: Partial<EducationalMessagingData>) => void;
 }) => {
+  const stories = authority.founder_stories;
+  const updateStory = (id: string, patch: Partial<FounderStory>) =>
+    onChangeAuthority({ founder_stories: stories.map((s) => (s.id === id ? { ...s, ...patch } : s)) });
+  const removeStory = (id: string) => onChangeAuthority({ founder_stories: stories.filter((s) => s.id !== id) });
+  const addStory = () => onChangeAuthority({ founder_stories: [...stories, { id: newId() }] });
+
+  const lessons = educational.lessons;
   const updateLesson = (id: string, patch: Partial<ValueLesson>) =>
-    onChange({ lessons: data.lessons.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
-  const removeLesson = (id: string) => onChange({ lessons: data.lessons.filter((l) => l.id !== id) });
-  const addLesson = () => onChange({ lessons: [...data.lessons, { id: newId() }] });
-
-  const updateMistake = (id: string, patch: Partial<CommonMistake>) =>
-    onChange({ mistakes: data.mistakes.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
-  const removeMistake = (id: string) => onChange({ mistakes: data.mistakes.filter((l) => l.id !== id) });
-  const addMistake = () => onChange({ mistakes: [...data.mistakes, { id: newId() }] });
-
-  const updateShift = (id: string, patch: Partial<BeliefShift>) =>
-    onChange({ belief_shifts: data.belief_shifts.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
-  const removeShift = (id: string) => onChange({ belief_shifts: data.belief_shifts.filter((l) => l.id !== id) });
-  const addShift = () => onChange({ belief_shifts: [...data.belief_shifts, { id: newId() }] });
+    onChangeEducational({ lessons: lessons.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
+  const removeLesson = (id: string) => onChangeEducational({ lessons: lessons.filter((l) => l.id !== id) });
+  const addLesson = () => onChangeEducational({ lessons: [...lessons, { id: newId() }] });
 
   return (
     <div className="space-y-5">
       <SectionCard
+        icon={BookOpen}
+        title="Stories"
+        description="Reusable narrative arcs for nurture, VSLs, webinars, founder-led content and authority pieces."
+        count={stories.length}
+        onAdd={addStory}
+        addLabel="Add Story"
+      >
+        {stories.length === 0 ? (
+          <EmptyHint text="Add the most defining moments of your journey — each becomes raw material for AI copy." />
+        ) : (
+          stories.map((s, i) => (
+            <EntryShell key={s.id} index={i} onDelete={() => removeStory(s.id)}>
+              <Field label="Story Title">
+                <Input
+                  value={s.title ?? ""}
+                  onChange={(e) => updateStory(s.id, { title: e.target.value })}
+                  placeholder="From burnout to building my first 7-figure offer"
+                  className="h-9 text-sm"
+                />
+              </Field>
+              <div className="grid md:grid-cols-2 gap-3">
+                <Field label="My before situation was">
+                  <AutoTextarea
+                    value={s.before ?? ""}
+                    onChange={(e) => updateStory(s.id, { before: e.target.value })}
+                    placeholder="Struggling to get clients consistently despite posting content every day…"
+                    rows={3} className="text-sm resize-none"
+                  />
+                </Field>
+                <Field label="The challenge I was having is">
+                  <AutoTextarea
+                    value={s.challenge ?? ""}
+                    onChange={(e) => updateStory(s.id, { challenge: e.target.value })}
+                    placeholder="I was trading time for money, working nights and weekends with no real growth."
+                    rows={3} className="text-sm resize-none"
+                  />
+                </Field>
+                <Field label="Eventually what happened that allowed me to overcome it was">
+                  <AutoTextarea
+                    value={s.breakthrough ?? ""}
+                    onChange={(e) => updateStory(s.id, { breakthrough: e.target.value })}
+                    placeholder="I rebuilt my offer around a single outcome and installed one acquisition system."
+                    rows={3} className="text-sm resize-none"
+                  />
+                </Field>
+                <Field label="In the process of the breakthrough I learned">
+                  <AutoTextarea
+                    value={s.learned ?? ""}
+                    onChange={(e) => updateStory(s.id, { learned: e.target.value })}
+                    placeholder="That clarity beats hustle — and that the offer is the marketing."
+                    rows={3} className="text-sm resize-none"
+                  />
+                </Field>
+                <Field label="My after situation was">
+                  <AutoTextarea
+                    value={s.after ?? ""}
+                    onChange={(e) => updateStory(s.id, { after: e.target.value })}
+                    placeholder="Predictable $40K/month, 4-day work week, fully booked with dream clients."
+                    rows={3} className="text-sm resize-none"
+                  />
+                </Field>
+                <Field label="Core Lesson (optional)">
+                  <AutoTextarea
+                    value={s.core_lesson ?? ""}
+                    onChange={(e) => updateStory(s.id, { core_lesson: e.target.value })}
+                    placeholder="You don't need more content. You need a clearer offer."
+                    rows={3} className="text-sm resize-none"
+                  />
+                </Field>
+              </div>
+              <Field label="Emotional Theme (optional)">
+                <MultiSelectChips
+                  options={EMOTIONAL_THEME_OPTIONS}
+                  value={s.emotional_theme ? [s.emotional_theme] : []}
+                  onChange={(v) => updateStory(s.id, { emotional_theme: v[v.length - 1] ?? "" })}
+                />
+              </Field>
+              <LinkField value={s.external_link} onChange={(v) => updateStory(s.id, { external_link: v })} />
+            </EntryShell>
+          ))
+        )}
+      </SectionCard>
+
+      <SectionCard
         icon={Lightbulb}
         title="Value Lessons"
-        description="Reusable insights for content, nurture and education."
-        count={data.lessons.length}
+        description="Reusable insights for content, nurture, education and authority building."
+        count={lessons.length}
         onAdd={addLesson}
         addLabel="Add Lesson"
       >
-        {data.lessons.length === 0 ? (
-          <EmptyHint text="Each lesson becomes raw material for emails, posts, VSLs, ads…" />
+        {lessons.length === 0 ? (
+          <EmptyHint text="Each lesson becomes raw material for emails, posts, VSLs and ads." />
         ) : (
-          data.lessons.map((l, i) => (
+          lessons.map((l, i) => (
             <EntryShell key={l.id} index={i} onDelete={() => removeLesson(l.id)}>
               <Field label="Lesson Title">
-                <Input value={l.title ?? ""} onChange={(e) => updateLesson(l.id, { title: e.target.value })} className="h-9 text-sm" />
+                <Input
+                  value={l.title ?? ""}
+                  onChange={(e) => updateLesson(l.id, { title: e.target.value })}
+                  placeholder="Why most coaches stay stuck under $10K/month"
+                  className="h-9 text-sm"
+                />
               </Field>
               <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Main Topic"><Input value={l.main_topic ?? ""} onChange={(e) => updateLesson(l.id, { main_topic: e.target.value })} className="h-9 text-sm" /></Field>
-                <Field label="Common Challenge"><Input value={l.common_challenge ?? ""} onChange={(e) => updateLesson(l.id, { common_challenge: e.target.value })} className="h-9 text-sm" /></Field>
-                <Field label="Core Insight">
-                  <AutoTextarea value={l.core_insight ?? ""} onChange={(e) => updateLesson(l.id, { core_insight: e.target.value })} rows={2} className="text-sm resize-none" />
+                <Field label="The main topic is">
+                  <AutoTextarea value={l.main_topic ?? ""} onChange={(e) => updateLesson(l.id, { main_topic: e.target.value })} placeholder="Pricing and offer positioning." rows={2} className="text-sm resize-none" />
                 </Field>
-                <Field label="Why This Matters">
-                  <AutoTextarea value={l.why_matters ?? ""} onChange={(e) => updateLesson(l.id, { why_matters: e.target.value })} rows={2} className="text-sm resize-none" />
+                <Field label="The challenge people have is">
+                  <AutoTextarea value={l.common_challenge ?? ""} onChange={(e) => updateLesson(l.id, { common_challenge: e.target.value })} placeholder="They charge by the hour and undercharge for transformations." rows={2} className="text-sm resize-none" />
                 </Field>
-                <Field label="Main Breakthrough Lesson">
-                  <AutoTextarea value={l.breakthrough_lesson ?? ""} onChange={(e) => updateLesson(l.id, { breakthrough_lesson: e.target.value })} rows={2} className="text-sm resize-none" />
+                <Field label="The awesome lesson about that is">
+                  <AutoTextarea value={l.core_insight ?? ""} onChange={(e) => updateLesson(l.id, { core_insight: e.target.value })} placeholder="Pricing for outcome — not time — instantly repositions you as a premium expert." rows={2} className="text-sm resize-none" />
                 </Field>
-                <Field label="CTA Goal">
+                <Field label="It's especially cool because">
+                  <AutoTextarea value={l.why_matters ?? ""} onChange={(e) => updateLesson(l.id, { why_matters: e.target.value })} placeholder="It removes the income ceiling without adding any hours." rows={2} className="text-sm resize-none" />
+                </Field>
+                <Field label="The main breakthrough I learned was">
+                  <AutoTextarea value={l.breakthrough_lesson ?? ""} onChange={(e) => updateLesson(l.id, { breakthrough_lesson: e.target.value })} placeholder="When I stopped selling sessions and started selling outcomes, my close rate doubled." rows={2} className="text-sm resize-none" />
+                </Field>
+                <Field label="CTA Goal (optional)">
                   <Select value={l.cta_goal ?? ""} onValueChange={(v) => updateLesson(l.id, { cta_goal: v })}>
                     <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select goal…" /></SelectTrigger>
                     <SelectContent>
@@ -681,58 +622,7 @@ const EducationalTab = ({
                   </Select>
                 </Field>
               </div>
-            </EntryShell>
-          ))
-        )}
-      </SectionCard>
-
-      <SectionCard
-        icon={AlertTriangle}
-        title="Common Mistakes"
-        count={data.mistakes.length}
-        onAdd={addMistake}
-        addLabel="Add Mistake"
-      >
-        {data.mistakes.length === 0 ? (
-          <EmptyHint text="Mistakes prospects make = great hooks for ads and content." />
-        ) : (
-          data.mistakes.map((m, i) => (
-            <EntryShell key={m.id} index={i} onDelete={() => removeMistake(m.id)}>
-              <Field label="Mistake">
-                <Input value={m.mistake ?? ""} onChange={(e) => updateMistake(m.id, { mistake: e.target.value })} className="h-9 text-sm" />
-              </Field>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Why People Make It">
-                  <AutoTextarea value={m.why_made ?? ""} onChange={(e) => updateMistake(m.id, { why_made: e.target.value })} rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="Better Approach">
-                  <AutoTextarea value={m.better_approach ?? ""} onChange={(e) => updateMistake(m.id, { better_approach: e.target.value })} rows={2} className="text-sm resize-none" />
-                </Field>
-              </div>
-            </EntryShell>
-          ))
-        )}
-      </SectionCard>
-
-      <SectionCard
-        icon={RefreshCw}
-        title="Key Belief Shifts"
-        count={data.belief_shifts.length}
-        onAdd={addShift}
-        addLabel="Add Shift"
-      >
-        {data.belief_shifts.length === 0 ? (
-          <EmptyHint text="The 'Old vs New' belief frame fuels great copy." />
-        ) : (
-          data.belief_shifts.map((s, i) => (
-            <EntryShell key={s.id} index={i} onDelete={() => removeShift(s.id)}>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Old Belief"><AutoTextarea value={s.old_belief ?? ""} onChange={(e) => updateShift(s.id, { old_belief: e.target.value })} rows={2} className="text-sm resize-none" /></Field>
-                <Field label="New Belief"><AutoTextarea value={s.new_belief ?? ""} onChange={(e) => updateShift(s.id, { new_belief: e.target.value })} rows={2} className="text-sm resize-none" /></Field>
-              </div>
-              <Field label="Why This Shift Matters">
-                <AutoTextarea value={s.why_matters ?? ""} onChange={(e) => updateShift(s.id, { why_matters: e.target.value })} rows={2} className="text-sm resize-none" />
-              </Field>
+              <LinkField value={l.external_link} onChange={(v) => updateLesson(l.id, { external_link: v })} />
             </EntryShell>
           ))
         )}
@@ -746,56 +636,111 @@ const EducationalTab = ({
 // ============================================================================
 
 const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
-  const progress = calcProofAuthorityProgress(data);
+  const [active, setActive] = useState<TabId>("authority");
+  const tab = TABS.find((t) => t.id === active)!;
+  const Icon = tab.icon;
+  const overallProgress = calcProofAuthorityProgress(data);
 
-  const updateAuthority = useCallback(
-    (patch: Partial<AuthorityPositioningData>) => onChange({ authority: { ...data.authority, ...patch } }),
-    [data.authority, onChange],
-  );
-  const updateSocial = useCallback(
-    (patch: Partial<SocialProofData>) => onChange({ social_proof: { ...data.social_proof, ...patch } }),
-    [data.social_proof, onChange],
-  );
-  const updateObj = useCallback(
-    (patch: Partial<ObjectionsBeliefsData>) => onChange({ objections: { ...data.objections, ...patch } }),
-    [data.objections, onChange],
-  );
-  const updateEdu = useCallback(
-    (patch: Partial<EducationalMessagingData>) => onChange({ educational: { ...data.educational, ...patch } }),
-    [data.educational, onChange],
-  );
+  const updateAuthority = (patch: Partial<AuthorityPositioningData>) =>
+    onChange({ authority: { ...data.authority, ...patch } });
+  const updateSocial = (patch: Partial<SocialProofData>) =>
+    onChange({ social_proof: { ...data.social_proof, ...patch } });
+  const updateObj = (patch: Partial<ObjectionsBeliefsData>) =>
+    onChange({ objections: { ...data.objections, ...patch } });
+  const updateEdu = (patch: Partial<EducationalMessagingData>) =>
+    onChange({ educational: { ...data.educational, ...patch } });
+
+  // Per-tab completion signal (used in sub-tabs)
+  const tabComplete = (id: TabId): boolean => {
+    if (id === "authority") {
+      return data.authority.authority_types.length > 0
+        && data.authority.credibility_foundations.length > 0
+        && !!data.authority.trust_reason?.trim()
+        && !!data.authority.signature_proof?.trim();
+    }
+    if (id === "social") {
+      return data.social_proof.metrics.length > 0
+        || data.social_proof.client_results.length > 0
+        || data.social_proof.testimonials.length > 0
+        || data.social_proof.authority_assets.length > 0;
+    }
+    if (id === "objections") return data.objections.objections.length > 0;
+    if (id === "stories") {
+      return data.authority.founder_stories.length > 0 || data.educational.lessons.length > 0;
+    }
+    return false;
+  };
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-6xl mx-auto p-8">
-        <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Award className="w-5 h-5 text-primary" />
-              <h2 className="text-2xl font-display font-bold text-foreground">Proof & Authority</h2>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Build the centralized trust, proof and persuasion library that powers every funnel, page and message.
-            </p>
-          </div>
-          {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
+    <div className="h-full flex flex-col">
+      {/* Sticky sub-tab navigation (matches Customer Clarity / Offer Design) */}
+      <div className="border-b border-border bg-card px-8 shrink-0">
+        <div className="max-w-6xl mx-auto flex gap-1 -mb-px overflow-x-auto">
+          {TABS.map((t) => {
+            const isActive = active === t.id;
+            const TIcon = t.icon;
+            const complete = tabComplete(t.id);
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActive(t.id)}
+                className={`group relative flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                  isActive
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                }`}
+              >
+                <TIcon className="w-4 h-4" />
+                <span>{t.label}</span>
+                {complete && <Check className="w-3.5 h-3.5 text-primary" />}
+              </button>
+            );
+          })}
         </div>
+      </div>
 
-        <Tabs defaultValue="authority" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-6 h-auto">
-            <TabsTrigger value="authority" className="gap-1.5"><BadgeCheck className="w-3.5 h-3.5" />Authority Positioning</TabsTrigger>
-            <TabsTrigger value="social" className="gap-1.5"><Users2 className="w-3.5 h-3.5" />Social Proof</TabsTrigger>
-            <TabsTrigger value="objections" className="gap-1.5"><MessageSquareWarning className="w-3.5 h-3.5" />Objections & Beliefs</TabsTrigger>
-            <TabsTrigger value="educational" className="gap-1.5"><BookOpen className="w-3.5 h-3.5" />Educational</TabsTrigger>
-          </TabsList>
-          <TabsContent value="authority"><AuthorityTab data={data.authority} onChange={updateAuthority} /></TabsContent>
-          <TabsContent value="social"><SocialProofTab data={data.social_proof} onChange={updateSocial} /></TabsContent>
-          <TabsContent value="objections"><ObjectionsTab data={data.objections} onChange={updateObj} /></TabsContent>
-          <TabsContent value="educational"><EducationalTab data={data.educational} onChange={updateEdu} /></TabsContent>
-        </Tabs>
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-8">
+          <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Icon className="w-5 h-5 text-primary" />
+                <h2 className="text-2xl font-display font-bold text-foreground">{tab.label}</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">{tab.description}</p>
+            </div>
+            {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
+          </div>
 
-        <div className="mt-6 px-1">
-          <Progress value={progress} className="h-1" />
+          {/* Insight box */}
+          <div className="mb-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-4 flex gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Info className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-primary mb-1">
+                Why this matters
+              </div>
+              <p className="text-sm text-foreground/80 leading-relaxed">{tab.insight}</p>
+            </div>
+          </div>
+
+          {active === "authority" && <AuthorityTab data={data.authority} onChange={updateAuthority} />}
+          {active === "social" && <SocialProofTab data={data.social_proof} onChange={updateSocial} />}
+          {active === "objections" && <ObjectionsTab data={data.objections} onChange={updateObj} />}
+          {active === "stories" && (
+            <StoriesTab
+              authority={data.authority}
+              educational={data.educational}
+              onChangeAuthority={updateAuthority}
+              onChangeEducational={updateEdu}
+            />
+          )}
+
+          <div className="mt-6 px-1">
+            <Progress value={overallProgress} className="h-1" />
+          </div>
         </div>
       </div>
     </div>
