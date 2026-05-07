@@ -444,8 +444,16 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= OFFER DESIGN ============= */}
-        <Section id="offer-design" title="Offer Design" icon={Package}>
-          <SubBlock title="Offer Angle">
+        <Section id="offer-design" title="Offer Design" icon={Package} show={hasOffer}>
+          <SubBlock
+            title="Offer Angle"
+            show={Boolean(
+              offer.angle?.main_offer_name || offer.angle?.core_outcome || promise ||
+              offer.angle?.short_description || offer.angle?.angle_new_vehicle ||
+              offer.angle?.angle_better_results || offer.angle?.angle_faster_outcome ||
+              offer.angle?.angle_easier_process || offer.angle?.framework?.name,
+            )}
+          >
             <KeyValueGrid
               items={[
                 { label: "Main offer", value: offer.angle?.main_offer_name },
