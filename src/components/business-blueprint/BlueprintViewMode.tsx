@@ -585,7 +585,17 @@ const BlueprintViewMode = ({
             )}
           </SubBlock>
 
-          <SubBlock title="Pricing">
+          <SubBlock
+            title="Pricing"
+            show={Boolean(
+              corePrice ||
+              (offer.pricing?.payment_plans?.length ?? 0) > 0 ||
+              offer.pricing?.premium_enabled ||
+              offer.pricing?.recurring_enabled ||
+              (offer.pricing?.guarantee_type && offer.pricing.guarantee_type !== "none") ||
+              hasText(offer.pricing?.guarantee_details),
+            )}
+          >
             <KeyValueGrid
               items={[
                 { label: "Core price", value: corePrice },
