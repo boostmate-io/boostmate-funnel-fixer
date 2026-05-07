@@ -62,30 +62,48 @@ const Section = ({
   id,
   title,
   icon: Icon,
+  show = true,
   children,
 }: {
   id?: string;
   title: string;
   icon: React.ComponentType<{ className?: string }>;
+  show?: boolean;
   children: React.ReactNode;
-}) => (
-  <section id={id} data-section={id} className="mb-12 scroll-mt-24 print-section">
-    <div className="flex items-center gap-3 mb-6 pb-3 border-b border-border print-section-header">
-      <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center print-section-icon">
-        <Icon className="w-5 h-5" />
+}) => {
+  if (!show) return null;
+  return (
+    <section id={id} data-section={id} className="mb-12 scroll-mt-24 print-section">
+      <div className="flex items-center gap-3 mb-6 pb-3 border-b border-border print-section-header">
+        <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center print-section-icon">
+          <Icon className="w-5 h-5" />
+        </div>
+        <h2 className="text-3xl font-display font-bold text-foreground">{title}</h2>
       </div>
-      <h2 className="text-3xl font-display font-bold text-foreground">{title}</h2>
-    </div>
-    <div className="space-y-8">{children}</div>
-  </section>
-);
+      <div className="space-y-8">{children}</div>
+    </section>
+  );
+};
 
-const SubBlock = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div>
-    <h3 className="text-xl font-display font-semibold text-foreground mb-4">{title}</h3>
-    <div className="space-y-4">{children}</div>
-  </div>
-);
+const SubBlock = ({
+  title,
+  show = true,
+  children,
+}: {
+  title: string;
+  show?: boolean;
+  children: React.ReactNode;
+}) => {
+  if (!show) return null;
+  return (
+    <div>
+      <h3 className="text-xl font-display font-semibold text-foreground mb-4">{title}</h3>
+      <div className="space-y-4">{children}</div>
+    </div>
+  );
+};
+
+const hasText = (v?: string | null) => Boolean(v && v.toString().trim());
 
 const Field = ({ label, value }: { label: string; value?: string | null }) => {
   if (!value || !value.toString().trim()) return null;
