@@ -244,11 +244,7 @@ const BlueprintViewMode = ({
     (proof.social_proof?.testimonials?.length ?? 0) > 0 ||
     (proof.social_proof?.authority_assets?.length ?? 0) > 0 ||
     (proof.objections?.objections?.length ?? 0) > 0 ||
-    (proof.objections?.failed_solutions?.length ?? 0) > 0 ||
-    (proof.objections?.faqs?.length ?? 0) > 0 ||
-    (proof.educational?.lessons?.length ?? 0) > 0 ||
-    (proof.educational?.mistakes?.length ?? 0) > 0 ||
-    (proof.educational?.belief_shifts?.length ?? 0) > 0,
+    (proof.educational?.lessons?.length ?? 0) > 0,
   );
 
   const navSections = [
@@ -291,11 +287,17 @@ const BlueprintViewMode = ({
   }, []);
 
   const scrollTo = (id: string) => {
+    const container = scrollContainerRef.current;
     const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-      setActiveId(id);
-    }
+    if (!el || !container) return;
+    const containerTop = container.getBoundingClientRect().top;
+    const elTop = el.getBoundingClientRect().top;
+    const offset = 72; // sticky header height
+    container.scrollTo({
+      top: container.scrollTop + (elTop - containerTop) - offset,
+      behavior: "smooth",
+    });
+    setActiveId(id);
   };
 
   return (
@@ -899,62 +901,25 @@ const BlueprintViewMode = ({
               )}
 
               {/* Objections & Beliefs */}
-              {(proof.objections.objections.length > 0 ||
-                proof.objections.failed_solutions.length > 0 ||
-                proof.objections.faqs.length > 0) && (
+              {proof.objections.objections.length > 0 && (
                 <SubBlock title="Objections & Beliefs">
-                  {proof.objections.objections.length > 0 && (
-                    <div className="space-y-2">
-                      {proof.objections.objections.map((o) => (
-                        <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                          {o.objection && <p className="text-sm font-semibold text-foreground">"{o.objection}"</p>}
-                          {o.why_believed && <p className="text-xs text-muted-foreground mt-1"><span className="font-medium">Why believed:</span> {o.why_believed}</p>}
-                          {o.reframe && <p className="text-sm text-primary mt-1"><span className="font-medium">Reframe:</span> {o.reframe}</p>}
-                          {o.supporting_proof && <p className="text-xs text-foreground/80 mt-1"><span className="font-medium">Proof:</span> {o.supporting_proof}</p>}
-                          {o.emotional_concern && <p className="text-xs text-muted-foreground mt-1 italic">{o.emotional_concern}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {proof.objections.failed_solutions.length > 0 && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                        Failed previous solutions
-                      </p>
-                      <div className="space-y-2">
-                        {proof.objections.failed_solutions.map((s) => (
-                          <div key={s.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                            {s.what_tried && <p className="text-sm font-semibold text-foreground">{s.what_tried}</p>}
-                            {s.why_failed && <p className="text-xs text-muted-foreground mt-1">Why it failed: {s.why_failed}</p>}
-                            {s.why_different && <p className="text-xs text-primary mt-1">Why we're different: {s.why_different}</p>}
-                          </div>
-                        ))}
+                  <div className="space-y-2">
+                    {proof.objections.objections.map((o) => (
+                      <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                        {o.objection && <p className="text-sm font-semibold text-foreground">"{o.objection}"</p>}
+                        {o.why_believed && <p className="text-xs text-muted-foreground mt-1"><span className="font-medium">Why believed:</span> {o.why_believed}</p>}
+                        {o.reframe && <p className="text-sm text-primary mt-1"><span className="font-medium">Reframe:</span> {o.reframe}</p>}
+                        {o.supporting_proof && <p className="text-xs text-foreground/80 mt-1"><span className="font-medium">Proof:</span> {o.supporting_proof}</p>}
+                        {o.emotional_concern && <p className="text-xs text-muted-foreground mt-1 italic">{o.emotional_concern}</p>}
                       </div>
-                    </div>
-                  )}
-                  {proof.objections.faqs.length > 0 && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                        FAQs
-                      </p>
-                      <div className="space-y-2">
-                        {proof.objections.faqs.map((f) => (
-                          <div key={f.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                            {f.question && <p className="text-sm font-semibold text-foreground">Q: {f.question}</p>}
-                            {f.answer && <p className="text-sm text-muted-foreground mt-1">A: {f.answer}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </SubBlock>
               )}
 
               {/* Stories & Educational Assets */}
               {(proof.authority.founder_stories.length > 0 ||
-                proof.educational.lessons.length > 0 ||
-                proof.educational.mistakes.length > 0 ||
-                proof.educational.belief_shifts.length > 0) && (
+                proof.educational.lessons.length > 0) && (
                 <SubBlock title="Stories & Educational Assets">
                   {proof.authority.founder_stories.length > 0 && (
                     <div>
@@ -1006,38 +971,6 @@ const BlueprintViewMode = ({
                                 </a>
                               )}
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {proof.educational.mistakes.length > 0 && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                        Common mistakes
-                      </p>
-                      <div className="space-y-2">
-                        {proof.educational.mistakes.map((m) => (
-                          <div key={m.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                            {m.mistake && <p className="text-sm font-semibold text-foreground">{m.mistake}</p>}
-                            {m.why_made && <p className="text-xs text-muted-foreground mt-1">Why: {m.why_made}</p>}
-                            {m.better_approach && <p className="text-xs text-primary mt-1">Better: {m.better_approach}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {proof.educational.belief_shifts.length > 0 && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                        Belief shifts
-                      </p>
-                      <div className="space-y-2">
-                        {proof.educational.belief_shifts.map((b) => (
-                          <div key={b.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                            {b.old_belief && <p className="text-sm text-muted-foreground"><span className="font-medium text-foreground/80">Old:</span> {b.old_belief}</p>}
-                            {b.new_belief && <p className="text-sm text-primary mt-1"><span className="font-medium">New:</span> {b.new_belief}</p>}
-                            {b.why_matters && <p className="text-xs text-muted-foreground mt-1">{b.why_matters}</p>}
                           </div>
                         ))}
                       </div>
