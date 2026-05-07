@@ -103,6 +103,7 @@ export interface ValueLesson {
   why_matters?: string;
   breakthrough_lesson?: string;
   cta_goal?: string;
+  external_link?: string;
 }
 export interface CommonMistake {
   id: string;
