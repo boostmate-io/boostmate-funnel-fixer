@@ -19,7 +19,7 @@ const fallbackAuth: AuthContextType = {
   signOut: async () => undefined,
 };
 
-const UNEXPECTED_SIGN_OUT_MAX_MS = 60_000;
+const UNEXPECTED_SIGN_OUT_MAX_MS = 120_000;
 const ACCESS_TOKEN_SAFETY_MS = 30_000;
 const RECOVERY_DELAYS = [500, 1500, 4000, 8000];
 
