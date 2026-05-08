@@ -19,7 +19,7 @@ const fallbackAuth: AuthContextType = {
   signOut: async () => undefined,
 };
 
-const UNEXPECTED_SIGN_OUT_MAX_MS = 60_000;
+const UNEXPECTED_SIGN_OUT_MAX_MS = 120_000;
 const ACCESS_TOKEN_SAFETY_MS = 30_000;
 const RECOVERY_DELAYS = [500, 1500, 4000, 8000];
 
@@ -112,17 +112,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return Date.now() - startedAt < UNEXPECTED_SIGN_OUT_MAX_MS;
     };
 
+    const tryRecoverSession = async () => {
+      // First check if another tab already wrote a fresh session to storage.
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session && hasFreshAccessToken(sessionData.session)) {
+        return sessionData.session;
+      }
+      // Otherwise explicitly attempt a refresh using the last known refresh token.
+      const cached = lastKnownSessionRef.current;
+      if (cached?.refresh_token) {
+        try {
+          const { data: refreshed } = await supabase.auth.refreshSession({
+            refresh_token: cached.refresh_token,
+          });
+          if (refreshed.session) return refreshed.session;
+        } catch {
+          // ignore — fall through to retry
+        }
+      }
+      return null;
+    };
+
     const scheduleRecovery = (overrideDelay?: number) => {
       clearRecoveryTimer();
       const nextAttempt = recoveryAttemptRef.current;
       const delay = overrideDelay ?? RECOVERY_DELAYS[Math.min(nextAttempt, RECOVERY_DELAYS.length - 1)];
 
       recoveryTimerRef.current = window.setTimeout(async () => {
-        const { data, error } = await supabase.auth.getSession();
+        const recovered = await tryRecoverSession();
         if (!isMounted) return;
 
-        if (!error && data.session) {
-          applySession(data.session);
+        if (recovered) {
+          applySession(recovered);
           return;
         }
 
@@ -232,10 +253,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearAuthState();
       });
 
+    // Cross-tab sync: if another tab refreshes the token, adopt that session
+    // instead of treating our stale token as an unexpected sign-out. This
+    // prevents refresh-token races when the app is open in multiple tabs
+    // (e.g. preview + custom domain).
+    const handleStorage = (e: StorageEvent) => {
+      if (!isMounted || !e.key || !e.key.includes("auth-token")) return;
+      void supabase.auth.getSession().then(({ data }) => {
+        if (!isMounted) return;
+        if (data.session && hasFreshAccessToken(data.session)) {
+          applySession(data.session);
+        }
+      });
+    };
+    window.addEventListener("storage", handleStorage);
+
     return () => {
       isMounted = false;
       clearRecoveryTimer();
       subscription.unsubscribe();
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 
