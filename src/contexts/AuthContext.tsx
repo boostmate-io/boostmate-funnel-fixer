@@ -112,17 +112,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return Date.now() - startedAt < UNEXPECTED_SIGN_OUT_MAX_MS;
     };
 
+    const tryRecoverSession = async () => {
+      // First check if another tab already wrote a fresh session to storage.
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session && hasFreshAccessToken(sessionData.session)) {
+        return sessionData.session;
+      }
+      // Otherwise explicitly attempt a refresh using the last known refresh token.
+      const cached = lastKnownSessionRef.current;
+      if (cached?.refresh_token) {
+        try {
+          const { data: refreshed } = await supabase.auth.refreshSession({
+            refresh_token: cached.refresh_token,
+          });
+          if (refreshed.session) return refreshed.session;
+        } catch {
+          // ignore — fall through to retry
+        }
+      }
+      return null;
+    };
+
     const scheduleRecovery = (overrideDelay?: number) => {
       clearRecoveryTimer();
       const nextAttempt = recoveryAttemptRef.current;
       const delay = overrideDelay ?? RECOVERY_DELAYS[Math.min(nextAttempt, RECOVERY_DELAYS.length - 1)];
 
       recoveryTimerRef.current = window.setTimeout(async () => {
-        const { data, error } = await supabase.auth.getSession();
+        const recovered = await tryRecoverSession();
         if (!isMounted) return;
 
-        if (!error && data.session) {
-          applySession(data.session);
+        if (recovered) {
+          applySession(recovered);
           return;
         }
 
