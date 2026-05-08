@@ -253,10 +253,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearAuthState();
       });
 
+    // Cross-tab sync: if another tab refreshes the token, adopt that session
+    // instead of treating our stale token as an unexpected sign-out. This
+    // prevents refresh-token races when the app is open in multiple tabs
+    // (e.g. preview + custom domain).
+    const handleStorage = (e: StorageEvent) => {
+      if (!isMounted || !e.key || !e.key.includes("auth-token")) return;
+      void supabase.auth.getSession().then(({ data }) => {
+        if (!isMounted) return;
+        if (data.session && hasFreshAccessToken(data.session)) {
+          applySession(data.session);
+        }
+      });
+    };
+    window.addEventListener("storage", handleStorage);
+
     return () => {
       isMounted = false;
       clearRecoveryTimer();
       subscription.unsubscribe();
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 
