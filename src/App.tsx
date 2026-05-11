@@ -17,30 +17,34 @@ import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
+const WithAuth = ({ children }: { children: React.ReactNode }) => (
+  <AuthProvider>{children}</AuthProvider>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/invite/:code" element={<InviteRegistration />} />
-            <Route path="/shared/:token" element={<SharedFunnel />} />
-            <Route path="/brief/:token" element={<SharedBrief />} />
-            <Route path="/offer/:token" element={<SharedOffer />} />
-            <Route path="/blueprint/:token" element={<SharedBlueprint />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/dashboard" element={
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<WithAuth><Index /></WithAuth>} />
+          <Route path="/invite/:code" element={<InviteRegistration />} />
+          <Route path="/shared/:token" element={<SharedFunnel />} />
+          <Route path="/brief/:token" element={<SharedBrief />} />
+          <Route path="/offer/:token" element={<SharedOffer />} />
+          <Route path="/blueprint/:token" element={<SharedBlueprint />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/dashboard" element={
+            <WithAuth>
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
-            } />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
+            </WithAuth>
+          } />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
