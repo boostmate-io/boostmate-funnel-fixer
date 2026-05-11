@@ -22,6 +22,8 @@ const fallbackAuth: AuthContextType = {
 const UNEXPECTED_SIGN_OUT_MAX_MS = 120_000;
 const ACCESS_TOKEN_SAFETY_MS = 30_000;
 const RECOVERY_DELAYS = [500, 1500, 4000, 8000];
+const AUTH_STORAGE_KEY_FRAGMENT = "auth-token";
+const INTENTIONAL_SIGN_OUT_KEY = "boostmate-intentional-signout";
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
@@ -74,6 +76,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsReady(true);
     };
 
+    const isIntentionalSignOut = () => {
+      if (intentionalSignOutRef.current) return true;
+      const timestamp = Number(localStorage.getItem(INTENTIONAL_SIGN_OUT_KEY) || 0);
+      return timestamp > 0 && Date.now() - timestamp < 10_000;
+    };
+
     const applySession = (nextSession: Session | null, options?: { skipStateUpdate?: boolean }) => {
       if (!isMounted) return;
       clearRecoveryTimer();
@@ -113,22 +121,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const tryRecoverSession = async () => {
-      // First check if another tab already wrote a fresh session to storage.
+      // Only read the stored session. Do not call refreshSession here: refresh
+      // tokens rotate, so manual recovery refreshes from multiple tabs can
+      // invalidate the active designer tab and cause a logout loop.
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session && hasFreshAccessToken(sessionData.session)) {
         return sessionData.session;
-      }
-      // Otherwise explicitly attempt a refresh using the last known refresh token.
-      const cached = lastKnownSessionRef.current;
-      if (cached?.refresh_token) {
-        try {
-          const { data: refreshed } = await supabase.auth.refreshSession({
-            refresh_token: cached.refresh_token,
-          });
-          if (refreshed.session) return refreshed.session;
-        } catch {
-          // ignore — fall through to retry
-        }
       }
       return null;
     };
@@ -196,7 +194,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (event === "SIGNED_OUT") {
-        if (intentionalSignOutRef.current) {
+        if (isIntentionalSignOut()) {
           clearAuthState();
           return;
         }
@@ -215,7 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      if (intentionalSignOutRef.current) {
+      if (isIntentionalSignOut()) {
         clearAuthState();
         return;
       }
@@ -278,6 +276,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     intentionalSignOutRef.current = true;
+    localStorage.setItem(INTENTIONAL_SIGN_OUT_KEY, String(Date.now()));
     recoveryAttemptRef.current = 0;
     unexpectedSignedOutAtRef.current = null;
     lastKnownSessionRef.current = null;
@@ -285,6 +284,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       intentionalSignOutRef.current = false;
+      localStorage.removeItem(INTENTIONAL_SIGN_OUT_KEY);
       throw error;
     }
   };

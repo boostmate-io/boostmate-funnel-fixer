@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { toast } from "sonner";
 import {
   ArrowLeft, Save, CheckCircle2, Circle, Gem, Star, AlertTriangle,
@@ -27,9 +28,10 @@ interface OfferEditorProps {
   offerId: string;
   onBack: () => void;
   readOnly?: boolean;
+  publicReadOnly?: boolean;
 }
 
-const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
+const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorProps) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
@@ -43,7 +45,8 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data: row } = await supabase
+      const db = publicReadOnly ? publicSupabase : supabase;
+      const { data: row } = await db
         .from("offers")
         .select("*")
         .eq("id", offerId)
@@ -57,7 +60,7 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
       }
       setLoading(false);
     })();
-  }, [offerId]);
+  }, [offerId, publicReadOnly]);
 
   const completion = computeOfferCompletion(data);
 
@@ -302,7 +305,7 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
         </div>
       </div>
 
-      {!readOnly && (
+      {!readOnly && !publicReadOnly && (
         <OfferShareDialog
           open={showShareDialog}
           onOpenChange={setShowShareDialog}

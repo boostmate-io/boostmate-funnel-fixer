@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Loader2, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import BlueprintViewMode from "@/components/business-blueprint/BlueprintViewMode";
 import {
   normalizeOfferDesign, type OfferDesignData,
@@ -46,7 +46,7 @@ const SharedBlueprint = () => {
       setLoading(true);
       setError(null);
 
-      const { data: bp, error: bpErr } = await supabase
+      const { data: bp, error: bpErr } = await publicSupabase
         .from("business_blueprints")
         .select("*")
         .eq("share_token", token)
@@ -66,22 +66,22 @@ const SharedBlueprint = () => {
 
       const [{ data: mappingRows }, { data: offerRows }, { data: ws }, { data: sub }] =
         await Promise.all([
-          supabase
+          publicSupabase
             .from("growth_funnel_mappings")
             .select("*")
             .eq("blueprint_id", bp.id)
             .order("sort_order", { ascending: true }),
-          supabase
+          publicSupabase
             .from("offers")
             .select("id, name, tier, data, source, sort_order")
             .eq("blueprint_id", bp.id)
             .order("sort_order", { ascending: true }),
-          supabase
+          publicSupabase
             .from("workspace_settings")
             .select("business_type, currency, help_achieve, who_help, main_goal, biggest_challenge")
             .eq("sub_account_id", bp.sub_account_id)
             .maybeSingle(),
-          supabase
+          publicSupabase
             .from("sub_accounts")
             .select("name")
             .eq("id", bp.sub_account_id)
