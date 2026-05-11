@@ -120,11 +120,11 @@ const IconStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeData
       {isDecision && shouldShowHandle(nodeData, "source", "no") && (
         <Handle type="source" position={Position.Bottom} id="no" className="!w-3 !h-3 !bg-red-500 !border-2 !border-white" title="No" />
       )}
-      {isDecision && (
-        <>
-          <div className="absolute right-0 top-[24px] translate-x-[14px] text-[7px] font-bold text-emerald-600 select-none pointer-events-none">Y</div>
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[14px] text-[7px] font-bold text-red-500 select-none pointer-events-none">N</div>
-        </>
+      {isDecision && shouldShowHandle(nodeData, "source", "yes") && (
+        <div className="absolute right-0 top-[24px] translate-x-[14px] text-[7px] font-bold text-emerald-600 select-none pointer-events-none">Y</div>
+      )}
+      {isDecision && shouldShowHandle(nodeData, "source", "no") && (
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[14px] text-[7px] font-bold text-red-500 select-none pointer-events-none">N</div>
       )}
     </div>
   );
