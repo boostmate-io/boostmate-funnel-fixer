@@ -815,8 +815,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       layoutNode(r.id, 0, rootCenterY);
     });
 
-    // Orphan nodes (no connections)
-    nodes.forEach((n) => {
+    // Orphan nodes (no connections) — skip utility elements
+    layoutNodes.forEach((n) => {
       if (!visitedLayout.has(n.id)) {
         rootCenterY += Y_GAP;
         positions[n.id] = { x: 0, y: rootCenterY };
