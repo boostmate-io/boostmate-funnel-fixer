@@ -130,11 +130,24 @@ const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onL
     <div className="space-y-2">
       <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.copySections")}</label>
 
-      {sections.map((section) => (
-        <div key={section.id} className="border border-border rounded-lg bg-card">
+      {sections.map((section, idx) => (
+        <div
+          key={section.id}
+          draggable={!linkedAssetId}
+          onDragOver={(e) => handleDragOver(e, idx)}
+          onDragEnd={handleDragEnd}
+          className={`border border-border rounded-lg bg-card transition-opacity ${draggedIdx === idx ? "opacity-50" : ""}`}
+        >
           <div className="flex items-center gap-2 p-2">
             {!linkedAssetId && (
-              <GripVertical className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span
+                draggable
+                onDragStart={(e) => { e.stopPropagation(); handleDragStart(idx); }}
+                onDragEnd={handleDragEnd}
+                className="cursor-grab active:cursor-grabbing shrink-0"
+              >
+                <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+              </span>
             )}
             <button
               onClick={() => setExpandedId(expandedId === section.id ? null : section.id)}
