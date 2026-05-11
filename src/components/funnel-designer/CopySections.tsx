@@ -32,6 +32,19 @@ const CopySections = ({ linkedAssetId, localSections, onLocalSectionsChange, onL
   const [converting, setConverting] = useState(false);
   const [showConvertInput, setShowConvertInput] = useState(false);
   const [assetName, setAssetName] = useState("");
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  const handleDragStart = (idx: number) => setDraggedIdx(idx);
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === idx || linkedAssetId) return;
+    const updated = [...localSections];
+    const [moved] = updated.splice(draggedIdx, 1);
+    updated.splice(idx, 0, moved);
+    onLocalSectionsChange(updated);
+    setDraggedIdx(idx);
+  };
+  const handleDragEnd = () => setDraggedIdx(null);
 
   // Load sections from linked asset
   useEffect(() => {
