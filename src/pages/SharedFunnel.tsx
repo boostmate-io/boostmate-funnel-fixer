@@ -12,7 +12,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { toPng } from "html-to-image";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import FunnelNode from "@/components/funnel-designer/FunnelNode";
 import TrafficSourceNode from "@/components/funnel-designer/TrafficSourceNode";
 import NodeDetailsPanel from "@/components/funnel-designer/NodeDetailsPanel";
@@ -77,7 +77,7 @@ const SharedFunnelInner = () => {
   useEffect(() => {
     if (!token) return;
     (async () => {
-      const { data, error: err } = await supabase
+      const { data, error: err } = await publicSupabase
         .from("funnels")
         .select("id, name, nodes, edges, linked_offer_id")
         .eq("share_token", token)
@@ -89,7 +89,7 @@ const SharedFunnelInner = () => {
         setFunnel(fd as unknown as FunnelData);
         setLinkedOfferId(fd.linked_offer_id || null);
         if (data.id) {
-          const { data: briefRow } = await supabase
+          const { data: briefRow } = await publicSupabase
             .from("funnel_briefs")
             .select("id, structure, values, approved_fields, is_approved, share_permission")
             .eq("funnel_id", data.id)
@@ -167,7 +167,7 @@ const SharedFunnelInner = () => {
   const saveBriefValues = useCallback(async () => {
     if (!briefData?.id) return;
     setSavingBrief(true);
-    const { error } = await supabase
+    const { error } = await publicSupabase
       .from("funnel_briefs")
       .update({ values: briefValues as any, approved_fields: briefApprovedFields as any, updated_at: new Date().toISOString() } as any)
       .eq("id", briefData.id);
