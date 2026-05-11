@@ -20,8 +20,11 @@ const fallbackAuth: AuthContextType = {
 };
 
 const UNEXPECTED_SIGN_OUT_MAX_MS = 120_000;
+const INITIAL_SESSION_RECOVERY_MAX_MS = 15_000;
 const ACCESS_TOKEN_SAFETY_MS = 30_000;
 const RECOVERY_DELAYS = [500, 1500, 4000, 8000];
+const AUTH_STORAGE_KEY_FRAGMENT = "auth-token";
+const INTENTIONAL_SIGN_OUT_KEY = "boostmate-intentional-signout";
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
@@ -41,6 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const recoveryAttemptRef = useRef(0);
   const lastKnownSessionRef = useRef<Session | null>(null);
   const unexpectedSignedOutAtRef = useRef<number | null>(null);
+  const initialRecoveryStartedAtRef = useRef<number | null>(null);
   const intentionalSignOutRef = useRef(false);
   const currentUserRef = useRef<User | null>(null);
   const currentSessionRef = useRef<Session | null>(null);
