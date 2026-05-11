@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import OfferEditor from "@/components/offers/OfferEditor";
 import logo from "@/assets/logo-boostmate.svg";
 
@@ -13,7 +13,7 @@ const SharedOffer = () => {
   useEffect(() => {
     if (!token) return;
     (async () => {
-      const { data, error: err } = await supabase
+      const { data, error: err } = await publicSupabase
         .from("offers")
         .select("id, status")
         .eq("share_token", token)
@@ -43,7 +43,7 @@ const SharedOffer = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <OfferEditor offerId={offerId} onBack={() => window.history.back()} />
+      <OfferEditor offerId={offerId} onBack={() => window.history.back()} readOnly publicReadOnly />
     </div>
   );
 };
