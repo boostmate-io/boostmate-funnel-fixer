@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { toast } from "sonner";
 import {
   ArrowLeft, Save, CheckCircle2, Circle, Gem, Star, AlertTriangle,
@@ -44,7 +45,8 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data: row } = await supabase
+      const db = publicReadOnly ? publicSupabase : supabase;
+      const { data: row } = await db
         .from("offers")
         .select("*")
         .eq("id", offerId)
@@ -58,7 +60,7 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
       }
       setLoading(false);
     })();
-  }, [offerId]);
+  }, [offerId, publicReadOnly]);
 
   const completion = computeOfferCompletion(data);
 
@@ -303,17 +305,15 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
         </div>
       </div>
 
-      {!readOnly && (
-        {!publicReadOnly && (
-          <OfferShareDialog
-            open={showShareDialog}
-            onOpenChange={setShowShareDialog}
-            offerId={offerId}
-            offerName={name}
-            shareToken={shareToken}
-            onShareTokenChange={setShareToken}
-          />
-        )}
+      {!readOnly && !publicReadOnly && (
+        <OfferShareDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          offerId={offerId}
+          offerName={name}
+          shareToken={shareToken}
+          onShareTokenChange={setShareToken}
+        />
       )}
     </div>
   );
