@@ -276,6 +276,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     intentionalSignOutRef.current = true;
+    localStorage.setItem(INTENTIONAL_SIGN_OUT_KEY, String(Date.now()));
     recoveryAttemptRef.current = 0;
     unexpectedSignedOutAtRef.current = null;
     lastKnownSessionRef.current = null;
@@ -283,6 +284,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       intentionalSignOutRef.current = false;
+      localStorage.removeItem(INTENTIONAL_SIGN_OUT_KEY);
       throw error;
     }
   };
