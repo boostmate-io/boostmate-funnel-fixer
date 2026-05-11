@@ -744,15 +744,22 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   /* ── Auto Layout ── */
   const autoLayout = useCallback(() => {
     if (nodes.length === 0) return;
-    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+    const isUtility = (n: any) => {
+      const rs = n?.data?.renderStyle;
+      return rs === "note" || rs === "text" || rs === "shape";
+    };
+    const layoutNodes = nodes.filter((n) => !isUtility(n));
+    const layoutIds = new Set(layoutNodes.map((n) => n.id));
+    const nodeMap = new Map(layoutNodes.map((n) => [n.id, n]));
     const children: Record<string, string[]> = {};
     const parents: Record<string, string[]> = {};
-    nodes.forEach((n) => { children[n.id] = []; parents[n.id] = []; });
+    layoutNodes.forEach((n) => { children[n.id] = []; parents[n.id] = []; });
     edges.forEach((e) => {
+      if (!layoutIds.has(e.source) || !layoutIds.has(e.target)) return;
       if (children[e.source]) children[e.source].push(e.target);
       if (parents[e.target]) parents[e.target].push(e.source);
     });
-    const roots = nodes.filter((n) => parents[n.id].length === 0);
+    const roots = layoutNodes.filter((n) => parents[n.id].length === 0);
     if (roots.length === 0) return;
 
     const X_GAP = 250;
@@ -808,8 +815,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       layoutNode(r.id, 0, rootCenterY);
     });
 
-    // Orphan nodes (no connections)
-    nodes.forEach((n) => {
+    // Orphan nodes (no connections) — skip utility elements
+    layoutNodes.forEach((n) => {
       if (!visitedLayout.has(n.id)) {
         rootCenterY += Y_GAP;
         positions[n.id] = { x: 0, y: rootCenterY };
