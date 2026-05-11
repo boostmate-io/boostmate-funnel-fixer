@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { toast } from "sonner";
 import { Save, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ const SharedBrief = () => {
   useEffect(() => {
     if (!token) return;
     (async () => {
-      const { data, error: err } = await supabase
+      const { data, error: err } = await publicSupabase
         .from("funnel_briefs")
         .select("*")
         .eq("share_token", token)
@@ -41,7 +41,7 @@ const SharedBrief = () => {
         setApprovedFields(b.approved_fields || {});
 
         if (b.funnel_id) {
-          const { data: funnelData } = await supabase
+          const { data: funnelData } = await publicSupabase
             .from("funnels")
             .select("name")
             .eq("id", b.funnel_id)
@@ -58,7 +58,7 @@ const SharedBrief = () => {
   const saveValues = useCallback(async () => {
     if (!brief?.id || !canEdit) return;
     setSaving(true);
-    const { error: err } = await supabase
+    const { error: err } = await publicSupabase
       .from("funnel_briefs")
       .update({ values: values as any, approved_fields: approvedFields as any } as any)
       .eq("id", brief.id);
