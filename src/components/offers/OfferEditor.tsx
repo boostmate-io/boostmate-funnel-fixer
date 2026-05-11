@@ -27,9 +27,10 @@ interface OfferEditorProps {
   offerId: string;
   onBack: () => void;
   readOnly?: boolean;
+  publicReadOnly?: boolean;
 }
 
-const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
+const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorProps) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
@@ -303,14 +304,16 @@ const OfferEditor = ({ offerId, onBack, readOnly }: OfferEditorProps) => {
       </div>
 
       {!readOnly && (
-        <OfferShareDialog
-          open={showShareDialog}
-          onOpenChange={setShowShareDialog}
-          offerId={offerId}
-          offerName={name}
-          shareToken={shareToken}
-          onShareTokenChange={setShareToken}
-        />
+        {!publicReadOnly && (
+          <OfferShareDialog
+            open={showShareDialog}
+            onOpenChange={setShowShareDialog}
+            offerId={offerId}
+            offerName={name}
+            shareToken={shareToken}
+            onShareTokenChange={setShareToken}
+          />
+        )}
       )}
     </div>
   );
