@@ -89,6 +89,11 @@ const SharedFunnelInner = () => {
         const fd = data as any;
         setFunnel(fd as unknown as FunnelData);
         setLinkedOfferId(fd.linked_offer_id || null);
+        const hasAnyImage = (fd.nodes || []).some((n: any) => {
+          const d = n?.data || {};
+          return Boolean(d.nodeImage || d.nodeImageThumb);
+        });
+        if (hasAnyImage) setShowImages(true);
         if (data.id) {
           const { data: briefRow } = await publicSupabase
             .from("funnel_briefs")
