@@ -1303,6 +1303,16 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!fullscreenImage} onOpenChange={(open) => { if (!open) setFullscreenImage(null); }}>
+        <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 gap-0 overflow-hidden">
+          <div className="w-full h-full overflow-auto bg-black">
+            {fullscreenImage && (
+              <img src={fullscreenImage} alt="Screenshot" className="w-full h-auto block" />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
