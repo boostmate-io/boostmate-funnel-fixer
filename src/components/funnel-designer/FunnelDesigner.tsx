@@ -299,6 +299,15 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     }
   }, [activeSubAccountId]);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const src = (e as CustomEvent).detail?.src;
+      if (src) setFullscreenImage(src);
+    };
+    window.addEventListener("funnel-node-image-view", handler);
+    return () => window.removeEventListener("funnel-node-image-view", handler);
+  }, []);
+
   const linkedAssetIds = useMemo(
     () => Array.from(new Set(
       nodes.flatMap((node) =>
