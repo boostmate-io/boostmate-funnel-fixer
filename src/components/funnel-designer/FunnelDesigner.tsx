@@ -702,6 +702,11 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     setNodes((nds) => nds.map((n) => n.id === detailsNodeId ? { ...n, data: { ...n.data, [key]: value } } : n));
   }, [detailsNodeId, setNodes]);
 
+  const handleNodeDataChange = useCallback((targetNodeId: string, key: string, value: any) => {
+    if (!targetNodeId) return;
+    setNodes((nds) => nds.map((n) => n.id === targetNodeId ? { ...n, data: { ...n.data, [key]: value } } : n));
+  }, [setNodes]);
+
   /* ── Clone selected node ── */
   const cloneSelected = useCallback(() => {
     const selectedId = selectedNodeRef.current;
