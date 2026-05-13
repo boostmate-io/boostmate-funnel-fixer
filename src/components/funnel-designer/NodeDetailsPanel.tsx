@@ -80,7 +80,7 @@ const NodeDetailsPanel = ({
   nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copySections, funnelName,
   readOnly, textSize, textBold, textItalic, textUnderline, textColor, themeColor,
   shapeType, shapeBorderStyle, shapeTransparent, shapeWidth, shapeHeight, shapeColor,
-  onLinkAsset, onRename, onNoteContentChange, onDataChange, onClose,
+  onLinkAsset, onRename, onNoteContentChange, onDataChange, onNodeDataChange, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
