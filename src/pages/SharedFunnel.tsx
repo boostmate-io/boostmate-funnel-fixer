@@ -124,6 +124,15 @@ const SharedFunnelInner = () => {
     setDetailsNodeId(null);
   }, [token]);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const src = (e as CustomEvent).detail?.src;
+      if (src) setFullscreenImage(src);
+    };
+    window.addEventListener("funnel-node-image-view", handler);
+    return () => window.removeEventListener("funnel-node-image-view", handler);
+  }, []);
+
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.id);
   }, []);
