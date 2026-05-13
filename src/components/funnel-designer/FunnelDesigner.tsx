@@ -131,6 +131,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const [interactionMode, setInteractionMode] = useState<"pointer" | "hand">("hand");
   const [showImages, setShowImages] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [spacePressed, setSpacePressed] = useState(false);
   const nodeIdCounter = useRef(0);
   const selectedNodeRef = useRef<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -281,6 +282,31 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
+
+  // Spacebar pan mode
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !e.repeat) {
+        const target = e.target as HTMLElement;
+        const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+        if (!isInput) {
+          e.preventDefault();
+          setSpacePressed(true);
+        }
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        setSpacePressed(false);
+      }
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, []);
 
   const loadFunnels = useCallback(async () => {
     if (!userId || !activeSubAccountId) return;
@@ -1052,7 +1078,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 min-h-0 relative" ref={reactFlowWrapper}>
+        <div className="flex-1 min-h-0 relative" ref={reactFlowWrapper} style={{ cursor: spacePressed ? "grab" : undefined }}>
           <ReactFlow
             nodes={nodes.map((n) => {
               const d = n.data as any;
@@ -1088,8 +1114,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             edgesReconnectable
             edgesFocusable
             elementsSelectable
-            panOnDrag={interactionMode === "hand"}
-            selectionOnDrag={interactionMode === "pointer"}
+            panOnDrag={interactionMode === "hand" || spacePressed}
+            selectionOnDrag={interactionMode === "pointer" && !spacePressed}
             zoomOnScroll
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
