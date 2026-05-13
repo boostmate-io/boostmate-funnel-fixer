@@ -71,6 +71,7 @@ interface NodeDetailsPanelProps {
   onRename: (name: string) => void;
   onNoteContentChange?: (content: string) => void;
   onDataChange?: (key: string, value: any) => void;
+  onNodeDataChange?: (nodeId: string, key: string, value: any) => void;
   onClose: () => void;
 }
 
@@ -79,7 +80,7 @@ const NodeDetailsPanel = ({
   nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copySections, funnelName,
   readOnly, textSize, textBold, textItalic, textUnderline, textColor, themeColor,
   shapeType, shapeBorderStyle, shapeTransparent, shapeWidth, shapeHeight, shapeColor,
-  onLinkAsset, onRename, onNoteContentChange, onDataChange, onClose,
+  onLinkAsset, onRename, onNoteContentChange, onDataChange, onNodeDataChange, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -137,21 +138,26 @@ const NodeDetailsPanel = ({
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !userId) return;
+    const targetNodeId = nodeId; // capture to avoid race when user switches selection
+    const update = (key: string, value: any) => {
+      if (onNodeDataChange) onNodeDataChange(targetNodeId, key, value);
+      else onDataChange?.(key, value);
+    };
     setUploading(true);
     const ts = Date.now();
     const ext = file.name.split('.').pop();
-    const fullPath = `${userId}/${nodeId}_${ts}.${ext}`;
+    const fullPath = `${userId}/${targetNodeId}_${ts}.${ext}`;
     const { error } = await supabase.storage.from("funnel-screenshots").upload(fullPath, file);
     if (!error) {
       const { data: urlData } = supabase.storage.from("funnel-screenshots").getPublicUrl(fullPath);
-      onDataChange?.("nodeImage", urlData.publicUrl);
+      update("nodeImage", urlData.publicUrl);
       try {
         const thumbBlob = await resizeImage(file, 400);
-        const thumbPath = `${userId}/${nodeId}_${ts}_thumb.webp`;
+        const thumbPath = `${userId}/${targetNodeId}_${ts}_thumb.webp`;
         const { error: thumbErr } = await supabase.storage.from("funnel-screenshots").upload(thumbPath, thumbBlob, { contentType: "image/webp" });
         if (!thumbErr) {
           const { data: thumbUrl } = supabase.storage.from("funnel-screenshots").getPublicUrl(thumbPath);
-          onDataChange?.("nodeImageThumb", thumbUrl.publicUrl);
+          update("nodeImageThumb", thumbUrl.publicUrl);
         }
       } catch { /* thumbnail generation failed */ }
     }
@@ -159,7 +165,15 @@ const NodeDetailsPanel = ({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleRemoveImage = () => { onDataChange?.("nodeImage", ""); };
+  const handleRemoveImage = () => {
+    if (onNodeDataChange) {
+      onNodeDataChange(nodeId, "nodeImage", "");
+      onNodeDataChange(nodeId, "nodeImageThumb", "");
+    } else {
+      onDataChange?.("nodeImage", "");
+      onDataChange?.("nodeImageThumb", "");
+    }
+  };
 
   const waitDurationLabel = waitType === "days" ? t("funnelDesigner.waitDays")
     : waitType === "hours" ? t("funnelDesigner.waitHours")

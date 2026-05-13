@@ -114,6 +114,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const [renamingFunnel, setRenamingFunnel] = useState(false);
   const [interactionMode, setInteractionMode] = useState<"pointer" | "hand">("hand");
   const [showImages, setShowImages] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const nodeIdCounter = useRef(0);
   const selectedNodeRef = useRef<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -297,6 +298,15 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       resetCanvas();
     }
   }, [activeSubAccountId]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const src = (e as CustomEvent).detail?.src;
+      if (src) setFullscreenImage(src);
+    };
+    window.addEventListener("funnel-node-image-view", handler);
+    return () => window.removeEventListener("funnel-node-image-view", handler);
+  }, []);
 
   const linkedAssetIds = useMemo(
     () => Array.from(new Set(
@@ -701,6 +711,11 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     if (!detailsNodeId) return;
     setNodes((nds) => nds.map((n) => n.id === detailsNodeId ? { ...n, data: { ...n.data, [key]: value } } : n));
   }, [detailsNodeId, setNodes]);
+
+  const handleNodeDataChange = useCallback((targetNodeId: string, key: string, value: any) => {
+    if (!targetNodeId) return;
+    setNodes((nds) => nds.map((n) => n.id === targetNodeId ? { ...n, data: { ...n.data, [key]: value } } : n));
+  }, [setNodes]);
 
   /* ── Clone selected node ── */
   const cloneSelected = useCallback(() => {
@@ -1114,6 +1129,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           onRename={handleRenameNode}
           onNoteContentChange={handleNoteContentChange}
           onDataChange={handleDataChange}
+          onNodeDataChange={handleNodeDataChange}
           onClose={() => setDetailsNodeId(null)}
         />
       )}
@@ -1287,6 +1303,16 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!fullscreenImage} onOpenChange={(open) => { if (!open) setFullscreenImage(null); }}>
+        <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 gap-0 overflow-hidden">
+          <div className="w-full h-full overflow-auto bg-black">
+            {fullscreenImage && (
+              <img src={fullscreenImage} alt="Screenshot" className="w-full h-auto block" />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -385,12 +385,26 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
       {/* Wireframe or image thumbnail */}
       <div className="px-2 pt-1 pb-2">
         {showImage ? (
-          <img
-            src={imgSrc}
-            alt={displayName}
-            loading="lazy"
-            className="w-full h-[240px] object-cover object-top rounded"
-          />
+          <div
+            className="relative w-full group/img cursor-zoom-in"
+            onClick={(e) => {
+              e.stopPropagation();
+              const fullSrc = nodeData.nodeImage || nodeData.nodeImageThumb;
+              if (fullSrc) {
+                window.dispatchEvent(new CustomEvent("funnel-node-image-view", { detail: { src: fullSrc } }));
+              }
+            }}
+          >
+            <img
+              src={imgSrc}
+              alt={displayName}
+              loading="lazy"
+              className="w-full h-[240px] object-cover object-top rounded"
+            />
+            <div className="absolute inset-0 rounded bg-black/0 group-hover/img:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover/img:opacity-100">
+              <Icons.Maximize2 className="w-6 h-6 text-white drop-shadow-md" />
+            </div>
+          </div>
         ) : (
           <div className="space-y-2">
             <WireframeComponent color={nodeData.color} />

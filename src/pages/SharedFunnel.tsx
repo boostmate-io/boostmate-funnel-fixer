@@ -62,6 +62,7 @@ const SharedFunnelInner = () => {
   const [error, setError] = useState(false);
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
   const [showImages, setShowImages] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [rfInstance, setRfInstance] = useState<any>(null);
   const initDone = useRef(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -88,6 +89,11 @@ const SharedFunnelInner = () => {
         const fd = data as any;
         setFunnel(fd as unknown as FunnelData);
         setLinkedOfferId(fd.linked_offer_id || null);
+        const hasAnyImage = (fd.nodes || []).some((n: any) => {
+          const d = n?.data || {};
+          return Boolean(d.nodeImage || d.nodeImageThumb);
+        });
+        if (hasAnyImage) setShowImages(true);
         if (data.id) {
           const { data: briefRow } = await publicSupabase
             .from("funnel_briefs")
@@ -117,6 +123,15 @@ const SharedFunnelInner = () => {
     setSelectedNodeId(null);
     setDetailsNodeId(null);
   }, [token]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const src = (e as CustomEvent).detail?.src;
+      if (src) setFullscreenImage(src);
+    };
+    window.addEventListener("funnel-node-image-view", handler);
+    return () => window.removeEventListener("funnel-node-image-view", handler);
+  }, []);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.id);
@@ -425,6 +440,16 @@ const SharedFunnelInner = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!fullscreenImage} onOpenChange={(open) => { if (!open) setFullscreenImage(null); }}>
+        <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 gap-0 overflow-hidden">
+          <div className="w-full h-full overflow-auto bg-black">
+            {fullscreenImage && (
+              <img src={fullscreenImage} alt="Screenshot" className="w-full h-auto block" />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
