@@ -1253,21 +1253,56 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       </Dialog>
 
       <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{t("funnelDesigner.templates")}</DialogTitle></DialogHeader>
-          <div className="space-y-2 max-h-80 overflow-y-auto">
+
+          {/* Type filter */}
+          <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border">
+            <Button
+              size="sm" variant={templateTypeFilter === "all" ? "default" : "outline"}
+              className="h-7 text-xs" onClick={() => setTemplateTypeFilter("all")}
+            >
+              All ({templates.length})
+            </Button>
+            {TEMPLATE_TYPES.map((tt) => {
+              const count = templates.filter((x) => (x.template_type || "full-funnel") === tt.value).length;
+              if (count === 0) return null;
+              return (
+                <Button
+                  key={tt.value} size="sm"
+                  variant={templateTypeFilter === tt.value ? "default" : "outline"}
+                  className="h-7 text-xs"
+                  onClick={() => setTemplateTypeFilter(tt.value)}
+                >
+                  {tt.label} ({count})
+                </Button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {templates.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">{t("funnelDesigner.noTemplates")}</p>}
-            {templates.map((tmpl) => (
+            {templates
+              .filter((tmpl) => templateTypeFilter === "all" || (tmpl.template_type || "full-funnel") === templateTypeFilter)
+              .map((tmpl) => (
               <div key={tmpl.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
-                <div className="text-left flex-1">
-                  <p className="text-sm font-medium text-foreground">{tmpl.name}</p>
+                <div className="text-left flex-1 min-w-0 mr-2">
+                  <p className="text-sm font-medium text-foreground truncate">{tmpl.name}</p>
+                  <Badge variant="secondary" className="mt-1 text-[10px] font-normal">
+                    {getTemplateTypeLabel(tmpl.template_type)}
+                  </Badge>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   <Tooltip><TooltipTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => createFromTemplate(tmpl)}>
                       <Plus className="w-3 h-3 mr-1" /> Use
                     </Button>
-                  </TooltipTrigger><TooltipContent>Use as template for new funnel</TooltipContent></Tooltip>
+                  </TooltipTrigger><TooltipContent>Create a new funnel from this template</TooltipContent></Tooltip>
+                  <Tooltip><TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => insertTemplate(tmpl)}>
+                      <Download className="w-3 h-3 mr-1" /> Insert
+                    </Button>
+                  </TooltipTrigger><TooltipContent>Insert into the current funnel canvas</TooltipContent></Tooltip>
                   <Tooltip><TooltipTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => editTemplate(tmpl)}>
                       <Pencil className="w-3 h-3 mr-1" /> Edit
@@ -1286,7 +1321,21 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       <Dialog open={showSaveTemplate} onOpenChange={setShowSaveTemplate}>
         <DialogContent>
           <DialogHeader><DialogTitle>{t("funnelDesigner.saveAsTemplate")}</DialogTitle></DialogHeader>
-          <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder={t("funnelDesigner.templateNamePlaceholder")} />
+          <div className="space-y-3">
+            <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder={t("funnelDesigner.templateNamePlaceholder")} />
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Template type</label>
+              <Select value={templateType} onValueChange={(v) => setTemplateType(v as TemplateTypeValue)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TEMPLATE_TYPES.map((tt) => (
+                    <SelectItem key={tt.value} value={tt.value}>{tt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Used for organization and filtering. All templates share the same architecture.</p>
+            </div>
+          </div>
           <DialogFooter><Button onClick={saveAsTemplate}>{t("funnelDesigner.save")}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
