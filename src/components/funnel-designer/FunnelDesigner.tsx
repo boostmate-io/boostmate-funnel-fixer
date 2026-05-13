@@ -142,7 +142,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const [showSeedTemplates, setShowSeedTemplates] = useState(false);
   const [showSaveSeed, setShowSaveSeed] = useState(false);
   const [seedTemplateName, setSeedTemplateName] = useState("");
-  const [seedTemplates, setSeedTemplates] = useState<Array<{ id: string; name: string; description: string; created_at: string; nodes: any[]; edges: any[]; is_active: boolean }>>([]);
+  const [seedTemplateType, setSeedTemplateType] = useState<TemplateTypeValue>("full-funnel");
+  const [seedTemplates, setSeedTemplates] = useState<Array<{ id: string; name: string; description: string; created_at: string; nodes: any[]; edges: any[]; is_active: boolean; template_type?: string | null }>>([]);
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
   const [editingSeedTemplate, setEditingSeedTemplate] = useState<{ id: string; name: string } | null>(null);
   const [showBriefPanel, setShowBriefPanel] = useState(false);
@@ -185,15 +186,17 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       nodes: cleanedNodes,
       edges: JSON.parse(JSON.stringify(edges)),
       brief_structure: briefStructure,
+      template_type: seedTemplateType,
     });
     if (error) toast.error("Error saving seed template");
     else {
       toast.success("Seed template saved");
       setShowSaveSeed(false);
       setSeedTemplateName("");
+      setSeedTemplateType("full-funnel");
       loadSeedTemplates();
     }
-  }, [seedTemplateName, nodes, edges, isAdmin, loadSeedTemplates, currentFunnel]);
+  }, [seedTemplateName, seedTemplateType, nodes, edges, isAdmin, loadSeedTemplates, currentFunnel]);
 
   const deleteSeedTemplate = useCallback(async (id: string) => {
     const { error } = await supabase.from("seed_templates").delete().eq("id", id);
@@ -1360,7 +1363,20 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             <DialogTitle>Save as Seed Template</DialogTitle>
             <DialogDescription>This template will be automatically copied to every new user account.</DialogDescription>
           </DialogHeader>
-          <Input value={seedTemplateName} onChange={(e) => setSeedTemplateName(e.target.value)} placeholder="Seed template name..." />
+          <div className="space-y-3">
+            <Input value={seedTemplateName} onChange={(e) => setSeedTemplateName(e.target.value)} placeholder="Seed template name..." />
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Template type</label>
+              <Select value={seedTemplateType} onValueChange={(v) => setSeedTemplateType(v as TemplateTypeValue)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TEMPLATE_TYPES.map((tt) => (
+                    <SelectItem key={tt.value} value={tt.value}>{tt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <DialogFooter><Button onClick={saveAsSeedTemplate}>Save Seed Template</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1377,9 +1393,28 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
               <div key={st.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
                 <button onClick={() => previewSeedTemplate(st)} className="text-left flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{st.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{new Date(st.created_at).toLocaleDateString()}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="secondary" className="text-[10px] font-normal">
+                      {getTemplateTypeLabel(st.template_type)}
+                    </Badge>
+                    <p className="text-[11px] text-muted-foreground">{new Date(st.created_at).toLocaleDateString()}</p>
+                  </div>
                 </button>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <Select
+                    value={(st.template_type as TemplateTypeValue) || "full-funnel"}
+                    onValueChange={async (v) => {
+                      await supabase.from("seed_templates").update({ template_type: v }).eq("id", st.id);
+                      setSeedTemplates((prev) => prev.map((t) => t.id === st.id ? { ...t, template_type: v } : t));
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TEMPLATE_TYPES.map((tt) => (
+                        <SelectItem key={tt.value} value={tt.value} className="text-xs">{tt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div>

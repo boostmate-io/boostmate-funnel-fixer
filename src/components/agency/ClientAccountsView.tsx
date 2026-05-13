@@ -68,6 +68,7 @@ const ClientAccountsView = () => {
           edges: seed.edges,
           is_template: true,
           template_id: null,
+          template_type: seed.template_type ?? null,
           description: seed.description || null,
         }));
 
