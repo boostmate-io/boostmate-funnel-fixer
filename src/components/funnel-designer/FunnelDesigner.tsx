@@ -1078,7 +1078,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 min-h-0 relative" ref={reactFlowWrapper}>
+        <div className="flex-1 min-h-0 relative" ref={reactFlowWrapper} style={{ cursor: spacePressed ? "grab" : undefined }}>
           <ReactFlow
             nodes={nodes.map((n) => {
               const d = n.data as any;
