@@ -25,8 +25,21 @@ import {
   Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil, ArrowLeft,
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
-  Sprout, ShieldCheck, ClipboardList, Gem,
+  Sprout, ShieldCheck, ClipboardList, Gem, Download,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+
+export const TEMPLATE_TYPES = [
+  { value: "full-funnel", label: "Full Funnel" },
+  { value: "funnel-segment", label: "Funnel Segment" },
+  { value: "email-sequence", label: "Email Sequence" },
+  { value: "automation-flow", label: "Automation Flow" },
+  { value: "follow-up-sequence", label: "Follow-Up Sequence" },
+] as const;
+type TemplateTypeValue = typeof TEMPLATE_TYPES[number]["value"];
+const getTemplateTypeLabel = (v?: string | null) =>
+  TEMPLATE_TYPES.find((t) => t.value === v)?.label ?? "Uncategorized";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
