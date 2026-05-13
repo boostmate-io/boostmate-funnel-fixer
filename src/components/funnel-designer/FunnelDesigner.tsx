@@ -1119,6 +1119,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           onRename={handleRenameNode}
           onNoteContentChange={handleNoteContentChange}
           onDataChange={handleDataChange}
+          onNodeDataChange={handleNodeDataChange}
           onClose={() => setDetailsNodeId(null)}
         />
       )}
