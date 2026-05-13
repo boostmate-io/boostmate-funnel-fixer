@@ -1363,7 +1363,20 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             <DialogTitle>Save as Seed Template</DialogTitle>
             <DialogDescription>This template will be automatically copied to every new user account.</DialogDescription>
           </DialogHeader>
-          <Input value={seedTemplateName} onChange={(e) => setSeedTemplateName(e.target.value)} placeholder="Seed template name..." />
+          <div className="space-y-3">
+            <Input value={seedTemplateName} onChange={(e) => setSeedTemplateName(e.target.value)} placeholder="Seed template name..." />
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Template type</label>
+              <Select value={seedTemplateType} onValueChange={(v) => setSeedTemplateType(v as TemplateTypeValue)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TEMPLATE_TYPES.map((tt) => (
+                    <SelectItem key={tt.value} value={tt.value}>{tt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <DialogFooter><Button onClick={saveAsSeedTemplate}>Save Seed Template</Button></DialogFooter>
         </DialogContent>
       </Dialog>
