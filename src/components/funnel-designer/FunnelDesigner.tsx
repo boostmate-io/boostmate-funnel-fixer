@@ -114,6 +114,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const [renamingFunnel, setRenamingFunnel] = useState(false);
   const [interactionMode, setInteractionMode] = useState<"pointer" | "hand">("hand");
   const [showImages, setShowImages] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const nodeIdCounter = useRef(0);
   const selectedNodeRef = useRef<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
