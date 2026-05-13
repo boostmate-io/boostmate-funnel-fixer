@@ -186,15 +186,17 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       nodes: cleanedNodes,
       edges: JSON.parse(JSON.stringify(edges)),
       brief_structure: briefStructure,
+      template_type: seedTemplateType,
     });
     if (error) toast.error("Error saving seed template");
     else {
       toast.success("Seed template saved");
       setShowSaveSeed(false);
       setSeedTemplateName("");
+      setSeedTemplateType("full-funnel");
       loadSeedTemplates();
     }
-  }, [seedTemplateName, nodes, edges, isAdmin, loadSeedTemplates, currentFunnel]);
+  }, [seedTemplateName, seedTemplateType, nodes, edges, isAdmin, loadSeedTemplates, currentFunnel]);
 
   const deleteSeedTemplate = useCallback(async (id: string) => {
     const { error } = await supabase.from("seed_templates").delete().eq("id", id);
