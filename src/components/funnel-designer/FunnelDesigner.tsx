@@ -90,6 +90,7 @@ interface Funnel {
   nodes: Node[];
   edges: Edge[];
   is_template: boolean;
+  template_type?: string | null;
   created_at: string;
   share_token?: string | null;
 }
