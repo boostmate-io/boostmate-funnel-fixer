@@ -1114,8 +1114,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             edgesReconnectable
             edgesFocusable
             elementsSelectable
-            panOnDrag={interactionMode === "hand"}
-            selectionOnDrag={interactionMode === "pointer"}
+            panOnDrag={interactionMode === "hand" || spacePressed}
+            selectionOnDrag={interactionMode === "pointer" && !spacePressed}
             zoomOnScroll
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
