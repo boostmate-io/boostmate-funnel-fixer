@@ -1393,9 +1393,28 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
               <div key={st.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
                 <button onClick={() => previewSeedTemplate(st)} className="text-left flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{st.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{new Date(st.created_at).toLocaleDateString()}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="secondary" className="text-[10px] font-normal">
+                      {getTemplateTypeLabel(st.template_type)}
+                    </Badge>
+                    <p className="text-[11px] text-muted-foreground">{new Date(st.created_at).toLocaleDateString()}</p>
+                  </div>
                 </button>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <Select
+                    value={(st.template_type as TemplateTypeValue) || "full-funnel"}
+                    onValueChange={async (v) => {
+                      await supabase.from("seed_templates").update({ template_type: v }).eq("id", st.id);
+                      setSeedTemplates((prev) => prev.map((t) => t.id === st.id ? { ...t, template_type: v } : t));
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TEMPLATE_TYPES.map((tt) => (
+                        <SelectItem key={tt.value} value={tt.value} className="text-xs">{tt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div>
