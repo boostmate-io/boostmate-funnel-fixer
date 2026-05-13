@@ -71,6 +71,7 @@ interface NodeDetailsPanelProps {
   onRename: (name: string) => void;
   onNoteContentChange?: (content: string) => void;
   onDataChange?: (key: string, value: any) => void;
+  onNodeDataChange?: (nodeId: string, key: string, value: any) => void;
   onClose: () => void;
 }
 
