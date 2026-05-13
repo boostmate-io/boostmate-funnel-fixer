@@ -888,6 +888,7 @@ export type Database = {
           share_token: string | null
           sub_account_id: string | null
           template_id: string | null
+          template_type: string | null
           updated_at: string
           user_id: string
         }
@@ -904,6 +905,7 @@ export type Database = {
           share_token?: string | null
           sub_account_id?: string | null
           template_id?: string | null
+          template_type?: string | null
           updated_at?: string
           user_id: string
         }
@@ -920,6 +922,7 @@ export type Database = {
           share_token?: string | null
           sub_account_id?: string | null
           template_id?: string | null
+          template_type?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1499,6 +1502,7 @@ export type Database = {
           is_active: boolean
           name: string
           nodes: Json
+          template_type: string | null
           updated_at: string
         }
         Insert: {
@@ -1510,6 +1514,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           nodes?: Json
+          template_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -1521,6 +1526,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           nodes?: Json
+          template_type?: string | null
           updated_at?: string
         }
         Relationships: []

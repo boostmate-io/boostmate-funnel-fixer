@@ -25,8 +25,21 @@ import {
   Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil, ArrowLeft,
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
-  Sprout, ShieldCheck, ClipboardList, Gem,
+  Sprout, ShieldCheck, ClipboardList, Gem, Download,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+
+export const TEMPLATE_TYPES = [
+  { value: "full-funnel", label: "Full Funnel" },
+  { value: "funnel-segment", label: "Funnel Segment" },
+  { value: "email-sequence", label: "Email Sequence" },
+  { value: "automation-flow", label: "Automation Flow" },
+  { value: "follow-up-sequence", label: "Follow-Up Sequence" },
+] as const;
+type TemplateTypeValue = typeof TEMPLATE_TYPES[number]["value"];
+const getTemplateTypeLabel = (v?: string | null) =>
+  TEMPLATE_TYPES.find((t) => t.value === v)?.label ?? "Uncategorized";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -77,6 +90,7 @@ interface Funnel {
   nodes: Node[];
   edges: Edge[];
   is_template: boolean;
+  template_type?: string | null;
   created_at: string;
   share_token?: string | null;
 }
@@ -110,6 +124,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const [showNewFunnel, setShowNewFunnel] = useState(false);
   const [funnelName, setFunnelName] = useState("");
   const [templateName, setTemplateName] = useState("");
+  const [templateType, setTemplateType] = useState<TemplateTypeValue>("full-funnel");
+  const [templateTypeFilter, setTemplateTypeFilter] = useState<"all" | TemplateTypeValue>("all");
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
   const [renamingFunnel, setRenamingFunnel] = useState(false);
   const [interactionMode, setInteractionMode] = useState<"pointer" | "hand">("hand");
@@ -544,15 +560,63 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       user_id: userId, name: templateName || "Untitled Template",
       nodes: cleanedNodes, edges: JSON.parse(JSON.stringify(edges)),
       is_template: true, sub_account_id: activeSubAccountId,
-    });
+      template_type: templateType,
+    } as any);
     if (error) toast.error(t("funnelDesigner.saveError"));
     else {
       toast.success(t("funnelDesigner.templateSaved"));
       setShowSaveTemplate(false);
       setTemplateName("");
+      setTemplateType("full-funnel");
       loadTemplates();
     }
-  }, [templateName, nodes, edges, t, loadTemplates, userId, activeSubAccountId]);
+  }, [templateName, templateType, nodes, edges, t, loadTemplates, userId, activeSubAccountId]);
+
+  /* ── Insert template into the CURRENT canvas ── */
+  const insertTemplate = useCallback((template: Funnel) => {
+    const tplNodes: Node[] = (template.nodes || []) as Node[];
+    const tplEdges: Edge[] = (template.edges || []) as Edge[];
+    if (tplNodes.length === 0) {
+      toast.error("Template is empty");
+      return;
+    }
+
+    // Compute offset: place inserted nodes to the right of existing canvas content
+    let offsetX = 0;
+    let offsetY = 0;
+    if (nodes.length > 0) {
+      const maxX = Math.max(...nodes.map((n) => (n.position?.x ?? 0) + 220));
+      offsetX = maxX + 200 - Math.min(...tplNodes.map((n) => n.position?.x ?? 0));
+    }
+
+    // Build ID map to avoid collisions
+    const idMap = new Map<string, string>();
+    const stamp = Date.now();
+    tplNodes.forEach((n, i) => {
+      nodeIdCounter.current += 1;
+      idMap.set(n.id, `node_${stamp}_${nodeIdCounter.current}_${i}`);
+    });
+
+    const remappedNodes: Node[] = tplNodes.map((n) => ({
+      ...JSON.parse(JSON.stringify(n)),
+      id: idMap.get(n.id)!,
+      position: { x: (n.position?.x ?? 0) + offsetX, y: (n.position?.y ?? 0) + offsetY },
+      selected: false,
+    }));
+
+    const remappedEdges: Edge[] = tplEdges.map((e, i) => ({
+      ...JSON.parse(JSON.stringify(e)),
+      id: `edge_${stamp}_${i}`,
+      source: idMap.get(e.source) ?? e.source,
+      target: idMap.get(e.target) ?? e.target,
+    }));
+
+    setNodes((nds) => [...nds, ...remappedNodes]);
+    setEdges((eds) => [...eds, ...remappedEdges]);
+    setShowTemplates(false);
+    setTimeout(() => reactFlowInstance?.fitView({ padding: 0.2 }), 100);
+    toast.success(`Inserted "${template.name}"`);
+  }, [nodes, setNodes, setEdges, reactFlowInstance]);
 
   const loadFunnel = useCallback((funnel: Funnel) => {
     setNodes(funnel.nodes || []);
@@ -1189,21 +1253,56 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       </Dialog>
 
       <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{t("funnelDesigner.templates")}</DialogTitle></DialogHeader>
-          <div className="space-y-2 max-h-80 overflow-y-auto">
+
+          {/* Type filter */}
+          <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border">
+            <Button
+              size="sm" variant={templateTypeFilter === "all" ? "default" : "outline"}
+              className="h-7 text-xs" onClick={() => setTemplateTypeFilter("all")}
+            >
+              All ({templates.length})
+            </Button>
+            {TEMPLATE_TYPES.map((tt) => {
+              const count = templates.filter((x) => (x.template_type || "full-funnel") === tt.value).length;
+              if (count === 0) return null;
+              return (
+                <Button
+                  key={tt.value} size="sm"
+                  variant={templateTypeFilter === tt.value ? "default" : "outline"}
+                  className="h-7 text-xs"
+                  onClick={() => setTemplateTypeFilter(tt.value)}
+                >
+                  {tt.label} ({count})
+                </Button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {templates.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">{t("funnelDesigner.noTemplates")}</p>}
-            {templates.map((tmpl) => (
+            {templates
+              .filter((tmpl) => templateTypeFilter === "all" || (tmpl.template_type || "full-funnel") === templateTypeFilter)
+              .map((tmpl) => (
               <div key={tmpl.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
-                <div className="text-left flex-1">
-                  <p className="text-sm font-medium text-foreground">{tmpl.name}</p>
+                <div className="text-left flex-1 min-w-0 mr-2">
+                  <p className="text-sm font-medium text-foreground truncate">{tmpl.name}</p>
+                  <Badge variant="secondary" className="mt-1 text-[10px] font-normal">
+                    {getTemplateTypeLabel(tmpl.template_type)}
+                  </Badge>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   <Tooltip><TooltipTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => createFromTemplate(tmpl)}>
                       <Plus className="w-3 h-3 mr-1" /> Use
                     </Button>
-                  </TooltipTrigger><TooltipContent>Use as template for new funnel</TooltipContent></Tooltip>
+                  </TooltipTrigger><TooltipContent>Create a new funnel from this template</TooltipContent></Tooltip>
+                  <Tooltip><TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => insertTemplate(tmpl)}>
+                      <Download className="w-3 h-3 mr-1" /> Insert
+                    </Button>
+                  </TooltipTrigger><TooltipContent>Insert into the current funnel canvas</TooltipContent></Tooltip>
                   <Tooltip><TooltipTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => editTemplate(tmpl)}>
                       <Pencil className="w-3 h-3 mr-1" /> Edit
@@ -1222,7 +1321,21 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       <Dialog open={showSaveTemplate} onOpenChange={setShowSaveTemplate}>
         <DialogContent>
           <DialogHeader><DialogTitle>{t("funnelDesigner.saveAsTemplate")}</DialogTitle></DialogHeader>
-          <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder={t("funnelDesigner.templateNamePlaceholder")} />
+          <div className="space-y-3">
+            <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder={t("funnelDesigner.templateNamePlaceholder")} />
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Template type</label>
+              <Select value={templateType} onValueChange={(v) => setTemplateType(v as TemplateTypeValue)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TEMPLATE_TYPES.map((tt) => (
+                    <SelectItem key={tt.value} value={tt.value}>{tt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Used for organization and filtering. All templates share the same architecture.</p>
+            </div>
+          </div>
           <DialogFooter><Button onClick={saveAsTemplate}>{t("funnelDesigner.save")}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
