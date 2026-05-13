@@ -560,15 +560,63 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       user_id: userId, name: templateName || "Untitled Template",
       nodes: cleanedNodes, edges: JSON.parse(JSON.stringify(edges)),
       is_template: true, sub_account_id: activeSubAccountId,
-    });
+      template_type: templateType,
+    } as any);
     if (error) toast.error(t("funnelDesigner.saveError"));
     else {
       toast.success(t("funnelDesigner.templateSaved"));
       setShowSaveTemplate(false);
       setTemplateName("");
+      setTemplateType("full-funnel");
       loadTemplates();
     }
-  }, [templateName, nodes, edges, t, loadTemplates, userId, activeSubAccountId]);
+  }, [templateName, templateType, nodes, edges, t, loadTemplates, userId, activeSubAccountId]);
+
+  /* ── Insert template into the CURRENT canvas ── */
+  const insertTemplate = useCallback((template: Funnel) => {
+    const tplNodes: Node[] = (template.nodes || []) as Node[];
+    const tplEdges: Edge[] = (template.edges || []) as Edge[];
+    if (tplNodes.length === 0) {
+      toast.error("Template is empty");
+      return;
+    }
+
+    // Compute offset: place inserted nodes to the right of existing canvas content
+    let offsetX = 0;
+    let offsetY = 0;
+    if (nodes.length > 0) {
+      const maxX = Math.max(...nodes.map((n) => (n.position?.x ?? 0) + 220));
+      offsetX = maxX + 200 - Math.min(...tplNodes.map((n) => n.position?.x ?? 0));
+    }
+
+    // Build ID map to avoid collisions
+    const idMap = new Map<string, string>();
+    const stamp = Date.now();
+    tplNodes.forEach((n, i) => {
+      nodeIdCounter.current += 1;
+      idMap.set(n.id, `node_${stamp}_${nodeIdCounter.current}_${i}`);
+    });
+
+    const remappedNodes: Node[] = tplNodes.map((n) => ({
+      ...JSON.parse(JSON.stringify(n)),
+      id: idMap.get(n.id)!,
+      position: { x: (n.position?.x ?? 0) + offsetX, y: (n.position?.y ?? 0) + offsetY },
+      selected: false,
+    }));
+
+    const remappedEdges: Edge[] = tplEdges.map((e, i) => ({
+      ...JSON.parse(JSON.stringify(e)),
+      id: `edge_${stamp}_${i}`,
+      source: idMap.get(e.source) ?? e.source,
+      target: idMap.get(e.target) ?? e.target,
+    }));
+
+    setNodes((nds) => [...nds, ...remappedNodes]);
+    setEdges((eds) => [...eds, ...remappedEdges]);
+    setShowTemplates(false);
+    setTimeout(() => reactFlowInstance?.fitView({ padding: 0.2 }), 100);
+    toast.success(`Inserted "${template.name}"`);
+  }, [nodes, setNodes, setEdges, reactFlowInstance]);
 
   const loadFunnel = useCallback((funnel: Funnel) => {
     setNodes(funnel.nodes || []);
