@@ -149,7 +149,9 @@ const SharedFunnelInner = () => {
   }, []);
 
   const canOpenReadOnlyDetails = useCallback((node: Node | undefined) => {
-    if (!node || node.type !== "funnelPage") return false;
+    if (!node) return false;
+    if (node.type === "sequenceGroup") return true;
+    if (node.type !== "funnelPage") return false;
     const nodeData = node.data as any;
     const renderStyle = nodeData.renderStyle ?? "page";
     if (nodeData.pageType === "wait") return false;
@@ -168,14 +170,27 @@ const SharedFunnelInner = () => {
     const handler = (e: Event) => {
       const nodeId = (e as CustomEvent).detail?.nodeId;
       if (!nodeId) return;
-      const node = (funnel?.nodes ?? []).find((item) => item.id === nodeId);
+      const node = localNodes.find((item) => item.id === nodeId);
       if (!canOpenReadOnlyDetails(node)) return;
       setSelectedNodeId(nodeId);
       setDetailsNodeId(nodeId);
     };
     window.addEventListener("funnel-node-dblclick", handler);
     return () => window.removeEventListener("funnel-node-dblclick", handler);
-  }, [funnel?.nodes, canOpenReadOnlyDetails]);
+  }, [localNodes, canOpenReadOnlyDetails]);
+
+  // Sequence group collapse/expand toggle
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id;
+      if (!id) return;
+      const result = toggleSequenceCollapse(localNodes, localEdges, id);
+      setLocalNodes(result.nodes);
+      setLocalEdges(result.edges);
+    };
+    window.addEventListener("sequence-group-toggle", handler);
+    return () => window.removeEventListener("sequence-group-toggle", handler);
+  }, [localNodes, localEdges]);
 
   const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
@@ -211,7 +226,7 @@ const SharedFunnelInner = () => {
 
   const connectedHandlesMap = useMemo(() => {
     const map: Record<string, Set<string>> = {};
-    for (const e of (funnel?.edges ?? []) as Edge[]) {
+    for (const e of localEdges) {
       if (!map[e.source]) map[e.source] = new Set();
       map[e.source].add(`source-${e.sourceHandle || "right"}`);
       if (!map[e.target]) map[e.target] = new Set();
@@ -220,18 +235,26 @@ const SharedFunnelInner = () => {
     const result: Record<string, string[]> = {};
     for (const [id, s] of Object.entries(map)) result[id] = Array.from(s);
     return result;
-  }, [funnel?.edges]);
+  }, [localEdges]);
 
   const readOnlyNodes = useMemo(
-    () => (funnel?.nodes ?? []).map((n) => ({
-      ...n,
-      selected: n.id === selectedNodeId,
-      draggable: false,
-      connectable: false,
-      data: { ...n.data, showImages, readOnly: true, connectedHandles: connectedHandlesMap[n.id] || [] },
-    })),
-    [funnel?.nodes, selectedNodeId, showImages, connectedHandlesMap]
+    () => localNodes.map((n) => {
+      const isSeqGroup = n.type === "sequenceGroup";
+      const collapsed = isSeqGroup && (n.data as any)?.collapsed;
+      return {
+        ...n,
+        selected: n.id === selectedNodeId,
+        draggable: false,
+        connectable: false,
+        ...(isSeqGroup
+          ? { style: { ...(n.style || {}), width: collapsed ? 240 : ((n.data as any)?.width || 400), height: collapsed ? 50 : ((n.data as any)?.height || 200) } }
+          : {}),
+        data: { ...n.data, showImages, readOnly: true, connectedHandles: connectedHandlesMap[n.id] || [] },
+      };
+    }),
+    [localNodes, selectedNodeId, showImages, connectedHandlesMap]
   );
+
 
   if (loading) {
     return (
