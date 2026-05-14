@@ -1355,6 +1355,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             nodes={nodes.map((n) => {
               const d = n.data as any;
               const isShape = d?.renderStyle === "shape";
+              const isSeqGroup = n.type === "sequenceGroup";
               const base = n.type === "funnelPage"
                 ? {
                     ...n,
@@ -1367,6 +1368,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                 : n;
               // Shapes always behind other elements
               if (isShape) return { ...base, zIndex: -1 };
+              // Expanded sequence group container behind its children
+              if (isSeqGroup && !d?.collapsed) return { ...base, zIndex: -2 };
               return base;
             })}
             edges={edges}
@@ -1376,6 +1379,33 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             onNodeClick={onNodeClick}
             onNodeDoubleClick={onNodeDoubleClick}
             onPaneClick={() => { selectedNodeRef.current = null; }}
+            onSelectionChange={({ nodes: selNodes }) => {
+              setSelectedNodeIds(selNodes.map((n) => n.id));
+            }}
+            onNodeDragStart={(_, node) => {
+              if (node.type === "sequenceGroup" && !(node.data as any)?.collapsed) {
+                dragStartPositionRef.current[node.id] = { x: node.position.x, y: node.position.y };
+              }
+            }}
+            onNodeDrag={(_, node) => {
+              if (node.type !== "sequenceGroup" || (node.data as any)?.collapsed) return;
+              const start = dragStartPositionRef.current[node.id];
+              if (!start) return;
+              const dx = node.position.x - start.x;
+              const dy = node.position.y - start.y;
+              if (dx === 0 && dy === 0) return;
+              dragStartPositionRef.current[node.id] = { x: node.position.x, y: node.position.y };
+              const childIds: string[] = (node.data as any)?.childIds ?? [];
+              if (childIds.length === 0) return;
+              const childSet = new Set(childIds);
+              setNodes((nds) => nds.map((n) => childSet.has(n.id)
+                ? { ...n, position: { x: (n.position?.x ?? 0) + dx, y: (n.position?.y ?? 0) + dy } }
+                : n
+              ));
+            }}
+            onNodeDragStop={(_, node) => {
+              if (node.type === "sequenceGroup") delete dragStartPositionRef.current[node.id];
+            }}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             onInit={setReactFlowInstance}
