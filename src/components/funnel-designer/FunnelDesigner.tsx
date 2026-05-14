@@ -1040,8 +1040,37 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   }, []);
 
   const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
-    if (node.type === "funnelPage") setDetailsNodeId(node.id);
+    if (node.type === "funnelPage" || node.type === "sequenceGroup") setDetailsNodeId(node.id);
   }, []);
+
+  // When a sequence group is deleted, restore its children visibility and edges (don't delete children)
+  const onNodesDelete = useCallback((deleted: Node[]) => {
+    const deletedGroups = deleted.filter((n) => n.type === "sequenceGroup");
+    if (deletedGroups.length === 0) return;
+    deletedGroups.forEach((g) => {
+      const childIds: string[] = (g.data as any)?.childIds ?? [];
+      const wasCollapsed = !!(g.data as any)?.collapsed;
+      setNodes((nds) => nds.map((n) => childIds.includes(n.id) ? { ...n, hidden: false } : n));
+      if (wasCollapsed) {
+        setEdges((eds) => eds.map((e) => {
+          const meta = (e.data as any) || {};
+          if (meta._groupId !== g.id) return e;
+          const restored: any = { ...e, hidden: false };
+          if (meta._origSource) restored.source = meta._origSource;
+          if (meta._origTarget) restored.target = meta._origTarget;
+          const newData = { ...meta };
+          delete newData._origSource;
+          delete newData._origTarget;
+          delete newData._groupId;
+          restored.data = newData;
+          return restored;
+        }));
+      }
+    });
+    if (detailsNodeId && deletedGroups.some((g) => g.id === detailsNodeId)) {
+      setDetailsNodeId(null);
+    }
+  }, [setNodes, setEdges, detailsNodeId]);
 
   useEffect(() => {
     const handler = (e: Event) => {
