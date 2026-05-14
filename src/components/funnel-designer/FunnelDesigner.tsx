@@ -635,10 +635,20 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             return { ...e, hidden: true, data: { ...(e.data as any), _groupId: groupId } };
           }
           if (sIn || tIn) {
-            const meta = { ...(e.data as any), _groupId: groupId };
+            const meta: any = { ...(e.data as any), _groupId: groupId };
             const next: any = { ...e, data: meta };
-            if (sIn) { meta._origSource = e.source; next.source = groupId; }
-            if (tIn) { meta._origTarget = e.target; next.target = groupId; }
+            if (sIn) {
+              meta._origSource = e.source;
+              if (e.sourceHandle != null) meta._origSourceHandle = e.sourceHandle;
+              next.source = groupId;
+              next.sourceHandle = null;
+            }
+            if (tIn) {
+              meta._origTarget = e.target;
+              if (e.targetHandle != null) meta._origTargetHandle = e.targetHandle;
+              next.target = groupId;
+              next.targetHandle = null;
+            }
             return next;
           }
           return e;
@@ -648,11 +658,19 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           const meta = (e.data as any) || {};
           if (meta._groupId !== groupId) return e;
           const restored: any = { ...e, hidden: false };
-          if (meta._origSource) restored.source = meta._origSource;
-          if (meta._origTarget) restored.target = meta._origTarget;
+          if (meta._origSource) {
+            restored.source = meta._origSource;
+            restored.sourceHandle = meta._origSourceHandle ?? null;
+          }
+          if (meta._origTarget) {
+            restored.target = meta._origTarget;
+            restored.targetHandle = meta._origTargetHandle ?? null;
+          }
           const newData = { ...meta };
           delete newData._origSource;
           delete newData._origTarget;
+          delete newData._origSourceHandle;
+          delete newData._origTargetHandle;
           delete newData._groupId;
           restored.data = newData;
           return restored;
