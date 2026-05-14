@@ -1119,7 +1119,16 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     deletedGroups.forEach((g) => {
       const childIds: string[] = (g.data as any)?.childIds ?? [];
       const wasCollapsed = !!(g.data as any)?.collapsed;
-      setNodes((nds) => nds.map((n) => childIds.includes(n.id) ? { ...n, hidden: false } : n));
+      setNodes((nds) => nds.map((n) => {
+        if (childIds.includes(n.id)) return { ...n, hidden: false };
+        const meta = (n.data as any)?._collapseShift;
+        if (wasCollapsed && meta && meta.groupId === g.id) {
+          const data = { ...n.data } as any;
+          delete data._collapseShift;
+          return { ...n, position: { x: (n.position?.x ?? 0) - meta.dx, y: n.position?.y ?? 0 }, data };
+        }
+        return n;
+      }));
       if (wasCollapsed) {
         setEdges((eds) => eds.map((e) => {
           const meta = (e.data as any) || {};
