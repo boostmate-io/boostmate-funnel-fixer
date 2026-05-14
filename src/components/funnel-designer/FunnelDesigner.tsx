@@ -1274,6 +1274,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           waitDuration={(detailsNode.data as any).waitDuration}
           copySections={resolveNodeCopySections(detailsNode)}
           funnelName={currentFunnel?.name || ""}
+          emailSubject={(detailsNode.data as any).emailSubject || ""}
           textSize={(detailsNode.data as any).textSize}
           textBold={(detailsNode.data as any).textBold}
           textItalic={(detailsNode.data as any).textItalic}

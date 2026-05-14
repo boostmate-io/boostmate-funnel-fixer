@@ -52,6 +52,7 @@ interface NodeDetailsPanelProps {
   copySections?: Array<{ id: string; title: string; description: string }>;
   funnelName?: string;
   readOnly?: boolean;
+  emailSubject?: string;
   // Text styling
   textSize?: number;
   textBold?: boolean;
@@ -80,6 +81,7 @@ const NodeDetailsPanel = ({
   nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copySections, funnelName,
   readOnly, textSize, textBold, textItalic, textUnderline, textColor, themeColor,
   shapeType, shapeBorderStyle, shapeTransparent, shapeWidth, shapeHeight, shapeColor,
+  emailSubject,
   onLinkAsset, onRename, onNoteContentChange, onDataChange, onNodeDataChange, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
@@ -479,6 +481,17 @@ const NodeDetailsPanel = ({
               placeholder={nodeLabel}
               className="text-sm h-8"
             />
+            {pageType === "email" && (
+              <>
+                <label className="text-xs font-medium text-muted-foreground">Subject line</label>
+                <Input
+                  value={emailSubject || ""}
+                  onChange={(e) => onDataChange?.("emailSubject", e.target.value)}
+                  placeholder="Enter email subject..."
+                  className="text-sm h-8"
+                />
+              </>
+            )}
           </div>
         )}
 
