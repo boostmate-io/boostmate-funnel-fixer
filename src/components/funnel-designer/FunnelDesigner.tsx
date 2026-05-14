@@ -157,6 +157,26 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const [linkedOfferId, setLinkedOfferId] = useState<string | null>(null);
   const templateSourceRef = useRef<{ type: "funnel" | "seed"; id: string } | null>(null);
 
+  // Multi-selection (for grouping into sequences)
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+
+  // Drag-along tracking for sequence groups
+  const dragStartPositionRef = useRef<Record<string, { x: number; y: number }>>({});
+
+  // Unsaved changes tracking
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState<string>("");
+  const [pendingExit, setPendingExit] = useState<null | (() => void)>(null);
+  const currentSnapshot = useMemo(
+    () => JSON.stringify({ n: nodes, e: edges, name: currentFunnel?.name ?? editingTemplate?.name ?? editingSeedTemplate?.name ?? "" }),
+    [nodes, edges, currentFunnel, editingTemplate, editingSeedTemplate]
+  );
+  const isDirty = lastSavedSnapshot !== "" && currentSnapshot !== lastSavedSnapshot;
+
+  const markSaved = useCallback(() => {
+    setLastSavedSnapshot(JSON.stringify({ n: nodes, e: edges, name: currentFunnel?.name ?? editingTemplate?.name ?? editingSeedTemplate?.name ?? "" }));
+  }, [nodes, edges, currentFunnel, editingTemplate, editingSeedTemplate]);
+
+
   // Check admin role
   useEffect(() => {
     if (!userId) { setIsAdmin(false); return; }
