@@ -1911,6 +1911,41 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Unsaved changes confirmation */}
+      <AlertDialog open={!!pendingExit} onOpenChange={(open) => { if (!open) setPendingExit(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes in this funnel. What do you want to do?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const action = pendingExit;
+                setPendingExit(null);
+                action?.();
+              }}
+            >
+              Discard changes
+            </Button>
+            <AlertDialogAction
+              onClick={async () => {
+                await saveFunnel();
+                const action = pendingExit;
+                setPendingExit(null);
+                action?.();
+              }}
+            >
+              Save and exit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
