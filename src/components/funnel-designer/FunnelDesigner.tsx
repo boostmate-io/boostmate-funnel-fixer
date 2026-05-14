@@ -1543,7 +1543,58 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         />
       )}
 
-      {showBriefPanel && !detailsNode && !showOfferPanel && (
+      {detailsNode && detailsNode.type === "sequenceGroup" && (
+        <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h3 className="text-sm font-display font-bold text-foreground truncate">Sequence</h3>
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setDetailsNodeId(null)}>
+              <ArrowLeft className="w-4 h-4 rotate-180" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-auto p-4 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Name</label>
+              <Input
+                value={(detailsNode.data as any).label || ""}
+                onChange={(e) => handleDataChange("label", e.target.value)}
+                placeholder="Sequence name..."
+                className="text-sm h-8"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Notes</label>
+              <textarea
+                value={(detailsNode.data as any).notes || ""}
+                onChange={(e) => handleDataChange("notes", e.target.value)}
+                placeholder="Optional notes about this sequence..."
+                className="text-sm w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                {((detailsNode.data as any).childIds?.length ?? 0)} step{((detailsNode.data as any).childIds?.length ?? 0) === 1 ? "" : "s"}
+              </label>
+              <Button
+                variant="outline" size="sm" className="w-full justify-start gap-2"
+                onClick={() => toggleSequenceCollapsed(detailsNode.id)}
+              >
+                {(detailsNode.data as any).collapsed ? "Expand sequence" : "Collapse sequence"}
+              </Button>
+            </div>
+            <div className="pt-2 border-t border-border">
+              <Button
+                variant="ghost" size="sm"
+                className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+                onClick={() => ungroupSequence(detailsNode.id)}
+              >
+                <Ungroup className="w-4 h-4" /> Ungroup sequence
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
         <FunnelBriefPanel
           funnelId={currentFunnel?.id || editingSeedTemplate?.id || null}
           userId={userId}
