@@ -30,6 +30,8 @@ type FunnelNodeData = {
   textColor?: string;
   // Notes theme
   themeColor?: string;
+  // Email subject
+  emailSubject?: string;
   // Shape props
   shapeType?: "circle" | "square" | "triangle";
   shapeBorderStyle?: "solid" | "dashed" | "dotted";
@@ -84,6 +86,11 @@ const EmailStyleRender = ({ nodeData, onDoubleClick }: { nodeData: FunnelNodeDat
       </span>
       {nodeData.customLabel && (
         <span className="text-[8px] text-muted-foreground text-center -mt-1">{t(nodeData.label)}</span>
+      )}
+      {nodeData.emailSubject && (
+        <span className="text-[8px] text-muted-foreground text-center leading-tight w-full px-1 line-clamp-2">
+          {nodeData.emailSubject}
+        </span>
       )}
       {shouldShowHandle(nodeData, "target") && <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />}
       {shouldShowHandle(nodeData, "target", "top") && <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground" />}
