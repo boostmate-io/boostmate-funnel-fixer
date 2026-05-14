@@ -26,6 +26,7 @@ import {
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
   Sprout, ShieldCheck, ClipboardList, Gem, Download, RefreshCw,
+  Group as GroupIcon, Ungroup,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
