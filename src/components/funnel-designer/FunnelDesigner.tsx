@@ -510,12 +510,20 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         const meta = (e.data as any) || {};
         if (meta._groupId !== groupId) return e;
         const restored: any = { ...e };
-        if (meta._origSource) restored.source = meta._origSource;
-        if (meta._origTarget) restored.target = meta._origTarget;
+        if (meta._origSource) {
+          restored.source = meta._origSource;
+          restored.sourceHandle = meta._origSourceHandle ?? null;
+        }
+        if (meta._origTarget) {
+          restored.target = meta._origTarget;
+          restored.targetHandle = meta._origTargetHandle ?? null;
+        }
         restored.hidden = false;
         const newData = { ...meta };
         delete newData._origSource;
         delete newData._origTarget;
+        delete newData._origSourceHandle;
+        delete newData._origTargetHandle;
         delete newData._groupId;
         restored.data = newData;
         return restored;
@@ -537,25 +545,52 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     const COLLAPSED_W = 240;
     const COLLAPSED_H = 50;
 
-    // Determine externals connected to children & X delta to compress them toward the collapsed group
+    // Determine externals connected to children (directly or transitively) and shift the
+    // entire right-side chain leftward to hug the collapsed group.
     const externalShifts: Record<string, number> = {};
     if (willCollapse) {
       const groupRight = (group.position?.x ?? 0) + groupW;
       const groupCenterX = (group.position?.x ?? 0) + groupW / 2;
       const collapsedRight = (group.position?.x ?? 0) + COLLAPSED_W;
       const deltaRight = collapsedRight - groupRight; // negative — pull right-side externals left
+
+      // Seed with externals directly connected to a child node, on the right side of the group.
+      const seeds = new Set<string>();
       edges.forEach((e) => {
         const sIn = childSet.has(e.source);
         const tIn = childSet.has(e.target);
-        if (sIn && !tIn) externalShifts[e.target] = (externalShifts[e.target] ?? 0);
-        if (tIn && !sIn) externalShifts[e.source] = (externalShifts[e.source] ?? 0);
+        if (sIn && !tIn) seeds.add(e.target);
+        if (tIn && !sIn) seeds.add(e.source);
       });
-      Object.keys(externalShifts).forEach((id) => {
+
+      // Build adjacency among non-child nodes only (so the BFS doesn't tunnel back through the group).
+      const adj: Record<string, Set<string>> = {};
+      edges.forEach((e) => {
+        if (childSet.has(e.source) || childSet.has(e.target)) return;
+        if (e.source === groupId || e.target === groupId) return;
+        (adj[e.source] ??= new Set()).add(e.target);
+        (adj[e.target] ??= new Set()).add(e.source);
+      });
+
+      // BFS from right-side seeds — every reachable external gets shifted.
+      const queue: string[] = [];
+      seeds.forEach((id) => {
         const ext = nodes.find((n) => n.id === id);
         if (!ext) return;
         const isRight = (ext.position?.x ?? 0) >= groupCenterX;
-        externalShifts[id] = isRight ? deltaRight : 0;
+        if (!isRight) return;
+        externalShifts[id] = deltaRight;
+        queue.push(id);
       });
+      while (queue.length) {
+        const cur = queue.shift()!;
+        (adj[cur] ?? new Set()).forEach((nb) => {
+          if (nb in externalShifts) return;
+          if (childSet.has(nb) || nb === groupId) return;
+          externalShifts[nb] = deltaRight;
+          queue.push(nb);
+        });
+      }
     }
 
     setNodes((nds) => nds.map((n) => {
@@ -608,10 +643,20 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             return { ...e, hidden: true, data: { ...(e.data as any), _groupId: groupId } };
           }
           if (sIn || tIn) {
-            const meta = { ...(e.data as any), _groupId: groupId };
+            const meta: any = { ...(e.data as any), _groupId: groupId };
             const next: any = { ...e, data: meta };
-            if (sIn) { meta._origSource = e.source; next.source = groupId; }
-            if (tIn) { meta._origTarget = e.target; next.target = groupId; }
+            if (sIn) {
+              meta._origSource = e.source;
+              if (e.sourceHandle != null) meta._origSourceHandle = e.sourceHandle;
+              next.source = groupId;
+              next.sourceHandle = null;
+            }
+            if (tIn) {
+              meta._origTarget = e.target;
+              if (e.targetHandle != null) meta._origTargetHandle = e.targetHandle;
+              next.target = groupId;
+              next.targetHandle = null;
+            }
             return next;
           }
           return e;
@@ -621,11 +666,19 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           const meta = (e.data as any) || {};
           if (meta._groupId !== groupId) return e;
           const restored: any = { ...e, hidden: false };
-          if (meta._origSource) restored.source = meta._origSource;
-          if (meta._origTarget) restored.target = meta._origTarget;
+          if (meta._origSource) {
+            restored.source = meta._origSource;
+            restored.sourceHandle = meta._origSourceHandle ?? null;
+          }
+          if (meta._origTarget) {
+            restored.target = meta._origTarget;
+            restored.targetHandle = meta._origTargetHandle ?? null;
+          }
           const newData = { ...meta };
           delete newData._origSource;
           delete newData._origTarget;
+          delete newData._origSourceHandle;
+          delete newData._origTargetHandle;
           delete newData._groupId;
           restored.data = newData;
           return restored;
@@ -1134,11 +1187,19 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           const meta = (e.data as any) || {};
           if (meta._groupId !== g.id) return e;
           const restored: any = { ...e, hidden: false };
-          if (meta._origSource) restored.source = meta._origSource;
-          if (meta._origTarget) restored.target = meta._origTarget;
+          if (meta._origSource) {
+            restored.source = meta._origSource;
+            restored.sourceHandle = meta._origSourceHandle ?? null;
+          }
+          if (meta._origTarget) {
+            restored.target = meta._origTarget;
+            restored.targetHandle = meta._origTargetHandle ?? null;
+          }
           const newData = { ...meta };
           delete newData._origSource;
           delete newData._origTarget;
+          delete newData._origSourceHandle;
+          delete newData._origTargetHandle;
           delete newData._groupId;
           restored.data = newData;
           return restored;
