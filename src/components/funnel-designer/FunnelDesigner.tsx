@@ -1095,6 +1095,12 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                     <ShieldCheck className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger><TooltipContent>Manage Seed Templates</TooltipContent></Tooltip>
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={syncSeedTemplates} className="text-amber-600 border-amber-300 hover:bg-amber-50">
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Sync library templates to this account (replaces existing copies)</TooltipContent></Tooltip>
               </>
             )}
 
