@@ -319,7 +319,7 @@ const SharedFunnelInner = () => {
         <div className="flex-1" ref={flowRef}>
           <ReactFlow
             nodes={readOnlyNodes}
-            edges={funnel.edges}
+            edges={localEdges}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             nodesDraggable={false}
