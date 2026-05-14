@@ -61,6 +61,8 @@ interface BriefData {
 const SharedFunnelInner = () => {
   const { token } = useParams<{ token: string }>();
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
+  const [localNodes, setLocalNodes] = useState<Node[]>([]);
+  const [localEdges, setLocalEdges] = useState<Edge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
