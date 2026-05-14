@@ -406,6 +406,20 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     setPendingExit(() => action);
   }, [isDirty]);
 
+  // Expose dirty guard to Dashboard so module/workspace switches can prompt
+  useEffect(() => {
+    if (!isDirty) {
+      delete (window as any).__funnelDirtyGuard;
+      return;
+    }
+    (window as any).__funnelDirtyGuard = (proceed: () => void) => {
+      setPendingExit(() => proceed);
+    };
+    return () => {
+      delete (window as any).__funnelDirtyGuard;
+    };
+  }, [isDirty]);
+
   // ── Sequence Group: create from selection ──
   const groupSelectedAsSequence = useCallback(() => {
     const selected = nodes.filter((n) => n.selected && n.type !== "sequenceGroup");
