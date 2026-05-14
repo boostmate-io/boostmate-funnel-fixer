@@ -162,6 +162,7 @@ const SharedFunnelInner = () => {
       nodeData.nodeNotes?.trim() ||
       nodeData.nodeUrl?.trim() ||
       nodeData.nodeImage?.trim() ||
+      nodeData.emailSubject?.trim() ||
       ((nodeData.copySections ?? []) as Array<unknown>).length > 0
     );
   }, []);
