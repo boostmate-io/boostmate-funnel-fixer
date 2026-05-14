@@ -561,6 +561,15 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     return () => window.removeEventListener("sequence-group-toggle", handler);
   }, [toggleSequenceCollapsed]);
 
+  // After switching loaded funnel/template, reset snapshot to match current state
+  const loadedEntityKey = (currentFunnel?.id || "") + "|" + (editingTemplate?.id || "") + "|" + (editingSeedTemplate?.id || "");
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      setLastSavedSnapshot(JSON.stringify({ n: nodes, e: edges, name: currentFunnel?.name ?? editingTemplate?.name ?? editingSeedTemplate?.name ?? "" }));
+    });
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedEntityKey]);
 
   const loadFunnels = useCallback(async () => {
     if (!userId || !activeSubAccountId) return;
