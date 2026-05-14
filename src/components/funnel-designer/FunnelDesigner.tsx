@@ -26,6 +26,7 @@ import {
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
   Sprout, ShieldCheck, ClipboardList, Gem, Download, RefreshCw,
+  Group as GroupIcon, Ungroup,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,7 @@ import ElementsPanel from "./ElementsPanel";
 import FunnelNode from "./FunnelNode";
 import TrafficSourceNode from "./TrafficSourceNode";
 import NodeDetailsPanel from "./NodeDetailsPanel";
+import SequenceGroupNode from "./SequenceGroupNode";
 import { TRAFFIC_SOURCES, FUNNEL_ELEMENTS } from "./constants";
 import { toPng } from "html-to-image";
 import { Switch } from "@/components/ui/switch";
@@ -77,6 +79,7 @@ import OfferPanel from "@/components/offers/OfferPanel";
 const nodeTypes = {
   funnelPage: FunnelNode,
   trafficSource: TrafficSourceNode,
+  sequenceGroup: SequenceGroupNode,
 };
 
 const defaultEdgeOptions = {
@@ -153,6 +156,26 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const [showOfferPanel, setShowOfferPanel] = useState(false);
   const [linkedOfferId, setLinkedOfferId] = useState<string | null>(null);
   const templateSourceRef = useRef<{ type: "funnel" | "seed"; id: string } | null>(null);
+
+  // Multi-selection (for grouping into sequences)
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+
+  // Drag-along tracking for sequence groups
+  const dragStartPositionRef = useRef<Record<string, { x: number; y: number }>>({});
+
+  // Unsaved changes tracking
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState<string>("");
+  const [pendingExit, setPendingExit] = useState<null | (() => void)>(null);
+  const currentSnapshot = useMemo(
+    () => JSON.stringify({ n: nodes, e: edges, name: currentFunnel?.name ?? editingTemplate?.name ?? editingSeedTemplate?.name ?? "" }),
+    [nodes, edges, currentFunnel, editingTemplate, editingSeedTemplate]
+  );
+  const isDirty = lastSavedSnapshot !== "" && currentSnapshot !== lastSavedSnapshot;
+
+  const markSaved = useCallback(() => {
+    setLastSavedSnapshot(JSON.stringify({ n: nodes, e: edges, name: currentFunnel?.name ?? editingTemplate?.name ?? editingSeedTemplate?.name ?? "" }));
+  }, [nodes, edges, currentFunnel, editingTemplate, editingSeedTemplate]);
+
 
   // Check admin role
   useEffect(() => {
@@ -366,6 +389,187 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       window.removeEventListener("keyup", up);
     };
   }, []);
+
+  // Warn on browser tab close / refresh when there are unsaved changes
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  const requestExit = useCallback((action: () => void) => {
+    if (!isDirty) { action(); return; }
+    setPendingExit(() => action);
+  }, [isDirty]);
+
+  // ── Sequence Group: create from selection ──
+  const groupSelectedAsSequence = useCallback(() => {
+    const selected = nodes.filter((n) => n.selected && n.type !== "sequenceGroup");
+    if (selected.length < 2) {
+      toast.error("Select at least 2 nodes to group");
+      return;
+    }
+    // Compute bounding box (estimate node sizes)
+    const estSize = (n: Node) => {
+      const d = n.data as any;
+      const rs = d?.renderStyle;
+      if (rs === "shape") return { w: d?.shapeWidth || 120, h: d?.shapeHeight || 120 };
+      if (rs === "icon" || n.type === "trafficSource") return { w: 100, h: 90 };
+      if (rs === "note" || rs === "text") return { w: 180, h: 80 };
+      return { w: 220, h: 240 };
+    };
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    selected.forEach((n) => {
+      const { w, h } = estSize(n);
+      const x = n.position?.x ?? 0;
+      const y = n.position?.y ?? 0;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x + w > maxX) maxX = x + w;
+      if (y + h > maxY) maxY = y + h;
+    });
+    const PAD = 30;
+    const groupId = `group_${Date.now()}`;
+    const groupNode: Node = {
+      id: groupId,
+      type: "sequenceGroup",
+      position: { x: minX - PAD, y: minY - PAD - 12 },
+      data: {
+        label: "Sequence",
+        notes: "",
+        collapsed: false,
+        childIds: selected.map((n) => n.id),
+        width: maxX - minX + PAD * 2,
+        height: maxY - minY + PAD * 2 + 12,
+      },
+      draggable: true,
+      selectable: true,
+      zIndex: -2,
+    };
+    setNodes((nds) => [groupNode, ...nds.map((n) => ({ ...n, selected: false }))]);
+    toast.success(`Grouped ${selected.length} nodes into a sequence`);
+  }, [nodes, setNodes]);
+
+  // ── Sequence Group: ungroup ──
+  const ungroupSequence = useCallback((groupId: string) => {
+    const group = nodes.find((n) => n.id === groupId);
+    if (!group || group.type !== "sequenceGroup") return;
+    const childIds: string[] = (group.data as any)?.childIds ?? [];
+    const wasCollapsed = !!(group.data as any)?.collapsed;
+
+    setNodes((nds) => nds
+      .filter((n) => n.id !== groupId)
+      .map((n) => childIds.includes(n.id) ? { ...n, hidden: false } : n)
+    );
+
+    if (wasCollapsed) {
+      // Restore edges that were remapped
+      setEdges((eds) => eds.map((e) => {
+        const meta = (e.data as any) || {};
+        if (meta._groupId !== groupId) return e;
+        const restored: any = { ...e };
+        if (meta._origSource) restored.source = meta._origSource;
+        if (meta._origTarget) restored.target = meta._origTarget;
+        restored.hidden = false;
+        const newData = { ...meta };
+        delete newData._origSource;
+        delete newData._origTarget;
+        delete newData._groupId;
+        restored.data = newData;
+        return restored;
+      }));
+    }
+    setDetailsNodeId(null);
+    toast.success("Sequence ungrouped");
+  }, [nodes, setNodes, setEdges]);
+
+  // ── Sequence Group: toggle collapsed ──
+  const toggleSequenceCollapsed = useCallback((groupId: string) => {
+    setNodes((nds) => {
+      const group = nds.find((n) => n.id === groupId);
+      if (!group || group.type !== "sequenceGroup") return nds;
+      const childIds: string[] = (group.data as any)?.childIds ?? [];
+      const willCollapse = !(group.data as any)?.collapsed;
+      const childSet = new Set(childIds);
+      return nds.map((n) => {
+        if (n.id === groupId) {
+          return { ...n, data: { ...n.data, collapsed: willCollapse } };
+        }
+        if (childSet.has(n.id)) {
+          return { ...n, hidden: willCollapse };
+        }
+        return n;
+      });
+    });
+
+    // Remap edges
+    setEdges((eds) => {
+      const group = nodes.find((n) => n.id === groupId);
+      if (!group) return eds;
+      const childIds: string[] = (group.data as any)?.childIds ?? [];
+      const willCollapse = !(group.data as any)?.collapsed;
+      const childSet = new Set(childIds);
+
+      if (willCollapse) {
+        return eds.map((e) => {
+          const sIn = childSet.has(e.source);
+          const tIn = childSet.has(e.target);
+          if (sIn && tIn) {
+            // internal edge → hide
+            return { ...e, hidden: true, data: { ...(e.data as any), _groupId: groupId } };
+          }
+          if (sIn || tIn) {
+            // external edge crossing boundary → remap to group
+            const meta = { ...(e.data as any), _groupId: groupId };
+            const next: any = { ...e, data: meta };
+            if (sIn) { meta._origSource = e.source; next.source = groupId; }
+            if (tIn) { meta._origTarget = e.target; next.target = groupId; }
+            return next;
+          }
+          return e;
+        });
+      } else {
+        // Expanding → restore
+        return eds.map((e) => {
+          const meta = (e.data as any) || {};
+          if (meta._groupId !== groupId) return e;
+          const restored: any = { ...e, hidden: false };
+          if (meta._origSource) restored.source = meta._origSource;
+          if (meta._origTarget) restored.target = meta._origTarget;
+          const newData = { ...meta };
+          delete newData._origSource;
+          delete newData._origTarget;
+          delete newData._groupId;
+          restored.data = newData;
+          return restored;
+        });
+      }
+    });
+  }, [nodes, setNodes, setEdges]);
+
+  // Listen for collapse/expand button clicks from SequenceGroupNode
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id;
+      if (id) toggleSequenceCollapsed(id);
+    };
+    window.addEventListener("sequence-group-toggle", handler);
+    return () => window.removeEventListener("sequence-group-toggle", handler);
+  }, [toggleSequenceCollapsed]);
+
+  // After switching loaded funnel/template, reset snapshot to match current state
+  const loadedEntityKey = (currentFunnel?.id || "") + "|" + (editingTemplate?.id || "") + "|" + (editingSeedTemplate?.id || "");
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      setLastSavedSnapshot(JSON.stringify({ n: nodes, e: edges, name: currentFunnel?.name ?? editingTemplate?.name ?? editingSeedTemplate?.name ?? "" }));
+    });
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedEntityKey]);
 
   const loadFunnels = useCallback(async () => {
     if (!userId || !activeSubAccountId) return;
@@ -1024,7 +1228,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-2">
             {onBackToList && (
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onBackToList}>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => requestExit(onBackToList)}>
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             )}
@@ -1139,7 +1343,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
               </Button>
             </TooltipTrigger><TooltipContent>{t("funnelDesigner.reset")}</TooltipContent></Tooltip>
 
-            <Button size="sm" onClick={saveFunnel}>
+            <Button size="sm" onClick={async () => { await saveFunnel(); setLastSavedSnapshot(currentSnapshot); }}>
               <Save className="w-4 h-4 mr-1" /> {t("funnelDesigner.save")}
             </Button>
           </div>
@@ -1151,6 +1355,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             nodes={nodes.map((n) => {
               const d = n.data as any;
               const isShape = d?.renderStyle === "shape";
+              const isSeqGroup = n.type === "sequenceGroup";
               const base = n.type === "funnelPage"
                 ? {
                     ...n,
@@ -1163,6 +1368,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                 : n;
               // Shapes always behind other elements
               if (isShape) return { ...base, zIndex: -1 };
+              // Expanded sequence group container behind its children
+              if (isSeqGroup && !d?.collapsed) return { ...base, zIndex: -2 };
               return base;
             })}
             edges={edges}
@@ -1172,6 +1379,33 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             onNodeClick={onNodeClick}
             onNodeDoubleClick={onNodeDoubleClick}
             onPaneClick={() => { selectedNodeRef.current = null; }}
+            onSelectionChange={({ nodes: selNodes }) => {
+              setSelectedNodeIds(selNodes.map((n) => n.id));
+            }}
+            onNodeDragStart={(_, node) => {
+              if (node.type === "sequenceGroup" && !(node.data as any)?.collapsed) {
+                dragStartPositionRef.current[node.id] = { x: node.position.x, y: node.position.y };
+              }
+            }}
+            onNodeDrag={(_, node) => {
+              if (node.type !== "sequenceGroup" || (node.data as any)?.collapsed) return;
+              const start = dragStartPositionRef.current[node.id];
+              if (!start) return;
+              const dx = node.position.x - start.x;
+              const dy = node.position.y - start.y;
+              if (dx === 0 && dy === 0) return;
+              dragStartPositionRef.current[node.id] = { x: node.position.x, y: node.position.y };
+              const childIds: string[] = (node.data as any)?.childIds ?? [];
+              if (childIds.length === 0) return;
+              const childSet = new Set(childIds);
+              setNodes((nds) => nds.map((n) => childSet.has(n.id)
+                ? { ...n, position: { x: (n.position?.x ?? 0) + dx, y: (n.position?.y ?? 0) + dy } }
+                : n
+              ));
+            }}
+            onNodeDragStop={(_, node) => {
+              if (node.type === "sequenceGroup") delete dragStartPositionRef.current[node.id];
+            }}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             onInit={setReactFlowInstance}
@@ -1230,6 +1464,19 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                     <LayoutGrid className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger><TooltipContent>{t("funnelDesigner.autoLayout")}</TooltipContent></Tooltip>
+
+                <Tooltip><TooltipTrigger asChild>
+                  <Button
+                    variant="ghost" size="sm" className="h-8 w-8 p-0"
+                    onClick={groupSelectedAsSequence}
+                    disabled={selectedNodeIds.filter((id) => {
+                      const n = nodes.find((nn) => nn.id === id);
+                      return n && n.type !== "sequenceGroup";
+                    }).length < 2}
+                  >
+                    <GroupIcon className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Group selection as sequence (min. 2 nodes)</TooltipContent></Tooltip>
 
                 <div className="w-px h-5 bg-border mx-0.5" />
 
@@ -1294,6 +1541,57 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           onNodeDataChange={handleNodeDataChange}
           onClose={() => setDetailsNodeId(null)}
         />
+      )}
+
+      {detailsNode && detailsNode.type === "sequenceGroup" && (
+        <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h3 className="text-sm font-display font-bold text-foreground truncate">Sequence</h3>
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setDetailsNodeId(null)}>
+              <ArrowLeft className="w-4 h-4 rotate-180" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-auto p-4 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Name</label>
+              <Input
+                value={(detailsNode.data as any).label || ""}
+                onChange={(e) => handleDataChange("label", e.target.value)}
+                placeholder="Sequence name..."
+                className="text-sm h-8"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Notes</label>
+              <textarea
+                value={(detailsNode.data as any).notes || ""}
+                onChange={(e) => handleDataChange("notes", e.target.value)}
+                placeholder="Optional notes about this sequence..."
+                className="text-sm w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                {((detailsNode.data as any).childIds?.length ?? 0)} step{((detailsNode.data as any).childIds?.length ?? 0) === 1 ? "" : "s"}
+              </label>
+              <Button
+                variant="outline" size="sm" className="w-full justify-start gap-2"
+                onClick={() => toggleSequenceCollapsed(detailsNode.id)}
+              >
+                {(detailsNode.data as any).collapsed ? "Expand sequence" : "Collapse sequence"}
+              </Button>
+            </div>
+            <div className="pt-2 border-t border-border">
+              <Button
+                variant="ghost" size="sm"
+                className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+                onClick={() => ungroupSequence(detailsNode.id)}
+              >
+                <Ungroup className="w-4 h-4" /> Ungroup sequence
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showBriefPanel && !detailsNode && !showOfferPanel && (
@@ -1613,6 +1911,42 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Unsaved changes confirmation */}
+      <AlertDialog open={!!pendingExit} onOpenChange={(open) => { if (!open) setPendingExit(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes in this funnel. What do you want to do?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const action = pendingExit;
+                setPendingExit(null);
+                action?.();
+              }}
+            >
+              Discard changes
+            </Button>
+            <AlertDialogAction
+              onClick={async () => {
+                await saveFunnel();
+                setLastSavedSnapshot(currentSnapshot);
+                const action = pendingExit;
+                setPendingExit(null);
+                action?.();
+              }}
+            >
+              Save and exit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
