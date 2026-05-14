@@ -537,25 +537,52 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     const COLLAPSED_W = 240;
     const COLLAPSED_H = 50;
 
-    // Determine externals connected to children & X delta to compress them toward the collapsed group
+    // Determine externals connected to children (directly or transitively) and shift the
+    // entire right-side chain leftward to hug the collapsed group.
     const externalShifts: Record<string, number> = {};
     if (willCollapse) {
       const groupRight = (group.position?.x ?? 0) + groupW;
       const groupCenterX = (group.position?.x ?? 0) + groupW / 2;
       const collapsedRight = (group.position?.x ?? 0) + COLLAPSED_W;
       const deltaRight = collapsedRight - groupRight; // negative — pull right-side externals left
+
+      // Seed with externals directly connected to a child node, on the right side of the group.
+      const seeds = new Set<string>();
       edges.forEach((e) => {
         const sIn = childSet.has(e.source);
         const tIn = childSet.has(e.target);
-        if (sIn && !tIn) externalShifts[e.target] = (externalShifts[e.target] ?? 0);
-        if (tIn && !sIn) externalShifts[e.source] = (externalShifts[e.source] ?? 0);
+        if (sIn && !tIn) seeds.add(e.target);
+        if (tIn && !sIn) seeds.add(e.source);
       });
-      Object.keys(externalShifts).forEach((id) => {
+
+      // Build adjacency among non-child nodes only (so the BFS doesn't tunnel back through the group).
+      const adj: Record<string, Set<string>> = {};
+      edges.forEach((e) => {
+        if (childSet.has(e.source) || childSet.has(e.target)) return;
+        if (e.source === groupId || e.target === groupId) return;
+        (adj[e.source] ??= new Set()).add(e.target);
+        (adj[e.target] ??= new Set()).add(e.source);
+      });
+
+      // BFS from right-side seeds — every reachable external gets shifted.
+      const queue: string[] = [];
+      seeds.forEach((id) => {
         const ext = nodes.find((n) => n.id === id);
         if (!ext) return;
         const isRight = (ext.position?.x ?? 0) >= groupCenterX;
-        externalShifts[id] = isRight ? deltaRight : 0;
+        if (!isRight) return;
+        externalShifts[id] = deltaRight;
+        queue.push(id);
       });
+      while (queue.length) {
+        const cur = queue.shift()!;
+        (adj[cur] ?? new Set()).forEach((nb) => {
+          if (nb in externalShifts) return;
+          if (childSet.has(nb) || nb === groupId) return;
+          externalShifts[nb] = deltaRight;
+          queue.push(nb);
+        });
+      }
     }
 
     setNodes((nds) => nds.map((n) => {
