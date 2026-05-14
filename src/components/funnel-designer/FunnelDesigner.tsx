@@ -392,7 +392,20 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     };
   }, []);
 
-  // Warn on browser tab close / refresh when there are unsaved changes
+  // Track Ctrl/Meta press state for extending lasso/click selection
+  useEffect(() => {
+    const sync = (e: KeyboardEvent | MouseEvent) => {
+      ctrlDownRef.current = !!(e as any).ctrlKey || !!(e as any).metaKey;
+    };
+    window.addEventListener("keydown", sync as any);
+    window.addEventListener("keyup", sync as any);
+    window.addEventListener("mousedown", sync as any);
+    return () => {
+      window.removeEventListener("keydown", sync as any);
+      window.removeEventListener("keyup", sync as any);
+      window.removeEventListener("mousedown", sync as any);
+    };
+  }, []);
   useEffect(() => {
     if (!isDirty) return;
     const handler = (e: BeforeUnloadEvent) => {
