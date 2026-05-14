@@ -219,6 +219,64 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     toast.success("Seed template loaded for editing");
   }, [setNodes, setEdges]);
 
+  const syncSeedTemplates = useCallback(async () => {
+    if (!isAdmin || !userId || !activeSubAccountId) return;
+    const { data: seeds, error: seedErr } = await supabase
+      .from("seed_templates")
+      .select("id, name, description, nodes, edges, brief_structure, template_type")
+      .eq("is_active", true);
+    if (seedErr || !seeds) {
+      toast.error("Could not load seed templates");
+      return;
+    }
+
+    // Find existing seed-derived templates in this sub_account
+    const { data: existing } = await supabase
+      .from("funnels")
+      .select("id")
+      .eq("sub_account_id", activeSubAccountId)
+      .eq("is_template", true)
+      .not("seed_template_id", "is", null);
+
+    if (existing && existing.length > 0) {
+      const ids = existing.map((f: any) => f.id);
+      await supabase.from("funnel_briefs").delete().in("funnel_id", ids);
+      await supabase.from("funnels").delete().in("id", ids);
+    }
+
+    let inserted = 0;
+    for (const s of seeds as any[]) {
+      const { data: newFunnel, error: insErr } = await supabase.from("funnels").insert({
+        user_id: userId,
+        sub_account_id: activeSubAccountId,
+        name: s.name,
+        description: s.description ?? "",
+        nodes: s.nodes ?? [],
+        edges: s.edges ?? [],
+        is_template: true,
+        template_type: s.template_type ?? null,
+        seed_template_id: s.id,
+      }).select("id").single();
+      if (insErr || !newFunnel) continue;
+      inserted += 1;
+      const bs = s.brief_structure;
+      if (bs && bs !== null && Array.isArray(bs?.sections) && bs.sections.length > 0) {
+        await supabase.from("funnel_briefs").insert({
+          funnel_id: newFunnel.id,
+          user_id: userId,
+          sub_account_id: activeSubAccountId,
+          structure: bs,
+          values: {},
+        });
+      }
+    }
+    toast.success(`Synced ${inserted} library template${inserted === 1 ? "" : "s"} to this account`);
+    loadTemplatesRef.current?.();
+  }, [isAdmin, userId, activeSubAccountId]);
+
+  const loadTemplatesRef = useRef<(() => void) | null>(null);
+
+
   // Undo/Redo
   const undoStack = useRef<HistoryEntry[]>([]);
   const redoStack = useRef<HistoryEntry[]>([]);
