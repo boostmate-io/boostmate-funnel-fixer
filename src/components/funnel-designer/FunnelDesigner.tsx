@@ -1465,6 +1465,19 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                   </Button>
                 </TooltipTrigger><TooltipContent>{t("funnelDesigner.autoLayout")}</TooltipContent></Tooltip>
 
+                <Tooltip><TooltipTrigger asChild>
+                  <Button
+                    variant="ghost" size="sm" className="h-8 w-8 p-0"
+                    onClick={groupSelectedAsSequence}
+                    disabled={selectedNodeIds.filter((id) => {
+                      const n = nodes.find((nn) => nn.id === id);
+                      return n && n.type !== "sequenceGroup";
+                    }).length < 2}
+                  >
+                    <GroupIcon className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent>Group selection as sequence (min. 2 nodes)</TooltipContent></Tooltip>
+
                 <div className="w-px h-5 bg-border mx-0.5" />
 
                 <Tooltip><TooltipTrigger asChild>
