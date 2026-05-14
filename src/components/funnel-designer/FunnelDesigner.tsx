@@ -68,6 +68,7 @@ import ElementsPanel from "./ElementsPanel";
 import FunnelNode from "./FunnelNode";
 import TrafficSourceNode from "./TrafficSourceNode";
 import NodeDetailsPanel from "./NodeDetailsPanel";
+import SequenceGroupNode from "./SequenceGroupNode";
 import { TRAFFIC_SOURCES, FUNNEL_ELEMENTS } from "./constants";
 import { toPng } from "html-to-image";
 import { Switch } from "@/components/ui/switch";
@@ -78,6 +79,7 @@ import OfferPanel from "@/components/offers/OfferPanel";
 const nodeTypes = {
   funnelPage: FunnelNode,
   trafficSource: TrafficSourceNode,
+  sequenceGroup: SequenceGroupNode,
 };
 
 const defaultEdgeOptions = {
