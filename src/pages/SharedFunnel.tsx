@@ -416,6 +416,40 @@ const SharedFunnelInner = () => {
             onClose={() => setDetailsNodeId(null)}
           />
         )}
+
+        {detailsNode && detailsNode.type === "sequenceGroup" && !showBrief && !showOffer && (
+          <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-sm font-display font-bold text-foreground truncate">Sequence</h3>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={() => setDetailsNodeId(null)}>
+                ×
+              </Button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Name</label>
+                <p className="text-sm text-foreground">{(detailsNode.data as any).label || "Sequence"}</p>
+              </div>
+              {(detailsNode.data as any).notes && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{(detailsNode.data as any).notes}</p>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {((detailsNode.data as any).childIds?.length ?? 0)} step{((detailsNode.data as any).childIds?.length ?? 0) === 1 ? "" : "s"}
+                </label>
+                <Button
+                  variant="outline" size="sm" className="w-full justify-start gap-2"
+                  onClick={() => window.dispatchEvent(new CustomEvent("sequence-group-toggle", { detail: { id: detailsNode.id } }))}
+                >
+                  {(detailsNode.data as any).collapsed ? "Expand sequence" : "Collapse sequence"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Offer fullscreen modal */}
