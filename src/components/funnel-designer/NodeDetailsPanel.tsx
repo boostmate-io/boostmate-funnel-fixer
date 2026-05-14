@@ -202,6 +202,12 @@ const NodeDetailsPanel = ({
           </Button>
         </div>
         <div className="flex-1 overflow-auto">
+          {isPageOrEmail && pageType === "email" && !!emailSubject && (
+            <div className="p-4 border-b border-border">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Subject line</label>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{emailSubject}</p>
+            </div>
+          )}
           {hasNotes && (
             <div className="p-4 border-b border-border">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
