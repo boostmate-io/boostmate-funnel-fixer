@@ -26,6 +26,16 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const initialModule = searchParams.get("module") || "overview";
   const [activeModule, setActiveModule] = useState(initialModule);
+  const handleModuleChange = (next: string) => {
+    const guard = (window as any).__funnelDirtyGuard as
+      | ((proceed: () => void) => void)
+      | undefined;
+    if (guard) {
+      guard(() => setActiveModule(next));
+      return;
+    }
+    setActiveModule(next);
+  };
   const { user } = useAuth();
   const { loading } = useWorkspace();
 
@@ -43,7 +53,7 @@ const Dashboard = () => {
     <div className="flex flex-col h-screen bg-background-dashboard">
       
       <div className="flex flex-1 overflow-hidden">
-        <DashboardSidebar activeModule={activeModule} onModuleChange={setActiveModule} />
+        <DashboardSidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
         <main className={`flex-1 overflow-auto ${fullHeightModules.includes(activeModule) ? "" : "p-8"}`}>
           {!fullHeightModules.includes(activeModule) && (
             <div className="mb-8">
