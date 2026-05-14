@@ -26,6 +26,16 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const initialModule = searchParams.get("module") || "overview";
   const [activeModule, setActiveModule] = useState(initialModule);
+  const handleModuleChange = (next: string) => {
+    const guard = (window as any).__funnelDirtyGuard as
+      | ((proceed: () => void) => void)
+      | undefined;
+    if (guard) {
+      guard(() => setActiveModule(next));
+      return;
+    }
+    setActiveModule(next);
+  };
   const { user } = useAuth();
   const { loading } = useWorkspace();
 
