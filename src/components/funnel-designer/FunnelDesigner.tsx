@@ -159,6 +159,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
 
   // Multi-selection (for grouping into sequences)
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const lastSelectedSetRef = useRef<Set<string>>(new Set());
+  const ctrlDownRef = useRef(false);
 
   // Drag-along tracking for sequence groups
   const dragStartPositionRef = useRef<Record<string, { x: number; y: number }>>({});
