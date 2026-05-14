@@ -1352,65 +1352,122 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{t("funnelDesigner.templates")}</DialogTitle></DialogHeader>
 
-          {/* Type filter */}
-          <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border">
-            <Button
-              size="sm" variant={templateTypeFilter === "all" ? "default" : "outline"}
-              className="h-7 text-xs" onClick={() => setTemplateTypeFilter("all")}
-            >
-              All ({templates.length})
-            </Button>
-            {TEMPLATE_TYPES.map((tt) => {
-              const count = templates.filter((x) => (x.template_type || "full-funnel") === tt.value).length;
-              if (count === 0) return null;
-              return (
-                <Button
-                  key={tt.value} size="sm"
-                  variant={templateTypeFilter === tt.value ? "default" : "outline"}
-                  className="h-7 text-xs"
-                  onClick={() => setTemplateTypeFilter(tt.value)}
-                >
-                  {tt.label} ({count})
-                </Button>
-              );
-            })}
-          </div>
+          <Tabs defaultValue="mine" className="w-full">
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="mine">My Templates ({templates.length})</TabsTrigger>
+              <TabsTrigger value="library">Library ({seedTemplates.filter((s) => s.is_active).length})</TabsTrigger>
+            </TabsList>
 
-          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {templates.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">{t("funnelDesigner.noTemplates")}</p>}
-            {templates
-              .filter((tmpl) => templateTypeFilter === "all" || (tmpl.template_type || "full-funnel") === templateTypeFilter)
-              .map((tmpl) => (
-              <div key={tmpl.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
-                <div className="text-left flex-1 min-w-0 mr-2">
-                  <p className="text-sm font-medium text-foreground truncate">{tmpl.name}</p>
-                  <Badge variant="secondary" className="mt-1 text-[10px] font-normal">
-                    {getTemplateTypeLabel(tmpl.template_type)}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Tooltip><TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => createFromTemplate(tmpl)}>
-                      <Plus className="w-3 h-3 mr-1" /> Use
+            <TabsContent value="mine" className="mt-3">
+              {/* Type filter */}
+              <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border">
+                <Button
+                  size="sm" variant={templateTypeFilter === "all" ? "default" : "outline"}
+                  className="h-7 text-xs" onClick={() => setTemplateTypeFilter("all")}
+                >
+                  All ({templates.length})
+                </Button>
+                {TEMPLATE_TYPES.map((tt) => {
+                  const count = templates.filter((x) => (x.template_type || "full-funnel") === tt.value).length;
+                  if (count === 0) return null;
+                  return (
+                    <Button
+                      key={tt.value} size="sm"
+                      variant={templateTypeFilter === tt.value ? "default" : "outline"}
+                      className="h-7 text-xs"
+                      onClick={() => setTemplateTypeFilter(tt.value)}
+                    >
+                      {tt.label} ({count})
                     </Button>
-                  </TooltipTrigger><TooltipContent>Create a new funnel from this template</TooltipContent></Tooltip>
-                  <Tooltip><TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => insertTemplate(tmpl)}>
-                      <Download className="w-3 h-3 mr-1" /> Insert
-                    </Button>
-                  </TooltipTrigger><TooltipContent>Insert into the current funnel canvas</TooltipContent></Tooltip>
-                  <Tooltip><TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => editTemplate(tmpl)}>
-                      <Pencil className="w-3 h-3 mr-1" /> Edit
-                    </Button>
-                  </TooltipTrigger><TooltipContent>Edit this template</TooltipContent></Tooltip>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteFunnel(tmpl.id)}>
-                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                  </Button>
-                </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+
+              <div className="space-y-2 max-h-[55vh] overflow-y-auto mt-2">
+                {templates.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">{t("funnelDesigner.noTemplates")}</p>}
+                {templates
+                  .filter((tmpl) => templateTypeFilter === "all" || (tmpl.template_type || "full-funnel") === templateTypeFilter)
+                  .map((tmpl) => (
+                  <div key={tmpl.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
+                    <div className="text-left flex-1 min-w-0 mr-2">
+                      <p className="text-sm font-medium text-foreground truncate">{tmpl.name}</p>
+                      <Badge variant="secondary" className="mt-1 text-[10px] font-normal">
+                        {getTemplateTypeLabel(tmpl.template_type)}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Tooltip><TooltipTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => createFromTemplate(tmpl)}>
+                          <Plus className="w-3 h-3 mr-1" /> Use
+                        </Button>
+                      </TooltipTrigger><TooltipContent>Create a new funnel from this template</TooltipContent></Tooltip>
+                      <Tooltip><TooltipTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => insertTemplate(tmpl)}>
+                          <Download className="w-3 h-3 mr-1" /> Insert
+                        </Button>
+                      </TooltipTrigger><TooltipContent>Insert into the current funnel canvas</TooltipContent></Tooltip>
+                      <Tooltip><TooltipTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => editTemplate(tmpl)}>
+                          <Pencil className="w-3 h-3 mr-1" /> Edit
+                        </Button>
+                      </TooltipTrigger><TooltipContent>Edit this template</TooltipContent></Tooltip>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteFunnel(tmpl.id)}>
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="library" className="mt-3">
+              <p className="text-xs text-muted-foreground pb-2 border-b border-border">
+                Templates curated by the BoostMate team. Use them as a starting point or insert into the current canvas.
+              </p>
+              <div className="space-y-2 max-h-[55vh] overflow-y-auto mt-2">
+                {seedTemplates.filter((s) => s.is_active).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No library templates available.</p>
+                )}
+                {seedTemplates.filter((s) => s.is_active).map((st) => {
+                  const asFunnelLike: any = {
+                    id: st.id,
+                    name: st.name,
+                    nodes: st.nodes || [],
+                    edges: st.edges || [],
+                    template_type: st.template_type,
+                  };
+                  return (
+                    <div key={st.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors">
+                      <div className="text-left flex-1 min-w-0 mr-2">
+                        <p className="text-sm font-medium text-foreground truncate">{st.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-[10px] font-normal">
+                            {getTemplateTypeLabel(st.template_type)}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] font-normal">Library</Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Tooltip><TooltipTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => {
+                            createFromTemplate(asFunnelLike);
+                            templateSourceRef.current = { type: "seed", id: st.id };
+                          }}>
+                            <Plus className="w-3 h-3 mr-1" /> Use
+                          </Button>
+                        </TooltipTrigger><TooltipContent>Create a new funnel from this library template</TooltipContent></Tooltip>
+                        <Tooltip><TooltipTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => insertTemplate(asFunnelLike)}>
+                            <Download className="w-3 h-3 mr-1" /> Insert
+                          </Button>
+                        </TooltipTrigger><TooltipContent>Insert into the current funnel canvas</TooltipContent></Tooltip>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
