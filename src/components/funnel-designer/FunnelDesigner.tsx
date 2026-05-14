@@ -510,12 +510,20 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         const meta = (e.data as any) || {};
         if (meta._groupId !== groupId) return e;
         const restored: any = { ...e };
-        if (meta._origSource) restored.source = meta._origSource;
-        if (meta._origTarget) restored.target = meta._origTarget;
+        if (meta._origSource) {
+          restored.source = meta._origSource;
+          restored.sourceHandle = meta._origSourceHandle ?? null;
+        }
+        if (meta._origTarget) {
+          restored.target = meta._origTarget;
+          restored.targetHandle = meta._origTargetHandle ?? null;
+        }
         restored.hidden = false;
         const newData = { ...meta };
         delete newData._origSource;
         delete newData._origTarget;
+        delete newData._origSourceHandle;
+        delete newData._origTargetHandle;
         delete newData._groupId;
         restored.data = newData;
         return restored;
