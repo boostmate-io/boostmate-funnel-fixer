@@ -1070,7 +1070,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             </TooltipTrigger><TooltipContent>{t("funnelDesigner.myFunnels")}</TooltipContent></Tooltip>
 
             <Tooltip><TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={() => { loadTemplates(); setShowTemplates(true); }}>
+              <Button variant="outline" size="sm" onClick={() => { loadTemplates(); loadSeedTemplates(); setShowTemplates(true); }}>
                 <Library className="w-4 h-4" />
               </Button>
             </TooltipTrigger><TooltipContent>{t("funnelDesigner.templates")}</TooltipContent></Tooltip>
