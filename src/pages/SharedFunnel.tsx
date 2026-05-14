@@ -241,16 +241,30 @@ const SharedFunnelInner = () => {
     () => localNodes.map((n) => {
       const isSeqGroup = n.type === "sequenceGroup";
       const collapsed = isSeqGroup && (n.data as any)?.collapsed;
-      return {
+      const base: any = {
         ...n,
         selected: n.id === selectedNodeId,
         draggable: false,
         connectable: false,
-        ...(isSeqGroup
-          ? { style: { ...(n.style || {}), width: collapsed ? 240 : ((n.data as any)?.width || 400), height: collapsed ? 50 : ((n.data as any)?.height || 200) } }
-          : {}),
         data: { ...n.data, showImages, readOnly: true, connectedHandles: connectedHandlesMap[n.id] || [] },
       };
+      if (isSeqGroup) {
+        if (collapsed) {
+          base.zIndex = 0;
+          base.style = { ...(n.style || {}), width: 240, height: 50 };
+        } else {
+          // Expanded: render behind external nodes and let clicks pass through
+          // so child nodes (and external nodes underneath the bbox) stay interactive.
+          base.zIndex = -2;
+          base.style = {
+            ...(n.style || {}),
+            width: (n.data as any)?.width || 400,
+            height: (n.data as any)?.height || 200,
+            pointerEvents: "none" as const,
+          };
+        }
+      }
+      return base;
     }),
     [localNodes, selectedNodeId, showImages, connectedHandlesMap]
   );
