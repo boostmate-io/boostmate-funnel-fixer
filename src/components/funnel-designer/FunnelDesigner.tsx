@@ -159,6 +159,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
 
   // Multi-selection (for grouping into sequences)
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const lastSelectedSetRef = useRef<Set<string>>(new Set());
+  const ctrlDownRef = useRef(false);
 
   // Drag-along tracking for sequence groups
   const dragStartPositionRef = useRef<Record<string, { x: number; y: number }>>({});
@@ -390,7 +392,20 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     };
   }, []);
 
-  // Warn on browser tab close / refresh when there are unsaved changes
+  // Track Ctrl/Meta press state for extending lasso/click selection
+  useEffect(() => {
+    const sync = (e: KeyboardEvent | MouseEvent) => {
+      ctrlDownRef.current = !!(e as any).ctrlKey || !!(e as any).metaKey;
+    };
+    window.addEventListener("keydown", sync as any);
+    window.addEventListener("keyup", sync as any);
+    window.addEventListener("mousedown", sync as any);
+    return () => {
+      window.removeEventListener("keydown", sync as any);
+      window.removeEventListener("keyup", sync as any);
+      window.removeEventListener("mousedown", sync as any);
+    };
+  }, []);
   useEffect(() => {
     if (!isDirty) return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -477,7 +492,16 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
 
     setNodes((nds) => nds
       .filter((n) => n.id !== groupId)
-      .map((n) => childIds.includes(n.id) ? { ...n, hidden: false } : n)
+      .map((n) => {
+        if (childIds.includes(n.id)) return { ...n, hidden: false };
+        const meta = (n.data as any)?._collapseShift;
+        if (wasCollapsed && meta && meta.groupId === groupId) {
+          const data = { ...n.data } as any;
+          delete data._collapseShift;
+          return { ...n, position: { x: (n.position?.x ?? 0) - meta.dx, y: n.position?.y ?? 0 }, data };
+        }
+        return n;
+      })
     );
 
     if (wasCollapsed) {
@@ -503,41 +527,87 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
 
   // ── Sequence Group: toggle collapsed ──
   const toggleSequenceCollapsed = useCallback((groupId: string) => {
-    setNodes((nds) => {
-      const group = nds.find((n) => n.id === groupId);
-      if (!group || group.type !== "sequenceGroup") return nds;
-      const childIds: string[] = (group.data as any)?.childIds ?? [];
-      const willCollapse = !(group.data as any)?.collapsed;
-      const childSet = new Set(childIds);
-      return nds.map((n) => {
-        if (n.id === groupId) {
-          return { ...n, data: { ...n.data, collapsed: willCollapse } };
-        }
-        if (childSet.has(n.id)) {
-          return { ...n, hidden: willCollapse };
-        }
-        return n;
+    const group = nodes.find((n) => n.id === groupId);
+    if (!group || group.type !== "sequenceGroup") return;
+    const childIds: string[] = (group.data as any)?.childIds ?? [];
+    const childSet = new Set(childIds);
+    const willCollapse = !(group.data as any)?.collapsed;
+    const groupW = (group.data as any)?.width || 400;
+    const groupH = (group.data as any)?.height || 200;
+    const COLLAPSED_W = 240;
+    const COLLAPSED_H = 50;
+
+    // Determine externals connected to children & X delta to compress them toward the collapsed group
+    const externalShifts: Record<string, number> = {};
+    if (willCollapse) {
+      const groupRight = (group.position?.x ?? 0) + groupW;
+      const groupCenterX = (group.position?.x ?? 0) + groupW / 2;
+      const collapsedRight = (group.position?.x ?? 0) + COLLAPSED_W;
+      const deltaRight = collapsedRight - groupRight; // negative — pull right-side externals left
+      edges.forEach((e) => {
+        const sIn = childSet.has(e.source);
+        const tIn = childSet.has(e.target);
+        if (sIn && !tIn) externalShifts[e.target] = (externalShifts[e.target] ?? 0);
+        if (tIn && !sIn) externalShifts[e.source] = (externalShifts[e.source] ?? 0);
       });
-    });
+      Object.keys(externalShifts).forEach((id) => {
+        const ext = nodes.find((n) => n.id === id);
+        if (!ext) return;
+        const isRight = (ext.position?.x ?? 0) >= groupCenterX;
+        externalShifts[id] = isRight ? deltaRight : 0;
+      });
+    }
+
+    setNodes((nds) => nds.map((n) => {
+      if (n.id === groupId) {
+        if (willCollapse) {
+          // Vertically center collapsed group on original center; remember original position
+          const origPos = n.position;
+          const newY = (origPos?.y ?? 0) + groupH / 2 - COLLAPSED_H / 2;
+          return {
+            ...n,
+            position: { x: origPos?.x ?? 0, y: newY },
+            data: { ...n.data, collapsed: true, _origPos: origPos },
+          };
+        } else {
+          const orig = (n.data as any)?._origPos;
+          const restored = { ...n.data, collapsed: false } as any;
+          delete restored._origPos;
+          return { ...n, position: orig || n.position, data: restored };
+        }
+      }
+      if (childSet.has(n.id)) {
+        return { ...n, hidden: willCollapse };
+      }
+      if (willCollapse && externalShifts[n.id]) {
+        const shift = externalShifts[n.id];
+        return {
+          ...n,
+          position: { x: (n.position?.x ?? 0) + shift, y: n.position?.y ?? 0 },
+          data: { ...n.data, _collapseShift: { groupId, dx: shift } },
+        };
+      }
+      if (!willCollapse) {
+        const meta = (n.data as any)?._collapseShift;
+        if (meta && meta.groupId === groupId) {
+          const data = { ...n.data } as any;
+          delete data._collapseShift;
+          return { ...n, position: { x: (n.position?.x ?? 0) - meta.dx, y: n.position?.y ?? 0 }, data };
+        }
+      }
+      return n;
+    }));
 
     // Remap edges
     setEdges((eds) => {
-      const group = nodes.find((n) => n.id === groupId);
-      if (!group) return eds;
-      const childIds: string[] = (group.data as any)?.childIds ?? [];
-      const willCollapse = !(group.data as any)?.collapsed;
-      const childSet = new Set(childIds);
-
       if (willCollapse) {
         return eds.map((e) => {
           const sIn = childSet.has(e.source);
           const tIn = childSet.has(e.target);
           if (sIn && tIn) {
-            // internal edge → hide
             return { ...e, hidden: true, data: { ...(e.data as any), _groupId: groupId } };
           }
           if (sIn || tIn) {
-            // external edge crossing boundary → remap to group
             const meta = { ...(e.data as any), _groupId: groupId };
             const next: any = { ...e, data: meta };
             if (sIn) { meta._origSource = e.source; next.source = groupId; }
@@ -547,7 +617,6 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           return e;
         });
       } else {
-        // Expanding → restore
         return eds.map((e) => {
           const meta = (e.data as any) || {};
           if (meta._groupId !== groupId) return e;
@@ -563,7 +632,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         });
       }
     });
-  }, [nodes, setNodes, setEdges]);
+  }, [nodes, edges, setNodes, setEdges]);
 
   // Listen for collapse/expand button clicks from SequenceGroupNode
   useEffect(() => {
@@ -1050,7 +1119,16 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     deletedGroups.forEach((g) => {
       const childIds: string[] = (g.data as any)?.childIds ?? [];
       const wasCollapsed = !!(g.data as any)?.collapsed;
-      setNodes((nds) => nds.map((n) => childIds.includes(n.id) ? { ...n, hidden: false } : n));
+      setNodes((nds) => nds.map((n) => {
+        if (childIds.includes(n.id)) return { ...n, hidden: false };
+        const meta = (n.data as any)?._collapseShift;
+        if (wasCollapsed && meta && meta.groupId === g.id) {
+          const data = { ...n.data } as any;
+          delete data._collapseShift;
+          return { ...n, position: { x: (n.position?.x ?? 0) - meta.dx, y: n.position?.y ?? 0 }, data };
+        }
+        return n;
+      }));
       if (wasCollapsed) {
         setEdges((eds) => eds.map((e) => {
           const meta = (e.data as any) || {};
@@ -1416,7 +1494,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                 if (d?.collapsed) {
                   return { ...base, zIndex: 0, style: { ...(base as any).style, width: 240, height: 50 } };
                 }
-                return { ...base, zIndex: -2, style: { ...(base as any).style, width: d?.width || 400, height: d?.height || 200 } };
+                return { ...base, zIndex: -2, style: { ...(base as any).style, width: d?.width || 400, height: d?.height || 200, pointerEvents: "none" as const } };
               }
               return base;
             })}
@@ -1428,7 +1506,19 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             onNodeDoubleClick={onNodeDoubleClick}
             onPaneClick={() => { selectedNodeRef.current = null; }}
             onSelectionChange={({ nodes: selNodes }) => {
-              setSelectedNodeIds(selNodes.map((n) => n.id));
+              const newIds = selNodes.map((n) => n.id);
+              const prev = lastSelectedSetRef.current;
+              if (ctrlDownRef.current && prev.size > 0) {
+                const merged = new Set([...prev, ...newIds]);
+                if (merged.size !== newIds.length || ![...merged].every((id) => newIds.includes(id))) {
+                  lastSelectedSetRef.current = merged;
+                  setSelectedNodeIds([...merged]);
+                  setNodes((nds) => nds.map((n) => merged.has(n.id) ? (n.selected ? n : { ...n, selected: true }) : n));
+                  return;
+                }
+              }
+              lastSelectedSetRef.current = new Set(newIds);
+              setSelectedNodeIds(newIds);
             }}
             onNodeDragStart={(_, node) => {
               if (node.type === "sequenceGroup" && !(node.data as any)?.collapsed) {
