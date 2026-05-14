@@ -389,6 +389,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       .select("*")
       .eq("is_template", true)
       .eq("sub_account_id", activeSubAccountId)
+      .is("seed_template_id", null)
       .order("name", { ascending: true });
     setTemplates((data || []) as unknown as Funnel[]);
   }, [activeSubAccountId]);
