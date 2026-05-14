@@ -154,17 +154,10 @@ const SharedFunnelInner = () => {
     if (node.type !== "funnelPage") return false;
     const nodeData = node.data as any;
     const renderStyle = nodeData.renderStyle ?? "page";
-    if (nodeData.pageType === "wait") return false;
     if (renderStyle === "note" || renderStyle === "text") {
       return Boolean(nodeData.noteContent?.trim());
     }
-    return Boolean(
-      nodeData.nodeNotes?.trim() ||
-      nodeData.nodeUrl?.trim() ||
-      nodeData.nodeImage?.trim() ||
-      nodeData.emailSubject?.trim() ||
-      ((nodeData.copySections ?? []) as Array<unknown>).length > 0
-    );
+    return true;
   }, []);
 
   useEffect(() => {
