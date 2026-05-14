@@ -32,6 +32,7 @@ import logo from "@/assets/logo-boostmate.svg";
 const nodeTypes = {
   funnelPage: FunnelNode,
   trafficSource: TrafficSourceNode,
+  sequenceGroup: SequenceGroupNode,
 };
 
 const defaultEdgeOptions = {
