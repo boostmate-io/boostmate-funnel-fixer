@@ -390,6 +390,178 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     };
   }, []);
 
+  // Warn on browser tab close / refresh when there are unsaved changes
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  const requestExit = useCallback((action: () => void) => {
+    if (!isDirty) { action(); return; }
+    setPendingExit(() => action);
+  }, [isDirty]);
+
+  // ── Sequence Group: create from selection ──
+  const groupSelectedAsSequence = useCallback(() => {
+    const selected = nodes.filter((n) => n.selected && n.type !== "sequenceGroup");
+    if (selected.length < 2) {
+      toast.error("Select at least 2 nodes to group");
+      return;
+    }
+    // Compute bounding box (estimate node sizes)
+    const estSize = (n: Node) => {
+      const d = n.data as any;
+      const rs = d?.renderStyle;
+      if (rs === "shape") return { w: d?.shapeWidth || 120, h: d?.shapeHeight || 120 };
+      if (rs === "icon" || n.type === "trafficSource") return { w: 100, h: 90 };
+      if (rs === "note" || rs === "text") return { w: 180, h: 80 };
+      return { w: 220, h: 240 };
+    };
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    selected.forEach((n) => {
+      const { w, h } = estSize(n);
+      const x = n.position?.x ?? 0;
+      const y = n.position?.y ?? 0;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x + w > maxX) maxX = x + w;
+      if (y + h > maxY) maxY = y + h;
+    });
+    const PAD = 30;
+    const groupId = `group_${Date.now()}`;
+    const groupNode: Node = {
+      id: groupId,
+      type: "sequenceGroup",
+      position: { x: minX - PAD, y: minY - PAD - 12 },
+      data: {
+        label: "Sequence",
+        notes: "",
+        collapsed: false,
+        childIds: selected.map((n) => n.id),
+        width: maxX - minX + PAD * 2,
+        height: maxY - minY + PAD * 2 + 12,
+      },
+      draggable: true,
+      selectable: true,
+      zIndex: -2,
+    };
+    setNodes((nds) => [groupNode, ...nds.map((n) => ({ ...n, selected: false }))]);
+    toast.success(`Grouped ${selected.length} nodes into a sequence`);
+  }, [nodes, setNodes]);
+
+  // ── Sequence Group: ungroup ──
+  const ungroupSequence = useCallback((groupId: string) => {
+    const group = nodes.find((n) => n.id === groupId);
+    if (!group || group.type !== "sequenceGroup") return;
+    const childIds: string[] = (group.data as any)?.childIds ?? [];
+    const wasCollapsed = !!(group.data as any)?.collapsed;
+
+    setNodes((nds) => nds
+      .filter((n) => n.id !== groupId)
+      .map((n) => childIds.includes(n.id) ? { ...n, hidden: false } : n)
+    );
+
+    if (wasCollapsed) {
+      // Restore edges that were remapped
+      setEdges((eds) => eds.map((e) => {
+        const meta = (e.data as any) || {};
+        if (meta._groupId !== groupId) return e;
+        const restored: any = { ...e };
+        if (meta._origSource) restored.source = meta._origSource;
+        if (meta._origTarget) restored.target = meta._origTarget;
+        restored.hidden = false;
+        const newData = { ...meta };
+        delete newData._origSource;
+        delete newData._origTarget;
+        delete newData._groupId;
+        restored.data = newData;
+        return restored;
+      }));
+    }
+    setDetailsNodeId(null);
+    toast.success("Sequence ungrouped");
+  }, [nodes, setNodes, setEdges]);
+
+  // ── Sequence Group: toggle collapsed ──
+  const toggleSequenceCollapsed = useCallback((groupId: string) => {
+    setNodes((nds) => {
+      const group = nds.find((n) => n.id === groupId);
+      if (!group || group.type !== "sequenceGroup") return nds;
+      const childIds: string[] = (group.data as any)?.childIds ?? [];
+      const willCollapse = !(group.data as any)?.collapsed;
+      const childSet = new Set(childIds);
+      return nds.map((n) => {
+        if (n.id === groupId) {
+          return { ...n, data: { ...n.data, collapsed: willCollapse } };
+        }
+        if (childSet.has(n.id)) {
+          return { ...n, hidden: willCollapse };
+        }
+        return n;
+      });
+    });
+
+    // Remap edges
+    setEdges((eds) => {
+      const group = nodes.find((n) => n.id === groupId);
+      if (!group) return eds;
+      const childIds: string[] = (group.data as any)?.childIds ?? [];
+      const willCollapse = !(group.data as any)?.collapsed;
+      const childSet = new Set(childIds);
+
+      if (willCollapse) {
+        return eds.map((e) => {
+          const sIn = childSet.has(e.source);
+          const tIn = childSet.has(e.target);
+          if (sIn && tIn) {
+            // internal edge → hide
+            return { ...e, hidden: true, data: { ...(e.data as any), _groupId: groupId } };
+          }
+          if (sIn || tIn) {
+            // external edge crossing boundary → remap to group
+            const meta = { ...(e.data as any), _groupId: groupId };
+            const next: any = { ...e, data: meta };
+            if (sIn) { meta._origSource = e.source; next.source = groupId; }
+            if (tIn) { meta._origTarget = e.target; next.target = groupId; }
+            return next;
+          }
+          return e;
+        });
+      } else {
+        // Expanding → restore
+        return eds.map((e) => {
+          const meta = (e.data as any) || {};
+          if (meta._groupId !== groupId) return e;
+          const restored: any = { ...e, hidden: false };
+          if (meta._origSource) restored.source = meta._origSource;
+          if (meta._origTarget) restored.target = meta._origTarget;
+          const newData = { ...meta };
+          delete newData._origSource;
+          delete newData._origTarget;
+          delete newData._groupId;
+          restored.data = newData;
+          return restored;
+        });
+      }
+    });
+  }, [nodes, setNodes, setEdges]);
+
+  // Listen for collapse/expand button clicks from SequenceGroupNode
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id;
+      if (id) toggleSequenceCollapsed(id);
+    };
+    window.addEventListener("sequence-group-toggle", handler);
+    return () => window.removeEventListener("sequence-group-toggle", handler);
+  }, [toggleSequenceCollapsed]);
+
+
   const loadFunnels = useCallback(async () => {
     if (!userId || !activeSubAccountId) return;
     const { data } = await supabase
