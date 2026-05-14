@@ -93,6 +93,8 @@ const SharedFunnelInner = () => {
       } else {
         const fd = data as any;
         setFunnel(fd as unknown as FunnelData);
+        setLocalNodes((fd.nodes || []) as Node[]);
+        setLocalEdges((fd.edges || []) as Edge[]);
         setLinkedOfferId(fd.linked_offer_id || null);
         const hasAnyImage = (fd.nodes || []).some((n: any) => {
           const d = n?.data || {};
