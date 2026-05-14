@@ -492,7 +492,16 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
 
     setNodes((nds) => nds
       .filter((n) => n.id !== groupId)
-      .map((n) => childIds.includes(n.id) ? { ...n, hidden: false } : n)
+      .map((n) => {
+        if (childIds.includes(n.id)) return { ...n, hidden: false };
+        const meta = (n.data as any)?._collapseShift;
+        if (wasCollapsed && meta && meta.groupId === groupId) {
+          const data = { ...n.data } as any;
+          delete data._collapseShift;
+          return { ...n, position: { x: (n.position?.x ?? 0) - meta.dx, y: n.position?.y ?? 0 }, data };
+        }
+        return n;
+      })
     );
 
     if (wasCollapsed) {
