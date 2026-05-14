@@ -1459,6 +1459,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             onInit={setReactFlowInstance}
             onDragOver={onDragOver}
             onDrop={onDrop}
+            onNodesDelete={onNodesDelete}
+            multiSelectionKeyCode={["Control", "Meta"]}
             fitView
             deleteKeyCode={["Backspace", "Delete"]}
             edgesReconnectable
