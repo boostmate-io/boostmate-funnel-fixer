@@ -1411,8 +1411,13 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                 : n;
               // Shapes always behind other elements
               if (isShape) return { ...base, zIndex: -1 };
-              // Expanded sequence group container behind its children
-              if (isSeqGroup && !d?.collapsed) return { ...base, zIndex: -2 };
+              // Sequence group sizing + z-index
+              if (isSeqGroup) {
+                if (d?.collapsed) {
+                  return { ...base, zIndex: 0, style: { ...(base as any).style, width: 240, height: 50 } };
+                }
+                return { ...base, zIndex: -2, style: { ...(base as any).style, width: d?.width || 400, height: d?.height || 200 } };
+              }
               return base;
             })}
             edges={edges}
