@@ -1343,7 +1343,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
               </Button>
             </TooltipTrigger><TooltipContent>{t("funnelDesigner.reset")}</TooltipContent></Tooltip>
 
-            <Button size="sm" onClick={saveFunnel}>
+            <Button size="sm" onClick={async () => { await saveFunnel(); setLastSavedSnapshot(currentSnapshot); }}>
               <Save className="w-4 h-4 mr-1" /> {t("funnelDesigner.save")}
             </Button>
           </div>
