@@ -15,7 +15,9 @@ import { toPng } from "html-to-image";
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import FunnelNode from "@/components/funnel-designer/FunnelNode";
 import TrafficSourceNode from "@/components/funnel-designer/TrafficSourceNode";
+import SequenceGroupNode from "@/components/funnel-designer/SequenceGroupNode";
 import NodeDetailsPanel from "@/components/funnel-designer/NodeDetailsPanel";
+import { toggleSequenceCollapse } from "@/components/funnel-designer/sequenceGroupUtils";
 import BriefFiller from "@/components/funnel-brief/BriefFiller";
 import { BriefStructure, BriefValues, BriefApprovedFields } from "@/components/funnel-brief/types";
 import OfferEditor from "@/components/offers/OfferEditor";
@@ -30,6 +32,7 @@ import logo from "@/assets/logo-boostmate.svg";
 const nodeTypes = {
   funnelPage: FunnelNode,
   trafficSource: TrafficSourceNode,
+  sequenceGroup: SequenceGroupNode,
 };
 
 const defaultEdgeOptions = {
@@ -58,6 +61,8 @@ interface BriefData {
 const SharedFunnelInner = () => {
   const { token } = useParams<{ token: string }>();
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
+  const [localNodes, setLocalNodes] = useState<Node[]>([]);
+  const [localEdges, setLocalEdges] = useState<Edge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [detailsNodeId, setDetailsNodeId] = useState<string | null>(null);
@@ -88,6 +93,8 @@ const SharedFunnelInner = () => {
       } else {
         const fd = data as any;
         setFunnel(fd as unknown as FunnelData);
+        setLocalNodes((fd.nodes || []) as Node[]);
+        setLocalEdges((fd.edges || []) as Edge[]);
         setLinkedOfferId(fd.linked_offer_id || null);
         const hasAnyImage = (fd.nodes || []).some((n: any) => {
           const d = n?.data || {};
@@ -142,7 +149,9 @@ const SharedFunnelInner = () => {
   }, []);
 
   const canOpenReadOnlyDetails = useCallback((node: Node | undefined) => {
-    if (!node || node.type !== "funnelPage") return false;
+    if (!node) return false;
+    if (node.type === "sequenceGroup") return true;
+    if (node.type !== "funnelPage") return false;
     const nodeData = node.data as any;
     const renderStyle = nodeData.renderStyle ?? "page";
     if (nodeData.pageType === "wait") return false;
@@ -161,14 +170,27 @@ const SharedFunnelInner = () => {
     const handler = (e: Event) => {
       const nodeId = (e as CustomEvent).detail?.nodeId;
       if (!nodeId) return;
-      const node = (funnel?.nodes ?? []).find((item) => item.id === nodeId);
+      const node = localNodes.find((item) => item.id === nodeId);
       if (!canOpenReadOnlyDetails(node)) return;
       setSelectedNodeId(nodeId);
       setDetailsNodeId(nodeId);
     };
     window.addEventListener("funnel-node-dblclick", handler);
     return () => window.removeEventListener("funnel-node-dblclick", handler);
-  }, [funnel?.nodes, canOpenReadOnlyDetails]);
+  }, [localNodes, canOpenReadOnlyDetails]);
+
+  // Sequence group collapse/expand toggle
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id;
+      if (!id) return;
+      const result = toggleSequenceCollapse(localNodes, localEdges, id);
+      setLocalNodes(result.nodes);
+      setLocalEdges(result.edges);
+    };
+    window.addEventListener("sequence-group-toggle", handler);
+    return () => window.removeEventListener("sequence-group-toggle", handler);
+  }, [localNodes, localEdges]);
 
   const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
@@ -204,7 +226,7 @@ const SharedFunnelInner = () => {
 
   const connectedHandlesMap = useMemo(() => {
     const map: Record<string, Set<string>> = {};
-    for (const e of (funnel?.edges ?? []) as Edge[]) {
+    for (const e of localEdges) {
       if (!map[e.source]) map[e.source] = new Set();
       map[e.source].add(`source-${e.sourceHandle || "right"}`);
       if (!map[e.target]) map[e.target] = new Set();
@@ -213,18 +235,26 @@ const SharedFunnelInner = () => {
     const result: Record<string, string[]> = {};
     for (const [id, s] of Object.entries(map)) result[id] = Array.from(s);
     return result;
-  }, [funnel?.edges]);
+  }, [localEdges]);
 
   const readOnlyNodes = useMemo(
-    () => (funnel?.nodes ?? []).map((n) => ({
-      ...n,
-      selected: n.id === selectedNodeId,
-      draggable: false,
-      connectable: false,
-      data: { ...n.data, showImages, readOnly: true, connectedHandles: connectedHandlesMap[n.id] || [] },
-    })),
-    [funnel?.nodes, selectedNodeId, showImages, connectedHandlesMap]
+    () => localNodes.map((n) => {
+      const isSeqGroup = n.type === "sequenceGroup";
+      const collapsed = isSeqGroup && (n.data as any)?.collapsed;
+      return {
+        ...n,
+        selected: n.id === selectedNodeId,
+        draggable: false,
+        connectable: false,
+        ...(isSeqGroup
+          ? { style: { ...(n.style || {}), width: collapsed ? 240 : ((n.data as any)?.width || 400), height: collapsed ? 50 : ((n.data as any)?.height || 200) } }
+          : {}),
+        data: { ...n.data, showImages, readOnly: true, connectedHandles: connectedHandlesMap[n.id] || [] },
+      };
+    }),
+    [localNodes, selectedNodeId, showImages, connectedHandlesMap]
   );
+
 
   if (loading) {
     return (
@@ -289,7 +319,7 @@ const SharedFunnelInner = () => {
         <div className="flex-1" ref={flowRef}>
           <ReactFlow
             nodes={readOnlyNodes}
-            edges={funnel.edges}
+            edges={localEdges}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             nodesDraggable={false}
@@ -385,6 +415,40 @@ const SharedFunnelInner = () => {
             onRename={() => {}}
             onClose={() => setDetailsNodeId(null)}
           />
+        )}
+
+        {detailsNode && detailsNode.type === "sequenceGroup" && !showBrief && !showOffer && (
+          <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-sm font-display font-bold text-foreground truncate">Sequence</h3>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={() => setDetailsNodeId(null)}>
+                ×
+              </Button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Name</label>
+                <p className="text-sm text-foreground">{(detailsNode.data as any).label || "Sequence"}</p>
+              </div>
+              {(detailsNode.data as any).notes && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{(detailsNode.data as any).notes}</p>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {((detailsNode.data as any).childIds?.length ?? 0)} step{((detailsNode.data as any).childIds?.length ?? 0) === 1 ? "" : "s"}
+                </label>
+                <Button
+                  variant="outline" size="sm" className="w-full justify-start gap-2"
+                  onClick={() => window.dispatchEvent(new CustomEvent("sequence-group-toggle", { detail: { id: detailsNode.id } }))}
+                >
+                  {(detailsNode.data as any).collapsed ? "Expand sequence" : "Collapse sequence"}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
