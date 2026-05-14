@@ -1594,7 +1594,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         </div>
       )}
 
-
+      {showBriefPanel && !detailsNode && !showOfferPanel && (
         <FunnelBriefPanel
           funnelId={currentFunnel?.id || editingSeedTemplate?.id || null}
           userId={userId}
