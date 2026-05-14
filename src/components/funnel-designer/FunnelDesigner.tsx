@@ -1431,7 +1431,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                 if (d?.collapsed) {
                   return { ...base, zIndex: 0, style: { ...(base as any).style, width: 240, height: 50 } };
                 }
-                return { ...base, zIndex: -2, style: { ...(base as any).style, width: d?.width || 400, height: d?.height || 200 } };
+                return { ...base, zIndex: -2, style: { ...(base as any).style, width: d?.width || 400, height: d?.height || 200, pointerEvents: "none" as const } };
               }
               return base;
             })}
@@ -1443,7 +1443,19 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             onNodeDoubleClick={onNodeDoubleClick}
             onPaneClick={() => { selectedNodeRef.current = null; }}
             onSelectionChange={({ nodes: selNodes }) => {
-              setSelectedNodeIds(selNodes.map((n) => n.id));
+              const newIds = selNodes.map((n) => n.id);
+              const prev = lastSelectedSetRef.current;
+              if (ctrlDownRef.current && prev.size > 0) {
+                const merged = new Set([...prev, ...newIds]);
+                if (merged.size !== newIds.length || ![...merged].every((id) => newIds.includes(id))) {
+                  lastSelectedSetRef.current = merged;
+                  setSelectedNodeIds([...merged]);
+                  setNodes((nds) => nds.map((n) => merged.has(n.id) ? (n.selected ? n : { ...n, selected: true }) : n));
+                  return;
+                }
+              }
+              lastSelectedSetRef.current = new Set(newIds);
+              setSelectedNodeIds(newIds);
             }}
             onNodeDragStart={(_, node) => {
               if (node.type === "sequenceGroup" && !(node.data as any)?.collapsed) {
