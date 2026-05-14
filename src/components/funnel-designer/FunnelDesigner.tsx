@@ -25,10 +25,11 @@ import {
   Save, RotateCcw, FolderOpen, Plus, Trash2, Pencil, ArrowLeft,
   Share2, Camera, Copy, Hand, MousePointer2, Undo2, Redo2,
   LayoutGrid, Image, Monitor, Library, ZoomIn, ZoomOut,
-  Sprout, ShieldCheck, ClipboardList, Gem, Download,
+  Sprout, ShieldCheck, ClipboardList, Gem, Download, RefreshCw,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export const TEMPLATE_TYPES = [
   { value: "full-funnel", label: "Full Funnel" },
