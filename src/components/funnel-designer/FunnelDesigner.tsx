@@ -1936,6 +1936,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             <AlertDialogAction
               onClick={async () => {
                 await saveFunnel();
+                setLastSavedSnapshot(currentSnapshot);
                 const action = pendingExit;
                 setPendingExit(null);
                 action?.();
