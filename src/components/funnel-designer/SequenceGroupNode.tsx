@@ -43,12 +43,16 @@ const SequenceGroupNode = memo(({ data, id }: NodeProps<any>) => {
 
   return (
     <div
-      style={{ width: d.width || 400, height: d.height || 200 }}
+      style={{ width: d.width || 400, height: d.height || 200, pointerEvents: "none" }}
       className="relative rounded-xl border-2 border-dashed border-primary/40 bg-primary/5"
     >
-      <div className="absolute -top-3 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-background border border-primary/50 shadow-sm">
+      {/* Header chip — interactive */}
+      <div
+        style={{ pointerEvents: "auto" }}
+        className="absolute -top-3 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-background border border-primary/50 shadow-sm cursor-pointer"
+      >
         <Layers className="w-3 h-3 text-primary" />
-        <span className="text-[11px] font-semibold text-foreground">{label}</span>
+        <span className="text-[11px] font-semibold text-foreground max-w-[200px] truncate">{label}</span>
         <button onClick={toggle} className="ml-1 p-0.5 rounded hover:bg-muted" title="Collapse sequence">
           <ChevronDown className="w-3 h-3 text-muted-foreground" />
         </button>
