@@ -393,6 +393,8 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     setTemplates((data || []) as unknown as Funnel[]);
   }, [activeSubAccountId]);
 
+  useEffect(() => { loadTemplatesRef.current = loadTemplates; }, [loadTemplates]);
+
   useEffect(() => {
     if (initialFunnel) {
       loadFunnel(initialFunnel);
