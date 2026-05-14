@@ -188,10 +188,11 @@ const NodeDetailsPanel = ({
   if (readOnly) {
     const displayName = customLabel || nodeLabel;
     const hasNotes = isNoteOrText && !!noteContent;
-    const hasNodeNotes = isPageOrEmail && !!nodeNotes;
-    const hasUrl = isPageOrEmail && !!nodeUrl;
-    const hasImage = isPageOrEmail && !!nodeImage;
+    const hasNodeNotes = !isNoteOrText && !isShape && !!nodeNotes;
+    const hasUrl = !isNoteOrText && !isShape && !!nodeUrl;
+    const hasImage = !isNoteOrText && !isShape && !!nodeImage;
     const hasCopySections = copySections && copySections.length > 0;
+    const hasAnyDetails = hasNotes || hasNodeNotes || hasUrl || hasImage || hasCopySections || (pageType === "email" && !!emailSubject);
 
     return (
       <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
@@ -250,6 +251,11 @@ const NodeDetailsPanel = ({
                   <ExternalLink className="w-3 h-3 mr-1" /> {t("funnelDesigner.viewImage")}
                 </a>
               </Button>
+            </div>
+          )}
+          {!hasAnyDetails && (
+            <div className="p-4 text-sm text-muted-foreground">
+              No additional details.
             </div>
           )}
         </div>
