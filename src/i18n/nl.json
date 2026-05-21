@@ -259,6 +259,7 @@
       "email": "E-mail",
       "broadcastEmail": "Broadcast E-mail",
       "sms": "SMS",
+      "dm": "DM",
       "phoneCall": "Telefoongesprek",
       "phoneOrder": "Telefonische Bestelling",
       "chatbot": "Chatbot",
