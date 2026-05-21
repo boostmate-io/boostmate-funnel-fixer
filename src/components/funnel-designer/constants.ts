@@ -137,6 +137,7 @@ export const FUNNEL_ELEMENTS: FunnelElement[] = [
   { type: "email", label: "funnelDesigner.elements.email", description: "", icon: "Mail", color: "#34A853", group: "Communication", isDecision: false, renderStyle: "icon" },
   { type: "broadcast-email", label: "funnelDesigner.elements.broadcastEmail", description: "", icon: "Mails", color: "#3B82F6", group: "Communication", isDecision: false, renderStyle: "icon" },
   { type: "sms", label: "funnelDesigner.elements.sms", description: "", icon: "MessageSquare", color: "#06B6D4", group: "Communication", isDecision: false, renderStyle: "icon" },
+  { type: "dm", label: "funnelDesigner.elements.dm", description: "", icon: "Send", color: "#EC4899", group: "Communication", isDecision: false, renderStyle: "icon" },
   { type: "phone-call", label: "funnelDesigner.elements.phoneCall", description: "", icon: "Phone", color: "#10B981", group: "Communication", isDecision: false, renderStyle: "icon" },
   { type: "phone-order", label: "funnelDesigner.elements.phoneOrder", description: "", icon: "PhoneCall", color: "#F59E0B", group: "Communication", isDecision: true, renderStyle: "icon" },
   { type: "chatbot", label: "funnelDesigner.elements.chatbot", description: "", icon: "Bot", color: "#8B5CF6", group: "Communication", isDecision: false, renderStyle: "icon" },
