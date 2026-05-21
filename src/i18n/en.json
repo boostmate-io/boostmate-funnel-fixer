@@ -259,6 +259,7 @@
       "email": "Email",
       "broadcastEmail": "Broadcast Email",
       "sms": "SMS",
+      "dm": "DM",
       "phoneCall": "Phone Call",
       "phoneOrder": "Phone Order",
       "chatbot": "Chatbot",
