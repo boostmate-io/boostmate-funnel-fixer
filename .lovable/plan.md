@@ -1,64 +1,49 @@
 
-# Outreach AI → Admin AI Actions
+# Resterende AI-logica → Admin AI Module
 
-## Doel
-De hardcoded prompt + model call in `supabase/functions/generate-outreach-messages/index.ts` vervangen door een AI Action die je via de Admin UI (AI Actions + Instruction Blocks) kan beheren — zonder de outreach-specifieke business logic (DB lookups, message inserts, status updates) kwijt te raken.
+## Bevindingen
+Na de outreach-migratie is er nog **één** edge function met hardcoded AI-calls:
 
-## Architectuur
+**`supabase/functions/analyze-audit/index.ts`** — gebruikt 2 directe `fetch` calls naar de Lovable AI gateway:
+1. **Section analysis** — multimodaal: stuurt een screenshot (image_url) + markdown naar Gemini om visuele secties te detecteren.
+2. **Funnel generation** — pure tekst-prompt: zet `funnelStrategy` om in een lijst `trafficSources` + `pages`.
 
-```text
-generate-outreach-messages (edge fn)
-  ├─ haalt lead + setup_types + outreach_settings op   ← blijft hier
-  ├─ bouwt inputs (lead velden, setupTypes lijst, settings)
-  ├─ roept executeAIAction({ slug: "outreach_messages", inputs, extraInstructions })
-  │     └─ execute-ai-action laadt prompt + instruction blocks uit DB
-  │        en stuurt naar Lovable AI Gateway met tool-calling
-  ├─ ontvangt gestructureerde output (opener, fu1..fu4, setup_type, ...)
-  └─ update lead + insert messages                      ← blijft hier
-```
+Geen andere edge functions of client-code roept de AI gateway rechtstreeks aan. Alles wat al via `executeAIAction` loopt is goed.
 
-Splitst dus AI-config (admin-beheerbaar) van app-logica (code).
+## Voorgestelde aanpak
 
-## Stappen
+### Funnel generation (task 2) → direct migreerbaar
+Pure tekst in/uit. Past 1-op-1 in het bestaande `execute-ai-action` model.
+- **Instruction block**: `Audit – Funnel Generation Rules` (lijst van page types + traffic types, JSON-output regels).
+- **AI Action**: slug `audit_funnel_from_strategy`
+  - Inputs: `funnel_strategy`, `traffic_source`
+  - Output structure: `traffic_sources` (array), `pages` (array)
+  - Model: `google/gemini-2.5-flash`, temperature 0.3
 
-### 1. Uitbreiding execute-ai-action voor nested output
-Huidige `execute-ai-action` ondersteunt alleen `text` en `array` van strings. Outreach output bevat meerdere losse string-velden (`opener`, `opener_alt`, `followup_1..4`, `setup_type`, `main_problem`, `main_angle`) — dat past wel binnen het huidige model: elk veld = aparte `text` entry in `output_structure`. Geen schemawijziging nodig.
+### Section analysis (task 1) → vereist uitbreiding van `execute-ai-action`
+Het multimodale screenshot-deel kan **niet** zonder aanpassing want `execute-ai-action`:
+- Bouwt alleen `{ role: "user", content: <string prompt> }` (geen image_url support).
+- Output structure ondersteunt alleen vlakke string/array velden — secties zijn `[{title, content}]` (array of objects).
 
-### 2. Instruction Blocks aanmaken (via Admin UI)
-- **Outreach – Tone & Rules**: tone, max lines, "no emojis", "no exclamation marks".
-- **Outreach – Opener Structure**: de 4-regel structuur (Line 1..4).
-- **Outreach – Followup Defaults**: de 4 default follow-ups.
+**Twee opties**:
 
-### 3. AI Action aanmaken (via Admin UI)
-- Naam: `Outreach Messages`, slug: `outreach_messages`
-- Model: `google/gemini-2.5-flash` (zelfde als nu)
-- Prompt template met `{{variables}}`:
-  - `{{lead_name}}`, `{{company}}`, `{{niche}}`, `{{offer}}`, `{{platform}}`, `{{profile_url}}`, `{{notes}}`, `{{channel}}`
-  - `{{setup_types_list}}` (gerenderde lijst)
-  - `{{setup_default_action}}`, `{{setup_default_problem}}`, `{{setup_default_angle}}`
-  - `{{current_setup_type}}`, `{{current_main_problem}}`, `{{current_main_angle}}`
-  - `{{custom_opener_template}}`, `{{custom_followups}}` (uit `outreach_settings`)
-- Output structure (8 velden, type `text`):
-  - `setup_type`, `main_problem`, `main_angle`, `opener`, `opener_alt`, `followup_1`, `followup_2`, `followup_3`, `followup_4`
-- Link de 3 instruction blocks.
+- **Optie A (aanbevolen)**: `execute-ai-action` uitbreiden met:
+  - Optionele `image_inputs` parameter (array van data URLs of base64) die als `image_url` content parts wordt toegevoegd.
+  - Output structure veld-type `object_array` met `item_schema` (key/type pairs) voor genest output zoals `sections[]`.
+  
+  Dan wordt section analysis óók een AI Action (`audit_section_analysis`).
 
-### 4. `generate-outreach-messages` herschrijven
-- Houdt: auth check, lead/setup_types/settings ophalen, lead update, messages insert.
-- Verwijdert: hele system/user prompt opbouw, directe `fetch` naar AI gateway, JSON parsing.
-- Voegt toe: HTTP call naar `execute-ai-action` met `slug: "outreach_messages"`, `inputs: {...}`, en optioneel `extra_instructions` (bv. `outreach_settings.ai_prompt_context`).
-- Bouwt `setup_types_list` als pre-gerenderde string voordat de inputs worden doorgegeven (template engine doet alleen simpele `{{key}}` vervanging).
+- **Optie B**: Section analysis laten staan in `analyze-audit` (geen admin control), alleen funnel-generation migreren. Snel klaar maar dan blijft een stukje AI-config buiten Admin.
 
-### 5. Seed migratie (optioneel maar aanbevolen)
-Eén `INSERT` migratie die de instruction blocks + AI action + links direct aanmaakt, zodat dit reproduceerbaar is en niet alleen via klikwerk in Admin UI bestaat.
+### Edge function herschrijven
+`analyze-audit` wordt een orchestrator (zoals `generate-outreach-messages` nu): roept 1-2 AI Actions aan via `execute-ai-action`, doet de node/edge layout-berekening lokaal (dat is geen AI-logica).
 
-### 6. Test
-- Open een lead, klik "Generate messages" → controleer of messages correct in DB komen.
-- Pas de prompt template in Admin AI Actions aan → herhaal → output verandert zonder code-deploy.
+### Seed migratie
+Insert van instruction block + 1 of 2 AI Actions in `ai_actions` / `ai_instruction_blocks` / `ai_action_instruction_blocks`.
 
-## Aandachtspunten
-- `execute-ai-action` returnt `{ output, action_slug }` — wrap in try/catch en handle 402/429 errors zoals nu.
-- `extra_instructions` is een goede plek voor `outreach_settings.ai_prompt_context` (per-workspace AI context) zodat dat dynamisch blijft.
-- Template engine ondersteunt geen loops; daarom pre-render `setup_types_list` in de edge function.
+## Vraag aan jou
+Welke optie wil je voor de screenshot/section-analyse?
+- **A**: `execute-ai-action` uitbreiden met image + nested output support, en beide audit-stappen migreren (volledig admin-beheerbaar, iets meer werk).
+- **B**: Alleen funnel-generation migreren, section analysis blijft hardcoded in `analyze-audit`.
 
-## Vervolgvraag
-Wil je dat ik dit zo ga bouwen (inclusief seed-migratie voor de instruction blocks + action), of wil je de instruction blocks/action liever zelf eerst handmatig aanmaken in de Admin UI en daarna alleen de edge function laten herschrijven?
+Als je later nog AI features toevoegt (bv. brief generation, copy generation, etc.) maakt **A** sowieso meer mogelijk.
