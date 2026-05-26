@@ -21,12 +21,6 @@ interface FunnelEdge {
   target: string;
 }
 
-const AVAILABLE_PAGE_TYPES = [
-  "opt-in", "squeeze", "bridge", "sales", "webinar", "application",
-  "calendar", "tripwire", "order-form", "checkout", "upsell",
-  "downsell", "confirmation", "thank-you", "membership",
-];
-
 const AVAILABLE_TRAFFIC_TYPES = [
   "youtube", "instagram", "facebook", "tiktok", "google", "email", "podcast", "affiliate",
 ];
@@ -60,6 +54,32 @@ const TRAFFIC_META: Record<string, { label: string; icon: string; color: string 
   "affiliate": { label: "Affiliate", icon: "Users", color: "#F59E0B" },
 };
 
+async function callAIAction(
+  supabaseUrl: string,
+  authHeader: string,
+  anonKey: string,
+  slug: string,
+  inputs: Record<string, unknown>,
+  imageInputs?: string[],
+): Promise<Record<string, any> | null> {
+  const resp = await fetch(`${supabaseUrl}/functions/v1/execute-ai-action`, {
+    method: 'POST',
+    headers: {
+      Authorization: authHeader,
+      apikey: anonKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ slug, inputs, image_inputs: imageInputs }),
+  });
+  if (!resp.ok) {
+    const t = await resp.text().catch(() => '');
+    console.error(`AI action ${slug} failed:`, resp.status, t);
+    return null;
+  }
+  const json = await resp.json();
+  return json.output || null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -68,173 +88,78 @@ Deno.serve(async (req) => {
   try {
     const { screenshot, markdown, funnelStrategy, trafficSource } = await req.json();
 
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'AI not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authHeader = req.headers.get('Authorization') || `Bearer ${anonKey}`;
 
-    // Task 1: Analyze screenshot for sections
+    // Task 1: Section analysis via admin AI Action
     let sections: Section[] = [];
     if (screenshot) {
-      const screenshotUrl = screenshot.startsWith('data:') ? screenshot : `data:image/png;base64,${screenshot}`;
-
-      const sectionResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content: `You are a landing page analyst. Analyze the screenshot of a landing page and identify the distinct visual sections. For each section, provide a descriptive title and extract the text content visible in that section. Use the provided markdown as a reference for the text content.
-
-Return JSON only, no markdown formatting. Format:
-{"sections": [{"title": "Section title", "content": "The text content of this section"}]}`,
-            },
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'image_url',
-                  image_url: { url: screenshotUrl },
-                },
-                {
-                  type: 'text',
-                  text: `Here is the markdown content of the page for reference:\n\n${markdown || '(no markdown available)'}\n\nAnalyze the screenshot and identify the visual sections with their content.`,
-                },
-              ],
-            },
-          ],
-          temperature: 0.3,
-        }),
-      });
-
-      const sectionData = await sectionResponse.json();
-      const sectionText = sectionData.choices?.[0]?.message?.content || '';
-      
-      try {
-        const cleaned = sectionText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const parsed = JSON.parse(cleaned);
-        sections = parsed.sections || [];
-      } catch (e) {
-        console.error('Failed to parse sections:', e, sectionText);
+      const out = await callAIAction(
+        supabaseUrl, authHeader, anonKey,
+        'audit_section_analysis',
+        { markdown: markdown || '(no markdown available)' },
+        [screenshot],
+      );
+      if (out && Array.isArray(out.sections)) {
+        sections = out.sections as Section[];
       }
     }
 
-    // Task 2: Generate funnel from strategy
+    // Task 2: Funnel structure via admin AI Action
     let nodes: FunnelNode[] = [];
     let edges: FunnelEdge[] = [];
 
-    const funnelPrompt = funnelStrategy?.trim()
-      ? `Based on this funnel strategy description, create a funnel structure:
+    if (funnelStrategy?.trim()) {
+      const out = await callAIAction(
+        supabaseUrl, authHeader, anonKey,
+        'audit_funnel_from_strategy',
+        { funnel_strategy: funnelStrategy, traffic_source: trafficSource || 'unknown' },
+      );
 
-Strategy: "${funnelStrategy}"
-Traffic source: "${trafficSource || 'unknown'}"
+      const trafficSources: string[] = (out?.traffic_sources as string[]) || [];
+      const pages: string[] = (out?.pages as string[]) || ['sales'];
 
-Available page types: ${AVAILABLE_PAGE_TYPES.join(', ')}
-Available traffic source types: ${AVAILABLE_TRAFFIC_TYPES.join(', ')}
+      let nodeIdx = 0;
 
-Create a funnel with appropriate traffic source(s) and page nodes connected in a logical flow.
-Return JSON only, no markdown formatting. Format:
-{
-  "trafficSources": ["type1"],
-  "pages": ["type1", "type2", "type3"]
-}
+      for (const ts of trafficSources) {
+        const meta = TRAFFIC_META[ts];
+        if (!meta) continue;
+        nodes.push({
+          id: `node_audit_${nodeIdx}`,
+          type: 'trafficSource',
+          position: { x: 50, y: 100 + nodeIdx * 120 },
+          data: { label: meta.label, icon: meta.icon, color: meta.color },
+        });
+        nodeIdx++;
+      }
 
-Choose the page types that best match the described strategy. If the strategy is unclear, use just ["sales"].`
-      : null;
+      const trafficNodeCount = nodes.length;
 
-    if (funnelPrompt) {
-      const funnelResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: 'You are a funnel strategy expert. Return only valid JSON.' },
-            { role: 'user', content: funnelPrompt },
-          ],
-          temperature: 0.3,
-        }),
-      });
+      for (let i = 0; i < pages.length; i++) {
+        const meta = PAGE_META[pages[i]];
+        if (!meta) continue;
+        nodes.push({
+          id: `node_audit_${nodeIdx}`,
+          type: 'funnelPage',
+          position: { x: 300 + i * 220, y: 150 },
+          data: { label: meta.label, pageType: pages[i], icon: meta.icon, color: meta.color },
+        });
+        nodeIdx++;
+      }
 
-      const funnelData = await funnelResponse.json();
-      const funnelText = funnelData.choices?.[0]?.message?.content || '';
-
-      try {
-        const cleaned = funnelText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const parsed = JSON.parse(cleaned);
-
-        const trafficSources: string[] = parsed.trafficSources || [];
-        const pages: string[] = parsed.pages || ['sales'];
-
-        // Build nodes
-        let nodeIdx = 0;
-
-        // Traffic source nodes
-        for (const ts of trafficSources) {
-          const meta = TRAFFIC_META[ts];
-          if (!meta) continue;
-          nodes.push({
-            id: `node_audit_${nodeIdx}`,
-            type: 'trafficSource',
-            position: { x: 50, y: 100 + nodeIdx * 120 },
-            data: { label: meta.label, icon: meta.icon, color: meta.color },
-          });
-          nodeIdx++;
+      const firstPageId = trafficNodeCount < nodes.length ? nodes[trafficNodeCount].id : null;
+      for (let i = 0; i < trafficNodeCount; i++) {
+        if (firstPageId) {
+          edges.push({ id: `edge_audit_${i}`, source: nodes[i].id, target: firstPageId });
         }
-
-        const trafficNodeCount = nodes.length;
-
-        // Page nodes
-        for (let i = 0; i < pages.length; i++) {
-          const pageType = pages[i];
-          const meta = PAGE_META[pageType];
-          if (!meta) continue;
-          nodes.push({
-            id: `node_audit_${nodeIdx}`,
-            type: 'funnelPage',
-            position: { x: 300 + i * 220, y: 150 },
-            data: { label: meta.label, pageType, icon: meta.icon, color: meta.color },
-          });
-          nodeIdx++;
-        }
-
-        // Edges: traffic sources → first page
-        const firstPageId = trafficNodeCount < nodes.length ? nodes[trafficNodeCount].id : null;
-        for (let i = 0; i < trafficNodeCount; i++) {
-          if (firstPageId) {
-            edges.push({
-              id: `edge_audit_${i}`,
-              source: nodes[i].id,
-              target: firstPageId,
-            });
-          }
-        }
-
-        // Edges: pages connected sequentially
-        for (let i = trafficNodeCount; i < nodes.length - 1; i++) {
-          edges.push({
-            id: `edge_audit_${edges.length}`,
-            source: nodes[i].id,
-            target: nodes[i + 1].id,
-          });
-        }
-      } catch (e) {
-        console.error('Failed to parse funnel:', e, funnelText);
+      }
+      for (let i = trafficNodeCount; i < nodes.length - 1; i++) {
+        edges.push({ id: `edge_audit_${edges.length}`, source: nodes[i].id, target: nodes[i + 1].id });
       }
     }
 
-    // Fallback: if no funnel nodes, create a simple sales page
+    // Fallback
     if (nodes.length === 0) {
       const salesMeta = PAGE_META['sales'];
       nodes = [{
@@ -244,7 +169,6 @@ Choose the page types that best match the described strategy. If the strategy is
         data: { label: salesMeta.label, pageType: 'sales', icon: salesMeta.icon, color: salesMeta.color },
       }];
 
-      // Try to add traffic source if specified
       if (trafficSource) {
         const tsLower = trafficSource.toLowerCase();
         const matchedTraffic = AVAILABLE_TRAFFIC_TYPES.find(t => tsLower.includes(t));
