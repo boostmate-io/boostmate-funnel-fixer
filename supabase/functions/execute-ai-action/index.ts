@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { slug, inputs, extra_instructions } = await req.json();
+    const { slug, inputs, extra_instructions, image_inputs } = await req.json();
 
     if (!slug) {
       return new Response(JSON.stringify({ error: "Missing slug" }), {
@@ -98,12 +98,34 @@ serve(async (req) => {
     const properties: Record<string, any> = {};
     const required: string[] = [];
 
+    const buildItemSchema = (itemSchema: any[]) => {
+      const itemProps: Record<string, any> = {};
+      const itemReq: string[] = [];
+      for (const it of itemSchema || []) {
+        const i = it as { key: string; type: string; label?: string };
+        itemProps[i.key] = { type: "string", description: i.label || i.key };
+        itemReq.push(i.key);
+      }
+      return {
+        type: "object",
+        properties: itemProps,
+        required: itemReq,
+        additionalProperties: false,
+      };
+    };
+
     for (const field of outputStructure) {
-      const f = field as { key: string; label: string; type: string };
+      const f = field as { key: string; label: string; type: string; item_schema?: any[] };
       if (f.type === "array") {
         properties[f.key] = {
           type: "array",
           items: { type: "string" },
+          description: f.label,
+        };
+      } else if (f.type === "object_array") {
+        properties[f.key] = {
+          type: "array",
+          items: buildItemSchema(f.item_schema || []),
           description: f.label,
         };
       } else {
@@ -116,12 +138,24 @@ serve(async (req) => {
     const model = modelSettings.model || "google/gemini-3-flash-preview";
     const temperature = modelSettings.temperature ?? 0.7;
 
+    // Build user message content (supports multimodal image_inputs)
+    let userContent: any = prompt;
+    if (Array.isArray(image_inputs) && image_inputs.length > 0) {
+      const parts: any[] = [{ type: "text", text: prompt }];
+      for (const img of image_inputs) {
+        if (!img) continue;
+        const url = String(img).startsWith("data:") ? img : `data:image/png;base64,${img}`;
+        parts.push({ type: "image_url", image_url: { url } });
+      }
+      userContent = parts;
+    }
+
     const body: any = {
       model,
       temperature,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: prompt },
+        { role: "user", content: userContent },
       ],
     };
 
