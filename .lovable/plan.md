@@ -1,79 +1,64 @@
-# Plan: Unsaved Changes Warning + Sequence Group Container
 
-## 1. Waarschuwing voor niet-opgeslagen wijzigingen
+# Outreach AI → Admin AI Actions
 
-### Gedrag
-- Bij het verlaten van de Funnel Designer (terug naar lijst, module-wissel, workspace-wissel, sluiten van tab) wordt eerst gecontroleerd of er onopgeslagen wijzigingen zijn.
-- Als er wijzigingen zijn → modal met 3 knoppen:
-  - **Save** — slaat huidige funnel op en gaat dan door met de navigatie
-  - **Discard** — gooit wijzigingen weg en gaat door
-  - **Cancel** — sluit modal, blijft in designer
-- Voor browser-refresh / tab-sluiten: native `beforeunload` listener met standaard browser-prompt.
+## Doel
+De hardcoded prompt + model call in `supabase/functions/generate-outreach-messages/index.ts` vervangen door een AI Action die je via de Admin UI (AI Actions + Instruction Blocks) kan beheren — zonder de outreach-specifieke business logic (DB lookups, message inserts, status updates) kwijt te raken.
 
-### Implementatie (`FunnelDesigner.tsx`)
-- Nieuwe state `isDirty` (boolean) + ref naar laatst-opgeslagen snapshot van `nodes` + `edges` + `funnelName`.
-- Vergelijking via JSON-stringify in een `useEffect` die luistert op nodes/edges/name → zet `isDirty`.
-- Reset `isDirty = false` na succesvolle save en na initial load van een funnel.
-- `useEffect` met `beforeunload` listener wanneer `isDirty`.
-- Nieuwe `pendingNavigation` state + `AlertDialog` (shadcn) met Save / Discard / Cancel.
-- Wrap alle exit-paden (`onBackToList`, eventuele andere navigatie-callbacks vanuit de toolbar) in een `requestExit(callback)` helper die de dialog opent als `isDirty`, anders direct uitvoert.
-
-### Beperking
-- Module-wissel en workspace-switch gebeuren buiten `FunnelDesigner` (in sidebar/context). Voor die paden voegen we een lichtgewicht "exit guard" toe via een ref op `window` (bijv. `window.__funnelDesignerDirtyGuard`) die de sidebar/WorkspaceContext kan aanroepen vóór ze daadwerkelijk wisselen. Alternatief: `isDirty` in een nieuwe context publiceren en sidebar laat deze checken. We kiezen voor de window-ref aanpak (klein, geïsoleerd, geen grote refactor).
-
-## 2. Sequence Group Container (lasso-select → group)
-
-### Concept
-- Selecteer meerdere nodes (lasso of shift-click — React Flow heeft beide ingebouwd).
-- Knop **"Group as sequence"** in de toolbar (alleen actief als ≥2 nodes geselecteerd).
-- Dit maakt een nieuwe **group node** (React Flow native `type: "group"` met onze custom render) die de geselecteerde nodes als children krijgt.
-- Group node heeft:
-  - **Naam** (bewerkbaar in details panel, getoond in header van de group)
-  - **Notes** (optioneel veld in details panel)
-  - **Collapse/expand toggle** rechtsbovenin de group
-  - Wanneer ingeklapt: toont alleen header met naam + aantal nodes binnen de group ("Email sequence — 12 steps"), in compacte vorm. Edges van/naar nodes binnen de group worden tijdelijk omgeleid naar de group-node zelf zodat de canvas overzichtelijk blijft.
-  - Wanneer uitgeklapt: toont alle children op hun originele relatieve posities binnen een licht-gekleurde container.
-- **Ungroup** knop in details panel om de group op te lossen (children blijven, group-node verdwijnt).
-
-### Data-model
-- Group is gewoon een node in de bestaande `nodes` jsonb-array.
-  - `type: "sequenceGroup"`
-  - `data: { label, notes, collapsed: boolean, childIds: string[] }`
-  - Child nodes krijgen `parentNode: groupId` en `extent: "parent"` (React Flow native).
-- Bij collapse:
-  - Children krijgen `hidden: true`
-  - Edges met source/target binnen de group worden verborgen
-  - Edges van buiten naar binnen worden tijdelijk geremapt naar de group-id (bewaard origineel in edge.data zodat ungroup/expand het kan herstellen)
-- Bij expand: omgekeerd.
-- Geen DB schema change nodig — alles past in bestaande jsonb kolommen.
-
-### Nieuwe component
-- `src/components/funnel-designer/SequenceGroupNode.tsx` — custom React Flow node die collapse/expand UI rendert + container styling.
-- Registreren in `nodeTypes` in `FunnelDesigner.tsx`.
-
-### Toolbar uitbreidingen
-- "Group as sequence" knop verschijnt wanneer er ≥2 nodes geselecteerd zijn.
-- Bestaande "selection" feature van React Flow gebruiken (`onSelectionChange`).
-
-### NodeDetailsPanel uitbreiding
-- Wanneer geselecteerde node `type === "sequenceGroup"`: toon naam + notes textarea + Ungroup knop.
-
-## Bestanden
+## Architectuur
 
 ```text
-src/components/funnel-designer/
-├── FunnelDesigner.tsx          (dirty tracking + exit guard + group toolbar btn + node type registratie)
-├── SequenceGroupNode.tsx       (NIEUW — collapsible container node)
-├── NodeDetailsPanel.tsx        (sequence group fields)
-└── constants.ts                (geen wijziging — geen Communication-elementen toegevoegd, want we kiezen lasso-aanpak)
+generate-outreach-messages (edge fn)
+  ├─ haalt lead + setup_types + outreach_settings op   ← blijft hier
+  ├─ bouwt inputs (lead velden, setupTypes lijst, settings)
+  ├─ roept executeAIAction({ slug: "outreach_messages", inputs, extraInstructions })
+  │     └─ execute-ai-action laadt prompt + instruction blocks uit DB
+  │        en stuurt naar Lovable AI Gateway met tool-calling
+  ├─ ontvangt gestructureerde output (opener, fu1..fu4, setup_type, ...)
+  └─ update lead + insert messages                      ← blijft hier
 ```
 
-## Waarom lasso-aanpak (jouw keuze) goed is t.o.v. start/end markers
-- Geen risico op "vergeten end-marker" → je kan niet per ongeluk een onafgemaakte sequence krijgen.
-- Werkt ook voor andere groeperingen later (niet alleen email — bijv. een upsell-flow of een welcome-serie).
-- Cleaner canvas: één container i.p.v. twee losse marker-nodes.
-- Standaard React Flow patroon (parent/child nodes), dus minder custom code.
+Splitst dus AI-config (admin-beheerbaar) van app-logica (code).
 
-## Open keuzes (kunnen tijdens build beslist worden)
-- Standaardkleur van de sequence container (suggestie: subtiel `bg-primary/5` met `border-primary/20`).
-- Collapsed-weergave breedte: vast (~280px) zodat de canvas-flow netjes blijft.
+## Stappen
+
+### 1. Uitbreiding execute-ai-action voor nested output
+Huidige `execute-ai-action` ondersteunt alleen `text` en `array` van strings. Outreach output bevat meerdere losse string-velden (`opener`, `opener_alt`, `followup_1..4`, `setup_type`, `main_problem`, `main_angle`) — dat past wel binnen het huidige model: elk veld = aparte `text` entry in `output_structure`. Geen schemawijziging nodig.
+
+### 2. Instruction Blocks aanmaken (via Admin UI)
+- **Outreach – Tone & Rules**: tone, max lines, "no emojis", "no exclamation marks".
+- **Outreach – Opener Structure**: de 4-regel structuur (Line 1..4).
+- **Outreach – Followup Defaults**: de 4 default follow-ups.
+
+### 3. AI Action aanmaken (via Admin UI)
+- Naam: `Outreach Messages`, slug: `outreach_messages`
+- Model: `google/gemini-2.5-flash` (zelfde als nu)
+- Prompt template met `{{variables}}`:
+  - `{{lead_name}}`, `{{company}}`, `{{niche}}`, `{{offer}}`, `{{platform}}`, `{{profile_url}}`, `{{notes}}`, `{{channel}}`
+  - `{{setup_types_list}}` (gerenderde lijst)
+  - `{{setup_default_action}}`, `{{setup_default_problem}}`, `{{setup_default_angle}}`
+  - `{{current_setup_type}}`, `{{current_main_problem}}`, `{{current_main_angle}}`
+  - `{{custom_opener_template}}`, `{{custom_followups}}` (uit `outreach_settings`)
+- Output structure (8 velden, type `text`):
+  - `setup_type`, `main_problem`, `main_angle`, `opener`, `opener_alt`, `followup_1`, `followup_2`, `followup_3`, `followup_4`
+- Link de 3 instruction blocks.
+
+### 4. `generate-outreach-messages` herschrijven
+- Houdt: auth check, lead/setup_types/settings ophalen, lead update, messages insert.
+- Verwijdert: hele system/user prompt opbouw, directe `fetch` naar AI gateway, JSON parsing.
+- Voegt toe: HTTP call naar `execute-ai-action` met `slug: "outreach_messages"`, `inputs: {...}`, en optioneel `extra_instructions` (bv. `outreach_settings.ai_prompt_context`).
+- Bouwt `setup_types_list` als pre-gerenderde string voordat de inputs worden doorgegeven (template engine doet alleen simpele `{{key}}` vervanging).
+
+### 5. Seed migratie (optioneel maar aanbevolen)
+Eén `INSERT` migratie die de instruction blocks + AI action + links direct aanmaakt, zodat dit reproduceerbaar is en niet alleen via klikwerk in Admin UI bestaat.
+
+### 6. Test
+- Open een lead, klik "Generate messages" → controleer of messages correct in DB komen.
+- Pas de prompt template in Admin AI Actions aan → herhaal → output verandert zonder code-deploy.
+
+## Aandachtspunten
+- `execute-ai-action` returnt `{ output, action_slug }` — wrap in try/catch en handle 402/429 errors zoals nu.
+- `extra_instructions` is een goede plek voor `outreach_settings.ai_prompt_context` (per-workspace AI context) zodat dat dynamisch blijft.
+- Template engine ondersteunt geen loops; daarom pre-render `setup_types_list` in de edge function.
+
+## Vervolgvraag
+Wil je dat ik dit zo ga bouwen (inclusief seed-migratie voor de instruction blocks + action), of wil je de instruction blocks/action liever zelf eerst handmatig aanmaken in de Admin UI en daarna alleen de edge function laten herschrijven?
