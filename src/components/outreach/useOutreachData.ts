@@ -27,6 +27,7 @@ export interface OutreachLead {
   last_contact_at: string | null;
   next_followup_at: string | null;
   deleted_at: string | null;
+  archived_at: string | null;
   opener_sent_at: string | null;
   fu1_sent_at: string | null;
   fu2_sent_at: string | null;
@@ -106,24 +107,44 @@ export function getNextFollowUp(lead: OutreachLead): { next: string | null; isDu
   return { next: null, isDue: false, label: "All sent" };
 }
 
-export function useOutreachLeads() {
+export interface UseOutreachLeadsOptions {
+  /** Include archived leads in the results (still excludes deleted). */
+  includeArchived?: boolean;
+  /** Only return archived leads (excludes deleted). */
+  onlyArchived?: boolean;
+  /** Include everything: archived + deleted. Used for analytics. */
+  includeAll?: boolean;
+}
+
+export function useOutreachLeads(options: UseOutreachLeadsOptions = {}) {
   const { activeSubAccountId } = useWorkspace();
   const [leads, setLeads] = useState<OutreachLead[]>([]);
   const [loading, setLoading] = useState(true);
+  const { includeArchived, onlyArchived, includeAll } = options;
 
   const loadLeads = useCallback(async () => {
     if (!activeSubAccountId) { setLeads([]); setLoading(false); return; }
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("outreach_leads")
       .select("*")
       .eq("sub_account_id", activeSubAccountId)
-      .is("deleted_at", null)
       .order("created_at", { ascending: false });
+
+    if (!includeAll) {
+      query = query.is("deleted_at", null);
+      if (onlyArchived) {
+        query = query.not("archived_at", "is", null);
+      } else if (!includeArchived) {
+        query = query.is("archived_at", null);
+      }
+    }
+
+    const { data, error } = await query;
     if (error) { toast.error("Failed to load leads"); console.error(error); }
     setLeads((data || []) as unknown as OutreachLead[]);
     setLoading(false);
-  }, [activeSubAccountId]);
+  }, [activeSubAccountId, includeArchived, onlyArchived, includeAll]);
 
   useEffect(() => { loadLeads(); }, [loadLeads]);
 

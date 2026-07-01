@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 interface Props { key?: number; }
 
 const OutreachAnalytics = (_props: Props) => {
-  const { leads, loading } = useOutreachLeads();
+  const { leads, loading } = useOutreachLeads({ includeAll: true });
   const [period, setPeriod] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
