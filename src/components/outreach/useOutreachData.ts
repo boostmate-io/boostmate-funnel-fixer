@@ -28,6 +28,7 @@ export interface OutreachLead {
   next_followup_at: string | null;
   deleted_at: string | null;
   archived_at: string | null;
+  followups_sent_at: Record<string, string>;
   opener_sent_at: string | null;
   fu1_sent_at: string | null;
   fu2_sent_at: string | null;
@@ -40,7 +41,7 @@ export interface OutreachLead {
 export interface OutreachMessage {
   id: string;
   lead_id: string;
-  message_type: "opener" | "opener_alt" | "followup_1" | "followup_2" | "followup_3" | "followup_4";
+  message_type: string;
   channel: "dm" | "email";
   content: string;
   sent: boolean;
@@ -66,11 +67,18 @@ export interface OutreachLeadSource {
   sort_order: number;
 }
 
+export interface FollowUpTemplate {
+  index: number;
+  content: string;
+  wait_days: number;
+  wait_hours: number;
+}
+
 export interface OutreachSettingsData {
   id: string;
   sub_account_id: string;
   opener_template: string;
-  follow_up_templates: any[];
+  follow_up_templates: FollowUpTemplate[];
   messaging_rules: Record<string, any>;
   ai_prompt_context: string;
 }
@@ -82,27 +90,62 @@ export const ALL_STATUSES = [
   "interested", "closed", "no_response", "not_interested",
 ] as const;
 
-export function getNextFollowUp(lead: OutreachLead): { next: string | null; isDue: boolean; label: string } {
-  if (!lead.opener_sent_at) return { next: "opener", isDue: false, label: "Opener not sent" };
-  if (!lead.fu1_sent_at) {
-    const due = new Date(lead.opener_sent_at);
-    due.setDate(due.getDate() + 1);
-    return { next: "fu1", isDue: new Date() >= due, label: "FU1" };
-  }
-  if (!lead.fu2_sent_at) {
-    const due = new Date(lead.fu1_sent_at);
-    due.setDate(due.getDate() + 1);
-    return { next: "fu2", isDue: new Date() >= due, label: "FU2" };
-  }
-  if (!lead.fu3_sent_at) {
-    const due = new Date(lead.fu2_sent_at);
-    due.setDate(due.getDate() + 1);
-    return { next: "fu3", isDue: new Date() >= due, label: "FU3" };
-  }
-  if (!lead.fu4_sent_at) {
-    const due = new Date(lead.fu3_sent_at);
-    due.setDate(due.getDate() + 1);
-    return { next: "fu4", isDue: new Date() >= due, label: "FU4" };
+export const DEFAULT_FOLLOW_UPS: FollowUpTemplate[] = [
+  { index: 1, content: "", wait_days: 1, wait_hours: 0 },
+  { index: 2, content: "", wait_days: 2, wait_hours: 0 },
+  { index: 3, content: "", wait_days: 3, wait_hours: 0 },
+  { index: 4, content: "", wait_days: 5, wait_hours: 0 },
+];
+
+/** Normalize any legacy shape (string[], {content}[], undefined) into FollowUpTemplate[]. */
+export function normalizeFollowUps(raw: any): FollowUpTemplate[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item: any, i: number) => {
+    if (typeof item === "string") {
+      return { index: i + 1, content: item, wait_days: 1, wait_hours: 0 };
+    }
+    return {
+      index: item.index ?? i + 1,
+      content: item.content ?? "",
+      wait_days: typeof item.wait_days === "number" ? item.wait_days : 1,
+      wait_hours: typeof item.wait_hours === "number" ? item.wait_hours : 0,
+    };
+  });
+}
+
+/** Get the sent-at timestamp for a follow-up index (1-based). */
+export function getFollowUpSentAt(lead: OutreachLead, index: number): string | null {
+  const jsonVal = lead.followups_sent_at?.[String(index)];
+  if (jsonVal) return jsonVal;
+  // Backwards-compat: legacy fu1..4 columns
+  if (index === 1) return lead.fu1_sent_at;
+  if (index === 2) return lead.fu2_sent_at;
+  if (index === 3) return lead.fu3_sent_at;
+  if (index === 4) return lead.fu4_sent_at;
+  return null;
+}
+
+export function getNextFollowUp(
+  lead: OutreachLead,
+  followUps: FollowUpTemplate[] = [],
+): { next: string | null; isDue: boolean; label: string } {
+  if (!lead.opener_sent_at) return { next: null, isDue: false, label: "Opener not sent" };
+  if (followUps.length === 0) return { next: null, isDue: false, label: "No follow-ups" };
+
+  let prevSentAt: string = lead.opener_sent_at;
+  for (const fu of followUps) {
+    const sentAt = getFollowUpSentAt(lead, fu.index);
+    if (!sentAt) {
+      const due = new Date(prevSentAt);
+      due.setDate(due.getDate() + (fu.wait_days || 0));
+      due.setHours(due.getHours() + (fu.wait_hours || 0));
+      return {
+        next: `fu${fu.index}`,
+        isDue: new Date() >= due,
+        label: `FU${fu.index}`,
+      };
+    }
+    prevSentAt = sentAt;
   }
   return { next: null, isDue: false, label: "All sent" };
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useOutreachLeads, type OutreachLead, getNextFollowUp } from "./useOutreachData";
+import { useOutreachLeads, useOutreachConfig, normalizeFollowUps, type OutreachLead, getNextFollowUp } from "./useOutreachData";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Clock } from "lucide-react";
@@ -23,6 +23,8 @@ interface Props { onRefresh: () => void; }
 
 const OutreachPipeline = ({ onRefresh }: Props) => {
   const { leads, loading, refresh } = useOutreachLeads();
+  const { settings } = useOutreachConfig();
+  const configuredFollowUps = normalizeFollowUps((settings as any)?.follow_up_templates);
   const [localLeads, setLocalLeads] = useState<OutreachLead[]>(leads);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
@@ -79,7 +81,7 @@ const OutreachPipeline = ({ onRefresh }: Props) => {
               </div>
               <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2 min-h-0">
                 {colLeads.map((lead) => {
-                  const fu = getNextFollowUp(lead);
+                  const fu = getNextFollowUp(lead, configuredFollowUps);
                   return (
                     <div
                       key={lead.id}

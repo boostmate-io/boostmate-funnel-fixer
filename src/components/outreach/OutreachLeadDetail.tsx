@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOutreachMessages, useOutreachConfig, type OutreachLead, PLATFORM_OPTIONS, ALL_STATUSES, getNextFollowUp } from "./useOutreachData";
+import { useOutreachMessages, useOutreachConfig, normalizeFollowUps, type OutreachLead, PLATFORM_OPTIONS, ALL_STATUSES, getNextFollowUp } from "./useOutreachData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,19 +14,19 @@ import { toast } from "sonner";
 const MESSAGE_LABELS: Record<string, string> = {
   opener: "Opener",
   opener_alt: "Opener (Alt)",
-  followup_1: "Follow-up 1",
-  followup_2: "Follow-up 2",
-  followup_3: "Follow-up 3",
-  followup_4: "Follow-up 4",
 };
 
-const MSG_TO_FIELD: Record<string, string> = {
-  opener: "opener_sent_at",
-  followup_1: "fu1_sent_at",
-  followup_2: "fu2_sent_at",
-  followup_3: "fu3_sent_at",
-  followup_4: "fu4_sent_at",
-};
+/** Parse "followup_3" → 3. Returns null for opener types. */
+function followUpIndex(messageType: string): number | null {
+  const m = /^followup_(\d+)$/.exec(messageType);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+/** Legacy fu1..4 column name if index is 1-4, else null. */
+function legacyFuColumn(index: number): string | null {
+  if (index >= 1 && index <= 4) return `fu${index}_sent_at`;
+  return null;
+}
 
 interface Props {
   leadId: string;
@@ -40,7 +40,7 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
   const [lead, setLead] = useState<OutreachLead | null>(null);
   const [loading, setLoading] = useState(true);
   const { messages, loading: messagesLoading, refresh: refreshMessages } = useOutreachMessages(leadId);
-  const { setupTypes, leadSources } = useOutreachConfig();
+  const { setupTypes, leadSources, settings } = useOutreachConfig();
   const [editedMessages, setEditedMessages] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -73,13 +73,23 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
   };
 
   const markSent = async (msgId: string, messageType: string) => {
+    if (!lead) return;
     const now = new Date().toISOString();
     await supabase.from("outreach_messages").update({ sent: true, sent_at: now } as any).eq("id", msgId);
 
-    // Update the corresponding sent_at field on the lead
-    const fieldName = MSG_TO_FIELD[messageType];
+    // Update the corresponding sent_at bookkeeping on the lead
     const leadUpdate: any = { last_contact_at: now, status: "sent" };
-    if (fieldName) leadUpdate[fieldName] = now;
+    if (messageType === "opener") {
+      leadUpdate.opener_sent_at = now;
+    } else {
+      const idx = followUpIndex(messageType);
+      if (idx !== null) {
+        const currentMap = (lead.followups_sent_at || {}) as Record<string, string>;
+        leadUpdate.followups_sent_at = { ...currentMap, [String(idx)]: now };
+        const legacy = legacyFuColumn(idx);
+        if (legacy) leadUpdate[legacy] = now;
+      }
+    }
 
     await supabase.from("outreach_leads").update(leadUpdate).eq("id", leadId);
     refreshMessages();
@@ -131,7 +141,8 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
   if (loading) return <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   if (!lead) return <div className="text-center py-16 text-muted-foreground">Lead not found</div>;
 
-  const fu = getNextFollowUp(lead);
+  const configuredFollowUps = normalizeFollowUps((settings as any)?.follow_up_templates);
+  const fu = getNextFollowUp(lead, configuredFollowUps);
 
   return (
     <div className="space-y-6 max-w-4xl">
