@@ -119,7 +119,10 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     setForm({ name: "", last_name: "", company_name: "", niche: "", offer: "", platform: "Instagram", profile_url: "", profile_url_2: "", notes: "", setup_type: "", lead_source: "", link: "", email: "", outreach_channel: "dm" });
     setCreating(false);
     refresh(true);
-    if (generateMessages && data) handleGenerate((data as any).id);
+    if (generateMessages && data) {
+      setSelectedLeadId((data as any).id);
+      handleGenerate((data as any).id);
+    }
   };
 
   const handleGenerate = async (leadId: string) => {
