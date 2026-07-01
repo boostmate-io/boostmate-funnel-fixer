@@ -68,11 +68,11 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
     setLoading(false);
   };
 
-  const updateLead = async (updates: Partial<OutreachLead>) => {
+  const updateLead = async (updates: Partial<OutreachLead>, opts?: { silent?: boolean }) => {
     if (!lead) return;
     await supabase.from("outreach_leads").update(updates as any).eq("id", leadId);
     setLead({ ...lead, ...updates });
-    toast.success("Lead updated");
+    if (!opts?.silent) toast.success("Lead updated");
   };
 
   const updateMessage = async (msgId: string, content: string) => {
