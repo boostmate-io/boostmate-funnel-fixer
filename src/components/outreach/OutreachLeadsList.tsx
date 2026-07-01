@@ -216,15 +216,18 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
       .from("outreach_leads")
       .update({ deleted_at: new Date().toISOString() } as any)
       .in("id", ids);
-    if (error) toast.error("Failed to delete");
-    else {
+    if (error) {
+      console.error("Bulk delete error", error);
+      toast.error(`Failed to delete: ${error.message}`);
+    } else {
       toast.success(`${ids.length} lead(s) deleted`);
       setSelectedIds(new Set());
-      refresh();
+      refresh(true);
     }
     setUpdatingBulk(false);
     setConfirmDelete(false);
   };
+
 
   const filtered = leads.filter((l) => {
     const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) ||
