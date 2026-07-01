@@ -81,7 +81,7 @@ const OutreachPipeline = ({ onRefresh }: Props) => {
               </div>
               <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2 min-h-0">
                 {colLeads.map((lead) => {
-                  const fu = getNextFollowUp(lead);
+                  const fu = getNextFollowUp(lead, configuredFollowUps);
                   return (
                     <div
                       key={lead.id}
