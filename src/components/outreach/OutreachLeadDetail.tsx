@@ -48,6 +48,14 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
   useEffect(() => { loadLead(); }, [leadId]);
 
   useEffect(() => {
+    if (!generating) {
+      // Whenever generation finishes (or on mount), refresh messages & lead
+      refreshMessages();
+      loadLead();
+    }
+  }, [generating]);
+
+  useEffect(() => {
     const map: Record<string, string> = {};
     messages.forEach((m) => { map[m.id] = m.content; });
     setEditedMessages(map);
