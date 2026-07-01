@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useOutreachLeads, type OutreachLead, getNextFollowUp } from "./useOutreachData";
+import { useOutreachLeads, useOutreachConfig, normalizeFollowUps, type OutreachLead, getNextFollowUp } from "./useOutreachData";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Clock } from "lucide-react";
