@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useOutreachConfig, type OutreachSetupType } from "./useOutreachData";
+import { useOutreachConfig, normalizeFollowUps, DEFAULT_FOLLOW_UPS, type OutreachSetupType, type FollowUpTemplate } from "./useOutreachData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Loader2, Save, Pencil, X, Check } from "lucide-react";
+import { Plus, Trash2, Loader2, Save, Pencil, X, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 
 const OutreachSettings = () => {
@@ -15,7 +15,7 @@ const OutreachSettings = () => {
   const { setupTypes, leadSources, settings, loading, refresh } = useOutreachConfig();
 
   const [openerTemplate, setOpenerTemplate] = useState("");
-  const [followUps, setFollowUps] = useState<string[]>(["", "", "", ""]);
+  const [followUps, setFollowUps] = useState<FollowUpTemplate[]>([]);
   const [tone, setTone] = useState("conversational, non-salesy, natural");
   const [maxLines, setMaxLines] = useState("4-5");
   const [aiContext, setAiContext] = useState("");
@@ -31,13 +31,7 @@ const OutreachSettings = () => {
   useEffect(() => {
     if (settings) {
       setOpenerTemplate(settings.opener_template || "");
-      const futs = (settings.follow_up_templates as any[]) || [];
-      setFollowUps([
-        futs[0]?.content || futs[0] || "",
-        futs[1]?.content || futs[1] || "",
-        futs[2]?.content || futs[2] || "",
-        futs[3]?.content || futs[3] || "",
-      ]);
+      setFollowUps(normalizeFollowUps(settings.follow_up_templates));
       const rules = settings.messaging_rules || {};
       setTone((rules as any).tone || "conversational, non-salesy, natural");
       setMaxLines((rules as any).max_lines || "4-5");
@@ -45,13 +39,45 @@ const OutreachSettings = () => {
     }
   }, [settings]);
 
+  const updateFollowUp = (i: number, patch: Partial<FollowUpTemplate>) => {
+    setFollowUps((prev) => prev.map((fu, idx) => (idx === i ? { ...fu, ...patch } : fu)));
+  };
+
+  const addFollowUp = () => {
+    setFollowUps((prev) => [
+      ...prev,
+      { index: prev.length + 1, content: "", wait_days: 1, wait_hours: 0 },
+    ]);
+  };
+
+  const removeFollowUp = (i: number) => {
+    setFollowUps((prev) => prev.filter((_, idx) => idx !== i).map((fu, idx) => ({ ...fu, index: idx + 1 })));
+  };
+
+  const moveFollowUp = (i: number, dir: -1 | 1) => {
+    setFollowUps((prev) => {
+      const next = [...prev];
+      const j = i + dir;
+      if (j < 0 || j >= next.length) return prev;
+      [next[i], next[j]] = [next[j], next[i]];
+      return next.map((fu, idx) => ({ ...fu, index: idx + 1 }));
+    });
+  };
+
+  const loadDefaultFollowUps = () => setFollowUps(DEFAULT_FOLLOW_UPS.map((f) => ({ ...f })));
+
   const saveSettings = async () => {
     if (!activeSubAccountId) return;
     setSaving(true);
     const payload = {
       sub_account_id: activeSubAccountId,
       opener_template: openerTemplate,
-      follow_up_templates: followUps.map((content, i) => ({ index: i + 1, content })),
+      follow_up_templates: followUps.map((fu, i) => ({
+        index: i + 1,
+        content: fu.content,
+        wait_days: fu.wait_days,
+        wait_hours: fu.wait_hours,
+      })),
       messaging_rules: { tone, max_lines: maxLines },
       ai_prompt_context: aiContext,
     };
@@ -221,14 +247,64 @@ const OutreachSettings = () => {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-sm">Follow-up Templates</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-sm">Follow-up Templates</CardTitle>
+          <div className="flex gap-2">
+            {followUps.length === 0 && (
+              <Button size="sm" variant="outline" onClick={loadDefaultFollowUps}>
+                Load default sequence
+              </Button>
+            )}
+            <Button size="sm" variant="outline" onClick={addFollowUp}>
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add follow-up
+            </Button>
+          </div>
+        </CardHeader>
         <CardContent className="space-y-3">
+          {followUps.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              No follow-ups configured. Add one, or load a default 4-step sequence (1, 2, 3, 5 days between messages).
+            </p>
+          )}
           {followUps.map((fu, i) => (
-            <div key={i}>
-              <Label className="text-xs">Follow-up {i + 1}</Label>
+            <div key={i} className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Follow-up {i + 1}</Label>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => moveFollowUp(i, -1)} disabled={i === 0}>
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => moveFollowUp(i, 1)} disabled={i === followUps.length - 1}>
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => removeFollowUp(i)}>
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Wait</span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={fu.wait_days}
+                  onChange={(e) => updateFollowUp(i, { wait_days: Math.max(0, parseInt(e.target.value || "0", 10)) })}
+                  className="h-8 w-20"
+                />
+                <span>days</span>
+                <Input
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={fu.wait_hours}
+                  onChange={(e) => updateFollowUp(i, { wait_hours: Math.max(0, Math.min(23, parseInt(e.target.value || "0", 10))) })}
+                  className="h-8 w-20"
+                />
+                <span>hours after previous message</span>
+              </div>
               <Textarea
-                value={fu}
-                onChange={(e) => { const next = [...followUps]; next[i] = e.target.value; setFollowUps(next); }}
+                value={fu.content}
+                onChange={(e) => updateFollowUp(i, { content: e.target.value })}
                 rows={3}
                 placeholder={`Follow-up ${i + 1} template...`}
               />

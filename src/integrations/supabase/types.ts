@@ -1209,6 +1209,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           email: string
+          followups_sent_at: Json
           fu1_sent_at: string | null
           fu2_sent_at: string | null
           fu3_sent_at: string | null
@@ -1242,6 +1243,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           email?: string
+          followups_sent_at?: Json
           fu1_sent_at?: string | null
           fu2_sent_at?: string | null
           fu3_sent_at?: string | null
@@ -1275,6 +1277,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           email?: string
+          followups_sent_at?: Json
           fu1_sent_at?: string | null
           fu2_sent_at?: string | null
           fu3_sent_at?: string | null
@@ -1319,7 +1322,7 @@ export type Database = {
           created_at: string
           id: string
           lead_id: string
-          message_type: Database["public"]["Enums"]["outreach_message_type"]
+          message_type: string
           sent: boolean
           sent_at: string | null
           updated_at: string
@@ -1330,7 +1333,7 @@ export type Database = {
           created_at?: string
           id?: string
           lead_id: string
-          message_type: Database["public"]["Enums"]["outreach_message_type"]
+          message_type: string
           sent?: boolean
           sent_at?: string | null
           updated_at?: string
@@ -1341,7 +1344,7 @@ export type Database = {
           created_at?: string
           id?: string
           lead_id?: string
-          message_type?: Database["public"]["Enums"]["outreach_message_type"]
+          message_type?: string
           sent?: boolean
           sent_at?: string | null
           updated_at?: string
@@ -1691,13 +1694,6 @@ export type Database = {
         | "workspace_admin"
         | "workspace_member"
       outreach_channel: "dm" | "email"
-      outreach_message_type:
-        | "opener"
-        | "opener_alt"
-        | "followup_1"
-        | "followup_2"
-        | "followup_3"
-        | "followup_4"
       outreach_status:
         | "new"
         | "drafted"
@@ -1846,14 +1842,6 @@ export const Constants = {
         "workspace_member",
       ],
       outreach_channel: ["dm", "email"],
-      outreach_message_type: [
-        "opener",
-        "opener_alt",
-        "followup_1",
-        "followup_2",
-        "followup_3",
-        "followup_4",
-      ],
       outreach_status: [
         "new",
         "drafted",

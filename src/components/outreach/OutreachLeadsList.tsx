@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOutreachLeads, useOutreachConfig, PLATFORM_OPTIONS, ALL_STATUSES, getNextFollowUp } from "./useOutreachData";
+import { useOutreachLeads, useOutreachConfig, normalizeFollowUps, PLATFORM_OPTIONS, ALL_STATUSES, getNextFollowUp } from "./useOutreachData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,7 +35,8 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
   const { user } = useAuth();
   const [showArchived, setShowArchived] = useState(false);
   const { leads, loading, refresh } = useOutreachLeads({ onlyArchived: showArchived });
-  const { setupTypes, leadSources } = useOutreachConfig();
+  const { setupTypes, leadSources, settings } = useOutreachConfig();
+  const configuredFollowUps = normalizeFollowUps((settings as any)?.follow_up_templates);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [followUpFilter, setFollowUpFilter] = useState(false);
@@ -233,7 +234,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) ||
       l.company_name.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
-    const fu = getNextFollowUp(l);
+    const fu = getNextFollowUp(l, configuredFollowUps);
     const matchFollowUp = !followUpFilter || (fu.next && fu.isDue);
     return matchSearch && matchStatus && matchFollowUp;
   });
@@ -340,7 +341,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
             </thead>
             <tbody>
               {filtered.map((lead) => {
-                const fu = getNextFollowUp(lead);
+                const fu = getNextFollowUp(lead, configuredFollowUps);
                 return (
                   <tr
                     key={lead.id}

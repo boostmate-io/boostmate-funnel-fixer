@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useOutreachLeads, type OutreachLead, type OutreachMessage, getNextFollowUp } from "./useOutreachData";
+import { useOutreachLeads, useOutreachConfig, normalizeFollowUps, type OutreachLead, type OutreachMessage, getNextFollowUp } from "./useOutreachData";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, CheckCheck, Clock, Copy, Loader2, Send, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
@@ -9,25 +9,28 @@ import { toast } from "sonner";
 
 interface Props { onRefresh: () => void; }
 
-const MESSAGE_LABELS: Record<string, string> = {
-  opener: "Opener",
-  opener_alt: "Opener (Alt)",
-  followup_1: "FU1",
-  followup_2: "FU2",
-  followup_3: "FU3",
-  followup_4: "FU4",
-};
+function messageLabel(messageType: string): string {
+  if (messageType === "opener") return "Opener";
+  if (messageType === "opener_alt") return "Opener (Alt)";
+  const m = /^followup_(\d+)$/.exec(messageType);
+  if (m) return `FU${m[1]}`;
+  return messageType;
+}
 
-const MSG_TO_FIELD: Record<string, string> = {
-  opener: "opener_sent_at",
-  followup_1: "fu1_sent_at",
-  followup_2: "fu2_sent_at",
-  followup_3: "fu3_sent_at",
-  followup_4: "fu4_sent_at",
-};
+function followUpIndex(messageType: string): number | null {
+  const m = /^followup_(\d+)$/.exec(messageType);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function legacyFuColumn(index: number): string | null {
+  if (index >= 1 && index <= 4) return `fu${index}_sent_at`;
+  return null;
+}
 
 const OutreachDraftQueue = ({ onRefresh }: Props) => {
   const { leads, loading } = useOutreachLeads();
+  const { settings } = useOutreachConfig();
+  const configuredFollowUps = normalizeFollowUps((settings as any)?.follow_up_templates);
   const [messagesMap, setMessagesMap] = useState<Record<string, OutreachMessage[]>>({});
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -77,9 +80,19 @@ const OutreachDraftQueue = ({ onRefresh }: Props) => {
     const now = new Date().toISOString();
     await supabase.from("outreach_messages").update({ sent: true, sent_at: now } as any).eq("id", msgId);
 
-    const fieldName = MSG_TO_FIELD[messageType];
+    const lead = leads.find((l) => l.id === leadId);
     const leadUpdate: any = { last_contact_at: now, status: "sent" };
-    if (fieldName) leadUpdate[fieldName] = now;
+    if (messageType === "opener") {
+      leadUpdate.opener_sent_at = now;
+    } else {
+      const idx = followUpIndex(messageType);
+      if (idx !== null) {
+        const currentMap = (lead?.followups_sent_at || {}) as Record<string, string>;
+        leadUpdate.followups_sent_at = { ...currentMap, [String(idx)]: now };
+        const legacy = legacyFuColumn(idx);
+        if (legacy) leadUpdate[legacy] = now;
+      }
+    }
 
     await supabase.from("outreach_leads").update(leadUpdate).eq("id", leadId);
     toast.success("Marked as sent");
@@ -108,7 +121,7 @@ const OutreachDraftQueue = ({ onRefresh }: Props) => {
         const msgs = messagesMap[lead.id] || [];
         const isExpanded = expandedLead === lead.id;
         const unsentCount = msgs.filter((m) => !m.sent).length;
-        const fu = getNextFollowUp(lead);
+        const fu = getNextFollowUp(lead, configuredFollowUps);
 
         return (
           <div key={lead.id} className="bg-card border border-border rounded-lg overflow-hidden">
@@ -146,7 +159,7 @@ const OutreachDraftQueue = ({ onRefresh }: Props) => {
                   msgs.map((msg) => (
                     <div key={msg.id} className="flex gap-3 items-start">
                       <div className="w-16 shrink-0">
-                        <span className="text-xs font-medium text-muted-foreground">{MESSAGE_LABELS[msg.message_type]}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{messageLabel(msg.message_type)}</span>
                       </div>
                       <div className="flex-1">
                         <p className="text-sm whitespace-pre-wrap">{msg.content}</p>

@@ -61,11 +61,13 @@ serve(async (req) => {
         )
         .join("\n") || "No setup types defined — detect the best fit.";
 
-    const customFollowups = Array.isArray(outreachSettings?.follow_up_templates)
+    const followUpConfig = Array.isArray(outreachSettings?.follow_up_templates)
       ? (outreachSettings!.follow_up_templates as any[])
-          .map((ft: any, i: number) => `Follow-up ${i + 1}: ${ft.content || ft}`)
-          .join("\n")
-      : "";
+      : [];
+    const followUpCount = followUpConfig.length;
+    const customFollowups = followUpConfig
+      .map((ft: any, i: number) => `Follow-up ${i + 1}: ${ft.content || ft || ""}`)
+      .join("\n");
 
     // Delegate to admin-managed AI Action
     const inputs = {
@@ -88,6 +90,7 @@ serve(async (req) => {
       max_lines: maxLines,
       custom_opener_template: outreachSettings?.opener_template || "",
       custom_followups: customFollowups,
+      follow_up_count: String(followUpCount),
     };
 
     const aiActionResp = await fetch(`${supabaseUrl}/functions/v1/execute-ai-action`, {
@@ -114,7 +117,7 @@ serve(async (req) => {
     }
 
     const { output } = await aiActionResp.json();
-    const parsed = (output || {}) as Record<string, string>;
+    const parsed = (output || {}) as Record<string, any>;
 
     // Update lead with detected fields
     await supabase
@@ -130,17 +133,21 @@ serve(async (req) => {
     // Replace messages for this lead
     await supabase.from("outreach_messages").delete().eq("lead_id", lead_id);
 
-    const messageTypes = [
-      { type: "opener", content: parsed.opener },
-      { type: "opener_alt", content: parsed.opener_alt },
-      { type: "followup_1", content: parsed.followup_1 },
-      { type: "followup_2", content: parsed.followup_2 },
-      { type: "followup_3", content: parsed.followup_3 },
-      { type: "followup_4", content: parsed.followup_4 },
+    const followupsArr: string[] = Array.isArray(parsed.followups)
+      ? (parsed.followups as any[]).map((s) => String(s || ""))
+      : [];
+
+    const messageTypes: { type: string; content: string }[] = [
+      { type: "opener", content: parsed.opener || "" },
+      { type: "opener_alt", content: parsed.opener_alt || "" },
+      ...followupsArr.map((content, i) => ({
+        type: `followup_${i + 1}`,
+        content,
+      })),
     ];
 
     const messagesToInsert = messageTypes
-      .filter((m) => m.content)
+      .filter((m) => m.content && m.content.trim().length > 0)
       .map((m) => ({
         lead_id,
         message_type: m.type,
