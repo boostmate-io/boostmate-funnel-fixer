@@ -47,6 +47,15 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
 
   useEffect(() => { loadLead(); }, [leadId]);
 
+  const prevGenerating = (function useRef() { return null; }, null);
+  useEffect(() => {
+    if (!generating) {
+      // Whenever generation finishes (or on mount), refresh messages & lead
+      refreshMessages();
+      loadLead();
+    }
+  }, [generating]);
+
   useEffect(() => {
     const map: Record<string, string> = {};
     messages.forEach((m) => { map[m.id] = m.content; });
