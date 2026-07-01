@@ -103,11 +103,30 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
   const deleteLead = async () => {
     setDeleting(true);
     const now = new Date().toISOString();
-    await supabase.from("outreach_leads").update({ deleted_at: now } as any).eq("id", leadId);
-    toast.success("Lead deleted");
+    const { error } = await supabase.from("outreach_leads").update({ deleted_at: now } as any).eq("id", leadId);
     setDeleting(false);
+    if (error) {
+      console.error("Delete lead error", error);
+      toast.error(`Failed to delete: ${error.message}`);
+      return;
+    }
+    toast.success("Lead deleted");
     onDeleted();
   };
+
+  const archiveLead = async () => {
+    if (!lead) return;
+    const isArchived = !!lead.archived_at;
+    const value = isArchived ? null : new Date().toISOString();
+    const { error } = await supabase.from("outreach_leads").update({ archived_at: value } as any).eq("id", leadId);
+    if (error) {
+      toast.error(`Failed to ${isArchived ? "unarchive" : "archive"}: ${error.message}`);
+      return;
+    }
+    toast.success(isArchived ? "Lead unarchived" : "Lead archived");
+    onDeleted();
+  };
+
 
   if (loading) return <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   if (!lead) return <div className="text-center py-16 text-muted-foreground">Lead not found</div>;
