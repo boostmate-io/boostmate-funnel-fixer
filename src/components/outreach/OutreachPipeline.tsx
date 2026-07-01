@@ -23,6 +23,8 @@ interface Props { onRefresh: () => void; }
 
 const OutreachPipeline = ({ onRefresh }: Props) => {
   const { leads, loading, refresh } = useOutreachLeads();
+  const { settings } = useOutreachConfig();
+  const configuredFollowUps = normalizeFollowUps((settings as any)?.follow_up_templates);
   const [localLeads, setLocalLeads] = useState<OutreachLead[]>(leads);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
