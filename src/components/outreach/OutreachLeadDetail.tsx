@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Check, CheckCheck, Clock, Copy, Loader2, RefreshCw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Clock, Copy, Loader2, RefreshCw, Send, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { toast } from "sonner";
 
 const MESSAGE_LABELS: Record<string, string> = {
@@ -103,11 +103,30 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
   const deleteLead = async () => {
     setDeleting(true);
     const now = new Date().toISOString();
-    await supabase.from("outreach_leads").update({ deleted_at: now } as any).eq("id", leadId);
-    toast.success("Lead deleted");
+    const { error } = await supabase.from("outreach_leads").update({ deleted_at: now } as any).eq("id", leadId);
     setDeleting(false);
+    if (error) {
+      console.error("Delete lead error", error);
+      toast.error(`Failed to delete: ${error.message}`);
+      return;
+    }
+    toast.success("Lead deleted");
     onDeleted();
   };
+
+  const archiveLead = async () => {
+    if (!lead) return;
+    const isArchived = !!lead.archived_at;
+    const value = isArchived ? null : new Date().toISOString();
+    const { error } = await supabase.from("outreach_leads").update({ archived_at: value } as any).eq("id", leadId);
+    if (error) {
+      toast.error(`Failed to ${isArchived ? "unarchive" : "archive"}: ${error.message}`);
+      return;
+    }
+    toast.success(isArchived ? "Lead unarchived" : "Lead archived");
+    onDeleted();
+  };
+
 
   if (loading) return <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   if (!lead) return <div className="text-center py-16 text-muted-foreground">Lead not found</div>;
@@ -123,27 +142,33 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
           {lead.company_name && <span className="text-muted-foreground">— {lead.company_name}</span>}
           <Badge variant="outline" className="uppercase text-xs">{lead.outreach_channel}</Badge>
         </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-              <Trash2 className="w-4 h-4 mr-1" /> Delete
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete this lead?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will remove {lead.name} from your leads. This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={deleteLead} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={archiveLead}>
+            {lead.archived_at ? (<><ArchiveRestore className="w-4 h-4 mr-1" /> Unarchive</>) : (<><Archive className="w-4 h-4 mr-1" /> Archive</>)}
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                <Trash2 className="w-4 h-4 mr-1" /> Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this lead?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove {lead.name} from your leads. Message history stays intact so analytics are not affected.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteLead} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+
       </div>
 
       {/* Follow-up indicator */}

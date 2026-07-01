@@ -117,7 +117,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     setShowCreate(false);
     setForm({ name: "", last_name: "", company_name: "", niche: "", offer: "", platform: "Instagram", profile_url: "", profile_url_2: "", notes: "", setup_type: "", lead_source: "", link: "", email: "", outreach_channel: "dm" });
     setCreating(false);
-    refresh();
+    refresh(true);
     if (generateMessages && data) handleGenerate((data as any).id);
   };
 
@@ -130,7 +130,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success("Messages generated");
-      refresh();
+      refresh(true);
     } catch (e: any) {
       toast.error(e.message || "Failed to generate messages");
     } finally {
@@ -168,7 +168,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
       toast.success(`${ids.length} lead(s) updated`);
       setSelectedIds(new Set());
       setBulkStatus("");
-      refresh();
+      refresh(true);
     }
     setUpdatingBulk(false);
   };
@@ -185,7 +185,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     else {
       toast.success(`${ids.length} lead(s) archived`);
       setSelectedIds(new Set());
-      refresh();
+      refresh(true);
     }
     setUpdatingBulk(false);
   };
@@ -202,7 +202,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     else {
       toast.success(`${ids.length} lead(s) restored`);
       setSelectedIds(new Set());
-      refresh();
+      refresh(true);
     }
     setUpdatingBulk(false);
   };
@@ -216,15 +216,18 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
       .from("outreach_leads")
       .update({ deleted_at: new Date().toISOString() } as any)
       .in("id", ids);
-    if (error) toast.error("Failed to delete");
-    else {
+    if (error) {
+      console.error("Bulk delete error", error);
+      toast.error(`Failed to delete: ${error.message}`);
+    } else {
       toast.success(`${ids.length} lead(s) deleted`);
       setSelectedIds(new Set());
-      refresh();
+      refresh(true);
     }
     setUpdatingBulk(false);
     setConfirmDelete(false);
   };
+
 
   const filtered = leads.filter((l) => {
     const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -400,19 +403,20 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
       )}
 
       {/* Lead detail popup */}
-      <Dialog open={!!selectedLeadId} onOpenChange={(open) => { if (!open) { setSelectedLeadId(null); refresh(); } }}>
+      <Dialog open={!!selectedLeadId} onOpenChange={(open) => { if (!open) { setSelectedLeadId(null); refresh(true); } }}>
         <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
           {selectedLeadId && (
             <OutreachLeadDetail
               leadId={selectedLeadId}
-              onBack={() => { setSelectedLeadId(null); refresh(); }}
+              onBack={() => { setSelectedLeadId(null); refresh(true); }}
               onGenerate={() => handleGenerate(selectedLeadId)}
               generating={generating === selectedLeadId}
-              onDeleted={() => { setSelectedLeadId(null); refresh(); }}
+              onDeleted={() => { setSelectedLeadId(null); refresh(true); }}
             />
           )}
         </DialogContent>
       </Dialog>
+
 
       {/* Confirm bulk delete */}
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
