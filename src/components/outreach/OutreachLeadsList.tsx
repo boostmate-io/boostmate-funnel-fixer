@@ -403,19 +403,20 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
       )}
 
       {/* Lead detail popup */}
-      <Dialog open={!!selectedLeadId} onOpenChange={(open) => { if (!open) { setSelectedLeadId(null); refresh(); } }}>
+      <Dialog open={!!selectedLeadId} onOpenChange={(open) => { if (!open) { setSelectedLeadId(null); refresh(true); } }}>
         <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
           {selectedLeadId && (
             <OutreachLeadDetail
               leadId={selectedLeadId}
-              onBack={() => { setSelectedLeadId(null); refresh(); }}
+              onBack={() => { setSelectedLeadId(null); refresh(true); }}
               onGenerate={() => handleGenerate(selectedLeadId)}
               generating={generating === selectedLeadId}
-              onDeleted={() => { setSelectedLeadId(null); refresh(); }}
+              onDeleted={() => { setSelectedLeadId(null); refresh(true); }}
             />
           )}
         </DialogContent>
       </Dialog>
+
 
       {/* Confirm bulk delete */}
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
