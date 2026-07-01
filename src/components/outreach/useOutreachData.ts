@@ -122,9 +122,9 @@ export function useOutreachLeads(options: UseOutreachLeadsOptions = {}) {
   const [loading, setLoading] = useState(true);
   const { includeArchived, onlyArchived, includeAll } = options;
 
-  const loadLeads = useCallback(async () => {
+  const loadLeads = useCallback(async (silent = false) => {
     if (!activeSubAccountId) { setLeads([]); setLoading(false); return; }
-    setLoading(true);
+    if (!silent) setLoading(true);
     let query = supabase
       .from("outreach_leads")
       .select("*")
@@ -143,13 +143,14 @@ export function useOutreachLeads(options: UseOutreachLeadsOptions = {}) {
     const { data, error } = await query;
     if (error) { toast.error("Failed to load leads"); console.error(error); }
     setLeads((data || []) as unknown as OutreachLead[]);
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, [activeSubAccountId, includeArchived, onlyArchived, includeAll]);
 
   useEffect(() => { loadLeads(); }, [loadLeads]);
 
   return { leads, loading, refresh: loadLeads };
 }
+
 
 export function useOutreachMessages(leadId: string | null) {
   const [messages, setMessages] = useState<OutreachMessage[]>([]);
