@@ -68,11 +68,11 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
     setLoading(false);
   };
 
-  const updateLead = async (updates: Partial<OutreachLead>) => {
+  const updateLead = async (updates: Partial<OutreachLead>, opts?: { silent?: boolean }) => {
     if (!lead) return;
     await supabase.from("outreach_leads").update(updates as any).eq("id", leadId);
     setLead({ ...lead, ...updates });
-    toast.success("Lead updated");
+    if (!opts?.silent) toast.success("Lead updated");
   };
 
   const updateMessage = async (msgId: string, content: string) => {
@@ -209,11 +209,11 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
       <div className="bg-card border border-border rounded-lg p-4 grid grid-cols-2 md:grid-cols-3 gap-4">
         <div>
           <Label className="text-xs text-muted-foreground">First Name</Label>
-          <Input value={lead.name} onChange={(e) => updateLead({ name: e.target.value })} className="h-8 mt-1" />
+          <Input value={lead.name} onChange={(e) => updateLead({ name: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="h-8 mt-1" />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Last Name</Label>
-          <Input value={lead.last_name} onChange={(e) => updateLead({ last_name: e.target.value })} className="h-8 mt-1" />
+          <Input value={lead.last_name} onChange={(e) => updateLead({ last_name: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="h-8 mt-1" />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Status</Label>
@@ -235,15 +235,15 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Main Problem</Label>
-          <Input value={lead.main_problem} onChange={(e) => updateLead({ main_problem: e.target.value })} className="h-8 mt-1" />
+          <Input value={lead.main_problem} onChange={(e) => updateLead({ main_problem: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="h-8 mt-1" />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Main Angle</Label>
-          <Input value={lead.main_angle} onChange={(e) => updateLead({ main_angle: e.target.value })} className="h-8 mt-1" />
+          <Input value={lead.main_angle} onChange={(e) => updateLead({ main_angle: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="h-8 mt-1" />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Niche</Label>
-          <Input value={lead.niche} onChange={(e) => updateLead({ niche: e.target.value })} className="h-8 mt-1" />
+          <Input value={lead.niche} onChange={(e) => updateLead({ niche: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="h-8 mt-1" />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Platform</Label>
@@ -265,29 +265,30 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Offer</Label>
-          <Input value={lead.offer} onChange={(e) => updateLead({ offer: e.target.value })} className="h-8 mt-1" />
+          <Input value={lead.offer} onChange={(e) => updateLead({ offer: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="h-8 mt-1" />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Profile URL</Label>
-          <Input value={lead.profile_url} onChange={(e) => updateLead({ profile_url: e.target.value })} className="h-8 mt-1" />
+          <Input value={lead.profile_url} onChange={(e) => updateLead({ profile_url: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="h-8 mt-1" />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Profile URL 2</Label>
-          <Input value={lead.profile_url_2} onChange={(e) => updateLead({ profile_url_2: e.target.value })} className="h-8 mt-1" />
+          <Input value={lead.profile_url_2} onChange={(e) => updateLead({ profile_url_2: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="h-8 mt-1" />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Link</Label>
-          <Input value={lead.link} onChange={(e) => updateLead({ link: e.target.value })} className="h-8 mt-1" placeholder="https://..." />
+          <Input value={lead.link} onChange={(e) => updateLead({ link: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="h-8 mt-1" placeholder="https://..." />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Email</Label>
-          <Input value={lead.email} onChange={(e) => updateLead({ email: e.target.value })} className="h-8 mt-1" placeholder="john@example.com" type="email" />
+          <Input value={lead.email} onChange={(e) => updateLead({ email: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="h-8 mt-1" placeholder="john@example.com" type="email" />
         </div>
         <div className="col-span-2 md:col-span-3">
           <Label className="text-xs text-muted-foreground">Notes</Label>
-          <Textarea value={lead.notes} onChange={(e) => updateLead({ notes: e.target.value })} className="mt-1" rows={2} />
+          <Textarea value={lead.notes} onChange={(e) => updateLead({ notes: e.target.value }, { silent: true })} onBlur={() => toast.success("Lead updated")} className="mt-1" rows={2} />
         </div>
       </div>
+
 
       {/* Action buttons */}
       <div className="flex items-center gap-2">
