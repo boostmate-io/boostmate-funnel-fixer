@@ -1,4 +1,5 @@
-import { useOutreachLeads, type OutreachLead, ALL_STATUSES, getNextFollowUp } from "./useOutreachData";
+import { useEffect, useState } from "react";
+import { useOutreachLeads, type OutreachLead, getNextFollowUp } from "./useOutreachData";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Clock } from "lucide-react";
@@ -19,35 +20,45 @@ const PIPELINE_STATUSES = [
 interface Props { onRefresh: () => void; }
 
 const OutreachPipeline = ({ onRefresh }: Props) => {
-  const { leads, loading, refresh } = useOutreachLeads();
+  const { leads, loading } = useOutreachLeads();
+  const [localLeads, setLocalLeads] = useState<OutreachLead[]>(leads);
+
+  useEffect(() => { setLocalLeads(leads); }, [leads]);
 
   const moveToStatus = async (leadId: string, newStatus: string) => {
-    await supabase.from("outreach_leads").update({ status: newStatus } as any).eq("id", leadId);
-    refresh();
-    toast.success(`Moved to ${newStatus.replace(/_/g, " ")}`);
+    const lead = localLeads.find((l) => l.id === leadId);
+    if (!lead || lead.status === newStatus) return;
+    // Optimistic update — no refresh, no toast
+    setLocalLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, status: newStatus as OutreachLead["status"] } : l));
+    const { error } = await supabase.from("outreach_leads").update({ status: newStatus } as any).eq("id", leadId);
+    if (error) {
+      // Rollback on failure
+      setLocalLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, status: lead.status } : l));
+      toast.error("Failed to update status");
+    }
   };
 
   if (loading) return <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: "60vh" }}>
+    <div className="flex gap-3 overflow-x-auto pb-4" style={{ height: "calc(100vh - 220px)" }}>
       {PIPELINE_STATUSES.map((col) => {
-        const colLeads = leads.filter((l) => l.status === col.key);
+        const colLeads = localLeads.filter((l) => l.status === col.key);
         return (
           <div
             key={col.key}
-            className={`flex-shrink-0 w-56 rounded-lg border ${col.color} p-3`}
+            className={`flex-shrink-0 w-56 rounded-lg border ${col.color} flex flex-col h-full`}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               const leadId = e.dataTransfer.getData("leadId");
               if (leadId) moveToStatus(leadId, col.key);
             }}
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between p-3 pb-2 flex-shrink-0">
               <h4 className="font-medium text-sm">{col.label}</h4>
               <Badge variant="secondary" className="text-xs">{colLeads.length}</Badge>
             </div>
-            <div className="space-y-2">
+            <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2 min-h-0">
               {colLeads.map((lead) => {
                 const fu = getNextFollowUp(lead);
                 return (
