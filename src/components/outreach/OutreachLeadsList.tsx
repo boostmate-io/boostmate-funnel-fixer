@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Sparkles, Loader2, ExternalLink, Clock, CheckSquare } from "lucide-react";
+import { Plus, Search, Sparkles, Loader2, ExternalLink, Clock, CheckSquare, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import OutreachLeadDetail from "./OutreachLeadDetail";
@@ -32,7 +33,8 @@ interface Props { onRefresh: () => void; }
 const OutreachLeadsList = ({ onRefresh }: Props) => {
   const { activeSubAccountId } = useWorkspace();
   const { user } = useAuth();
-  const { leads, loading, refresh } = useOutreachLeads();
+  const [showArchived, setShowArchived] = useState(false);
+  const { leads, loading, refresh } = useOutreachLeads({ onlyArchived: showArchived });
   const { setupTypes, leadSources } = useOutreachConfig();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -44,6 +46,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string>("");
   const [updatingBulk, setUpdatingBulk] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [form, setForm] = useState({
     name: "", last_name: "", company_name: "", niche: "", offer: "", platform: "Instagram",
@@ -51,6 +54,29 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     link: "", email: "",
     outreach_channel: "dm" as "dm" | "email",
   });
+
+  const checkDuplicate = async () => {
+    if (!activeSubAccountId) return null;
+    const urls = [form.profile_url.trim(), form.profile_url_2.trim()].filter(Boolean);
+    const email = form.email.trim();
+    if (urls.length === 0 && !email) return null;
+
+    const orParts: string[] = [];
+    urls.forEach((u) => {
+      const safe = u.replace(/,/g, "");
+      orParts.push(`profile_url.eq.${safe}`);
+      orParts.push(`profile_url_2.eq.${safe}`);
+    });
+    if (email) orParts.push(`email.eq.${email}`);
+
+    const { data } = await supabase
+      .from("outreach_leads")
+      .select("id,name,archived_at,deleted_at")
+      .eq("sub_account_id", activeSubAccountId)
+      .or(orParts.join(","))
+      .limit(1);
+    return (data && data[0]) || null;
+  };
 
   const handleCreate = async (generateMessages: boolean) => {
     if (!activeSubAccountId || !user?.id || !form.name.trim()) {
@@ -62,6 +88,21 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
       return;
     }
     setCreating(true);
+
+    // Duplicate check on profile urls and email (includes archived + deleted)
+    const dup = await checkDuplicate();
+    if (dup) {
+      const suffix = dup.archived_at ? " (archived)" : dup.deleted_at ? " (deleted)" : "";
+      toast.error(`Lead already exists: ${dup.name}${suffix}`, {
+        action: dup.archived_at || dup.deleted_at ? undefined : {
+          label: "Open",
+          onClick: () => { setShowCreate(false); setSelectedLeadId(dup.id); },
+        },
+      });
+      setCreating(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("outreach_leads")
       .insert({
@@ -132,6 +173,59 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     setUpdatingBulk(false);
   };
 
+  const handleBulkArchive = async () => {
+    if (selectedIds.size === 0) return;
+    setUpdatingBulk(true);
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from("outreach_leads")
+      .update({ archived_at: new Date().toISOString() } as any)
+      .in("id", ids);
+    if (error) toast.error("Failed to archive");
+    else {
+      toast.success(`${ids.length} lead(s) archived`);
+      setSelectedIds(new Set());
+      refresh();
+    }
+    setUpdatingBulk(false);
+  };
+
+  const handleBulkUnarchive = async () => {
+    if (selectedIds.size === 0) return;
+    setUpdatingBulk(true);
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from("outreach_leads")
+      .update({ archived_at: null } as any)
+      .in("id", ids);
+    if (error) toast.error("Failed to unarchive");
+    else {
+      toast.success(`${ids.length} lead(s) restored`);
+      setSelectedIds(new Set());
+      refresh();
+    }
+    setUpdatingBulk(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setUpdatingBulk(true);
+    const ids = Array.from(selectedIds);
+    // Soft-delete (deleted_at) so message history remains intact for analytics.
+    const { error } = await supabase
+      .from("outreach_leads")
+      .update({ deleted_at: new Date().toISOString() } as any)
+      .in("id", ids);
+    if (error) toast.error("Failed to delete");
+    else {
+      toast.success(`${ids.length} lead(s) deleted`);
+      setSelectedIds(new Set());
+      refresh();
+    }
+    setUpdatingBulk(false);
+    setConfirmDelete(false);
+  };
+
   const filtered = leads.filter((l) => {
     const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) ||
       l.company_name.toLowerCase().includes(search.toLowerCase());
@@ -140,18 +234,6 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     const matchFollowUp = !followUpFilter || (fu.next && fu.isDue);
     return matchSearch && matchStatus && matchFollowUp;
   });
-
-  if (selectedLeadId) {
-    return (
-      <OutreachLeadDetail
-        leadId={selectedLeadId}
-        onBack={() => { setSelectedLeadId(null); refresh(); }}
-        onGenerate={() => handleGenerate(selectedLeadId)}
-        generating={generating === selectedLeadId}
-        onDeleted={() => { setSelectedLeadId(null); refresh(); }}
-      />
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -177,15 +259,24 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
           >
             <Clock className="w-3.5 h-3.5 mr-1" /> Follow-up due
           </Button>
+          <Button
+            variant={showArchived ? "default" : "outline"}
+            size="sm"
+            onClick={() => { setShowArchived(!showArchived); setSelectedIds(new Set()); }}
+          >
+            <Archive className="w-3.5 h-3.5 mr-1" /> {showArchived ? "Showing archived" : "Show archived"}
+          </Button>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus className="w-4 h-4 mr-1" /> Add Lead
-        </Button>
+        {!showArchived && (
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="w-4 h-4 mr-1" /> Add Lead
+          </Button>
+        )}
       </div>
 
       {/* Bulk actions bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-muted/50 border border-border rounded-lg">
+        <div className="flex items-center gap-3 p-3 bg-muted/50 border border-border rounded-lg flex-wrap">
           <span className="text-sm font-medium">{selectedIds.size} selected</span>
           <Select value={bulkStatus} onValueChange={setBulkStatus}>
             <SelectTrigger className="w-44"><SelectValue placeholder="Change status to..." /></SelectTrigger>
@@ -197,7 +288,19 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
           </Select>
           <Button size="sm" onClick={handleBulkStatusUpdate} disabled={!bulkStatus || updatingBulk}>
             {updatingBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <CheckSquare className="w-3.5 h-3.5 mr-1" />}
-            Apply
+            Apply status
+          </Button>
+          {showArchived ? (
+            <Button size="sm" variant="outline" onClick={handleBulkUnarchive} disabled={updatingBulk}>
+              <ArchiveRestore className="w-3.5 h-3.5 mr-1" /> Unarchive
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" onClick={handleBulkArchive} disabled={updatingBulk}>
+              <Archive className="w-3.5 h-3.5 mr-1" /> Archive
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={() => setConfirmDelete(true)} disabled={updatingBulk} className="text-destructive hover:text-destructive">
+            <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
         </div>
@@ -209,7 +312,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
-          <p>No leads found.</p>
+          <p>{showArchived ? "No archived leads." : "No leads found."}</p>
         </div>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
@@ -295,6 +398,39 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
           </table>
         </div>
       )}
+
+      {/* Lead detail popup */}
+      <Dialog open={!!selectedLeadId} onOpenChange={(open) => { if (!open) { setSelectedLeadId(null); refresh(); } }}>
+        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+          {selectedLeadId && (
+            <OutreachLeadDetail
+              leadId={selectedLeadId}
+              onBack={() => { setSelectedLeadId(null); refresh(); }}
+              onGenerate={() => handleGenerate(selectedLeadId)}
+              generating={generating === selectedLeadId}
+              onDeleted={() => { setSelectedLeadId(null); refresh(); }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm bulk delete */}
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} lead(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              These leads will be removed from your workspace. Their message history stays intact so your analytics are not affected. Use Archive instead if you want to keep them recoverable.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} disabled={updatingBulk} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {updatingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Create Lead Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>

@@ -1,49 +1,38 @@
 
-# Resterende AI-logica → Admin AI Module
+## Outreach module improvements
 
-## Bevindingen
-Na de outreach-migratie is er nog **één** edge function met hardcoded AI-calls:
+### 1. Pipeline UX (`OutreachPipeline.tsx`)
+- **Optimistic drag & drop**: update local state immediately on drop; run Supabase update in background. No `refresh()` (which currently causes the whole page to feel like it reloads), no `toast.success` notification.
+- **Column scrolling**: give each column a fixed max height (`h-[calc(100vh-220px)]`) with an internal scroll area for the cards list, so columns don't grow taller than the viewport.
+- Keep local `leads` state synced when the hook's leads change (via `useEffect`).
 
-**`supabase/functions/analyze-audit/index.ts`** — gebruikt 2 directe `fetch` calls naar de Lovable AI gateway:
-1. **Section analysis** — multimodaal: stuurt een screenshot (image_url) + markdown naar Gemini om visuele secties te detecteren.
-2. **Funnel generation** — pure tekst-prompt: zet `funnelStrategy` om in een lijst `trafficSources` + `pages`.
+### 2. Leads tab (`OutreachLeadsList.tsx`)
+- **Detail as popup**: instead of replacing the list view with `<OutreachLeadDetail>`, render `OutreachLeadDetail` inside a large `Dialog` (max-w-4xl, scrollable). Closing the dialog returns to the list without navigation. Remove the `if (selectedLeadId) return <OutreachLeadDetail…>` branch.
+- **Bulk actions bar**: add two new buttons next to the status dropdown:
+  - **Archive** — sets `deleted_at = now()` on all selected leads (soft-delete = archive).
+  - **Delete** — hard delete (`.delete()`) after an `AlertDialog` confirm. Warning text clarifies analytics are unaffected (messages remain, see §4).
+- **Archived filter**: add a small toggle/select "Show archived" next to the status filter. Default view filters out rows where `deleted_at IS NOT NULL`; toggling shows only archived leads with an "Unarchive" bulk action available.
 
-Geen andere edge functions of client-code roept de AI gateway rechtstreeks aan. Alles wat al via `executeAIAction` loopt is goed.
+### 3. Duplicate check on Add Lead
+- Before insert in `handleCreate`, query `outreach_leads` scoped to the current `sub_account_id` (no `deleted_at` filter, so archived leads are included) matching any of:
+  - `profile_url` (if provided) equals input `profile_url` or `profile_url_2`
+  - `profile_url_2` (if provided) equals input `profile_url` or `profile_url_2`
+  - `email` (if provided) equals input `email`
+- If a match is found: show a toast with the existing lead's name and status (mention if archived), block the insert, and offer an "Open existing" action that selects that lead (opens the detail popup, unarchiving if needed via a separate user action).
 
-## Voorgestelde aanpak
+### 4. Analytics safety
+- `useOutreachData` currently loads leads with `.is("deleted_at", null)` (verify and keep this) so archived leads disappear from list/pipeline/draft queue automatically.
+- **Archive path**: only sets `deleted_at`; `outreach_messages` rows are untouched → analytics unaffected.
+- **Delete path**: keep `outreach_messages` rows intact by NOT cascading. Before hard-deleting a lead, `UPDATE outreach_messages SET lead_id = NULL` (requires migration to make `lead_id` nullable and drop any ON DELETE CASCADE). Analytics queries counting messages/replies remain correct because they aggregate messages, not leads.
+- Migration needed:
+  - Ensure `outreach_messages.lead_id` FK is `ON DELETE SET NULL` and column is nullable.
+  - (No schema change needed for archive — `deleted_at` already exists.)
 
-### Funnel generation (task 2) → direct migreerbaar
-Pure tekst in/uit. Past 1-op-1 in het bestaande `execute-ai-action` model.
-- **Instruction block**: `Audit – Funnel Generation Rules` (lijst van page types + traffic types, JSON-output regels).
-- **AI Action**: slug `audit_funnel_from_strategy`
-  - Inputs: `funnel_strategy`, `traffic_source`
-  - Output structure: `traffic_sources` (array), `pages` (array)
-  - Model: `google/gemini-2.5-flash`, temperature 0.3
+### 5. Filter application
+- Update `useOutreachData` (or the filter in list/pipeline) to consistently exclude `deleted_at IS NOT NULL` unless the "Show archived" toggle is on in the leads list. Pipeline and draft queue always exclude archived.
 
-### Section analysis (task 1) → vereist uitbreiding van `execute-ai-action`
-Het multimodale screenshot-deel kan **niet** zonder aanpassing want `execute-ai-action`:
-- Bouwt alleen `{ role: "user", content: <string prompt> }` (geen image_url support).
-- Output structure ondersteunt alleen vlakke string/array velden — secties zijn `[{title, content}]` (array of objects).
-
-**Twee opties**:
-
-- **Optie A (aanbevolen)**: `execute-ai-action` uitbreiden met:
-  - Optionele `image_inputs` parameter (array van data URLs of base64) die als `image_url` content parts wordt toegevoegd.
-  - Output structure veld-type `object_array` met `item_schema` (key/type pairs) voor genest output zoals `sections[]`.
-  
-  Dan wordt section analysis óók een AI Action (`audit_section_analysis`).
-
-- **Optie B**: Section analysis laten staan in `analyze-audit` (geen admin control), alleen funnel-generation migreren. Snel klaar maar dan blijft een stukje AI-config buiten Admin.
-
-### Edge function herschrijven
-`analyze-audit` wordt een orchestrator (zoals `generate-outreach-messages` nu): roept 1-2 AI Actions aan via `execute-ai-action`, doet de node/edge layout-berekening lokaal (dat is geen AI-logica).
-
-### Seed migratie
-Insert van instruction block + 1 of 2 AI Actions in `ai_actions` / `ai_instruction_blocks` / `ai_action_instruction_blocks`.
-
-## Vraag aan jou
-Welke optie wil je voor de screenshot/section-analyse?
-- **A**: `execute-ai-action` uitbreiden met image + nested output support, en beide audit-stappen migreren (volledig admin-beheerbaar, iets meer werk).
-- **B**: Alleen funnel-generation migreren, section analysis blijft hardcoded in `analyze-audit`.
-
-Als je later nog AI features toevoegt (bv. brief generation, copy generation, etc.) maakt **A** sowieso meer mogelijk.
+### Files touched
+- `src/components/outreach/OutreachPipeline.tsx` — optimistic DnD, column scroll, no toast/refresh.
+- `src/components/outreach/OutreachLeadsList.tsx` — dialog-based detail, archive/delete bulk actions, archived filter, duplicate check.
+- `src/components/outreach/useOutreachData.ts` — support `includeArchived` flag; ensure default filters out `deleted_at`.
+- Migration — make `outreach_messages.lead_id` nullable with `ON DELETE SET NULL`.
