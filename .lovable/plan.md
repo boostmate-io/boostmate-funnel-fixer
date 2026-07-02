@@ -1,56 +1,29 @@
-## Doel
+## Probleem
 
-Vervang het huidige systeem van 4 vaste follow-ups (met hardcoded interval van 1 dag) door een dynamische lijst waar de gebruiker zelf bepaalt:
-- Hoeveel follow-ups er zijn (0 tot onbeperkt)
-- Wat de tekst/template per follow-up is
-- Hoeveel tijd er tussen elk bericht moet zitten (in dagen én uren)
+De `generate_big_promise_hero` prompt gebruikt de placeholders `{{context}}`, `{{component_instructions}}` en `{{inputs}}`, maar `execute-ai-action` vervangt alleen `{{key}}` tokens die als losse key in het `inputs`-object staan. Gevolg:
 
-## Wijzigingen
+- `{{inputs}}` blijft letterlijk in de prompt staan (er is geen key genaamd `inputs`), dus de strategische keuzes uit de Hero Section UI (announcement_pattern, headline_pattern, cta_goal, ...) worden nooit doorgegeven aan het model.
+- `{{component_instructions}}` blijft ook letterlijk staan; die inhoud wordt wel toegevoegd aan de system prompt als "ADDITIONAL INSTRUCTIONS", maar de placeholder in de user prompt wordt niet ingevuld.
+- `{{context}}` werkt toevallig wel omdat `BigPromiseHeroUI` `context` als key meegeeft in `inputs`.
 
-### 1. Settings UI (`OutreachSettings.tsx`)
-Sectie "Follow-up Templates" wordt herwerkt:
-- Lijst met kaartjes, elk kaartje = 1 follow-up met:
-  - Textarea voor de template tekst
-  - Twee kleine inputs: "Wachten X dagen Y uur na vorig bericht"
-  - Verwijder-knop
-- Knop "+ Follow-up toevoegen" onderaan
-- Volgorde aanpasbaar via drag-handle of pijl omhoog/omlaag
+Daardoor genereert de AI puur op basis van de generieke prompt en negeert alle UI-selecties.
 
-### 2. Datamodel
-De bestaande `follow_up_templates` kolom (jsonb) op `outreach_settings` krijgt een nieuw formaat:
-```
-[
-  { index: 1, content: "...", wait_days: 1, wait_hours: 0 },
-  { index: 2, content: "...", wait_days: 2, wait_hours: 0 },
-  ...
-]
-```
-Backwards-compat: bestaande strings/oude objects worden bij het laden geconverteerd naar dit formaat met `wait_days: 1`.
+## Oplossing
 
-Geen database migratie nodig — het is een jsonb veld.
+Uitbreiding van de placeholder-substitutie in `supabase/functions/execute-ai-action/index.ts`:
 
-### 3. Follow-up timing logica (`useOutreachData.ts`)
-De functie `getNextFollowUp` gebruikt nu hardcoded `+1 dag`. Deze wordt aangepast zodat ze de wait-waarden uit de settings leest. Signature wijzigt naar `getNextFollowUp(lead, followUpConfig)`.
+1. Vóór de bestaande `\{\{(\w+)\}\}` replace:
+   - Vervang `{{inputs}}` door een leesbare, gestructureerde dump van alle inputs behalve `context` (bv. `- announcement_pattern: scarcity` per regel; `ai_recommended` → "AI Recommended (let AI decide)"; lege/undefined velden weglaten).
+   - Vervang `{{component_instructions}}` door de meegegeven `extra_instructions` (leeg string als niet aanwezig).
+   - Vervang `{{context}}` door `inputs.context` als aanwezig, anders lege string.
+2. Bestaande generieke `{{key}}` replace blijft daarna staan voor overige velden.
+3. Geen wijziging aan de client- of UI-code nodig; alle bestaande AI Actions blijven werken.
 
-Alle plekken die deze functie aanroepen (`OutreachLeadDetail`, `OutreachPipeline`, `OutreachDraftQueue`, `OutreachLeadsList`) krijgen de settings mee via de bestaande `useOutreachConfig` hook.
+## Verificatie
 
-### 4. Bericht generatie (`generate-outreach-messages` edge function)
-Genereert nu vast opener + 4 follow-ups. Aanpassen zodat het aantal follow-ups gelijk is aan het aantal in de settings. De AI action instructions/blocks verwijzen momenteel naar "followup_1..4" — die worden dynamisch opgebouwd op basis van de configuratie.
+- `generate_big_promise_hero` opnieuw uitvoeren vanuit de Hero Section UI met verschillende pattern-keuzes en checken dat de AI zichtbaar rekening houdt met de selectie (bv. specifieke headline pattern of CTA goal).
+- Bestaande AI Actions zonder `{{inputs}}` / `{{component_instructions}}` placeholder mogen ongewijzigd blijven werken.
 
-De `message_type` enum-achtige waarden in `outreach_messages` (`followup_1..4`) blijven werken, maar we staan nu ook `followup_5`, `followup_6`, etc. toe. Aangezien dit een tekst-kolom is (geen enum in DB), werkt dit direct.
+## Technisch
 
-### 5. Lead tabel `fuN_sent_at` kolommen
-De lead-tabel heeft `fu1_sent_at` t/m `fu4_sent_at` als aparte kolommen. Om onbeperkte follow-ups te ondersteunen zonder telkens schema-wijzigingen, voegen we één jsonb kolom `followups_sent_at` toe (bv. `{"1": "2026-...", "2": "2026-..."}`). De oude 4 kolommen blijven bestaan voor backwards-compat en worden bij update parallel bijgewerkt voor FU1-4.
-
-Dit vraagt één kleine migratie: `ALTER TABLE outreach_leads ADD COLUMN followups_sent_at jsonb DEFAULT '{}'::jsonb`.
-
-## Wat blijft hetzelfde
-- Opener template en flow
-- Kanaal DM/email split
-- Analytics — die tellen nog steeds op basis van sent messages
-- Alle bestaande settings-secties (setup types, lead sources, tone, etc.)
-
-## Standaard bij nieuwe accounts
-Als er nog geen follow-ups geconfigureerd zijn, tonen we een lege lijst met een suggestie-knop "Add default sequence" die 4 follow-ups aanmaakt met intervallen 1, 2, 3, 5 dagen (in plaats van huidige 1/1/1/1).
-
-Akkoord om zo te bouwen?
+Bestand: `supabase/functions/execute-ai-action/index.ts`, blok rond regel 78–85 (prompt building) uitbreiden met de drie specifieke replaces vóór de generieke regex.

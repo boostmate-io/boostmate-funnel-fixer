@@ -78,11 +78,37 @@ serve(async (req) => {
     // Build the prompt from template
     let prompt = action.prompt_template || "";
     const inputMap = inputs || {};
-    
-    // Replace {{variable}} placeholders
+
+    // Format inputs (excl. context) as a readable list for {{inputs}}
+    const formatInputs = (obj: Record<string, any>) => {
+      const lines: string[] = [];
+      for (const [k, v] of Object.entries(obj)) {
+        if (k === "context") continue;
+        if (v === undefined || v === null || v === "") continue;
+        let val: string;
+        if (v === "ai_recommended") {
+          val = "AI Recommended (let AI decide the best option based on context)";
+        } else if (typeof v === "object") {
+          val = JSON.stringify(v);
+        } else {
+          val = String(v);
+        }
+        lines.push(`- ${k}: ${val}`);
+      }
+      return lines.length > 0 ? lines.join("\n") : "(no user inputs provided)";
+    };
+
+    // Special placeholders
+    prompt = prompt
+      .replace(/\{\{\s*inputs\s*\}\}/g, formatInputs(inputMap))
+      .replace(/\{\{\s*component_instructions\s*\}\}/g, extra_instructions || "")
+      .replace(/\{\{\s*context\s*\}\}/g, inputMap.context ? String(inputMap.context) : "");
+
+    // Replace remaining {{variable}} placeholders with individual input keys
     prompt = prompt.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => {
       return inputMap[key] !== undefined ? String(inputMap[key]) : `{{${key}}}`;
     });
+
 
     // Build system prompt
     let systemPrompt = "You are an expert AI assistant.";
