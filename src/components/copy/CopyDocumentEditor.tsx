@@ -145,13 +145,15 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
     ));
   };
 
-  const updateComponentData = async (id: string, inputs: Record<string, any>, outputs: Record<string, any>, isGenerated: boolean) => {
-    await supabase.from("copy_document_components").update({
+  const updateComponentData = (id: string, inputs: Record<string, any>, outputs: Record<string, any>, isGenerated: boolean) => {
+    // Update local state immediately so controlled inputs stay in sync while typing.
+    setDocComponents(prev => prev.map(c => c.id === id ? { ...c, inputs, outputs, is_generated: isGenerated } : c));
+    // Persist in the background (fire-and-forget).
+    void supabase.from("copy_document_components").update({
       inputs: inputs as any,
       outputs: outputs as any,
       is_generated: isGenerated,
     }).eq("id", id);
-    setDocComponents(prev => prev.map(c => c.id === id ? { ...c, inputs, outputs, is_generated: isGenerated } : c));
   };
 
   const applyFramework = async (frameworkId: string) => {
