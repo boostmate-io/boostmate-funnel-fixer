@@ -460,7 +460,23 @@ const HeroSectionUI = ({
           {outputKeys.map((key) =>
             outputs[key] ? (
               <div key={key} className="space-y-1.5">
-                <Label className="text-xs capitalize">{key.replace(/_/g, " ")}</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs capitalize">{key.replace(/_/g, " ")}</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 gap-1 text-xs"
+                    onClick={() => handleRegenerateField(key)}
+                    disabled={regeneratingField !== null || generating}
+                  >
+                    {regeneratingField === key ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <RotateCw className="w-3 h-3" />
+                    )}
+                    Regenerate
+                  </Button>
+                </div>
                 <Textarea
                   value={outputs[key] || ""}
                   onChange={(e) => onOutputsChange({ ...outputs, [key]: e.target.value })}
