@@ -391,7 +391,10 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     <div key={dc.id} className="space-y-2">
                       <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{def?.name}</p>
                       {outputKeys.map(key => (
-                        <div key={key}>
+                        <div key={key} className="space-y-1">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+                            {key.replace(/_/g, " ")}
+                          </p>
                           {Array.isArray(outputs[key]) ? (
                             <ul className="list-disc list-inside space-y-1">
                               {(outputs[key] as string[]).map((item, i) => (
