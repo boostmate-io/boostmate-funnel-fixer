@@ -195,6 +195,7 @@ const HeroSectionUI = ({
   onGenerated,
 }: HeroSectionUIProps) => {
   const [generating, setGenerating] = useState(false);
+  const [regeneratingField, setRegeneratingField] = useState<string | null>(null);
   const s = (key: string, value: any) => onInputsChange({ ...inputs, [key]: value });
 
   const handleGenerate = async () => {
@@ -216,6 +217,38 @@ const HeroSectionUI = ({
       toast.error(e.message || "Generation failed");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleRegenerateField = async (fieldKey: string) => {
+    if (!aiActionSlug) {
+      toast.error("No AI Action linked to this component");
+      return;
+    }
+    setRegeneratingField(fieldKey);
+    try {
+      const fieldLabel = fieldKey.replace(/_/g, " ");
+      const existingOutputSummary = Object.entries(outputs)
+        .filter(([k, v]) => k !== fieldKey && v)
+        .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
+        .join("\n");
+      const focusInstruction = `IMPORTANT: Only regenerate the "${fieldLabel}" field. Keep all other fields consistent with the existing output below and return a fresh, different variation for "${fieldLabel}" only.\n\nEXISTING OUTPUT (keep these unchanged in your response):\n${existingOutputSummary}\n\n${componentInstructions || ""}`;
+      const result = await executeAIAction({
+        slug: aiActionSlug,
+        inputs: { ...inputs, context },
+        extraInstructions: focusInstruction,
+      });
+      if (result.output && result.output[fieldKey] !== undefined && result.output[fieldKey] !== "") {
+        onOutputsChange({ ...outputs, [fieldKey]: result.output[fieldKey] });
+        onGenerated();
+        toast.success(`${fieldLabel} regenerated`);
+      } else {
+        toast.error(`No "${fieldLabel}" returned by AI`);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Regeneration failed");
+    } finally {
+      setRegeneratingField(null);
     }
   };
 
@@ -427,7 +460,23 @@ const HeroSectionUI = ({
           {outputKeys.map((key) =>
             outputs[key] ? (
               <div key={key} className="space-y-1.5">
-                <Label className="text-xs capitalize">{key.replace(/_/g, " ")}</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs capitalize">{key.replace(/_/g, " ")}</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 gap-1 text-xs"
+                    onClick={() => handleRegenerateField(key)}
+                    disabled={regeneratingField !== null || generating}
+                  >
+                    {regeneratingField === key ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <RotateCw className="w-3 h-3" />
+                    )}
+                    Regenerate
+                  </Button>
+                </div>
                 <Textarea
                   value={outputs[key] || ""}
                   onChange={(e) => onOutputsChange({ ...outputs, [key]: e.target.value })}
