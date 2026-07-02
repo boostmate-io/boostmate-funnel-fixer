@@ -219,7 +219,26 @@ const HeroSectionUI = ({
     }
   };
 
-  const outputKeys = Object.keys(outputs);
+  const OUTPUT_ORDER = [
+    "announcement_bar",
+    "proof_badge",
+    "pre_headline",
+    "headline",
+    "subheadline",
+    "video_intro",
+    "cta_button_text",
+    "cta_subtext",
+    "scarcity_line",
+    "bottom_social_proof",
+    "testimonial_quote",
+    "testimonial_author",
+    "logo_label",
+  ];
+  const rawKeys = Object.keys(outputs);
+  const outputKeys = [
+    ...OUTPUT_ORDER.filter((k) => rawKeys.includes(k)),
+    ...rawKeys.filter((k) => !OUTPUT_ORDER.includes(k)),
+  ];
   const hasOutput = outputKeys.length > 0 && outputKeys.some((k) => outputs[k]);
 
   return (
