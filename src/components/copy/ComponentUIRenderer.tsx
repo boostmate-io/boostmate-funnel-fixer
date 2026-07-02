@@ -30,6 +30,7 @@ const ComponentUIRenderer = ({
 
   switch (uiInterfaceSlug) {
     case "big_promise_hero_ui":
+    case "hero_section_ui":
       return <BigPromiseHeroUI {...props} />;
     default:
       return <GenericComponentUI {...props} />;
