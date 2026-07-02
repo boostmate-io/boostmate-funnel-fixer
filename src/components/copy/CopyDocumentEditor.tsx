@@ -381,14 +381,17 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                 {docComponents.map(dc => {
                   const def = componentDefs.find(d => d.slug === dc.component_slug);
                   const outputs = dc.outputs as Record<string, any>;
-                  const ORDER_MAP: Record<string, string[]> = {
-                    big_promise_hero: [
-                      "announcement_bar","proof_badge","pre_headline","headline","subheadline",
-                      "video_intro","cta_button_text","cta_subtext","scarcity_line",
-                      "bottom_social_proof","testimonial_quote","testimonial_author","logo_label",
-                    ],
-                  };
-                  const order = ORDER_MAP[dc.component_slug] || [];
+                  const heroOutputOrder = [
+                    "announcement_bar","proof_badge","pre_headline","headline","subheadline",
+                    "video_intro","cta_button_text","cta_subtext","scarcity_line",
+                    "bottom_social_proof","testimonial_quote","testimonial_author","logo_label",
+                  ];
+                  const isHeroSection =
+                    dc.component_slug === "big_promise_hero" ||
+                    def?.ui_interface_slug === "big_promise_hero_ui" ||
+                    def?.ui_interface_slug === "hero_section_ui" ||
+                    def?.ai_action_slug === "generate_big_promise_hero";
+                  const order = isHeroSection ? heroOutputOrder : [];
                   const rawKeys = Object.keys(outputs).filter(k => outputs[k]);
                   const outputKeys = [
                     ...order.filter(k => rawKeys.includes(k)),
