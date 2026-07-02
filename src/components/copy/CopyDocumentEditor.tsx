@@ -381,7 +381,19 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                 {docComponents.map(dc => {
                   const def = componentDefs.find(d => d.slug === dc.component_slug);
                   const outputs = dc.outputs as Record<string, any>;
-                  const outputKeys = Object.keys(outputs).filter(k => outputs[k]);
+                  const ORDER_MAP: Record<string, string[]> = {
+                    big_promise_hero: [
+                      "announcement_bar","proof_badge","pre_headline","headline","subheadline",
+                      "video_intro","cta_button_text","cta_subtext","scarcity_line",
+                      "bottom_social_proof","testimonial_quote","testimonial_author","logo_label",
+                    ],
+                  };
+                  const order = ORDER_MAP[dc.component_slug] || [];
+                  const rawKeys = Object.keys(outputs).filter(k => outputs[k]);
+                  const outputKeys = [
+                    ...order.filter(k => rawKeys.includes(k)),
+                    ...rawKeys.filter(k => !order.includes(k)),
+                  ];
                   if (outputKeys.length === 0) return (
                     <div key={dc.id} className="p-6 border border-dashed border-border rounded-lg text-center text-sm text-muted-foreground">
                       {def?.name || dc.component_slug} — not generated yet
