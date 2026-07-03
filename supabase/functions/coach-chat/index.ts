@@ -341,6 +341,7 @@ Deno.serve(async (req) => {
     ];
 
     const tools = toolsForScope(context?.scope);
+    const shouldForceBlueprintWrites = isBlueprintWriteIntent(context?.scope, messages);
 
     // Call Lovable AI Gateway (OpenAI-compatible)
     const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -353,7 +354,9 @@ Deno.serve(async (req) => {
         model: "google/gemini-3-flash-preview",
         messages: llmMessages,
         tools,
-        tool_choice: "auto",
+        tool_choice: shouldForceBlueprintWrites
+          ? { type: "function", function: { name: "propose_blueprint_writes" } }
+          : "auto",
       }),
     });
 
