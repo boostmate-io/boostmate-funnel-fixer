@@ -6,9 +6,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import {
   BLUEPRINT_FIELDS,
-  BLUEPRINT_FIELD_BY_PATH,
   BLUEPRINT_SUB_BLOCKS,
-  getBlueprintFieldByKey,
   renderBlueprintFieldPathsPrompt,
   type BlueprintFieldKind,
 } from "../_shared/blueprintSchema.ts";

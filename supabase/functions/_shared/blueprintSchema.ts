@@ -38,8 +38,8 @@ export interface BlueprintFieldDef {
   aliases: string[];
   /**
    * Whether the AI coach is allowed to write to this field.
-   * Set to false for structured builders (framework, core_promise, cards, …)
-   * that the coach cannot currently populate correctly.
+   * Set to false for fields that should never be written by batch AI proposals.
+   * Structured builders can expose safe sub-fields here when apply logic supports them.
    */
   aiWritable: boolean;
 }
