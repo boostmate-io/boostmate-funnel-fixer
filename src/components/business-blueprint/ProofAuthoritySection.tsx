@@ -761,6 +761,21 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
           </div>
         </div>
       </div>
+
+      <CoachPanel
+        open={coachOpen}
+        onOpenChange={setCoachOpen}
+        context={
+          activeSubAccountId
+            ? buildBlueprintSectionContext(
+                "proof_authority",
+                "Proof & Authority",
+                { proof_authority: data } as unknown as BlueprintRow,
+                activeSubAccountId,
+              )
+            : null
+        }
+      />
     </div>
   );
 };
