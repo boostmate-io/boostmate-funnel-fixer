@@ -71,6 +71,12 @@ function IconPicker({ value, onChange }: { value: string; onChange: (icon: strin
   );
 }
 
+interface OutputField {
+  key: string;
+  label: string;
+  type: "text" | "array";
+}
+
 interface CopyComponent {
   id: string;
   name: string;
@@ -81,6 +87,7 @@ interface CopyComponent {
   ui_interface_slug: string;
   icon: string;
   config: any;
+  output_structure: OutputField[];
   is_active: boolean;
   sort_order: number;
 }
