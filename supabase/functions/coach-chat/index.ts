@@ -84,6 +84,12 @@ Only write to paths that make sense for the user's request. Use the current Blue
 function buildSystemPrompt(context: any, memoryFacts: Array<{ key: string; value: string }>): string {
   const parts: string[] = [COACH_BASE];
 
+  const locale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
+  const langName = locale === "nl" ? "Dutch (Nederlands)" : "English";
+  parts.push(
+    `# Language\nAlways reply in ${langName}. All prose, quick replies, remembered fact values and proposed field drafts MUST be in ${langName}, regardless of the language the user writes in. The only exception: keep JSON keys and path strings (e.g. remember_fact "key", propose_blueprint_writes "path") in English snake_case.`,
+  );
+
   if (context?.scope === "blueprint.field") {
     parts.push(COACH_BLUEPRINT_FIELD);
   } else if (context?.scope === "blueprint.section") {
