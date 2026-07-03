@@ -136,6 +136,7 @@ const AdminCopyComponents = () => {
         icon: editing.icon || "Gem",
         config: editing.config || {},
         output_structure: (editing.output_structure || []) as any,
+        required_blueprint_fields: (editing.required_blueprint_fields || []) as any,
         is_active: editing.is_active ?? true,
         sort_order: editing.sort_order ?? 0,
       };
