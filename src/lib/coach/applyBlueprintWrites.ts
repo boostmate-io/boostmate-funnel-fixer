@@ -49,11 +49,17 @@ function setDeep(target: Record<string, any>, segments: string[], value: any) {
 function normalizeFrameworkPillars(patch: BlueprintPatch) {
   const pillars = (patch.offer_stack as any)?.angle?.framework?.pillars;
   if (!Array.isArray(pillars)) return;
-  (patch.offer_stack as any).angle.framework.pillars = pillars.map((pillar: any) => ({
-    id: pillar?.id || crypto.randomUUID(),
-    name: pillar?.name ?? "",
-    description: pillar?.description ?? "",
-  }));
+  (patch.offer_stack as any).angle.framework.pillars = Array.from(
+    { length: pillars.length },
+    (_, index) => {
+      const pillar = pillars[index] ?? {};
+      return {
+        id: pillar?.id || crypto.randomUUID(),
+        name: pillar?.name ?? "",
+        description: pillar?.description ?? "",
+      };
+    },
+  );
 }
 
 export async function applyBlueprintWrites(
