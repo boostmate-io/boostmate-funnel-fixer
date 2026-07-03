@@ -85,11 +85,19 @@ customer_clarity.transformation_point_a — textarea — Where they are now
 customer_clarity.transformation_point_b — textarea — Where they want to be
 customer_clarity.transformation_process — textarea — Transformation process
 
-offer_stack.angle.<key>   (angle fields — textarea unless noted)
+offer_stack.angle.main_offer_name — text — Main Offer Name (short, 3-6 words, name only)
+offer_stack.angle.short_description — textarea — Short Offer Description (1-2 sentences)
+offer_stack.angle.core_outcome — textarea — Core Outcome (primary transformation result, 1 sentence)
+offer_stack.angle.angle_new_vehicle — textarea — New Vehicle (what makes the method genuinely NEW)
+offer_stack.angle.angle_better_results — textarea — Better Results (why the method produces BETTER results)
+offer_stack.angle.angle_faster_outcome — textarea — Faster Outcome (how clients get results FASTER)
+offer_stack.angle.angle_easier_process — textarea — Easier Process (how the process is made EASIER)
 offer_stack.stack.<key>   (stack fields — textarea unless noted)
 offer_stack.pricing.<key> (pricing fields — textarea unless noted)
 proof_authority.<sub>.<key>
 growth_system.<sub>.<key>
+
+NOTE: The Offer Angle tab also has structured fields (framework, core_promise) that the Coach cannot currently write to — never propose writes for those paths. Fields like "primary outcome of the main offer", "unique mechanism", "main promise / tagline", "core emotional hook" DO NOT EXIST in this blueprint — never invent field names.
 
 Rules:
 - Only write to paths the user's request actually implies. If the user asks for one field, write ONLY that path.
@@ -192,6 +200,46 @@ const BLUEPRINT_FIELD_META: Record<string, BlueprintFieldMeta> = {
   },
 };
 
+const OFFER_ANGLE_FIELD_META: Record<string, BlueprintFieldMeta> = {
+  "offer_stack.angle.main_offer_name": {
+    kind: "textarea",
+    label: "Main Offer Name",
+    aliases: ["main_offer_name", "main offer name", "offer name", "flagship name", "naam aanbod"],
+  },
+  "offer_stack.angle.short_description": {
+    kind: "textarea",
+    label: "Short Offer Description",
+    aliases: ["short_description", "short offer description", "offer description", "korte beschrijving"],
+  },
+  "offer_stack.angle.core_outcome": {
+    kind: "textarea",
+    label: "Core Outcome",
+    aliases: ["core_outcome", "core outcome", "primary outcome", "main outcome", "hoofdresultaat"],
+  },
+  "offer_stack.angle.angle_new_vehicle": {
+    kind: "textarea",
+    label: "New Vehicle",
+    aliases: ["angle_new_vehicle", "new vehicle", "new method", "nieuw voertuig", "nieuwe methode"],
+  },
+  "offer_stack.angle.angle_better_results": {
+    kind: "textarea",
+    label: "Better Results",
+    aliases: ["angle_better_results", "better results", "betere resultaten"],
+  },
+  "offer_stack.angle.angle_faster_outcome": {
+    kind: "textarea",
+    label: "Faster Outcome",
+    aliases: ["angle_faster_outcome", "faster outcome", "faster results", "sneller resultaat"],
+  },
+  "offer_stack.angle.angle_easier_process": {
+    kind: "textarea",
+    label: "Easier Process",
+    aliases: ["angle_easier_process", "easier process", "eenvoudiger proces", "makkelijker proces"],
+  },
+};
+
+Object.assign(BLUEPRINT_FIELD_META, OFFER_ANGLE_FIELD_META);
+
 const BLUEPRINT_KEY_TO_PATH = new Map(
   Object.keys(BLUEPRINT_FIELD_META).map((path) => [path.split(".").at(-1)!, path]),
 );
@@ -219,6 +267,15 @@ const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = {
     "customer_clarity.transformation_point_b",
     "customer_clarity.transformation_process",
   ],
+  offer_angle: [
+    "offer_stack.angle.main_offer_name",
+    "offer_stack.angle.short_description",
+    "offer_stack.angle.core_outcome",
+    "offer_stack.angle.angle_new_vehicle",
+    "offer_stack.angle.angle_better_results",
+    "offer_stack.angle.angle_faster_outcome",
+    "offer_stack.angle.angle_easier_process",
+  ],
 };
 
 const BLUEPRINT_SUB_BLOCK_ALIASES: Record<string, string[]> = {
@@ -240,6 +297,15 @@ const BLUEPRINT_SUB_BLOCK_ALIASES: Record<string, string[]> = {
   ],
   desire: ["desire goals", "desire and goals", "desire & goals", "desire", "goals", "verlangens", "doelen"],
   transformation: ["transformation", "transformatie", "point a", "point b"],
+  offer_angle: [
+    "offer angle",
+    "offer angle tab",
+    "angle tab",
+    "offer design angle",
+    "offer design",
+    "aanbod angle",
+    "offer positioning",
+  ],
 };
 
 async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
