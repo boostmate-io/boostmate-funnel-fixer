@@ -6,6 +6,7 @@ import PainPointsUI from "./interfaces/PainPointsUI";
 import FounderStoryUI from "./interfaces/FounderStoryUI";
 import DesiredOutcomesUI from "./interfaces/DesiredOutcomesUI";
 import ResultsProofUI from "./interfaces/ResultsProofUI";
+import CoreOutcomesUI from "./interfaces/CoreOutcomesUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
