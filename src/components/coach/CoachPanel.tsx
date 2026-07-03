@@ -350,6 +350,8 @@ function PartRenderer({
   return null;
 }
 
+type ItemState = "pending" | "applying" | "applied" | "dismissed";
+
 function BlueprintWritesCard({
   writes,
   reasoning,
@@ -359,18 +361,49 @@ function BlueprintWritesCard({
   reasoning?: string;
   onApplyAll?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
 }) {
-  const [applying, setApplying] = useState(false);
-  const [applied, setApplied] = useState(false);
+  const [states, setStates] = useState<ItemState[]>(() => writes.map(() => "pending"));
+  const [batchApplying, setBatchApplying] = useState(false);
 
-  const handleApply = async () => {
-    if (!onApplyAll || applying || applied) return;
-    setApplying(true);
+  const setAt = (i: number, s: ItemState) =>
+    setStates((prev) => prev.map((v, idx) => (idx === i ? s : v)));
+
+  const pendingIndices = states
+    .map((s, i) => (s === "pending" ? i : -1))
+    .filter((i) => i >= 0);
+  const allHandled = states.every((s) => s === "applied" || s === "dismissed");
+
+  const handleApplyOne = async (i: number) => {
+    if (!onApplyAll || states[i] !== "pending") return;
+    setAt(i, "applying");
     try {
-      await onApplyAll(writes);
-      setApplied(true);
-    } finally {
-      setApplying(false);
+      await onApplyAll([writes[i]]);
+      setAt(i, "applied");
+    } catch {
+      setAt(i, "pending");
     }
+  };
+
+  const handleDismissOne = (i: number) => {
+    if (states[i] !== "pending") return;
+    setAt(i, "dismissed");
+  };
+
+  const handleApplyAllRemaining = async () => {
+    if (!onApplyAll || batchApplying || !pendingIndices.length) return;
+    setBatchApplying(true);
+    setStates((prev) => prev.map((s) => (s === "pending" ? "applying" : s)));
+    try {
+      await onApplyAll(pendingIndices.map((i) => writes[i]));
+      setStates((prev) => prev.map((s) => (s === "applying" ? "applied" : s)));
+    } catch {
+      setStates((prev) => prev.map((s) => (s === "applying" ? "pending" : s)));
+    } finally {
+      setBatchApplying(false);
+    }
+  };
+
+  const handleDismissAll = () => {
+    setStates((prev) => prev.map((s) => (s === "pending" ? "dismissed" : s)));
   };
 
   return (
@@ -382,42 +415,108 @@ function BlueprintWritesCard({
         </Badge>
       </div>
       <div className="space-y-1.5 max-h-72 overflow-y-auto">
-        {writes.map((w, i) => (
-          <div key={i} className="rounded-lg border bg-background p-2">
-            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-              {w.label}
+        {writes.map((w, i) => {
+          const s = states[i];
+          if (s === "dismissed") return null;
+          const isApplied = s === "applied";
+          const isApplying = s === "applying";
+          return (
+            <div
+              key={i}
+              className={cn(
+                "rounded-lg border bg-background p-2 transition-opacity",
+                isApplied && "opacity-60",
+              )}
+            >
+              <div className="flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                    {w.label}
+                  </div>
+                  <div
+                    className={cn(
+                      "text-sm text-foreground whitespace-pre-wrap mt-0.5",
+                      isApplied && "line-through",
+                    )}
+                  >
+                    {w.value}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {isApplied ? (
+                    <Badge variant="secondary" className="text-[10px]">
+                      Applied
+                    </Badge>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        aria-label="Apply this field"
+                        onClick={() => handleApplyOne(i)}
+                        disabled={!onApplyAll || isApplying || batchApplying}
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-primary hover:bg-primary/10 disabled:opacity-40 disabled:pointer-events-none"
+                      >
+                        {isApplying ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Dismiss this field"
+                        onClick={() => handleDismissOne(i)}
+                        disabled={isApplying || batchApplying}
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:pointer-events-none"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="text-sm text-foreground whitespace-pre-wrap mt-0.5">{w.value}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {reasoning && (
         <p className="text-[11px] text-muted-foreground italic">{reasoning}</p>
       )}
-      <div className="flex flex-wrap gap-1.5 pt-1">
-        <Button
-          size="sm"
-          className="h-7 gap-1.5"
-          onClick={handleApply}
-          disabled={!onApplyAll || applying || applied}
-        >
-          {applied ? (
-            <>
-              <Check className="w-3 h-3" />
-              Applied
-            </>
-          ) : applying ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Applying…
-            </>
-          ) : (
-            <>
-              <Check className="w-3 h-3" />
-              Apply all
-            </>
-          )}
-        </Button>
+      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        {allHandled ? (
+          <span className="text-[11px] text-muted-foreground italic">All handled</span>
+        ) : (
+          <>
+            <Button
+              size="sm"
+              className="h-7 gap-1.5"
+              onClick={handleApplyAllRemaining}
+              disabled={!onApplyAll || batchApplying || !pendingIndices.length}
+            >
+              {batchApplying ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Applying…
+                </>
+              ) : (
+                <>
+                  <Check className="w-3 h-3" />
+                  Apply all remaining ({pendingIndices.length})
+                </>
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1.5"
+              onClick={handleDismissAll}
+              disabled={batchApplying || !pendingIndices.length}
+            >
+              <X className="w-3 h-3" />
+              Dismiss all
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
