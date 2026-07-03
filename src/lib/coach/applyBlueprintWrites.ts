@@ -31,16 +31,29 @@ const ROOT_COLUMNS = new Set([
   "proof_authority",
 ]);
 
+const isIndex = (segment: string) => /^\d+$/.test(segment);
+
 function setDeep(target: Record<string, any>, segments: string[], value: any) {
   let cursor = target;
   for (let i = 0; i < segments.length - 1; i++) {
     const key = segments[i];
-    if (typeof cursor[key] !== "object" || cursor[key] === null || Array.isArray(cursor[key])) {
-      cursor[key] = {};
+    const nextKey = segments[i + 1];
+    if (typeof cursor[key] !== "object" || cursor[key] === null) {
+      cursor[key] = isIndex(nextKey) ? [] : {};
     }
     cursor = cursor[key];
   }
   cursor[segments[segments.length - 1]] = value;
+}
+
+function normalizeFrameworkPillars(patch: BlueprintPatch) {
+  const pillars = (patch.offer_stack as any)?.angle?.framework?.pillars;
+  if (!Array.isArray(pillars)) return;
+  (patch.offer_stack as any).angle.framework.pillars = pillars.map((pillar: any) => ({
+    id: pillar?.id || crypto.randomUUID(),
+    name: pillar?.name ?? "",
+    description: pillar?.description ?? "",
+  }));
 }
 
 export async function applyBlueprintWrites(
@@ -77,6 +90,8 @@ export async function applyBlueprintWrites(
     setDeep((patch as any)[root], rest, w.value);
     applied++;
   }
+
+  normalizeFrameworkPillars(patch);
 
   // 3) Update
   const { error: updErr } = await supabase
