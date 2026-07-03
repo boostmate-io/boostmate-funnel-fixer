@@ -32,36 +32,41 @@ interface Props {
 
 const openerFor = (context: CoachContext | null): CoachMessage | null => {
   if (!context) return null;
+  const locale = (context.businessContext.locale ?? "en").toLowerCase().slice(0, 2);
+  const nl = locale === "nl";
 
   if (context.scope === "global") {
-    const text =
-      "Hoi! Ik ben je **Growth Strategist**. Ik ken je Blueprint en denk mee over strategie, aanbod, funnels of copy. Waar wil je vandaag scherper op worden?";
+    const text = nl
+      ? "Hoi! Ik ben je **Growth Strategist**. Ik ken je Blueprint en denk mee over strategie, aanbod, funnels of copy. Waar wil je vandaag scherper op worden?"
+      : "Hi! I'm your **Growth Strategist**. I know your Blueprint and can help you think through strategy, offers, funnels or copy. What do you want to sharpen today?";
+    const replies = nl
+      ? ["Wat is nu mijn grootste bottleneck?", "Check mijn positionering", "Ideeën voor mijn volgende aanbod"]
+      : ["What's my biggest bottleneck right now?", "Check my positioning", "Ideas for my next offer"];
     return {
       id: "opener",
       role: "assistant",
       content: text,
       parts: [
         { type: "text", text },
-        {
-          type: "quick_replies",
-          replies: ["Wat is nu mijn grootste bottleneck?", "Check mijn positionering", "Ideeën voor mijn volgende aanbod"],
-        },
+        { type: "quick_replies", replies },
       ],
     };
   }
 
   if (context.scope === "blueprint.section" && context.target) {
-    const text = `Laten we samen door **${context.target.label}** heen lopen. Ik zie wat je al hebt ingevuld — waar wil je beginnen?`;
+    const text = nl
+      ? `Laten we samen door **${context.target.label}** heen lopen. Ik zie wat je al hebt ingevuld — waar wil je beginnen?`
+      : `Let's walk through **${context.target.label}** together. I can see what you've already filled in — where do you want to start?`;
+    const replies = nl
+      ? ["Wat mist er nog?", "Wat is het zwakst?", "Geef me een prioriteitenlijstje"]
+      : ["What's still missing?", "What's the weakest part?", "Give me a priority list"];
     return {
       id: "opener",
       role: "assistant",
       content: text,
       parts: [
         { type: "text", text },
-        {
-          type: "quick_replies",
-          replies: ["Wat mist er nog?", "Wat is het zwakst?", "Geef me een prioriteitenlijstje"],
-        },
+        { type: "quick_replies", replies },
       ],
     };
   }
@@ -69,12 +74,20 @@ const openerFor = (context: CoachContext | null): CoachMessage | null => {
   if (!context.target) return null;
   const label = context.target.label;
   const hasValue = !!context.target.currentValue?.trim();
-  const text = hasValue
-    ? `Ik zie dat je al iets hebt staan voor **${label}**. Wil je dat ik het aanscherp, uitbreid, of helemaal herschrijf?`
-    : `Laten we samen **${label}** invullen. Ik kan je vragen stellen, voorbeelden geven, of gewoon meedenken — waar heb je het meest aan?`;
-  const replies = hasValue
-    ? ["Aanscherpen", "Uitbreiden", "Helemaal herschrijven"]
-    : ["Stel me vragen", "Geef voorbeelden", "Ik heb al ideeën"];
+  const text = nl
+    ? hasValue
+      ? `Ik zie dat je al iets hebt staan voor **${label}**. Wil je dat ik het aanscherp, uitbreid, of helemaal herschrijf?`
+      : `Laten we samen **${label}** invullen. Ik kan je vragen stellen, voorbeelden geven, of gewoon meedenken — waar heb je het meest aan?`
+    : hasValue
+      ? `I can see you already have something for **${label}**. Want me to sharpen it, expand it, or rewrite it from scratch?`
+      : `Let's fill in **${label}** together. I can ask you questions, give examples, or just brainstorm — what would help most?`;
+  const replies = nl
+    ? hasValue
+      ? ["Aanscherpen", "Uitbreiden", "Helemaal herschrijven"]
+      : ["Stel me vragen", "Geef voorbeelden", "Ik heb al ideeën"]
+    : hasValue
+      ? ["Sharpen it", "Expand it", "Rewrite from scratch"]
+      : ["Ask me questions", "Give examples", "I have some ideas"];
   return {
     id: "opener",
     role: "assistant",
