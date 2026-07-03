@@ -278,6 +278,12 @@ function isEmptyBlueprintValue(value: unknown): boolean {
   return false;
 }
 
+function latestUserAsksForEmptyOnly(messages: any[]): boolean {
+  return /\b(empty|blank|unfilled|missing|remaining|leeg|leegstaande|lege|ontbrekend|resterend|nog niet ingevuld)\b/i.test(
+    latestUserText(messages),
+  );
+}
+
 function requestedBlueprintSubBlock(messages: any[]): string | null {
   const latest = latestUserText(messages);
   if (!WRITE_INTENT_RE.test(latest)) return null;
@@ -309,6 +315,7 @@ function allowedBlueprintWritePaths(context: any, messages: any[]): Set<string> 
   const snapshot = context?.businessContext?.blueprintSnapshot;
   const paths = BLUEPRINT_SUB_BLOCK_PATHS[requestedBlock] ?? [];
   const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
+  if (latestUserAsksForEmptyOnly(messages)) return new Set(emptyPaths);
   return new Set(emptyPaths.length > 0 ? emptyPaths : paths);
 }
 
@@ -356,7 +363,22 @@ function normalizeTagOrChipValue(raw: string): string {
 function normalizeFieldValue(path: string, value: string): string {
   const meta = BLUEPRINT_FIELD_META[path];
   if (meta?.kind === "tags" || meta?.kind === "chips") return normalizeTagOrChipValue(value);
+  if (path === "offer_stack.angle.core_promise.timeframe") return normalizeTimeframeValue(value);
   return String(value ?? "").trim();
+}
+
+function normalizeTimeframeValue(value: string): string {
+  const raw = String(value ?? "").trim().toLowerCase();
+  const compact = raw.replace(/\s+/g, "_").replace(/-/g, "_");
+  const allowed = new Set(["7_days", "30_days", "60_days", "90_days", "6_months", "12_months", "custom"]);
+  if (allowed.has(compact)) return compact;
+  if (/\b7\b/.test(raw) && /\b(day|days|dag|dagen)\b/.test(raw)) return "7_days";
+  if (/\b30\b/.test(raw) && /\b(day|days|dag|dagen)\b/.test(raw)) return "30_days";
+  if (/\b60\b/.test(raw) && /\b(day|days|dag|dagen)\b/.test(raw)) return "60_days";
+  if (/\b90\b/.test(raw) && /\b(day|days|dag|dagen)\b/.test(raw)) return "90_days";
+  if (/\b6\b/.test(raw) && /\b(month|months|maand|maanden)\b/.test(raw)) return "6_months";
+  if (/\b12\b/.test(raw) && /\b(month|months|maand|maanden)\b/.test(raw)) return "12_months";
+  return raw ? "90_days" : "";
 }
 
 function normalizeCurrentFieldProposal(context: any, value: string): string {
@@ -372,7 +394,10 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) 
   if (!Array.isArray(writesArg)) return [];
 
   const allowedPaths = allowedBlueprintWritePaths(context, messages);
+  const emptyOnly = latestUserAsksForEmptyOnly(messages);
   const byPath = new Map<string, { path: string; label: string; value: string }>();
+
+  if (allowedPaths && allowedPaths.size === 0) return [];
 
   for (const raw of writesArg) {
     if (!raw || typeof raw.path !== "string" || typeof raw.value !== "string") continue;
@@ -381,6 +406,7 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) 
     // Reject unknown paths and paths flagged non-writable in the shared schema.
     if (!meta || !meta.aiWritable) continue;
     if (allowedPaths && !allowedPaths.has(path)) continue;
+    if (!allowedPaths && emptyOnly && !isEmptyBlueprintValue(getDeepValue(context?.businessContext?.blueprintSnapshot, path))) continue;
 
     const value = normalizeFieldValue(path, raw.value);
     if (!value) continue;
