@@ -314,6 +314,15 @@ function PartRenderer({
     );
   }
 
+  if (part.type === "memory_saved") {
+    return (
+      <div className="text-[11px] text-muted-foreground inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/60 border border-border">
+        <Sparkles className="w-3 h-3 text-primary" />
+        Onthouden: <span className="font-medium text-foreground">{part.key}</span>
+      </div>
+    );
+  }
+
   return null;
 }
 
