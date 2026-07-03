@@ -143,7 +143,7 @@ const BLUEPRINT_FIELD_META: Record<string, BlueprintFieldMeta> = {
   "customer_clarity.pain_main_problem": {
     kind: "textarea",
     label: "Main problem",
-    aliases: ["pain_main_problem", "main problem", "one big problem", "pain", "probleem"],
+    aliases: ["pain_main_problem", "main problem", "one big problem", "hoofdprobleem", "probleem"],
   },
   "customer_clarity.pain_daily_frustrations": {
     kind: "textarea",
@@ -196,6 +196,52 @@ const BLUEPRINT_KEY_TO_PATH = new Map(
   Object.keys(BLUEPRINT_FIELD_META).map((path) => [path.split(".").at(-1)!, path]),
 );
 
+const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = {
+  avatar: [
+    "customer_clarity.avatar_who",
+    "customer_clarity.avatar_stage",
+    "customer_clarity.avatar_traits",
+    "customer_clarity.avatar_not_fit",
+  ],
+  pain: [
+    "customer_clarity.pain_main_problem",
+    "customer_clarity.pain_daily_frustrations",
+    "customer_clarity.pain_already_tried",
+    "customer_clarity.pain_consequences",
+  ],
+  desire: [
+    "customer_clarity.desire_main_result",
+    "customer_clarity.desire_success_vision",
+    "customer_clarity.desire_why_badly",
+  ],
+  transformation: [
+    "customer_clarity.transformation_point_a",
+    "customer_clarity.transformation_point_b",
+    "customer_clarity.transformation_process",
+  ],
+};
+
+const BLUEPRINT_SUB_BLOCK_ALIASES: Record<string, string[]> = {
+  avatar: [
+    "ideal client avatar",
+    "ideal customer avatar",
+    "avatar",
+    "icp",
+    "ideale klant",
+    "ideale client",
+  ],
+  pain: [
+    "pain friction",
+    "pain and friction",
+    "pain en friction",
+    "pain & friction",
+    "friction",
+    "pijnpunten",
+  ],
+  desire: ["desire goals", "desire and goals", "desire & goals", "desire", "goals", "verlangens", "doelen"],
+  transformation: ["transformation", "transformatie", "point a", "point b"],
+};
+
 async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
   if (promptCache && Date.now() - promptCache.at < PROMPT_TTL_MS) return promptCache.prompts;
   try {
@@ -238,6 +284,7 @@ function buildSystemPrompt(
   context: any,
   memoryFacts: Array<{ key: string; value: string }>,
   prompts: PromptSet,
+  messages: any[] = [],
 ): string {
   const parts: string[] = [prompts.base];
 
@@ -263,6 +310,17 @@ function buildSystemPrompt(
 
   if (context?.businessContext?.blueprintSnapshot) {
     parts.push(`# Current Business Blueprint JSON\n${JSON.stringify(context.businessContext.blueprintSnapshot, null, 2)}`);
+  }
+
+  const allowedPaths = allowedBlueprintWritePaths(context, messages);
+  if (allowedPaths && allowedPaths.size > 0) {
+    parts.push(
+      `# Current write target — hard constraint\nFor the user's latest request, propose Blueprint writes ONLY for these path(s):\n${[
+        ...allowedPaths,
+      ]
+        .map((path) => `- ${path} — ${BLUEPRINT_FIELD_META[path]?.kind ?? "textarea"} — ${BLUEPRINT_FIELD_META[path]?.label ?? path}`)
+        .join("\n")}\nDo not write to any other Blueprint path.`,
+    );
   }
 
   if (memoryFacts.length > 0) {
@@ -323,6 +381,51 @@ function requestedSingleBlueprintPath(messages: any[]): string | null {
   return matches[0].path;
 }
 
+function getDeepValue(source: any, path: string): unknown {
+  return path.split(".").reduce((cursor, key) => cursor?.[key], source);
+}
+
+function isEmptyBlueprintValue(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return value.trim().length === 0;
+  if (Array.isArray(value)) return value.length === 0;
+  return false;
+}
+
+function requestedBlueprintSubBlock(messages: any[]): string | null {
+  const latest = latestUserText(messages);
+  if (!WRITE_INTENT_RE.test(latest)) return null;
+
+  const normalized = normalizeForMatch(latest);
+  const matches = Object.entries(BLUEPRINT_SUB_BLOCK_ALIASES)
+    .map(([block, aliases]) => {
+      const score = aliases
+        .map(normalizeForMatch)
+        .filter((needle) => needle.length > 2)
+        .reduce((best, needle) => (normalized.includes(needle) ? Math.max(best, 20 + needle.length) : best), 0);
+      return { block, score };
+    })
+    .filter((match) => match.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (matches.length === 0) return null;
+  if (matches.length > 1 && matches[0].score === matches[1].score) return null;
+  return matches[0].block;
+}
+
+function allowedBlueprintWritePaths(context: any, messages: any[]): Set<string> | null {
+  const requestedPath = requestedSingleBlueprintPath(messages);
+  if (requestedPath) return new Set([requestedPath]);
+
+  const requestedBlock = requestedBlueprintSubBlock(messages);
+  if (!requestedBlock) return null;
+
+  const snapshot = context?.businessContext?.blueprintSnapshot;
+  const paths = BLUEPRINT_SUB_BLOCK_PATHS[requestedBlock] ?? [];
+  const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
+  return new Set(emptyPaths.length > 0 ? emptyPaths : paths);
+}
+
 function cleanTagCandidate(value: string): string {
   return value
     .replace(/^[-–—•\d.)\s]+/g, "")
@@ -379,16 +482,16 @@ function normalizeCurrentFieldProposal(context: any, value: string): string {
   return normalizeFieldValue(path, value);
 }
 
-function sanitizeBlueprintWrites(writesArg: any, messages: any[]) {
+function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) {
   if (!Array.isArray(writesArg)) return [];
 
-  const requestedPath = requestedSingleBlueprintPath(messages);
+  const allowedPaths = allowedBlueprintWritePaths(context, messages);
   const byPath = new Map<string, { path: string; label: string; value: string }>();
 
   for (const raw of writesArg) {
     if (!raw || typeof raw.path !== "string" || typeof raw.value !== "string") continue;
     const path = canonicalBlueprintPath(raw.path);
-    if (requestedPath && path !== requestedPath) continue;
+    if (allowedPaths && !allowedPaths.has(path)) continue;
 
     const value = normalizeFieldValue(path, raw.value);
     if (!value) continue;
@@ -592,7 +695,7 @@ Deno.serve(async (req) => {
 
     // Build LLM messages
     const prompts = await loadCoachPrompts(supabase);
-    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts);
+    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts, messages);
     const llmMessages: any[] = [
       { role: "system", content: systemPrompt },
       ...messages.map((m: any) => ({
@@ -653,7 +756,7 @@ Deno.serve(async (req) => {
         name === "propose_blueprint_writes" &&
         (context?.scope === "blueprint.section" || context?.scope === "global")
       ) {
-        const writes = sanitizeBlueprintWrites(args.writes, messages);
+        const writes = sanitizeBlueprintWrites(args.writes, messages, context);
         if (writes.length > 0) {
           parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
         }
@@ -690,7 +793,15 @@ Deno.serve(async (req) => {
     }
 
     if (parts.length === 0) {
-      parts.push({ type: "text", text: "…" });
+      const locale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
+      parts.push({
+        type: "text",
+        text: shouldForceBlueprintWrites
+          ? locale === "nl"
+            ? "Ik kon hiervoor geen passende Blueprint-updates maken. Probeer het nog één keer met de naam van de sectie of het veld."
+            : "I couldn't create matching Blueprint updates for that. Please try once more with the section or field name."
+          : "…",
+      });
     }
 
     // Persist the last user message + assistant message
