@@ -144,7 +144,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
                   field={field}
                   value={(data[field.key] as string) || ""}
                   onChange={(v) => onChange({ [field.key]: v } as Partial<CustomerClarityData>)}
-                  onCoach={() => openCoachFor(field.label)}
+                  onCoach={() => setCoachField(field)}
                 />
               </div>
             ))}
@@ -165,16 +165,18 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
         </div>
       </div>
 
-      {/* Coach panel */}
+      {/* AI Coach */}
       <CoachPanel
-        open={coachOpen}
+        open={!!coachField}
         onOpenChange={(o) => {
-          setCoachOpen(o);
-          if (!o) setCoachFieldLabel(null);
+          if (!o) setCoachField(null);
         }}
-        title={coachFieldLabel ?? config.label}
-        questions={config.coachQuestions}
-        onSubmit={handleCoachSubmit}
+        context={coachContext}
+        onApply={(value) => {
+          if (coachField) {
+            onChange({ [coachField.key]: value } as Partial<CustomerClarityData>);
+          }
+        }}
       />
     </div>
   );
