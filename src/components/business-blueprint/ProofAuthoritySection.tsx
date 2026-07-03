@@ -642,6 +642,8 @@ const StoriesTab = ({
 
 const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
   const [active, setActive] = useState<TabId>("authority");
+  const [coachOpen, setCoachOpen] = useState(false);
+  const { activeSubAccountId } = useWorkspace();
   const tab = TABS.find((t) => t.id === active)!;
   const Icon = tab.icon;
   const overallProgress = calcProofAuthorityProgress(data);
