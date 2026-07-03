@@ -2,6 +2,7 @@ import GenericComponentUI from "./interfaces/GenericComponentUI";
 import BigPromiseHeroUI from "./interfaces/BigPromiseHeroUI";
 import CredibilityStatsUI from "./interfaces/CredibilityStatsUI";
 import ProblemAmplifierUI from "./interfaces/ProblemAmplifierUI";
+import PainPointsUI from "./interfaces/PainPointsUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
@@ -34,6 +35,8 @@ const ComponentUIRenderer = ({
       return <CredibilityStatsUI {...props} />;
     case "problem_amplifier_ui":
       return <ProblemAmplifierUI {...props} />;
+    case "pain_points_ui":
+      return <PainPointsUI {...props} />;
     default:
       return <GenericComponentUI {...props} />;
   }
