@@ -126,6 +126,25 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
     return contextCustomText;
   }, [contextType, contextOfferId, contextCustomText, offers]);
 
+  /**
+   * Builds the full context for a specific component:
+   *  - the document-level context source (offer or custom text)
+   *  - PLUS, when the component declares `required_blueprint_fields`, only
+   *    those blueprint sections are appended (scoped context — no full-blueprint dump).
+   *  - Fallback: if the component has no required fields, the document context is used as-is.
+   */
+  const getContextForComponent = useCallback(
+    (def?: CopyComponentDef | null) => {
+      const base = getContext();
+      const required = def?.required_blueprint_fields || [];
+      if (required.length === 0) return base;
+      const scoped = buildScopedBlueprintContext(blueprint, required);
+      if (!scoped) return base;
+      return base ? `${base}\n\n${scoped}` : scoped;
+    },
+    [getContext, blueprint],
+  );
+
   const addComponent = async (slug: string) => {
     const sortOrder = docComponents.length;
     const { data, error } = await supabase
