@@ -638,20 +638,13 @@ Deno.serve(async (req) => {
         // ignore
       }
       if (name === "propose_field_value" && context?.scope === "blueprint.field") {
-        parts.push({ type: "proposal", value: args.value ?? "", reasoning: args.reasoning ?? "" });
+        const value = normalizeCurrentFieldProposal(context, args.value ?? "");
+        if (value) parts.push({ type: "proposal", value, reasoning: args.reasoning ?? "" });
       } else if (
         name === "propose_blueprint_writes" &&
         (context?.scope === "blueprint.section" || context?.scope === "global")
       ) {
-        const writes = Array.isArray(args.writes)
-          ? args.writes
-              .filter((w: any) => w && typeof w.path === "string" && typeof w.value === "string")
-              .map((w: any) => ({
-                path: String(w.path),
-                label: String(w.label ?? w.path),
-                value: String(w.value),
-              }))
-          : [];
+        const writes = sanitizeBlueprintWrites(args.writes, messages);
         if (writes.length > 0) {
           parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
         }
