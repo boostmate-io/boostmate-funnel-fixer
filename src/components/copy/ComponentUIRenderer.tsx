@@ -53,6 +53,8 @@ const ComponentUIRenderer = ({
       return <CoreOutcomesUI {...props} />;
     case "program_deliverables_ui":
       return <ProgramDeliverablesUI {...props} />;
+    case "process_mechanism_ui":
+      return <ProcessMechanismUI {...props} />;
     default:
       return <GenericComponentUI {...props} />;
   }
