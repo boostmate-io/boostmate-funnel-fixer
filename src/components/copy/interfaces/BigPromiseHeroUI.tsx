@@ -24,6 +24,7 @@ interface HeroSectionUIProps {
   context: string;
   inputs: Record<string, any>;
   outputs: Record<string, any>;
+  outputStructure?: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
   onInputsChange: (inputs: Record<string, any>) => void;
   onOutputsChange: (outputs: Record<string, any>) => void;
   onGenerated: () => void;
@@ -190,6 +191,7 @@ const HeroSectionUI = ({
   context,
   inputs,
   outputs,
+  outputStructure,
   onInputsChange,
   onOutputsChange,
   onGenerated,
@@ -209,6 +211,7 @@ const HeroSectionUI = ({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
         extraInstructions: componentInstructions || undefined,
+        outputStructure,
       });
       onOutputsChange(result.output);
       onGenerated();
@@ -237,6 +240,7 @@ const HeroSectionUI = ({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
         extraInstructions: focusInstruction,
+        outputStructure,
       });
       if (result.output && result.output[fieldKey] !== undefined && result.output[fieldKey] !== "") {
         onOutputsChange({ ...outputs, [fieldKey]: result.output[fieldKey] });

@@ -71,6 +71,12 @@ function IconPicker({ value, onChange }: { value: string; onChange: (icon: strin
   );
 }
 
+interface OutputField {
+  key: string;
+  label: string;
+  type: "text" | "array";
+}
+
 interface CopyComponent {
   id: string;
   name: string;
@@ -81,6 +87,7 @@ interface CopyComponent {
   ui_interface_slug: string;
   icon: string;
   config: any;
+  output_structure: OutputField[];
   is_active: boolean;
   sort_order: number;
 }
@@ -126,6 +133,7 @@ const AdminCopyComponents = () => {
         ui_interface_slug: editing.ui_interface_slug || "generic_ui",
         icon: editing.icon || "Gem",
         config: editing.config || {},
+        output_structure: (editing.output_structure || []) as any,
         is_active: editing.is_active ?? true,
         sort_order: editing.sort_order ?? 0,
       };
@@ -159,7 +167,7 @@ const AdminCopyComponents = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-display font-bold">Copy Components</h2>
-        <Button onClick={() => setEditing({ name: "", slug: "", icon: "Gem", ui_interface_slug: "generic_ui", is_active: true, sort_order: components.length })} size="sm">
+        <Button onClick={() => setEditing({ name: "", slug: "", icon: "Gem", ui_interface_slug: "generic_ui", output_structure: [], is_active: true, sort_order: components.length })} size="sm">
           <Plus className="w-4 h-4 mr-1" /> New Component
         </Button>
       </div>
@@ -175,6 +183,7 @@ const AdminCopyComponents = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{comp.name}</span>
                   <Badge variant="secondary" className="text-xs font-mono">{comp.ui_interface_slug}</Badge>
+                  <Badge variant="outline" className="text-xs">{(comp.output_structure || []).length} output fields</Badge>
                   {!comp.is_active && <Badge variant="outline" className="text-xs">Inactive</Badge>}
                 </div>
                 <p className="text-xs text-muted-foreground">{comp.description.slice(0, 80)}</p>
@@ -245,6 +254,82 @@ const AdminCopyComponents = () => {
                   onChange={e => setEditing({ ...editing, instructions: e.target.value })}
                   className="min-h-[120px] text-sm"
                 />
+              </div>
+
+              {/* Output Structure — per-component, overrides the linked AI Action's structure */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">Output Structure</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => {
+                      const current = (editing.output_structure as OutputField[]) || [];
+                      setEditing({ ...editing, output_structure: [...current, { key: "", label: "", type: "text" }] });
+                    }}
+                  >
+                    <Plus className="w-3 h-3 mr-1" /> Add Field
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Defines the structured output fields for this component. Overrides the AI Action's own output structure (the AI Action stays generic and reusable across components).
+                </p>
+                {((editing.output_structure as OutputField[]) || []).map((field, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-2 border border-border rounded-md bg-muted/30">
+                    <Input
+                      value={field.key}
+                      onChange={e => {
+                        const current = [...((editing.output_structure as OutputField[]) || [])];
+                        current[idx] = { ...current[idx], key: e.target.value };
+                        setEditing({ ...editing, output_structure: current });
+                      }}
+                      placeholder="key"
+                      className="text-xs h-8 font-mono flex-1"
+                    />
+                    <Input
+                      value={field.label}
+                      onChange={e => {
+                        const current = [...((editing.output_structure as OutputField[]) || [])];
+                        current[idx] = { ...current[idx], label: e.target.value };
+                        setEditing({ ...editing, output_structure: current });
+                      }}
+                      placeholder="Label"
+                      className="text-xs h-8 flex-1"
+                    />
+                    <Select
+                      value={field.type}
+                      onValueChange={v => {
+                        const current = [...((editing.output_structure as OutputField[]) || [])];
+                        current[idx] = { ...current[idx], type: v as any };
+                        setEditing({ ...editing, output_structure: current });
+                      }}
+                    >
+                      <SelectTrigger className="text-xs h-8 w-24"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Text</SelectItem>
+                        <SelectItem value="array">Array</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => {
+                        const current = [...((editing.output_structure as OutputField[]) || [])];
+                        current.splice(idx, 1);
+                        setEditing({ ...editing, output_structure: current });
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                {((editing.output_structure as OutputField[]) || []).length === 0 && (
+                  <div className="text-[11px] text-muted-foreground italic px-1">
+                    No output fields defined — the AI Action's own output structure will be used as fallback.
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

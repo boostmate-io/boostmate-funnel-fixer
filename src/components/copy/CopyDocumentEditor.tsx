@@ -40,6 +40,7 @@ interface CopyComponentDef {
   instructions: string;
   ui_interface_slug: string;
   icon: string;
+  output_structure: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
 }
 
 interface CopyFramework {
@@ -85,7 +86,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
 
     const [{ data: dc }, { data: cd }, { data: fw }, { data: of }, { data: doc }] = await Promise.all([
       supabase.from("copy_document_components").select("*").eq("document_id", documentId).order("sort_order"),
-      supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug, icon").eq("is_active", true).order("sort_order"),
+      supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug, icon, output_structure").eq("is_active", true).order("sort_order"),
       supabase.from("copy_frameworks").select("id, name, component_slugs, type").eq("is_active", true).eq("type", documentType),
       offersQuery,
       supabase.from("copy_documents").select("context_type, context_offer_id, context_custom_text, global_instructions, name").eq("id", documentId).single(),
@@ -209,6 +210,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
           slug: def.ai_action_slug,
           inputs: { ...dc.inputs, context },
           extraInstructions: [globalInstructions, def.instructions].filter(Boolean).join("\n\n"),
+          outputStructure: def.output_structure,
         });
         await updateComponentData(dc.id, dc.inputs as Record<string, any>, result.output, true);
       } catch (e: any) {
@@ -345,6 +347,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     context={getContext()}
                     inputs={activeComp.inputs as Record<string, any>}
                     outputs={activeComp.outputs as Record<string, any>}
+                    outputStructure={activeDef.output_structure}
                     onInputsChange={inputs => updateComponentData(activeComp.id, inputs, activeComp.outputs as Record<string, any>, activeComp.is_generated)}
                     onOutputsChange={outputs => updateComponentData(activeComp.id, activeComp.inputs as Record<string, any>, outputs, true)}
                     onGenerated={() => {}}

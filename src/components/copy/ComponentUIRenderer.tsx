@@ -9,6 +9,7 @@ interface ComponentUIRendererProps {
   context: string;
   inputs: Record<string, any>;
   outputs: Record<string, any>;
+  outputStructure?: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
   onInputsChange: (inputs: Record<string, any>) => void;
   onOutputsChange: (outputs: Record<string, any>) => void;
   onGenerated: () => void;
@@ -23,11 +24,6 @@ const ComponentUIRenderer = ({
   uiInterfaceSlug,
   ...props
 }: ComponentUIRendererProps) => {
-  // When we add dedicated UIs, add cases here:
-  // case "big_promise_ui": return <BigPromiseUI {...props} />;
-  // case "credibility_ui": return <CredibilityUI {...props} />;
-  // case "faq_ui": return <FaqUI {...props} />;
-
   switch (uiInterfaceSlug) {
     case "big_promise_hero_ui":
     case "hero_section_ui":
