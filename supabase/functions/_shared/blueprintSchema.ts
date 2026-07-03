@@ -38,8 +38,8 @@ export interface BlueprintFieldDef {
   aliases: string[];
   /**
    * Whether the AI coach is allowed to write to this field.
-   * Set to false for structured builders (framework, core_promise, cards, …)
-   * that the coach cannot currently populate correctly.
+   * Set to false for fields that should never be written by batch AI proposals.
+   * Structured builders can expose safe sub-fields here when apply logic supports them.
    */
   aiWritable: boolean;
 }
@@ -233,6 +233,83 @@ export const BLUEPRINT_FIELDS: BlueprintFieldDef[] = [
     ["easier process", "eenvoudiger proces", "makkelijker proces"],
     { helper: "How the process is made EASIER" },
   ),
+  field(
+    "offer_stack.angle.framework.name",
+    "Framework / Method Name",
+    "text",
+    ["framework method name", "method name", "framework naam", "methode naam"],
+    { helper: "Memorable name for the signature method, 2-5 words" },
+  ),
+  field(
+    "offer_stack.angle.framework.description",
+    "Framework — Brief Description",
+    "text",
+    ["framework description", "brief description", "framework beschrijving", "methode beschrijving"],
+    { helper: "One line describing what makes the framework unique and why it works" },
+  ),
+  field(
+    "offer_stack.angle.framework.pillars.0.name",
+    "Pillar 1 — Name",
+    "text",
+    ["pillar 1 name", "first pillar", "eerste pijler"],
+    { helper: "Short name for pillar 1 of the signature framework" },
+  ),
+  field(
+    "offer_stack.angle.framework.pillars.0.description",
+    "Pillar 1 — Description",
+    "textarea",
+    ["pillar 1 description", "first pillar description", "eerste pijler beschrijving"],
+    { helper: "What happens in pillar 1, 1-2 sentences" },
+  ),
+  field(
+    "offer_stack.angle.framework.pillars.1.name",
+    "Pillar 2 — Name",
+    "text",
+    ["pillar 2 name", "second pillar", "tweede pijler"],
+    { helper: "Short name for pillar 2 of the signature framework" },
+  ),
+  field(
+    "offer_stack.angle.framework.pillars.1.description",
+    "Pillar 2 — Description",
+    "textarea",
+    ["pillar 2 description", "second pillar description", "tweede pijler beschrijving"],
+    { helper: "What happens in pillar 2, 1-2 sentences" },
+  ),
+  field(
+    "offer_stack.angle.framework.pillars.2.name",
+    "Pillar 3 — Name",
+    "text",
+    ["pillar 3 name", "third pillar", "derde pijler"],
+    { helper: "Short name for pillar 3 of the signature framework" },
+  ),
+  field(
+    "offer_stack.angle.framework.pillars.2.description",
+    "Pillar 3 — Description",
+    "textarea",
+    ["pillar 3 description", "third pillar description", "derde pijler beschrijving"],
+    { helper: "What happens in pillar 3, 1-2 sentences" },
+  ),
+  field(
+    "offer_stack.angle.core_promise.desired_outcome",
+    "Desired Outcome (Core Promise)",
+    "text",
+    ["desired outcome", "promise outcome", "gewenste uitkomst"],
+    { helper: "Specific transformation the client walks away with" },
+  ),
+  field(
+    "offer_stack.angle.core_promise.timeframe",
+    "Timeframe (Core Promise)",
+    "text",
+    ["promise timeframe", "timeframe", "termijn", "tijdspanne"],
+    { helper: "Use one of: 7_days, 30_days, 60_days, 90_days, 6_months, 12_months, custom" },
+  ),
+  field(
+    "offer_stack.angle.core_promise.guarantee",
+    "Guarantee / Risk Reversal",
+    "text",
+    ["guarantee", "risk reversal", "garantie", "risico omkering"],
+    { helper: "Optional risk reversal promise, one sentence" },
+  ),
 ];
 
 // =============================================================================
@@ -329,6 +406,59 @@ export const BLUEPRINT_SUB_BLOCKS: BlueprintSubBlockDef[] = [
       "offer_stack.angle.angle_better_results",
       "offer_stack.angle.angle_faster_outcome",
       "offer_stack.angle.angle_easier_process",
+      "offer_stack.angle.framework.name",
+      "offer_stack.angle.framework.description",
+      "offer_stack.angle.framework.pillars.0.name",
+      "offer_stack.angle.framework.pillars.0.description",
+      "offer_stack.angle.framework.pillars.1.name",
+      "offer_stack.angle.framework.pillars.1.description",
+      "offer_stack.angle.framework.pillars.2.name",
+      "offer_stack.angle.framework.pillars.2.description",
+      "offer_stack.angle.core_promise.desired_outcome",
+      "offer_stack.angle.core_promise.timeframe",
+      "offer_stack.angle.core_promise.guarantee",
+    ],
+  },
+  {
+    id: "signature_framework",
+    tabId: "offer_design",
+    label: "Signature Mechanism / Framework",
+    aliases: [
+      "signature mechanism",
+      "signature framework",
+      "mechanism framework",
+      "framework",
+      "method framework",
+      "methode",
+      "pijlers",
+    ],
+    fieldPaths: [
+      "offer_stack.angle.framework.name",
+      "offer_stack.angle.framework.description",
+      "offer_stack.angle.framework.pillars.0.name",
+      "offer_stack.angle.framework.pillars.0.description",
+      "offer_stack.angle.framework.pillars.1.name",
+      "offer_stack.angle.framework.pillars.1.description",
+      "offer_stack.angle.framework.pillars.2.name",
+      "offer_stack.angle.framework.pillars.2.description",
+    ],
+  },
+  {
+    id: "core_transformation_promise",
+    tabId: "offer_design",
+    label: "Core Transformation Promise",
+    aliases: [
+      "core transformation promise",
+      "transformation promise",
+      "core promise",
+      "promise builder",
+      "belofte",
+      "transformatiebelofte",
+    ],
+    fieldPaths: [
+      "offer_stack.angle.core_promise.desired_outcome",
+      "offer_stack.angle.core_promise.timeframe",
+      "offer_stack.angle.core_promise.guarantee",
     ],
   },
 ];
@@ -373,10 +503,11 @@ export function renderBlueprintFieldPathsPrompt(): string {
   });
 
   const footer = `
-NOTE: Only the paths listed above can be written by the Coach. Structured
-sub-fields (framework, core_promise, stack cards, pricing plans, proof items,
-growth mappings, …) exist in the Blueprint but are NOT in this list — never
-invent path names, never propose writes for them.
+NOTE: Only the paths listed above can be written by the Coach. Some structured
+builders expose safe writable sub-fields in this list (for example framework
+pillars and core_promise). Other structured areas that are NOT listed (stack
+cards, pricing plans, proof items, growth mappings, …) must never be invented
+or written to.
 
 Rules:
 - Only write to paths the user's request actually implies. If the user asks for one field, write ONLY that path.
