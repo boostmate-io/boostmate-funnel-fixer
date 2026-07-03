@@ -297,6 +297,15 @@ const BLUEPRINT_SUB_BLOCK_ALIASES: Record<string, string[]> = {
   ],
   desire: ["desire goals", "desire and goals", "desire & goals", "desire", "goals", "verlangens", "doelen"],
   transformation: ["transformation", "transformatie", "point a", "point b"],
+  offer_angle: [
+    "offer angle",
+    "offer angle tab",
+    "angle tab",
+    "offer design angle",
+    "offer design",
+    "aanbod angle",
+    "offer positioning",
+  ],
 };
 
 async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
