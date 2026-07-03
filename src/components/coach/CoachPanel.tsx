@@ -181,7 +181,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply }: Props) => {
             <Button
               size="icon"
               onClick={() => handleSend()}
-              disabled={!input.trim() || status === "sending" || status === "loading"}
+              disabled={!input.trim() || status === "sending"}
             >
               {status === "sending" ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
