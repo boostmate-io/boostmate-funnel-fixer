@@ -250,13 +250,80 @@ const AdminCopyComponents = () => {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs">Component Instructions</Label>
-                <p className="text-xs text-muted-foreground">Additional prompt guidance on top of the AI Action</p>
+                <Label className="text-xs">AI Generation Rules</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  These instructions are injected into the AI prompt as <code className="font-mono">{"{{component_instructions}}"}</code> when generating this component.
+                </p>
                 <Textarea
                   value={editing.instructions || ""}
                   onChange={e => setEditing({ ...editing, instructions: e.target.value })}
                   className="min-h-[120px] text-sm"
                 />
+              </div>
+
+              {/* Required Business Blueprint fields — used to (a) warn the user
+                  before generating and (b) scope the AI context to only what
+                  matters for this component. */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Required Business Blueprint Fields</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Select the blueprint sections this component needs. Missing data triggers a non-blocking warning, and only these sections are injected as context when generating.
+                </p>
+                <div className="flex flex-wrap gap-1.5 p-2 border border-border rounded-md bg-muted/30 min-h-[40px]">
+                  {(editing.required_blueprint_fields || []).map((slug) => (
+                    <Badge key={slug} variant="secondary" className="text-xs gap-1 pr-1">
+                      {getBlueprintFieldLabel(slug)}
+                      <button
+                        className="hover:bg-background/50 rounded-sm p-0.5"
+                        onClick={() =>
+                          setEditing({
+                            ...editing,
+                            required_blueprint_fields: (editing.required_blueprint_fields || []).filter((s) => s !== slug),
+                          })
+                        }
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  {(editing.required_blueprint_fields || []).length === 0 && (
+                    <span className="text-[11px] text-muted-foreground italic px-1 self-center">
+                      No fields required — falls back to the document's context source only.
+                    </span>
+                  )}
+                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-xs h-7">
+                      <Plus className="w-3 h-3 mr-1" /> Add Blueprint Field
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-1" align="start">
+                    <div className="max-h-64 overflow-y-auto">
+                      {BLUEPRINT_FIELDS.map((f) => {
+                        const selected = (editing.required_blueprint_fields || []).includes(f.slug);
+                        return (
+                          <button
+                            key={f.slug}
+                            onClick={() => {
+                              const cur = editing.required_blueprint_fields || [];
+                              setEditing({
+                                ...editing,
+                                required_blueprint_fields: selected
+                                  ? cur.filter((s) => s !== f.slug)
+                                  : [...cur, f.slug],
+                              });
+                            }}
+                            className={`w-full text-left text-xs px-2 py-1.5 rounded flex items-center justify-between hover:bg-muted ${selected ? "text-primary" : ""}`}
+                          >
+                            <span>{f.label}</span>
+                            {selected && <Check className="w-3 h-3" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Output Structure — per-component, overrides the linked AI Action's structure */}
