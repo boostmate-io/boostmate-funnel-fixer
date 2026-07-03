@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Trash2, Settings2, Eye, PenTool, Sparkles, Loader2,
-  ChevronUp, ChevronDown, LayoutList, icons, Gem,
+  ChevronUp, ChevronDown, LayoutList, icons, Gem, AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ComponentUIRenderer from "./ComponentUIRenderer";
 import { executeAIAction } from "@/lib/api/aiActions";
+import { buildScopedBlueprintContext, getMissingBlueprintFields } from "@/lib/blueprintFields";
 
 function LucideIcon({ name, className }: { name: string; className?: string }) {
   const IconComp = (icons as any)[name];
@@ -41,6 +42,7 @@ interface CopyComponentDef {
   ui_interface_slug: string;
   icon: string;
   output_structure: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
+  required_blueprint_fields: string[];
 }
 
 interface CopyFramework {
@@ -78,18 +80,24 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
   const [globalInstructions, setGlobalInstructions] = useState("");
   const [generatingAll, setGeneratingAll] = useState(false);
   const [editingName, setEditingName] = useState(false);
+  const [blueprint, setBlueprint] = useState<any>(null);
 
   const load = useCallback(async () => {
     const offersQuery = activeSubAccountId
       ? supabase.from("offers").select("id, name, data").eq("sub_account_id", activeSubAccountId)
       : supabase.from("offers").select("id, name, data");
 
-    const [{ data: dc }, { data: cd }, { data: fw }, { data: of }, { data: doc }] = await Promise.all([
+    const blueprintQuery = activeSubAccountId
+      ? supabase.from("business_blueprints").select("*").eq("sub_account_id", activeSubAccountId).maybeSingle()
+      : Promise.resolve({ data: null });
+
+    const [{ data: dc }, { data: cd }, { data: fw }, { data: of }, { data: doc }, { data: bp }] = await Promise.all([
       supabase.from("copy_document_components").select("*").eq("document_id", documentId).order("sort_order"),
-      supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug, icon, output_structure").eq("is_active", true).order("sort_order"),
+      supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug, icon, output_structure, required_blueprint_fields").eq("is_active", true).order("sort_order"),
       supabase.from("copy_frameworks").select("id, name, component_slugs, type").eq("is_active", true).eq("type", documentType),
       offersQuery,
       supabase.from("copy_documents").select("context_type, context_offer_id, context_custom_text, global_instructions, name").eq("id", documentId).single(),
+      blueprintQuery,
     ]);
     if (dc) setDocComponents(dc as unknown as DocumentComponent[]);
     if (cd) setComponentDefs(cd as unknown as CopyComponentDef[]);
@@ -102,6 +110,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
       setGlobalInstructions((doc as any).global_instructions || "");
       setDocName((doc as any).name || documentName);
     }
+    setBlueprint(bp || null);
   }, [documentId, documentType, documentName, activeSubAccountId]);
 
   useEffect(() => { load(); }, [load]);
@@ -116,6 +125,25 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
     }
     return contextCustomText;
   }, [contextType, contextOfferId, contextCustomText, offers]);
+
+  /**
+   * Builds the full context for a specific component:
+   *  - the document-level context source (offer or custom text)
+   *  - PLUS, when the component declares `required_blueprint_fields`, only
+   *    those blueprint sections are appended (scoped context — no full-blueprint dump).
+   *  - Fallback: if the component has no required fields, the document context is used as-is.
+   */
+  const getContextForComponent = useCallback(
+    (def?: CopyComponentDef | null) => {
+      const base = getContext();
+      const required = def?.required_blueprint_fields || [];
+      if (required.length === 0) return base;
+      const scoped = buildScopedBlueprintContext(blueprint, required);
+      if (!scoped) return base;
+      return base ? `${base}\n\n${scoped}` : scoped;
+    },
+    [getContext, blueprint],
+  );
 
   const addComponent = async (slug: string) => {
     const sortOrder = docComponents.length;
@@ -201,11 +229,11 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
 
   const generateAll = async () => {
     setGeneratingAll(true);
-    const context = getContext();
     for (const dc of docComponents) {
       const def = componentDefs.find(d => d.slug === dc.component_slug);
       if (!def || !def.ai_action_slug) continue;
       try {
+        const context = getContextForComponent(def);
         const result = await executeAIAction({
           slug: def.ai_action_slug,
           inputs: { ...dc.inputs, context },
@@ -228,6 +256,15 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
 
   const activeComp = docComponents[activeComponentIdx];
   const activeDef = activeComp ? componentDefs.find(d => d.slug === activeComp.component_slug) : null;
+
+  const missingBlueprintFields = useMemo(
+    () => getMissingBlueprintFields(blueprint, activeDef?.required_blueprint_fields),
+    [blueprint, activeDef?.required_blueprint_fields],
+  );
+
+  const openBlueprintModule = () => {
+    window.dispatchEvent(new CustomEvent("boostmate:navigate-module", { detail: "business-blueprint" }));
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -339,12 +376,30 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                       )}
                     </div>
                   </div>
+                  {missingBlueprintFields.length > 0 && (
+                    <div className="mb-4 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 flex items-start gap-3">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-2">
+                        <p className="text-xs text-foreground">
+                          This component may not generate optimal copy because your Business Blueprint is missing:
+                        </p>
+                        <ul className="list-disc list-inside text-xs text-muted-foreground space-y-0.5">
+                          {missingBlueprintFields.map((f) => (
+                            <li key={f.slug}>{f.label}</li>
+                          ))}
+                        </ul>
+                        <Button variant="outline" size="sm" className="text-xs h-7" onClick={openBlueprintModule}>
+                          Complete Blueprint
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   <ComponentUIRenderer
                     uiInterfaceSlug={activeDef.ui_interface_slug}
                     componentSlug={activeDef.slug}
                     aiActionSlug={activeDef.ai_action_slug}
                     componentInstructions={[globalInstructions, activeDef.instructions].filter(Boolean).join("\n\n")}
-                    context={getContext()}
+                    context={getContextForComponent(activeDef)}
                     inputs={activeComp.inputs as Record<string, any>}
                     outputs={activeComp.outputs as Record<string, any>}
                     outputStructure={activeDef.output_structure}

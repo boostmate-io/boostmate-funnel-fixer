@@ -561,6 +561,7 @@ export type Database = {
           is_active: boolean
           name: string
           output_structure: Json
+          required_blueprint_fields: string[]
           slug: string
           sort_order: number
           ui_interface_slug: string
@@ -577,6 +578,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           output_structure?: Json
+          required_blueprint_fields?: string[]
           slug: string
           sort_order?: number
           ui_interface_slug?: string
@@ -593,6 +595,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           output_structure?: Json
+          required_blueprint_fields?: string[]
           slug?: string
           sort_order?: number
           ui_interface_slug?: string
