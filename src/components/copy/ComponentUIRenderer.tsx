@@ -10,6 +10,7 @@ import CoreOutcomesUI from "./interfaces/CoreOutcomesUI";
 import ProgramDeliverablesUI from "./interfaces/ProgramDeliverablesUI";
 import ProcessMechanismUI from "./interfaces/ProcessMechanismUI";
 import AdditionalResultsProofUI from "./interfaces/AdditionalResultsProofUI";
+import AuthorityContextInsightUI from "./interfaces/AuthorityContextInsightUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
@@ -58,6 +59,8 @@ const ComponentUIRenderer = ({
       return <ProcessMechanismUI {...props} />;
     case "additional_results_proof_ui":
       return <AdditionalResultsProofUI {...props} />;
+    case "authority_context_insight_ui":
+      return <AuthorityContextInsightUI {...props} />;
     default:
       return <GenericComponentUI {...props} />;
   }
