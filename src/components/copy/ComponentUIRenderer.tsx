@@ -6,6 +6,7 @@ import PainPointsUI from "./interfaces/PainPointsUI";
 import FounderStoryUI from "./interfaces/FounderStoryUI";
 import DesiredOutcomesUI from "./interfaces/DesiredOutcomesUI";
 import ResultsProofUI from "./interfaces/ResultsProofUI";
+import CoreOutcomesUI from "./interfaces/CoreOutcomesUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
@@ -46,6 +47,8 @@ const ComponentUIRenderer = ({
       return <DesiredOutcomesUI {...props} />;
     case "results_proof_ui":
       return <ResultsProofUI {...props} />;
+    case "core_outcomes_ui":
+      return <CoreOutcomesUI {...props} />;
     default:
       return <GenericComponentUI {...props} />;
   }
