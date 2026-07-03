@@ -143,7 +143,7 @@ const BLUEPRINT_FIELD_META: Record<string, BlueprintFieldMeta> = {
   "customer_clarity.pain_main_problem": {
     kind: "textarea",
     label: "Main problem",
-    aliases: ["pain_main_problem", "main problem", "one big problem", "pain", "probleem"],
+    aliases: ["pain_main_problem", "main problem", "one big problem", "hoofdprobleem", "probleem"],
   },
   "customer_clarity.pain_daily_frustrations": {
     kind: "textarea",
@@ -195,6 +195,52 @@ const BLUEPRINT_FIELD_META: Record<string, BlueprintFieldMeta> = {
 const BLUEPRINT_KEY_TO_PATH = new Map(
   Object.keys(BLUEPRINT_FIELD_META).map((path) => [path.split(".").at(-1)!, path]),
 );
+
+const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = {
+  avatar: [
+    "customer_clarity.avatar_who",
+    "customer_clarity.avatar_stage",
+    "customer_clarity.avatar_traits",
+    "customer_clarity.avatar_not_fit",
+  ],
+  pain: [
+    "customer_clarity.pain_main_problem",
+    "customer_clarity.pain_daily_frustrations",
+    "customer_clarity.pain_already_tried",
+    "customer_clarity.pain_consequences",
+  ],
+  desire: [
+    "customer_clarity.desire_main_result",
+    "customer_clarity.desire_success_vision",
+    "customer_clarity.desire_why_badly",
+  ],
+  transformation: [
+    "customer_clarity.transformation_point_a",
+    "customer_clarity.transformation_point_b",
+    "customer_clarity.transformation_process",
+  ],
+};
+
+const BLUEPRINT_SUB_BLOCK_ALIASES: Record<string, string[]> = {
+  avatar: [
+    "ideal client avatar",
+    "ideal customer avatar",
+    "avatar",
+    "icp",
+    "ideale klant",
+    "ideale client",
+  ],
+  pain: [
+    "pain friction",
+    "pain and friction",
+    "pain en friction",
+    "pain & friction",
+    "friction",
+    "pijnpunten",
+  ],
+  desire: ["desire goals", "desire and goals", "desire & goals", "desire", "goals", "verlangens", "doelen"],
+  transformation: ["transformation", "transformatie", "point a", "point b"],
+};
 
 async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
   if (promptCache && Date.now() - promptCache.at < PROMPT_TTL_MS) return promptCache.prompts;
