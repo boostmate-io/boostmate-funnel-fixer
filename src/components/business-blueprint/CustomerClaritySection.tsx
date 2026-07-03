@@ -9,7 +9,6 @@ import {
   type CustomerClarityData,
 } from "./types";
 import { getClarityConfig, getFeedbackMessage, type FieldDef } from "./clarityConfig";
-import { getBusinessType } from "./businessTypes";
 import CoachPanel from "@/components/coach/CoachPanel";
 import FieldCard from "./FieldCard";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -28,7 +27,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
   const [coachField, setCoachField] = useState<FieldDef | null>(null);
   const { activeSubAccountId } = useWorkspace();
 
-  const bt = getBusinessType(businessType);
+
   const clarityConfig = useMemo(() => getClarityConfig(businessType), [businessType]);
   const config = clarityConfig.find((c) => c.id === active)!;
   const Icon = config.icon;
