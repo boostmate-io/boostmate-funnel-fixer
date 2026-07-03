@@ -7,6 +7,7 @@ import FounderStoryUI from "./interfaces/FounderStoryUI";
 import DesiredOutcomesUI from "./interfaces/DesiredOutcomesUI";
 import ResultsProofUI from "./interfaces/ResultsProofUI";
 import CoreOutcomesUI from "./interfaces/CoreOutcomesUI";
+import ProgramDeliverablesUI from "./interfaces/ProgramDeliverablesUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
@@ -49,6 +50,8 @@ const ComponentUIRenderer = ({
       return <ResultsProofUI {...props} />;
     case "core_outcomes_ui":
       return <CoreOutcomesUI {...props} />;
+    case "program_deliverables_ui":
+      return <ProgramDeliverablesUI {...props} />;
     default:
       return <GenericComponentUI {...props} />;
   }
