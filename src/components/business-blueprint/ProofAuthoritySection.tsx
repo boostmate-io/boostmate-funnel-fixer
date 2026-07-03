@@ -717,7 +717,18 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
               </div>
               <p className="text-sm text-muted-foreground">{tab.description}</p>
             </div>
-            {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
+            <div className="flex items-center gap-2">
+              {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCoachOpen(true)}
+                className="gap-1.5 h-8"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Coach
+              </Button>
+            </div>
           </div>
 
           {/* Insight box */}
