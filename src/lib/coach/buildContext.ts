@@ -87,6 +87,7 @@ export function buildGlobalContext(
       subAccountId,
       blueprintSnapshot: blueprint,
       routeHint,
+      locale: currentLocale(),
     },
   };
 }
