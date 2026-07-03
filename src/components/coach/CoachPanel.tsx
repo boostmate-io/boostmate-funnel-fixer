@@ -176,7 +176,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply }: Props) => {
               placeholder="Type your message… (Enter to send)"
               rows={2}
               className="resize-none text-sm"
-              disabled={status === "sending" || status === "loading"}
+              disabled={status === "sending"}
             />
             <Button
               size="icon"
