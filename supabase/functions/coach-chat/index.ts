@@ -204,6 +204,46 @@ const BLUEPRINT_KEY_TO_PATH = new Map(
   Object.keys(BLUEPRINT_FIELD_META).map((path) => [path.split(".").at(-1)!, path]),
 );
 
+const OFFER_ANGLE_FIELD_META: Record<string, BlueprintFieldMeta> = {
+  "offer_stack.angle.main_offer_name": {
+    kind: "textarea",
+    label: "Main Offer Name",
+    aliases: ["main_offer_name", "main offer name", "offer name", "flagship name", "naam aanbod"],
+  },
+  "offer_stack.angle.short_description": {
+    kind: "textarea",
+    label: "Short Offer Description",
+    aliases: ["short_description", "short offer description", "offer description", "korte beschrijving"],
+  },
+  "offer_stack.angle.core_outcome": {
+    kind: "textarea",
+    label: "Core Outcome",
+    aliases: ["core_outcome", "core outcome", "primary outcome", "main outcome", "hoofdresultaat"],
+  },
+  "offer_stack.angle.angle_new_vehicle": {
+    kind: "textarea",
+    label: "New Vehicle",
+    aliases: ["angle_new_vehicle", "new vehicle", "new method", "nieuw voertuig", "nieuwe methode"],
+  },
+  "offer_stack.angle.angle_better_results": {
+    kind: "textarea",
+    label: "Better Results",
+    aliases: ["angle_better_results", "better results", "betere resultaten"],
+  },
+  "offer_stack.angle.angle_faster_outcome": {
+    kind: "textarea",
+    label: "Faster Outcome",
+    aliases: ["angle_faster_outcome", "faster outcome", "faster results", "sneller resultaat"],
+  },
+  "offer_stack.angle.angle_easier_process": {
+    kind: "textarea",
+    label: "Easier Process",
+    aliases: ["angle_easier_process", "easier process", "eenvoudiger proces", "makkelijker proces"],
+  },
+};
+
+Object.assign(BLUEPRINT_FIELD_META, OFFER_ANGLE_FIELD_META);
+
 const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = {
   avatar: [
     "customer_clarity.avatar_who",
