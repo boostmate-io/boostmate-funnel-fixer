@@ -65,6 +65,7 @@ export function buildBlueprintSectionContext(
     businessContext: {
       subAccountId,
       blueprintSnapshot: blueprint,
+      locale: currentLocale(),
     },
   };
 }
