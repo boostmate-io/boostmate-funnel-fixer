@@ -487,6 +487,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                 })}
               </div>
             )}
+            </div>
           </div>
         )}
 
