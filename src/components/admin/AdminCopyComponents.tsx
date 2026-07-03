@@ -170,7 +170,7 @@ const AdminCopyComponents = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-display font-bold">Copy Components</h2>
-        <Button onClick={() => setEditing({ name: "", slug: "", icon: "Gem", ui_interface_slug: "generic_ui", output_structure: [], is_active: true, sort_order: components.length })} size="sm">
+        <Button onClick={() => setEditing({ name: "", slug: "", icon: "Gem", ui_interface_slug: "generic_ui", output_structure: [], required_blueprint_fields: [], is_active: true, sort_order: components.length })} size="sm">
           <Plus className="w-4 h-4 mr-1" /> New Component
         </Button>
       </div>
