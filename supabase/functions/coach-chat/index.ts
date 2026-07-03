@@ -680,7 +680,7 @@ Deno.serve(async (req) => {
     ];
 
     const tools = toolsForScope(context?.scope);
-    const shouldForceBlueprintWrites = isBlueprintWriteIntent(context?.scope, messages);
+    const shouldForceBlueprintWrites = isBlueprintWriteIntent(context?.scope, messages, context);
 
     // Call Lovable AI Gateway (OpenAI-compatible)
     const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
