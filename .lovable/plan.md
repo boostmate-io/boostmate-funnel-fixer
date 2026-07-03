@@ -1,96 +1,57 @@
-## Wat je nu ziet klopt
+## Doel
+In de "Blueprint updates (N)" kaart van de AI Coach: per veld kunnen **accepteren** en **weigeren**, naast de bestaande "Apply all".
 
-Ja, je hebt gelijk. Op dit moment staat de definitie van elk blueprint-veld **op meerdere plekken** die niets van elkaar weten:
+## UX
 
-| Locatie | Wat er in staat | Gebruikt door |
-|---|---|---|
-| `src/components/business-blueprint/clarityConfig.ts` | Customer Clarity velden (key, label, type, helper, placeholder, chips-opties) | UI-formulieren |
-| `src/components/business-blueprint/offerDesignTypes.ts` | Offer Angle/Stack/Pricing types + defaults + progress-berekening | UI-formulieren |
-| `src/components/business-blueprint/proofAuthorityTypes.ts` | Proof & Authority types | UI-formulieren |
-| `src/components/business-blueprint/growthSystemTypes.ts` | Growth System types | UI-formulieren |
-| `src/lib/blueprintFields.ts` | Grove groepering (avatar/pain/desire/…) voor Copy Components context | Copy generator |
-| `supabase/functions/coach-chat/index.ts` — `BLUEPRINT_FIELD_META`, `BLUEPRINT_FIELD_PATHS`, `BLUEPRINT_SUB_BLOCK_PATHS`, `BLUEPRINT_SUB_BLOCK_ALIASES` | Path, kind, label, aliases, sub-block mapping | AI Coach edge function |
+Elk voorstel-item krijgt twee kleine knoppen rechtsboven:
+- ✓ Apply (past enkel dit veld toe)
+- ✕ Dismiss (verwijdert dit voorstel uit de kaart)
 
-De edge function draait op Deno en kan niet zomaar uit `src/…` importeren, dus is de veld-info dáár gewoon overgetypt. Elk nieuw veld of hernoemd veld = **twee plekken bijwerken** (UI-config + coach edge function). Voor Offer Angle merkte je dat net: de coach kende die velden simpelweg niet omdat ze nog niet in `coach-chat/index.ts` stonden.
+Onderaan blijven de globale acties, maar slimmer:
+- **Apply all remaining** — past alle nog niet behandelde voorstellen toe
+- **Dismiss all** — sluit de hele kaart weg
 
-## Voorstel: één gedeeld blueprint-schema
+Per-item statussen visueel:
+- *pending* — normale weergave met ✓/✕
+- *applied* — grijs/doorstreept met "Applied" badge, knoppen weg
+- *dismissed* — item verdwijnt uit de lijst (of collapsed met "Dismissed")
 
-Extraheer alle veld-metadata naar één puur data-bestand dat zowel Vite (frontend) als Deno (edge function) kan lezen. Icons, chips-opties met React-componenten en business-type personalisatie blijven in de frontend; het gedeelde bestand bevat alleen data.
+Als alle items applied/dismissed zijn → onderste knoppen disablen en toon "All handled".
 
-### Nieuwe structuur
+### Praktisch nut van decline?
+Ja, wel degelijk nuttig:
+- Coach stelt soms 4 goede + 1 zwak voorstel voor → gebruiker wil de 4 accepteren zonder de zwakke te moeten overschrijven.
+- "Dismiss" voorkomt dat de kaart blijft aandringen en houdt de chat opgeruimd.
+- Individueel weigeren is duidelijker dan "gewoon niks doen" (er blijft anders visuele ruis staan).
 
-```text
-supabase/functions/_shared/
-  blueprintSchema.ts        ← nieuwe single source of truth (pure data, geen imports)
+## Technische aanpak (frontend-only)
 
-src/components/business-blueprint/
-  clarityConfig.ts          ← importeert velddefs uit blueprintSchema, voegt icons/copy toe
-  offerDesignTypes.ts       ← types blijven, defaults/progress halen paden uit schema
-  …
+Alle wijzigingen zitten in `src/components/coach/CoachPanel.tsx` in de `BlueprintWritesCard` component. Geen edge function of schema-wijzigingen nodig.
 
-supabase/functions/coach-chat/index.ts
-  ← BLUEPRINT_FIELD_META, PATHS-string, SUB_BLOCK_PATHS, ALIASES worden GEGENEREERD
-    uit blueprintSchema in plaats van hand-gedefinieerd
-```
+1. **Lokale state per item** in `BlueprintWritesCard`:
+   ```ts
+   type ItemState = "pending" | "applying" | "applied" | "dismissed";
+   const [states, setStates] = useState<ItemState[]>(() => writes.map(() => "pending"));
+   ```
 
-Vite-alias `@shared → supabase/functions/_shared` zodat de frontend het bestand kan importeren zonder relatieve `../../../` paden.
+2. **Per-item apply**: roept `onApplyAll` aan met een array van 1 write (bestaande `applyBlueprintWrites` in `src/lib/coach/applyBlueprintWrites.ts` accepteert al elk aantal). Zet state naar `applying` → `applied`.
 
-### Vorm van het gedeelde schema
+3. **Per-item dismiss**: zet state naar `dismissed`, puur client-side.
 
-```ts
-// supabase/functions/_shared/blueprintSchema.ts
-export type FieldKind = "text" | "textarea" | "tags" | "chips" | "number" | "structured";
+4. **Apply all remaining**: filtert writes waarvan state `pending` is en stuurt die als batch.
 
-export interface BlueprintFieldDef {
-  path: string;              // "customer_clarity.avatar_who"
-  label: string;             // "Who is your ideal client"
-  helper?: string;
-  placeholder?: string;
-  kind: FieldKind;
-  aliases: string[];         // voor coach intent-matching
-  aiWritable: boolean;       // false voor structured builders (framework, core_promise, …)
-}
+5. **Rendering**:
+   - Applied items: `opacity-60`, doorstreepte value, kleine "Applied" badge, geen knoppen.
+   - Dismissed items: niet renderen (of optioneel een compacte "Dismissed — undo" regel; ik houd het simpel en verberg ze).
+   - Pending items: huidige weergave + twee icon-buttons (Check / X) rechtsboven het item.
 
-export interface BlueprintSubBlockDef {
-  id: string;                // "avatar", "pain", "offer_angle", …
-  tabId: string;             // "customer_clarity", "offer_design", …
-  label: string;             // "Ideal Client Avatar"
-  aliases: string[];         // "avatar", "icp", "ideale klant", …
-  fieldPaths: string[];      // paden binnen dit sub-block
-}
+6. **Footer knop-tekst** past zich aan:
+   - Als er nog pending items zijn: "Apply all remaining (K)"
+   - Als alles behandeld is: knop weg, kleine tekst "All handled".
 
-export const BLUEPRINT_FIELDS: BlueprintFieldDef[] = [ … ];
-export const BLUEPRINT_SUB_BLOCKS: BlueprintSubBlockDef[] = [ … ];
-```
+## Bestand dat wijzigt
+- `src/components/coach/CoachPanel.tsx` — enkel de `BlueprintWritesCard` sectie.
 
-### Gevolgen per consument
-
-- **`clarityConfig.ts`** haalt path/kind/label/aliases uit het schema en laagt UI-only zaken erover (icons, per-business-type placeholders via `getFieldCopy`).
-- **`offerDesignTypes.ts`** houdt zijn TS-types en helpers; alleen de field-lijst voor de coach/writer komt uit het schema (bron voor "welke velden bestaan in de angle-tab").
-- **`blueprintFields.ts`** (copy generator) mag blijven als coarse groepering, maar kan de veld-slugs valideren tegen het schema zodat een typefout onmiddellijk crasht.
-- **`coach-chat/index.ts`** stopt met hand-onderhouden `BLUEPRINT_FIELD_META` etc. — die worden afgeleid:
-  - `BLUEPRINT_FIELD_META` = map van `path → {kind, label, aliases}` uit het schema
-  - `BLUEPRINT_FIELD_PATHS` (de prompt-tekst voor het model) = automatisch samengesteld: per veld één regel `path — kind — label (helper)`
-  - `BLUEPRINT_SUB_BLOCK_PATHS` + `_ALIASES` = uit `BLUEPRINT_SUB_BLOCKS`
-  - `sanitizeBlueprintWrites` weigert automatisch schrijfacties naar `aiWritable: false` paden (framework, core_promise, …).
-
-### Migratiestappen (in volgorde)
-
-1. Bouw `supabase/functions/_shared/blueprintSchema.ts` en vul het met **alle bestaande velden** die vandaag in `clarityConfig.ts`, `offerDesignTypes.ts`, `proofAuthorityTypes.ts`, `growthSystemTypes.ts` en de coach-function staan. Meteen dekkend, niet stukje bij beetje.
-2. Vite-alias toevoegen (`vite.config.ts`) zodat `@shared/blueprintSchema` werkt.
-3. `coach-chat/index.ts` refactoren: verwijder `BLUEPRINT_FIELD_META`, `BLUEPRINT_FIELD_PATHS`, `BLUEPRINT_SUB_BLOCK_PATHS`, `BLUEPRINT_SUB_BLOCK_ALIASES` en genereer ze uit het schema.
-4. `clarityConfig.ts` refactoren zodat het per veld het schema-record ophaalt in plaats van label/type hard te coderen.
-5. Runtime-test: coach vragen om Avatar, Pain & Friction, Desire & Goals, Offer Angle-velden in te vullen; controleer dat alle voorgestelde paden echt bestaan en dat structured velden geweigerd worden.
-6. Optioneel: unit-test die valideert dat elk `BLUEPRINT_FIELDS[i].path` in de TypeScript-types voorkomt (voorkomt dat schema en types uit elkaar lopen).
-
-### Wat je hierna wint
-
-- **Één plek** om een veld toe te voegen, hernoemen of verwijderen. UI én AI coach volgen automatisch.
-- Nieuwe tabs (Proof & Authority, Growth System, …) werken meteen in de coach zodra hun velden in het schema staan — geen tweede rondje meer door de edge function.
-- Aliases (NL/EN synoniemen) worden op één plek beheerd, in dezelfde regel als het veld zelf.
-- `aiWritable: false` voorkomt dat de coach ooit nog gaat "verzinnen" voor structured builders.
-
-### Buiten scope van deze plan-stap
-
-- Runtime-schema in de database (optie C). Kan later als admins zelf velden willen toevoegen zonder deploy — vandaag onnodige complexiteit.
-- Auto-generatie van TypeScript types uit het schema. Handmatig gesynchroniseerd is prima zolang je één file per verandering aanraakt.
+## Buiten scope
+- Geen wijziging aan `applyBlueprintWrites`, `coach-chat` edge function, of het schema.
+- Geen persistentie van dismiss-status over sessies (kaart is per bericht in de chat; refresh laadt de chat opnieuw op — dan staan voorstellen weer als pending, wat OK is).
