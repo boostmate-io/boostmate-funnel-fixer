@@ -15,6 +15,7 @@ interface GenericComponentUIProps {
   context: string;
   inputs: Record<string, any>;
   outputs: Record<string, any>;
+  outputStructure?: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
   onInputsChange: (inputs: Record<string, any>) => void;
   onOutputsChange: (outputs: Record<string, any>) => void;
   onGenerated: () => void;
@@ -31,6 +32,7 @@ const GenericComponentUI = ({
   context,
   inputs,
   outputs,
+  outputStructure,
   onInputsChange,
   onOutputsChange,
   onGenerated,
@@ -52,6 +54,7 @@ const GenericComponentUI = ({
           context,
         },
         extraInstructions: componentInstructions || undefined,
+        outputStructure,
       });
       onOutputsChange(result.output);
       onGenerated();
