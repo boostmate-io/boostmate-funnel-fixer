@@ -167,16 +167,14 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
               message={m}
               onQuickReply={(r) => handleSend(r)}
               onApply={handleApply}
-              onRefine={(v) =>
-                handleSend(`Scherp deze versie verder aan, houd de kern maar maak hem sterker:\n\n${v}`)
-              }
+              onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
               onApplyBlueprintWrites={onApplyBlueprintWrites}
             />
           ))}
           {status === "sending" && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground pl-1">
               <Loader2 className="w-3 h-3 animate-spin" />
-              Denken…
+              {t.thinking}
             </div>
           )}
           {error && (
