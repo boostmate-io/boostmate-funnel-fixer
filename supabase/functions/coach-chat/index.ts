@@ -313,8 +313,7 @@ function allowedBlueprintWritePaths(context: any, messages: any[]): Set<string> 
   const snapshot = context?.businessContext?.blueprintSnapshot;
   const paths = BLUEPRINT_SUB_BLOCK_PATHS[requestedBlock] ?? [];
   const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
-  if (latestUserAsksForEmptyOnly(messages)) return new Set(emptyPaths);
-  return new Set(emptyPaths.length > 0 ? emptyPaths : paths);
+  return new Set(emptyPaths);
 }
 
 function cleanTagCandidate(value: string): string {
