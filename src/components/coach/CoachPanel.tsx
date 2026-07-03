@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Send, Sparkles, Loader2, RefreshCw, Check, X } from "lucide-react";
+import { Send, Sparkles, Loader2, RefreshCw, Check } from "lucide-react";
 import { useCoachChat } from "@/lib/coach/useCoachChat";
 import type { CoachContext, CoachMessage, CoachMessagePart } from "@/lib/coach/types";
 import { cn } from "@/lib/utils";
