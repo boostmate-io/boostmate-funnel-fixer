@@ -229,11 +229,11 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
 
   const generateAll = async () => {
     setGeneratingAll(true);
-    const context = getContext();
     for (const dc of docComponents) {
       const def = componentDefs.find(d => d.slug === dc.component_slug);
       if (!def || !def.ai_action_slug) continue;
       try {
+        const context = getContextForComponent(def);
         const result = await executeAIAction({
           slug: def.ai_action_slug,
           inputs: { ...dc.inputs, context },
@@ -256,6 +256,15 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
 
   const activeComp = docComponents[activeComponentIdx];
   const activeDef = activeComp ? componentDefs.find(d => d.slug === activeComp.component_slug) : null;
+
+  const missingBlueprintFields = useMemo(
+    () => getMissingBlueprintFields(blueprint, activeDef?.required_blueprint_fields),
+    [blueprint, activeDef?.required_blueprint_fields],
+  );
+
+  const openBlueprintModule = () => {
+    window.dispatchEvent(new CustomEvent("boostmate:navigate-module", { detail: "business-blueprint" }));
+  };
 
   return (
     <div className="h-full flex flex-col">
