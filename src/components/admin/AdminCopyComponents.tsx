@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Puzzle, icons, Gem } from "lucide-react";
+import { Plus, Trash2, Pencil, Puzzle, icons, Gem, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { BLUEPRINT_FIELDS, getBlueprintFieldLabel } from "@/lib/blueprintFields";
 
 const ICON_OPTIONS = [
   "Gem", "Star", "AlertTriangle", "Lightbulb", "Package", "TrendingUp", "Award",
