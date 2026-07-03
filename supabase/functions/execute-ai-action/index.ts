@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { slug, inputs, extra_instructions, image_inputs } = await req.json();
+    const { slug, inputs, extra_instructions, image_inputs, output_structure: outputStructureOverride } = await req.json();
 
     if (!slug) {
       return new Response(JSON.stringify({ error: "Missing slug" }), {
@@ -120,7 +120,11 @@ serve(async (req) => {
     }
 
     // Build tool calling for structured output
-    const outputStructure = action.output_structure || [];
+    // Prefer caller-supplied structure (e.g. Copy Components define their own).
+    // Fall back to the AI Action's own structure for other modules (Outreach, Audit, …).
+    const outputStructure = Array.isArray(outputStructureOverride) && outputStructureOverride.length > 0
+      ? outputStructureOverride
+      : (action.output_structure || []);
     const properties: Record<string, any> = {};
     const required: string[] = [];
 
