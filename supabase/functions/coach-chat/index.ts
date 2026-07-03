@@ -376,12 +376,15 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) 
   for (const raw of writesArg) {
     if (!raw || typeof raw.path !== "string" || typeof raw.value !== "string") continue;
     const path = canonicalBlueprintPath(raw.path);
+    const meta = BLUEPRINT_FIELD_META[path];
+    // Reject unknown paths and paths flagged non-writable in the shared schema.
+    if (!meta || !meta.aiWritable) continue;
     if (allowedPaths && !allowedPaths.has(path)) continue;
 
     const value = normalizeFieldValue(path, raw.value);
     if (!value) continue;
 
-    const label = String(raw.label ?? BLUEPRINT_FIELD_META[path]?.label ?? path);
+    const label = String(raw.label ?? meta.label ?? path);
     if (!byPath.has(path)) byPath.set(path, { path, label, value });
   }
 
