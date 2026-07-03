@@ -295,20 +295,16 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
       </div>
 
       <CoachPanel
-        open={coachOpen}
+        open={!!coachSpec}
         onOpenChange={(o) => {
-          setCoachOpen(o);
-          if (!o) setCoachField(null);
+          if (!o) setCoachSpec(null);
         }}
-        title={coachField ?? "Offer Angle"}
-        questions={[
-          "What's the #1 thing that makes your method different?",
-          `Why do ${noun} get better results with you than with alternatives?`,
-          "How is the timeline meaningfully faster?",
-          "What friction or complexity have you removed?",
-          "What outcome do you confidently promise?",
-        ]}
-        onSubmit={() => toast.info("AI suggestions coming soon")}
+        context={coachContext}
+        onApply={(value) => {
+          if (coachSpec) {
+            onChange({ [coachSpec.key]: value } as Partial<OfferAngleData>);
+          }
+        }}
       />
     </SectionShell>
   );
