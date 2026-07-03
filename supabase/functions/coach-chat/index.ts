@@ -88,8 +88,10 @@ function buildSystemPrompt(context: any, memoryFacts: Array<{ key: string; value
     parts.push(COACH_BLUEPRINT_FIELD);
   } else if (context?.scope === "blueprint.section") {
     parts.push(COACH_BLUEPRINT_SECTION);
+    parts.push(BLUEPRINT_FIELD_PATHS);
   } else if (context?.scope === "global") {
     parts.push(COACH_GLOBAL);
+    parts.push(BLUEPRINT_FIELD_PATHS);
   }
 
   if (context?.target) {
