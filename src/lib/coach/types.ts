@@ -41,11 +41,22 @@ export interface CoachContext {
 // Message part shapes (used by client + persisted in ai_coach_messages.parts)
 // -----------------------------------------------------------------------------
 
+export interface CoachBlueprintWrite {
+  path: string; // dot-path e.g. "customer_clarity.avatar_who"
+  label: string;
+  value: string;
+}
+
 export type CoachMessagePart =
   | { type: "text"; text: string }
   | { type: "proposal"; value: string; reasoning?: string }
   | { type: "quick_replies"; replies: string[] }
-  | { type: "memory_saved"; key: string; value: string };
+  | { type: "memory_saved"; key: string; value: string }
+  | {
+      type: "blueprint_writes";
+      writes: CoachBlueprintWrite[];
+      reasoning?: string;
+    };
 
 export interface CoachMessage {
   id: string;
