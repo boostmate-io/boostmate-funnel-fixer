@@ -23,15 +23,25 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
 
   const targetKey = context?.target?.id ?? "__global__";
   const scope = context?.scope ?? null;
+  const subAccountId = context?.businessContext.subAccountId ?? null;
+  const targetLabel = context?.target?.label ?? null;
+  const userId = user?.id ?? null;
 
-  // Ensure conversation + load messages when context becomes available
+  // Keep a live ref to context so we can snapshot it on insert without
+  // re-triggering the effect every time the parent recreates the object.
+  const contextRef = useRef<CoachContext | null>(context);
+  contextRef.current = context;
+
+  // Ensure conversation + load messages when context becomes available.
+  // Deps are stable primitives only — the parent may recreate the `context`
+  // object every render (e.g. GlobalCoachBubble), and we must NOT let that
+  // cancel an in-flight load and leave `status` stuck on "loading".
   useEffect(() => {
-    if (!enabled || !context || !user || !scope) return;
-    const key = `${scope}::${targetKey}::${context.businessContext.subAccountId}`;
+    if (!enabled || !scope || !userId || !subAccountId) return;
+    const key = `${scope}::${targetKey}::${subAccountId}::${userId}`;
     if (initKey.current === key) return;
     initKey.current = key;
 
-    let cancelled = false;
     (async () => {
       setStatus("loading");
       setError(null);
@@ -42,8 +52,8 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
       const { data: existing } = await supabase
         .from("ai_coach_conversations")
         .select("id")
-        .eq("user_id", user.id)
-        .eq("sub_account_id", context.businessContext.subAccountId)
+        .eq("user_id", userId)
+        .eq("sub_account_id", subAccountId)
         .eq("scope", scope)
         .eq("target_id", targetKey)
         .maybeSingle();
@@ -55,20 +65,18 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
         const { data: created, error: insErr } = await supabase
           .from("ai_coach_conversations")
           .insert({
-            user_id: user.id,
-            sub_account_id: context.businessContext.subAccountId,
+            user_id: userId,
+            sub_account_id: subAccountId,
             scope,
             target_id: targetKey,
-            target_label: context.target?.label ?? null,
-            context_snapshot: context as any,
+            target_label: targetLabel,
+            context_snapshot: (contextRef.current ?? {}) as any,
           })
           .select("id")
           .single();
-        if (insErr) {
-          if (!cancelled) {
-            setError(insErr.message);
-            setStatus("error");
-          }
+        if (insErr || !created) {
+          setError(insErr?.message ?? "Failed to start coach conversation");
+          setStatus("error");
           return;
         }
         convId = created.id;
@@ -81,7 +89,6 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
         .eq("conversation_id", convId!)
         .order("created_at", { ascending: true });
 
-      if (cancelled) return;
       setConversationId(convId!);
       setMessages(
         (msgs ?? []).map((m) => ({
@@ -94,11 +101,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
       );
       setStatus("idle");
     })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, scope, targetKey, context, user]);
+  }, [enabled, scope, targetKey, subAccountId, userId, targetLabel]);
 
   const sendMessage = useCallback(
     async (text: string) => {
