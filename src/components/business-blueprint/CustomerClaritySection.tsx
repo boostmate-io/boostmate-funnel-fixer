@@ -181,4 +181,5 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
   );
 };
 
+
 export default CustomerClaritySection;
