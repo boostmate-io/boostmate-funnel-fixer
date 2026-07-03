@@ -4,7 +4,7 @@
 //        New/Better/Faster/Easier → Signature Framework → Core Promise
 // =============================================================================
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Lightbulb, Wand2, Loader2, Sparkles, Shield, FileText, Target } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,10 @@ import {
   calcAngleProgress,
 } from "../offerDesignTypes";
 import { getBusinessType } from "../businessTypes";
-import CoachPanel from "../CoachPanel";
+import CoachPanel from "@/components/coach/CoachPanel";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { buildBlueprintFieldContext } from "@/lib/coach/buildContext";
+import type { BlueprintRow } from "../types";
 
 interface Props {
   data: OfferAngleData;
@@ -32,18 +35,38 @@ interface Props {
   embedded?: boolean;
 }
 
+interface CoachSpec {
+  key: keyof OfferAngleData;
+  label: string;
+  helper?: string;
+  placeholder?: string;
+}
+
 const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
   const bt = getBusinessType(businessType);
   const noun = bt.customerNoun;
   const progress = calcAngleProgress(data);
-  const [coachOpen, setCoachOpen] = useState(false);
-  const [coachField, setCoachField] = useState<string | null>(null);
+  const [coachSpec, setCoachSpec] = useState<CoachSpec | null>(null);
   const [genNamesBusy, setGenNamesBusy] = useState(false);
+  const { activeSubAccountId } = useWorkspace();
 
-  const openCoach = (label: string) => {
-    setCoachField(label);
-    setCoachOpen(true);
-  };
+  const openCoach = (spec: CoachSpec) => setCoachSpec(spec);
+
+  const coachContext = useMemo(() => {
+    if (!coachSpec || !activeSubAccountId) return null;
+    const snapshot = { offer_stack: { angle: data } } as unknown as BlueprintRow;
+    return buildBlueprintFieldContext(
+      {
+        id: coachSpec.key as string,
+        label: coachSpec.label,
+        helper: coachSpec.helper,
+        placeholder: coachSpec.placeholder,
+        currentValue: (data[coachSpec.key] as string) || "",
+      },
+      snapshot,
+      activeSubAccountId,
+    );
+  }, [coachSpec, data, activeSubAccountId]);
 
   const handleGenerateNames = () => {
     setGenNamesBusy(true);
@@ -162,7 +185,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           placeholder="e.g. The first 90-day program that combines somatic work with strategic positioning…"
           value={data.angle_new_vehicle ?? ""}
           onChange={(v) => onChange({ angle_new_vehicle: v })}
-          onCoach={() => openCoach("New Vehicle")}
+          onCoach={() => openCoach({ key: "angle_new_vehicle", label: "New Vehicle", helper: "What makes your method genuinely new compared to what they already tried?" })}
         />
         <AngleField
           label="Better Results"
@@ -170,7 +193,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           placeholder="e.g. Because we combine strategy with implementation in the same week…"
           value={data.angle_better_results ?? ""}
           onChange={(v) => onChange({ angle_better_results: v })}
-          onCoach={() => openCoach("Better Results")}
+          onCoach={() => openCoach({ key: "angle_better_results", label: "Better Results", helper: "Why does your method produce better results?" })}
         />
         <AngleField
           label="Faster Outcome"
@@ -178,7 +201,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           placeholder="e.g. We compress 6 months of trial-and-error into 30 days of guided execution…"
           value={data.angle_faster_outcome ?? ""}
           onChange={(v) => onChange({ angle_faster_outcome: v })}
-          onCoach={() => openCoach("Faster Outcome")}
+          onCoach={() => openCoach({ key: "angle_faster_outcome", label: "Faster Outcome", helper: "How do clients get results faster?" })}
         />
         <AngleField
           label="Easier Process"
@@ -186,7 +209,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           placeholder="e.g. Done-with-you templates, weekly accountability, no guesswork…"
           value={data.angle_easier_process ?? ""}
           onChange={(v) => onChange({ angle_easier_process: v })}
-          onCoach={() => openCoach("Easier Process")}
+          onCoach={() => openCoach({ key: "angle_easier_process", label: "Easier Process", helper: "How do you make the process feel easier?" })}
         />
       </div>
 
@@ -272,20 +295,16 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
       </div>
 
       <CoachPanel
-        open={coachOpen}
+        open={!!coachSpec}
         onOpenChange={(o) => {
-          setCoachOpen(o);
-          if (!o) setCoachField(null);
+          if (!o) setCoachSpec(null);
         }}
-        title={coachField ?? "Offer Angle"}
-        questions={[
-          "What's the #1 thing that makes your method different?",
-          `Why do ${noun} get better results with you than with alternatives?`,
-          "How is the timeline meaningfully faster?",
-          "What friction or complexity have you removed?",
-          "What outcome do you confidently promise?",
-        ]}
-        onSubmit={() => toast.info("AI suggestions coming soon")}
+        context={coachContext}
+        onApply={(value) => {
+          if (coachSpec) {
+            onChange({ [coachSpec.key]: value } as Partial<OfferAngleData>);
+          }
+        }}
       />
     </SectionShell>
   );

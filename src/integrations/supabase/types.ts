@@ -253,6 +253,133 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_coach_conversations: {
+        Row: {
+          context_snapshot: Json
+          created_at: string
+          id: string
+          scope: string
+          sub_account_id: string
+          target_id: string | null
+          target_label: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context_snapshot?: Json
+          created_at?: string
+          id?: string
+          scope: string
+          sub_account_id: string
+          target_id?: string | null
+          target_label?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context_snapshot?: Json
+          created_at?: string
+          id?: string
+          scope?: string
+          sub_account_id?: string
+          target_id?: string | null
+          target_label?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_coach_conversations_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_coach_memory: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          source_conversation_id: string | null
+          sub_account_id: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          source_conversation_id?: string | null
+          sub_account_id: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          source_conversation_id?: string | null
+          sub_account_id?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_coach_memory_source_conversation_id_fkey"
+            columns: ["source_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_coach_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_coach_memory_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_coach_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          parts: Json
+          role: string
+        }
+        Insert: {
+          content?: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          parts?: Json
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          parts?: Json
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_coach_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_coach_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_instruction_blocks: {
         Row: {
           content: string

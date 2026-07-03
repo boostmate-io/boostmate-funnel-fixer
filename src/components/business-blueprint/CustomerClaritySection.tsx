@@ -2,17 +2,18 @@ import { useMemo, useState } from "react";
 import { Check, TrendingUp, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
 import {
   calculateSubBlockProgress,
   CLARITY_FIELDS,
   type ClaritySubBlock,
   type CustomerClarityData,
 } from "./types";
-import { getClarityConfig, getFeedbackMessage } from "./clarityConfig";
-import { getBusinessType } from "./businessTypes";
-import CoachPanel from "./CoachPanel";
+import { getClarityConfig, getFeedbackMessage, type FieldDef } from "./clarityConfig";
+import CoachPanel from "@/components/coach/CoachPanel";
 import FieldCard from "./FieldCard";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { buildBlueprintFieldContext } from "@/lib/coach/buildContext";
+import type { BlueprintRow } from "./types";
 
 interface Props {
   data: CustomerClarityData;
@@ -23,10 +24,10 @@ interface Props {
 
 const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props) => {
   const [active, setActive] = useState<ClaritySubBlock>("avatar");
-  const [coachOpen, setCoachOpen] = useState(false);
-  const [coachFieldLabel, setCoachFieldLabel] = useState<string | null>(null);
+  const [coachField, setCoachField] = useState<FieldDef | null>(null);
+  const { activeSubAccountId } = useWorkspace();
 
-  const bt = getBusinessType(businessType);
+
   const clarityConfig = useMemo(() => getClarityConfig(businessType), [businessType]);
   const config = clarityConfig.find((c) => c.id === active)!;
   const Icon = config.icon;
@@ -35,16 +36,22 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
   const progress = calculateSubBlockProgress(data, active);
   const feedback = getFeedbackMessage(config, progress);
 
-  const handleCoachSubmit = (answers: Record<string, string>) => {
-    toast.info("AI suggestions coming soon", {
-      description: `Captured ${Object.keys(answers).filter((k) => answers[k]?.trim()).length} answers.`,
-    });
-  };
-
-  const openCoachFor = (label: string) => {
-    setCoachFieldLabel(label);
-    setCoachOpen(true);
-  };
+  const coachContext = useMemo(() => {
+    if (!coachField || !activeSubAccountId) return null;
+    const snapshot = { customer_clarity: data } as unknown as BlueprintRow;
+    return buildBlueprintFieldContext(
+      {
+        id: coachField.key as string,
+        label: coachField.label,
+        helper: coachField.helper,
+        placeholder: coachField.placeholder,
+        currentValue: (data[coachField.key] as string) || "",
+        kind: coachField.type === "tags" ? "tags" : coachField.type === "chips-single" ? "chips" : "text",
+      },
+      snapshot,
+      activeSubAccountId,
+    );
+  }, [coachField, activeSubAccountId, data]);
 
   return (
     <div className="h-full flex flex-col">
@@ -136,7 +143,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
                   field={field}
                   value={(data[field.key] as string) || ""}
                   onChange={(v) => onChange({ [field.key]: v } as Partial<CustomerClarityData>)}
-                  onCoach={() => openCoachFor(field.label)}
+                  onCoach={() => setCoachField(field)}
                 />
               </div>
             ))}
@@ -157,16 +164,18 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
         </div>
       </div>
 
-      {/* Coach panel */}
+      {/* AI Coach */}
       <CoachPanel
-        open={coachOpen}
+        open={!!coachField}
         onOpenChange={(o) => {
-          setCoachOpen(o);
-          if (!o) setCoachFieldLabel(null);
+          if (!o) setCoachField(null);
         }}
-        title={coachFieldLabel ?? config.label}
-        questions={config.coachQuestions}
-        onSubmit={handleCoachSubmit}
+        context={coachContext}
+        onApply={(value) => {
+          if (coachField) {
+            onChange({ [coachField.key]: value } as Partial<CustomerClarityData>);
+          }
+        }}
       />
     </div>
   );
