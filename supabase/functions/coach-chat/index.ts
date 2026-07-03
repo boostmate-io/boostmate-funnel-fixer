@@ -350,7 +350,8 @@ Deno.serve(async (req) => {
     const memoryFacts = (memoryRows ?? []) as Array<{ key: string; value: string }>;
 
     // Build LLM messages
-    const systemPrompt = buildSystemPrompt(context, memoryFacts);
+    const prompts = await loadCoachPrompts(supabase);
+    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts);
     const llmMessages: any[] = [
       { role: "system", content: systemPrompt },
       ...messages.map((m: any) => ({
