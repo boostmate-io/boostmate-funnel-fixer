@@ -2,11 +2,12 @@
 // BuilderCard — reusable wrapper for "Add X" list builders (Deliverables,
 // Bonuses, Milestones, Payment Plans, Ecosystem offers).
 //
-// Renders a card section with a title, description, an "Add" CTA, and an empty
-// state. Children are the rendered list of items.
+// Optional `onCoach` prop renders a section-level AI Coach button next to
+// the "Add" CTA. Clicking it opens the Coach in list-section mode so the AI
+// can propose a batch of items at once — no need to add empty items first.
 // =============================================================================
 
-import { Plus, type LucideIcon } from "lucide-react";
+import { Plus, MessageSquare, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
   description?: string;
   addLabel: string;
   onAdd: () => void;
+  onCoach?: () => void;
   emptyText?: string;
   emptyAction?: React.ReactNode;
   count?: number;
@@ -27,6 +29,7 @@ const BuilderCard = ({
   description,
   addLabel,
   onAdd,
+  onCoach,
   emptyText,
   emptyAction,
   count,
@@ -57,10 +60,24 @@ const BuilderCard = ({
             )}
           </div>
         </div>
-        <Button size="sm" variant="outline" onClick={onAdd} className="gap-1.5 h-8 shrink-0">
-          <Plus className="w-3.5 h-3.5" />
-          {addLabel}
-        </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onCoach && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onCoach}
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+              aria-label={`Open AI Coach for ${title}`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              Coach
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={onAdd} className="gap-1.5 h-8">
+            <Plus className="w-3.5 h-3.5" />
+            {addLabel}
+          </Button>
+        </div>
       </div>
 
       <div className="p-4 space-y-3">
@@ -70,10 +87,18 @@ const BuilderCard = ({
               {emptyText ?? "Nothing here yet."}
             </p>
             {emptyAction ?? (
-              <Button size="sm" variant="ghost" onClick={onAdd} className="gap-1.5 text-primary hover:bg-primary/5">
-                <Plus className="w-3.5 h-3.5" />
-                {addLabel}
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button size="sm" variant="ghost" onClick={onAdd} className="gap-1.5 text-primary hover:bg-primary/5">
+                  <Plus className="w-3.5 h-3.5" />
+                  {addLabel}
+                </Button>
+                {onCoach && (
+                  <Button size="sm" variant="ghost" onClick={onCoach} className="gap-1.5 text-primary hover:bg-primary/5">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Ask Coach to suggest
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         ) : (

@@ -59,7 +59,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
   const bt = getBusinessType(businessType);
   const noun = bt.customerNoun;
   const progress = calcStackProgress(data);
-  const { openCoach, panel } = useOfferCoach(() => ({ offer_stack: { stack: data } }));
+  const { openCoach, openListCoach, panel } = useOfferCoach(() => ({ offer_stack: { stack: data } }));
 
   // ----- Deliverables -----
   const addDeliverable = () =>
@@ -123,6 +123,69 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
   const removeMilestone = (id: string) =>
     onChange({ milestones: data.milestones.filter((m) => m.id !== id) });
 
+  // ----- Section-Coach appenders (list_section mode) -----
+  const appendDeliverable = (item: Record<string, string>) =>
+    onChange({
+      deliverables: [
+        ...data.deliverables,
+        {
+          id: newId(),
+          name: (item.name ?? "").trim(),
+          description: (item.description ?? "").trim(),
+          delivery_types: [],
+          frequency: "weekly",
+        },
+      ],
+    });
+  const appendResource = (item: Record<string, string>) =>
+    onChange({
+      resources: [
+        ...data.resources,
+        {
+          id: newId(),
+          name: (item.name ?? "").trim(),
+          resource_type: (item.resource_type ?? "").trim(),
+          description: (item.description ?? "").trim(),
+        },
+      ],
+    });
+  const appendSupport = (item: Record<string, string>) =>
+    onChange({
+      support_channels: [
+        ...data.support_channels,
+        {
+          id: newId(),
+          name: (item.name ?? "").trim(),
+          description: (item.description ?? "").trim(),
+          frequency: (item.frequency ?? "").trim(),
+        },
+      ],
+    });
+  const appendBonus = (item: Record<string, string>) =>
+    onChange({
+      bonuses: [
+        ...data.bonuses,
+        {
+          id: newId(),
+          name: (item.name ?? "").trim(),
+          description: (item.description ?? "").trim(),
+          perceived_value: (item.perceived_value ?? "").trim(),
+        },
+      ],
+    });
+  const appendMilestone = (item: Record<string, string>) =>
+    onChange({
+      milestones: [
+        ...data.milestones,
+        {
+          id: newId(),
+          phase_name: (item.phase_name ?? `Phase ${data.milestones.length + 1}`).trim(),
+          description: (item.description ?? "").trim(),
+          expected_outcome: (item.expected_outcome ?? "").trim(),
+        },
+      ],
+    });
+
   const feedback =
     progress >= 100
       ? "Premium-level stack. The price will feel like a no-brainer."
@@ -174,6 +237,21 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           description="Main service, coaching or program components."
           addLabel="Add Deliverable"
           onAdd={addDeliverable}
+          onCoach={() =>
+            openListCoach({
+              id: "stack_deliverables",
+              label: "Core Deliverables",
+              helper: "Main service, coaching or program components clients receive.",
+              basePath: "offer_stack.stack.deliverables",
+              itemFields: [
+                { key: "name", label: "Name", kind: "text", helper: "Short, benefit-driven deliverable name." },
+                { key: "description", label: "Description", kind: "textarea", helper: "1–2 sentences on what the client gets." },
+              ],
+              currentCount: data.deliverables.length,
+              suggestedCount: [3, 5],
+              appendItem: appendDeliverable,
+            })
+          }
           count={data.deliverables.length}
           emptyText="No deliverables yet. Start with your most valuable component."
         >
@@ -275,6 +353,22 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           description="Add resources included in your offer. Click a quick-add chip to start a card."
           addLabel="Add Resource"
           onAdd={() => addResource()}
+          onCoach={() =>
+            openListCoach({
+              id: "stack_resources",
+              label: "Templates & Resources",
+              helper: "Templates, guides, checklists, swipe files included with the offer.",
+              basePath: "offer_stack.stack.resources",
+              itemFields: [
+                { key: "name", label: "Name", kind: "text" },
+                { key: "resource_type", label: "Type", kind: "text", helper: "Template, Ebook, Checklist, Swipe file…" },
+                { key: "description", label: "Description", kind: "textarea", helper: "What's inside and how it's used." },
+              ],
+              currentCount: data.resources.length,
+              suggestedCount: [3, 5],
+              appendItem: appendResource,
+            })
+          }
           count={data.resources.length}
           emptyText="No resources yet. Quick-add common types below or add a custom resource."
           emptyAction={
@@ -384,6 +478,22 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           description="How will clients reach you and your team?"
           addLabel="Add Support Channel"
           onAdd={() => addSupport()}
+          onCoach={() =>
+            openListCoach({
+              id: "stack_support_channels",
+              label: "Support System",
+              helper: "Channels clients use to reach you (Slack, Voxer, calls…).",
+              basePath: "offer_stack.stack.support_channels",
+              itemFields: [
+                { key: "name", label: "Name", kind: "text", helper: "Channel name (Slack, WhatsApp, Q&A calls…)." },
+                { key: "frequency", label: "Frequency / Availability", kind: "text", helper: "When are you available (e.g. Mon–Fri 9–5)." },
+                { key: "description", label: "Description", kind: "textarea", helper: "What kind of support happens here and typical response time." },
+              ],
+              currentCount: data.support_channels.length,
+              suggestedCount: [2, 4],
+              appendItem: appendSupport,
+            })
+          }
           count={data.support_channels.length}
           emptyText="No support channels yet. Quick-add common ones or add custom."
           emptyAction={
@@ -493,6 +603,22 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           description="Additional incentives that tip the decision in your favor."
           addLabel="Add Bonus"
           onAdd={addBonus}
+          onCoach={() =>
+            openListCoach({
+              id: "stack_bonuses",
+              label: "Bonuses",
+              helper: "High-value bonuses that tip the buying decision.",
+              basePath: "offer_stack.stack.bonuses",
+              itemFields: [
+                { key: "name", label: "Name", kind: "text", helper: "Punchy bonus name." },
+                { key: "description", label: "Description", kind: "textarea", helper: "What it is and why it's valuable." },
+                { key: "perceived_value", label: "Perceived Value", kind: "text", helper: "Stated dollar value (e.g. €497 value)." },
+              ],
+              currentCount: data.bonuses.length,
+              suggestedCount: [2, 4],
+              appendItem: appendBonus,
+            })
+          }
           count={data.bonuses.length}
           emptyText="No bonuses yet. Add 1–3 high-value bonuses to anchor perceived value."
         >
@@ -606,6 +732,22 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           description="The step-by-step journey through your offer."
           addLabel="Add Milestone"
           onAdd={addMilestone}
+          onCoach={() =>
+            openListCoach({
+              id: "stack_milestones",
+              label: "Milestones / Roadmap",
+              helper: "The phases clients move through in your offer.",
+              basePath: "offer_stack.stack.milestones",
+              itemFields: [
+                { key: "phase_name", label: "Phase Name", kind: "text", helper: "Short, evocative phase name." },
+                { key: "description", label: "Description", kind: "textarea", helper: "What happens in this phase." },
+                { key: "expected_outcome", label: "Expected Outcome", kind: "textarea", helper: "Concrete result after this phase." },
+              ],
+              currentCount: data.milestones.length,
+              suggestedCount: [3, 5],
+              appendItem: appendMilestone,
+            })
+          }
           count={data.milestones.length}
           emptyText="Map out the phases your clients move through. Most great programs have 3–5."
         >

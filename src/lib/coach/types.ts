@@ -16,6 +16,19 @@ export type CoachScope =
 
 export type CoachTargetKind = "text" | "chips" | "tags" | "structured";
 
+/**
+ * Optional metadata declaring that the coach target is a LIST section — a
+ * container into which the Coach can propose ONE OR MORE new items at once
+ * (e.g. Framework Pillars, Deliverables, Bonuses…). Item paths in
+ * `blueprint_writes` will look like `<basePath>.new_<n>.<fieldKey>`.
+ */
+export interface CoachListSectionMeta {
+  basePath: string;
+  itemFields: { key: string; label: string; kind?: "text" | "textarea"; helper?: string }[];
+  currentCount: number;
+  suggestedCount?: [number, number];
+}
+
 export interface CoachTarget {
   id: string;
   label: string;
@@ -23,6 +36,7 @@ export interface CoachTarget {
   currentValue: string | null;
   helper?: string;
   placeholder?: string;
+  listSection?: CoachListSectionMeta;
 }
 
 export interface CoachContext {

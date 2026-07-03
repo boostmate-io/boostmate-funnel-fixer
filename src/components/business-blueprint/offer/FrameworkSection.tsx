@@ -4,7 +4,7 @@
 // Every field (framework meta + each pillar) has an AI Coach entry point.
 // =============================================================================
 
-import { Layers3, Trash2, Plus } from "lucide-react";
+import { Layers3, Trash2, Plus, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,11 @@ interface Props {
   value: SignatureFramework | undefined;
   onChange: (next: SignatureFramework) => void;
   onCoach?: (spec: AngleCoachSpec) => void;
+  /** Section-level Coach for the whole Pillars list. */
+  onCoachPillars?: () => void;
 }
 
-const FrameworkSection = ({ value, onChange, onCoach }: Props) => {
+const FrameworkSection = ({ value, onChange, onCoach, onCoachPillars }: Props) => {
   const framework: SignatureFramework = value ?? { pillars: [] };
   const pillars = framework.pillars ?? [];
 
@@ -121,10 +123,23 @@ const FrameworkSection = ({ value, onChange, onCoach }: Props) => {
             <Label className="text-xs font-medium text-muted-foreground">
               Core Pillars / Steps
             </Label>
-            <Button size="sm" variant="outline" onClick={addPillar} className="h-7 gap-1 text-xs">
-              <Plus className="w-3 h-3" />
-              Add Pillar
-            </Button>
+            <div className="flex items-center gap-1.5">
+              {onCoachPillars && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onCoachPillars}
+                  className="h-7 gap-1 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  Coach
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={addPillar} className="h-7 gap-1 text-xs">
+                <Plus className="w-3 h-3" />
+                Add Pillar
+              </Button>
+            </div>
           </div>
 
           {pillars.length === 0 ? (
@@ -132,10 +147,18 @@ const FrameworkSection = ({ value, onChange, onCoach }: Props) => {
               <p className="text-sm text-muted-foreground mb-2">
                 Map the core pillars or steps of your method.
               </p>
-              <Button size="sm" variant="ghost" onClick={addPillar} className="gap-1.5 text-primary hover:bg-primary/5">
-                <Plus className="w-3.5 h-3.5" />
-                Add First Pillar
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button size="sm" variant="ghost" onClick={addPillar} className="gap-1.5 text-primary hover:bg-primary/5">
+                  <Plus className="w-3.5 h-3.5" />
+                  Add First Pillar
+                </Button>
+                {onCoachPillars && (
+                  <Button size="sm" variant="ghost" onClick={onCoachPillars} className="gap-1.5 text-primary hover:bg-primary/5">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Ask Coach to suggest
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-2">

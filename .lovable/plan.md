@@ -1,57 +1,51 @@
 ## Doel
-In de "Blueprint updates (N)" kaart van de AI Coach: per veld kunnen **accepteren** en **weigeren**, naast de bestaande "Apply all".
+
+Elke sectie waar meerdere items toegevoegd kunnen worden krijgt een **sectie-brede "Coach"-knop** naast de "Add"-knop. Die knop opent de AI Coach met de volledige sectie als scope. De Coach stelt een lijst voorstellen voor die via het bestaande **Blueprint updates**-kader (per item apply/dismiss, of alles tegelijk) worden toegevoegd — exact hetzelfde patroon als bij losse velden.
+
+## Betrokken secties (Offer Design)
+
+- **Offer Angle** → Signature Mechanism / Framework → Core Pillars
+- **Offer Stack** → Deliverables, Resources, Support Channels, Bonuses, Milestones
+- **Pricing** → Payment Plans
+- **Offer Ecosystem** → Non-core offers (front-end, upsell, downsell, back-end)
 
 ## UX
 
-Elk voorstel-item krijgt twee kleine knoppen rechtsboven:
-- ✓ Apply (past enkel dit veld toe)
-- ✕ Dismiss (verwijdert dit voorstel uit de kaart)
+- Knop rechtsboven in elke `BuilderCard`, links van of naast de bestaande "Add"-knop. Label: `Coach` met `MessageSquare`-icoon, zelfde styling als de veld-Coach knop (consistentie met vorige afspraak).
+- Empty state krijgt daarnaast een tweede prominente "Ask Coach to suggest…"-CTA onder de bestaande "Add first…"-knop, zodat leeg-scherm meteen naar de Coach leidt.
+- Als er al items zijn: de sectie-Coach blijft beschikbaar. De Coach weet dan dat hij mag *aanvullen* i.p.v. van nul beginnen (zie prompt-instructie hieronder).
 
-Onderaan blijven de globale acties, maar slimmer:
-- **Apply all remaining** — past alle nog niet behandelde voorstellen toe
-- **Dismiss all** — sluit de hele kaart weg
+## Coach-flow
 
-Per-item statussen visueel:
-- *pending* — normale weergave met ✓/✕
-- *applied* — grijs/doorstreept met "Applied" badge, knoppen weg
-- *dismissed* — item verdwijnt uit de lijst (of collapsed met "Dismissed")
+1. Gebruiker klikt sectie-Coach → `CoachPanel` opent met een nieuwe scope `blueprint.list_section`.
+2. De user-vraag opent bv. met een quick-reply zoals *"Suggest 3–5 pillars for my framework"*.
+3. Coach antwoordt met een `blueprint_writes`-part waarin elke voorgestelde item-veld één write is met een gestructureerd pad (bv. `offer_stack.angle.framework.pillars.<newId>.name` + `.description`).
+4. Bestaand Blueprint-updates kader toont alle voorstellen; user kan per item of allemaal apply/dismiss. Apply voegt items daadwerkelijk toe aan de array via `applyBlueprintWrites` (die al array-indices en objecten aankan sinds vorige iteratie — we breiden uit met stabiel-gegenereerde IDs voor nieuwe items).
 
-Als alle items applied/dismissed zijn → onderste knoppen disablen en toon "All handled".
+## Technische details
 
-### Praktisch nut van decline?
-Ja, wel degelijk nuttig:
-- Coach stelt soms 4 goede + 1 zwak voorstel voor → gebruiker wil de 4 accepteren zonder de zwakke te moeten overschrijven.
-- "Dismiss" voorkomt dat de kaart blijft aandringen en houdt de chat opgeruimd.
-- Individueel weigeren is duidelijker dan "gewoon niks doen" (er blijft anders visuele ruis staan).
+**Nieuw**
+- `src/lib/coach/buildContext.ts` → `buildBlueprintListSectionContext(sectionSpec, blueprint, subAccountId)`: bouwt een `CoachContext` met scope `blueprint.list_section`, target = de hele lijst (id = het array-pad, bv. `offer_stack.angle.framework.pillars`), en meta over item-schema (welke velden per item, min/max aantal, korte beschrijving).
+- `src/lib/coach/types.ts` → nieuwe scope `"blueprint.list_section"` + optionele `target.itemSchema: { fields: {key,label,helper}[]; suggestedCount?: [min,max] }`.
+- `src/components/business-blueprint/offer/SectionCoachButton.tsx`: kleine wrapper rond `MessageSquare + "Coach"` voor de header van `BuilderCard`. Zelfde stijl als `CoachIconButton` niet-compact.
+- `src/components/business-blueprint/offer/useOfferSectionCoach.tsx` (of uitbreiding van bestaande `useOfferCoach`): opent panel met list-section-context i.p.v. field-context. Blijft snapshot bouwen op dezelfde manier.
 
-## Technische aanpak (frontend-only)
+**Aangepast**
+- `src/components/business-blueprint/offer/BuilderCard.tsx`: extra optionele prop `onCoach?: () => void`. Rendert `SectionCoachButton` links van de "Add"-knop wanneer aanwezig. Empty state krijgt ook een extra "Ask Coach"-CTA (secundair) als `onCoach` gegeven is.
+- `FrameworkSection.tsx`, `OfferStackTab.tsx`, `PricingTab.tsx`, `OfferEcosystemTab.tsx`: elke lijst-sectie geeft nu `onCoach` mee met een goede spec (label = sectienaam, item-schema = velden die de Coach moet vullen, array-pad, huidig aantal items).
+- `supabase/functions/coach-chat/index.ts`:
+  - System-prompt uitbreiden: bij `blueprint.list_section` genereert de Coach een **gestructureerde lijst voorstellen** — één `blueprint_writes` entry per item-veld, gebruikt vers-gegenereerde stabiele IDs (UUID-achtig) in de paden zodat items niet met elkaar collide.
+  - `allowedBlueprintWritePaths` uitbreiden om paden onder het door de client meegegeven `target.id` (het array-pad) toe te staan, ook als de betreffende index nog niet bestaat (nieuwe items).
+  - Redelijk maximum: bv. Coach mag max 6 items per sectie voorstellen tenzij user meer vraagt.
+- `src/lib/coach/applyBlueprintWrites.ts`: controleer dat `setDeep` correct nieuwe object-items met een gegeven ID kan invoegen wanneer het pad `pillars.<uuid>.name` is (i.p.v. numerieke index). Voeg helper `upsertItemById` toe zodat writes voor hetzelfde item-ID in één apply samen één item vormen. Behoud normalisatie voor framework pillars, en voeg vergelijkbare normalisatie toe voor Deliverables/Bonuses/Milestones/PaymentPlans/EcosystemOffers (auto-fill ontbrekende velden met defaults, zorg voor unieke IDs).
 
-Alle wijzigingen zitten in `src/components/coach/CoachPanel.tsx` in de `BlueprintWritesCard` component. Geen edge function of schema-wijzigingen nodig.
+**Niet gewijzigd**
+- `CoachPanel.tsx` per-item apply/dismiss UI blijft zoals hij is — de nieuwe writes verschijnen automatisch in hetzelfde kader.
+- Bestaande per-item veld-Coach knoppen blijven bestaan (voor wie later één specifiek pillar/deliverable wil verbeteren).
 
-1. **Lokale state per item** in `BlueprintWritesCard`:
-   ```ts
-   type ItemState = "pending" | "applying" | "applied" | "dismissed";
-   const [states, setStates] = useState<ItemState[]>(() => writes.map(() => "pending"));
-   ```
+## Acceptance
 
-2. **Per-item apply**: roept `onApplyAll` aan met een array van 1 write (bestaande `applyBlueprintWrites` in `src/lib/coach/applyBlueprintWrites.ts` accepteert al elk aantal). Zet state naar `applying` → `applied`.
-
-3. **Per-item dismiss**: zet state naar `dismissed`, puur client-side.
-
-4. **Apply all remaining**: filtert writes waarvan state `pending` is en stuurt die als batch.
-
-5. **Rendering**:
-   - Applied items: `opacity-60`, doorstreepte value, kleine "Applied" badge, geen knoppen.
-   - Dismissed items: niet renderen (of optioneel een compacte "Dismissed — undo" regel; ik houd het simpel en verberg ze).
-   - Pending items: huidige weergave + twee icon-buttons (Check / X) rechtsboven het item.
-
-6. **Footer knop-tekst** past zich aan:
-   - Als er nog pending items zijn: "Apply all remaining (K)"
-   - Als alles behandeld is: knop weg, kleine tekst "All handled".
-
-## Bestand dat wijzigt
-- `src/components/coach/CoachPanel.tsx` — enkel de `BlueprintWritesCard` sectie.
-
-## Buiten scope
-- Geen wijziging aan `applyBlueprintWrites`, `coach-chat` edge function, of het schema.
-- Geen persistentie van dismiss-status over sessies (kaart is per bericht in de chat; refresh laadt de chat opnieuw op — dan staan voorstellen weer als pending, wat OK is).
+- Op elke lijst-sectie in Offer Angle, Offer Stack, Pricing en Offer Ecosystem staat rechtsboven een "Coach"-knop, ook als de sectie leeg is.
+- Klikken opent de Coach met de sectie als context en een duidelijke quick-reply om een lijst voor te stellen.
+- Coach-voorstellen verschijnen als meerdere items in het Blueprint updates-kader, elk per item apply/dismiss-baar, of allemaal tegelijk apply-baar.
+- Apply voegt volledige items toe (met alle sub-velden ingevuld), zonder duplicaten of "gaten" in de array.

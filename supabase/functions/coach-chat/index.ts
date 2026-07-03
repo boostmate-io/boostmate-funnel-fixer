@@ -196,15 +196,42 @@ function buildSystemPrompt(
     parts.push(`# Current Business Blueprint JSON\n${JSON.stringify(context.businessContext.blueprintSnapshot, null, 2)}`);
   }
 
-  const allowedPaths = allowedBlueprintWritePaths(context, messages);
-  if (allowedPaths && allowedPaths.size > 0) {
+  const listSection = context?.target?.listSection;
+  if (listSection && typeof listSection === "object") {
+    const fields = Array.isArray(listSection.itemFields) ? listSection.itemFields : [];
+    const suggested = Array.isArray(listSection.suggestedCount) && listSection.suggestedCount.length === 2
+      ? `${listSection.suggestedCount[0]}–${listSection.suggestedCount[1]}`
+      : "3–5";
+    const fieldLines = fields
+      .map((f: any) => `  - ${f.key} (${f.kind ?? "text"}) — ${f.label}${f.helper ? `: ${f.helper}` : ""}`)
+      .join("\n");
     parts.push(
-      `# Current write target — hard constraint\nFor the user's latest request, propose Blueprint writes ONLY for these path(s):\n${[
-        ...allowedPaths,
-      ]
-        .map((path) => `- ${path} — ${BLUEPRINT_FIELD_META[path]?.kind ?? "textarea"} — ${BLUEPRINT_FIELD_META[path]?.label ?? path}`)
-        .join("\n")}\nDo not write to any other Blueprint path.`,
+      `# List section mode — CRITICAL
+You are helping the user populate a LIST inside their Business Blueprint.
+List label: ${listSection.label ?? context?.target?.label ?? ""}
+Base path: ${listSection.basePath}
+Currently ${listSection.currentCount ?? 0} item(s) exist.
+
+Each item in this list has these fields:
+${fieldLines}
+
+When the user asks you to suggest / generate / propose / fill / draft items for this list, call the propose_blueprint_writes tool ONCE with one write per (item, field) pair. Use paths of exactly this form:
+  <basePath>.new_0.<fieldKey>
+  <basePath>.new_1.<fieldKey>
+  ...
+Every proposed item MUST include a value for every listed field. Suggested item count: ${suggested} unless the user specifies otherwise. Label each write "Item <n> — <field label>". Do NOT write to any other Blueprint path in this turn.`,
     );
+  } else {
+    const allowedPaths = allowedBlueprintWritePaths(context, messages);
+    if (allowedPaths && allowedPaths.size > 0) {
+      parts.push(
+        `# Current write target — hard constraint\nFor the user's latest request, propose Blueprint writes ONLY for these path(s):\n${[
+          ...allowedPaths,
+        ]
+          .map((path) => `- ${path} — ${BLUEPRINT_FIELD_META[path]?.kind ?? "textarea"} — ${BLUEPRINT_FIELD_META[path]?.label ?? path}`)
+          .join("\n")}\nDo not write to any other Blueprint path.`,
+      );
+    }
   }
 
   if (memoryFacts.length > 0) {

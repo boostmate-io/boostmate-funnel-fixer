@@ -1,10 +1,10 @@
 // =============================================================================
 // OfferAngleTab — Tab 1 (redesigned)
 // Every field has an AI Coach entry point, including the structured
-// Framework and Core Promise builders.
+// Framework and Core Promise builders. The Framework Pillars list also has
+// a section-level Coach that can propose a full set of pillars at once.
 // =============================================================================
 
-import { useMemo, useState } from "react";
 import { Lightbulb, Sparkles, Shield, FileText, Target } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,16 +14,14 @@ import AngleField from "./AngleField";
 import TimeframePicker from "./TimeframePicker";
 import FrameworkSection from "./FrameworkSection";
 import CoachIconButton from "./CoachIconButton";
+import { useOfferCoach } from "./useOfferCoach";
 import {
   type OfferAngleData,
+  type FrameworkPillar,
   buildPromisePreview,
   calcAngleProgress,
 } from "../offerDesignTypes";
 import { getBusinessType } from "../businessTypes";
-import CoachPanel from "@/components/coach/CoachPanel";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { buildBlueprintFieldContext } from "@/lib/coach/buildContext";
-import type { BlueprintRow } from "../types";
 
 interface Props {
   data: OfferAngleData;
@@ -48,30 +46,15 @@ export interface AngleCoachSpec {
   apply: (value: string) => void;
 }
 
+const newId = () => crypto.randomUUID();
+
 const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
   const bt = getBusinessType(businessType);
   const noun = bt.customerNoun;
   const progress = calcAngleProgress(data);
-  const [coachSpec, setCoachSpec] = useState<AngleCoachSpec | null>(null);
-  const { activeSubAccountId } = useWorkspace();
-
-  const openCoach = (spec: AngleCoachSpec) => setCoachSpec(spec);
-
-  const coachContext = useMemo(() => {
-    if (!coachSpec || !activeSubAccountId) return null;
-    const snapshot = { offer_stack: { angle: data } } as unknown as BlueprintRow;
-    return buildBlueprintFieldContext(
-      {
-        id: coachSpec.id,
-        label: coachSpec.label,
-        helper: coachSpec.helper,
-        placeholder: coachSpec.placeholder,
-        currentValue: coachSpec.currentValue,
-      },
-      snapshot,
-      activeSubAccountId,
-    );
-  }, [coachSpec, data, activeSubAccountId]);
+  const { openCoach, openListCoach, panel } = useOfferCoach(() => ({
+    offer_stack: { angle: data },
+  }));
 
   const promisePreview = buildPromisePreview(data.core_promise);
 
@@ -88,6 +71,21 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
     });
   };
 
+  const framework = data.framework ?? { pillars: [] };
+  const appendPillar = (item: Record<string, string>) => {
+    const nextPillar: FrameworkPillar = {
+      id: newId(),
+      name: (item.name ?? "").trim(),
+      description: (item.description ?? "").trim(),
+    };
+    onChange({
+      framework: {
+        ...framework,
+        pillars: [...(framework.pillars ?? []), nextPillar],
+      },
+    });
+  };
+
   const feedback =
     progress >= 100
       ? "World-class positioning. Your offer is the obvious choice."
@@ -96,6 +94,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
       : progress >= 50
       ? "Good start. Keep sharpening what makes your method genuinely new."
       : null;
+
 
   return (
     <SectionShell
@@ -279,8 +278,25 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           value={data.framework}
           onChange={(framework) => onChange({ framework })}
           onCoach={openCoach}
+          onCoachPillars={() =>
+            openListCoach({
+              id: "framework_pillars",
+              label: "Signature Framework — Pillars",
+              helper:
+                "Core pillars or steps of the signature method. Short, evocative names + 1–2 sentence descriptions.",
+              basePath: "offer_stack.angle.framework.pillars",
+              itemFields: [
+                { key: "name", label: "Name", kind: "text", helper: "Short, evocative pillar name (2–5 words)." },
+                { key: "description", label: "Description", kind: "textarea", helper: "What happens in this pillar — 1–2 sentences." },
+              ],
+              currentCount: framework.pillars?.length ?? 0,
+              suggestedCount: [3, 5],
+              appendItem: appendPillar,
+            })
+          }
         />
       </div>
+
 
       {/* 6. Core Transformation Promise builder */}
       <div className="rounded-xl border border-border bg-card p-5">
@@ -385,16 +401,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
         </div>
       </div>
 
-      <CoachPanel
-        open={!!coachSpec}
-        onOpenChange={(o) => {
-          if (!o) setCoachSpec(null);
-        }}
-        context={coachContext}
-        onApply={(value) => {
-          coachSpec?.apply(value);
-        }}
-      />
+      {panel}
     </SectionShell>
   );
 };
