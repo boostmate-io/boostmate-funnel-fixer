@@ -85,11 +85,19 @@ customer_clarity.transformation_point_a — textarea — Where they are now
 customer_clarity.transformation_point_b — textarea — Where they want to be
 customer_clarity.transformation_process — textarea — Transformation process
 
-offer_stack.angle.<key>   (angle fields — textarea unless noted)
+offer_stack.angle.main_offer_name — text — Main Offer Name (short, 3-6 words, name only)
+offer_stack.angle.short_description — textarea — Short Offer Description (1-2 sentences)
+offer_stack.angle.core_outcome — textarea — Core Outcome (primary transformation result, 1 sentence)
+offer_stack.angle.angle_new_vehicle — textarea — New Vehicle (what makes the method genuinely NEW)
+offer_stack.angle.angle_better_results — textarea — Better Results (why the method produces BETTER results)
+offer_stack.angle.angle_faster_outcome — textarea — Faster Outcome (how clients get results FASTER)
+offer_stack.angle.angle_easier_process — textarea — Easier Process (how the process is made EASIER)
 offer_stack.stack.<key>   (stack fields — textarea unless noted)
 offer_stack.pricing.<key> (pricing fields — textarea unless noted)
 proof_authority.<sub>.<key>
 growth_system.<sub>.<key>
+
+NOTE: The Offer Angle tab also has structured fields (framework, core_promise) that the Coach cannot currently write to — never propose writes for those paths. Fields like "primary outcome of the main offer", "unique mechanism", "main promise / tagline", "core emotional hook" DO NOT EXIST in this blueprint — never invent field names.
 
 Rules:
 - Only write to paths the user's request actually implies. If the user asks for one field, write ONLY that path.
