@@ -18,6 +18,8 @@ import SectionShell from "./SectionShell";
 import CoreOfferDialog from "./CoreOfferDialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import DeliveryTypePicker from "./DeliveryTypePicker";
+import CoachIconButton from "./CoachIconButton";
+import { useOfferCoach, type OfferCoachSpec } from "./useOfferCoach";
 import {
   ECOSYSTEM_TIERS,
   calcEcosystemProgress,
