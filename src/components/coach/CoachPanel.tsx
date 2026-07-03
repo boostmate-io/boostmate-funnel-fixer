@@ -148,6 +148,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
               onRefine={(v) =>
                 handleSend(`Scherp deze versie verder aan, houd de kern maar maak hem sterker:\n\n${v}`)
               }
+              onApplyBlueprintWrites={onApplyBlueprintWrites}
             />
           ))}
           {status === "sending" && (
