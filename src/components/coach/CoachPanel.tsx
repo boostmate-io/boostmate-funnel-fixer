@@ -106,6 +106,15 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
 
   const opener = useMemo(() => openerFor(context), [context]);
   const displayMessages = messages.length > 0 || !opener ? messages : [opener];
+  const nl = (context?.businessContext.locale ?? "en").toLowerCase().slice(0, 2) === "nl";
+  const t = {
+    thinking: nl ? "Denken…" : "Thinking…",
+    placeholder: nl ? "Typ je bericht… (Enter om te versturen)" : "Type your message… (Enter to send)",
+    subtitle: nl ? "Chat tot we op het juiste antwoord landen." : "Chat until we land on the right answer.",
+    refinePrompt: nl
+      ? "Scherp deze versie verder aan, houd de kern maar maak hem sterker:"
+      : "Sharpen this version further — keep the core, make it stronger:",
+  };
 
   useEffect(() => {
     if (open) {
