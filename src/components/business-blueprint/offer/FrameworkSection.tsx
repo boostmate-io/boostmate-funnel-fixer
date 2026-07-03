@@ -1,6 +1,7 @@
 // =============================================================================
 // FrameworkSection — Tab 1 builder for Signature Mechanism / Framework.
 // Method name + brief description + dynamic pillar cards.
+// Every field (framework meta + each pillar) has an AI Coach entry point.
 // =============================================================================
 
 import { Layers3, Trash2, Plus } from "lucide-react";
@@ -8,16 +9,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
+import CoachIconButton from "./CoachIconButton";
 import type { SignatureFramework, FrameworkPillar } from "../offerDesignTypes";
+import type { AngleCoachSpec } from "./OfferAngleTab";
 
 const newId = () => crypto.randomUUID();
 
 interface Props {
   value: SignatureFramework | undefined;
   onChange: (next: SignatureFramework) => void;
+  onCoach?: (spec: AngleCoachSpec) => void;
 }
 
-const FrameworkSection = ({ value, onChange }: Props) => {
+const FrameworkSection = ({ value, onChange, onCoach }: Props) => {
   const framework: SignatureFramework = value ?? { pillars: [] };
   const pillars = framework.pillars ?? [];
 
@@ -55,9 +59,26 @@ const FrameworkSection = ({ value, onChange }: Props) => {
       <div className="p-5 space-y-4">
         <div className="space-y-4">
           <div>
-            <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Framework / Method Name
-            </Label>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-xs font-medium text-muted-foreground block">
+                Framework / Method Name
+              </Label>
+              {onCoach && (
+                <CoachIconButton
+                  compact
+                  onClick={() =>
+                    onCoach({
+                      id: "offer_stack.angle.framework.name",
+                      label: "Framework / Method Name",
+                      helper: "A memorable name for your signature method. 2–5 words. Ownable.",
+                      placeholder: "e.g. The Confidence Reset Method",
+                      currentValue: framework.name ?? "",
+                      apply: (v) => update({ name: v }),
+                    })
+                  }
+                />
+              )}
+            </div>
             <Input
               value={framework.name ?? ""}
               onChange={(e) => update({ name: e.target.value })}
@@ -66,9 +87,26 @@ const FrameworkSection = ({ value, onChange }: Props) => {
             />
           </div>
           <div>
-            <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Brief Description
-            </Label>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-xs font-medium text-muted-foreground block">
+                Brief Description
+              </Label>
+              {onCoach && (
+                <CoachIconButton
+                  compact
+                  onClick={() =>
+                    onCoach({
+                      id: "offer_stack.angle.framework.description",
+                      label: "Framework — Brief Description",
+                      helper: "One line describing what makes the framework unique and why it works.",
+                      placeholder: "What makes it unique and why it works",
+                      currentValue: framework.description ?? "",
+                      apply: (v) => update({ description: v }),
+                    })
+                  }
+                />
+              )}
+            </div>
             <Input
               value={framework.description ?? ""}
               onChange={(e) => update({ description: e.target.value })}
@@ -115,6 +153,21 @@ const FrameworkSection = ({ value, onChange }: Props) => {
                           placeholder={`Pillar ${idx + 1} name`}
                           className="h-9 font-medium"
                         />
+                        {onCoach && (
+                          <CoachIconButton
+                            compact
+                            onClick={() =>
+                              onCoach({
+                                id: `offer_stack.angle.framework.pillars.${p.id}.name`,
+                                label: `Pillar ${idx + 1} — Name`,
+                                helper: `The name of pillar ${idx + 1} in your framework. Short and evocative.`,
+                                placeholder: `Pillar ${idx + 1} name`,
+                                currentValue: p.name ?? "",
+                                apply: (v) => updatePillar(p.id, { name: v }),
+                              })
+                            }
+                          />
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -124,13 +177,32 @@ const FrameworkSection = ({ value, onChange }: Props) => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                      <AutoTextarea
-                        value={p.description ?? ""}
-                        onChange={(e) => updatePillar(p.id, { description: e.target.value })}
-                        placeholder="What happens in this pillar?"
-                        rows={2}
-                        className="resize-none text-sm"
-                      />
+                      <div className="relative">
+                        <AutoTextarea
+                          value={p.description ?? ""}
+                          onChange={(e) => updatePillar(p.id, { description: e.target.value })}
+                          placeholder="What happens in this pillar?"
+                          rows={2}
+                          className="resize-none text-sm pr-10"
+                        />
+                        {onCoach && (
+                          <div className="absolute top-1.5 right-1.5">
+                            <CoachIconButton
+                              compact
+                              onClick={() =>
+                                onCoach({
+                                  id: `offer_stack.angle.framework.pillars.${p.id}.description`,
+                                  label: `Pillar ${idx + 1} — Description`,
+                                  helper: `What actually happens inside pillar ${idx + 1}? 1–2 sentences.`,
+                                  placeholder: "What happens in this pillar?",
+                                  currentValue: p.description ?? "",
+                                  apply: (v) => updatePillar(p.id, { description: v }),
+                                })
+                              }
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
