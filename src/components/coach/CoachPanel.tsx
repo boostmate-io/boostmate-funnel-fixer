@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Send, Sparkles, Loader2, RefreshCw, Check } from "lucide-react";
 import { useCoachChat } from "@/lib/coach/useCoachChat";
-import type { CoachContext, CoachMessage, CoachMessagePart } from "@/lib/coach/types";
+import type { CoachContext, CoachMessage, CoachMessagePart, CoachBlueprintWrite } from "@/lib/coach/types";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -26,6 +26,8 @@ interface Props {
   context: CoachContext | null;
   /** Called when the user clicks "Replace field" on a proposed answer. */
   onApply?: (value: string) => void;
+  /** Called when the user clicks "Apply all" on a batch blueprint-writes proposal. */
+  onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
 }
 
 const openerFor = (context: CoachContext | null): CoachMessage | null => {
