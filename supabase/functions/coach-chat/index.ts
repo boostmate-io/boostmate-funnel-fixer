@@ -128,6 +128,7 @@ const BLUEPRINT_SUB_BLOCK_ALIASES: Record<string, string[]> = Object.fromEntries
   BLUEPRINT_SUB_BLOCKS.map((s) => [s.id, s.aliases]),
 );
 
+async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
   if (promptCache && Date.now() - promptCache.at < PROMPT_TTL_MS) return promptCache.prompts;
   try {
     const { data: action } = await supabase
