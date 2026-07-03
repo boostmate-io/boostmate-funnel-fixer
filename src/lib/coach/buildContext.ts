@@ -37,3 +37,51 @@ export function buildBlueprintFieldContext(
     },
   };
 }
+
+/**
+ * Section-level Coach entry — covers a full Blueprint section
+ * (e.g. "Proof & Authority") instead of one specific field. The engine
+ * will NOT propose a replacement value; it acts as a strategist.
+ */
+export function buildBlueprintSectionContext(
+  sectionId: string,
+  sectionLabel: string,
+  blueprint: BlueprintRow | null,
+  subAccountId: string,
+): CoachContext {
+  return {
+    scope: "blueprint.section",
+    intent: "freeform",
+    target: {
+      id: `section:${sectionId}`,
+      label: sectionLabel,
+      kind: "structured",
+      currentValue: null,
+    },
+    businessContext: {
+      subAccountId,
+      blueprintSnapshot: blueprint,
+    },
+  };
+}
+
+/**
+ * Global Growth Strategist — no specific target, full blueprint context.
+ * Used by the floating Coach bubble.
+ */
+export function buildGlobalContext(
+  blueprint: BlueprintRow | null,
+  subAccountId: string,
+  routeHint?: string,
+): CoachContext {
+  return {
+    scope: "global",
+    intent: "freeform",
+    target: null,
+    businessContext: {
+      subAccountId,
+      blueprintSnapshot: blueprint,
+      routeHint,
+    },
+  };
+}

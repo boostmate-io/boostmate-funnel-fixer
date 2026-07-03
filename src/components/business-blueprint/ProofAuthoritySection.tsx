@@ -9,7 +9,12 @@ import { useState } from "react";
 import {
   Award, Users2, MessageSquareWarning, BookOpen, Plus, Trash2, Link as LinkIcon,
   Sparkles, Shield, Star, BadgeCheck, BarChart3, Quote, Trophy, Lightbulb, Check, Info,
+  MessageSquare,
 } from "lucide-react";
+import CoachPanel from "@/components/coach/CoachPanel";
+import { buildBlueprintSectionContext } from "@/lib/coach/buildContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import type { BlueprintRow } from "./types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -637,6 +642,8 @@ const StoriesTab = ({
 
 const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
   const [active, setActive] = useState<TabId>("authority");
+  const [coachOpen, setCoachOpen] = useState(false);
+  const { activeSubAccountId } = useWorkspace();
   const tab = TABS.find((t) => t.id === active)!;
   const Icon = tab.icon;
   const overallProgress = calcProofAuthorityProgress(data);
@@ -710,7 +717,18 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
               </div>
               <p className="text-sm text-muted-foreground">{tab.description}</p>
             </div>
-            {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
+            <div className="flex items-center gap-2">
+              {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCoachOpen(true)}
+                className="gap-1.5 h-8"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Coach
+              </Button>
+            </div>
           </div>
 
           {/* Insight box */}
@@ -743,6 +761,21 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
           </div>
         </div>
       </div>
+
+      <CoachPanel
+        open={coachOpen}
+        onOpenChange={setCoachOpen}
+        context={
+          activeSubAccountId
+            ? buildBlueprintSectionContext(
+                "proof_authority",
+                "Proof & Authority",
+                { proof_authority: data } as unknown as BlueprintRow,
+                activeSubAccountId,
+              )
+            : null
+        }
+      />
     </div>
   );
 };

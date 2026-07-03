@@ -1,7 +1,7 @@
 // =============================================================================
 // AI Coach — universal CoachContext contract.
-// Every touchpoint (Blueprint field, Copy Component, Funnel node, Global) builds
-// one of these and passes it to the Coach engine. The engine itself is
+// Every touchpoint (Blueprint field/section, Copy Component, Funnel node, Global)
+// builds one of these and passes it to the same Coach engine. The engine is
 // scope-agnostic — it only reads this shape.
 // =============================================================================
 
@@ -9,6 +9,7 @@ import type { BlueprintRow } from "@/components/business-blueprint/types";
 
 export type CoachScope =
   | "blueprint.field"
+  | "blueprint.section"
   | "copy.component"
   | "funnel.node"
   | "global";
@@ -32,6 +33,7 @@ export interface CoachContext {
     subAccountId: string;
     blueprintSnapshot: BlueprintRow | null;
     activeOfferId?: string;
+    routeHint?: string;
   };
 }
 
@@ -42,7 +44,8 @@ export interface CoachContext {
 export type CoachMessagePart =
   | { type: "text"; text: string }
   | { type: "proposal"; value: string; reasoning?: string }
-  | { type: "quick_replies"; replies: string[] };
+  | { type: "quick_replies"; replies: string[] }
+  | { type: "memory_saved"; key: string; value: string };
 
 export interface CoachMessage {
   id: string;

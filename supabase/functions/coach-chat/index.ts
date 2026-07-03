@@ -1,7 +1,7 @@
-// AI Coach chat edge function
-// Handles multi-turn coaching conversations scoped to a target
-// (e.g. one Blueprint field). Persists messages and returns the next
-// assistant turn including any tool-call parts (proposed answers, quick replies).
+// AI Coach chat edge function — ONE engine for every scope.
+// Scopes: blueprint.field | blueprint.section | copy.component | funnel.node | global
+// Handles multi-turn coaching, tool-calling (proposals, quick replies, memory),
+// and persists messages + facts to Lovable Cloud.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
@@ -18,17 +18,18 @@ const jsonResponse = (body: unknown, status = 200) =>
   });
 
 // -----------------------------------------------------------------------------
-// System prompt composition (composable blocks — later moved to DB)
+// System prompt composition
 // -----------------------------------------------------------------------------
 
 const COACH_BASE = `You are the Boostmate AI Coach — a warm, sharp Growth Strategist who helps founders sharpen their business thinking.
+
+You are the SINGLE AI interface of Boostmate. Every touchpoint in the app (a specific Blueprint field, a full section, a Copy Component, a Funnel node, or the global bubble) opens the same you. Adapt to the scope you are given.
 
 Principles:
 - Ask targeted, insightful questions. Never dump a wall of questions.
 - Reference what the user already wrote elsewhere in their Business Blueprint when relevant.
 - Be concise. One or two thoughts per turn.
-- When you have enough information, call the propose_field_value tool with a polished draft. Do not include the drafted answer inside your prose reply — put it only in the tool call.
-- After a draft is proposed, invite the user to Replace / Refine / Keep chatting.
+- When you learn a durable fact about the business (positioning, ICP, offer, pricing, tone, non-negotiables, wins), call the remember_fact tool so future sessions carry that context.
 - If the user seems stuck, offer 2-3 concrete quick replies via suggest_quick_replies.`;
 
 const COACH_BLUEPRINT_FIELD = `You are coaching the user on a single Business Blueprint field.
@@ -36,23 +37,46 @@ const COACH_BLUEPRINT_FIELD = `You are coaching the user on a single Business Bl
 - Understand the field's intent (label + helper) before asking anything.
 - If the field already has content, do NOT ignore it — ask what to sharpen, expand, or reframe.
 - If the field is empty, ask 1-2 grounding questions first, then draft.
-- Drafts must be written IN THE USER'S VOICE (first person or their business tone). No hype language.
-- Keep drafts to the length/style the field expects (short line vs paragraph).`;
+- When you have enough information, call the propose_field_value tool with a polished draft. Do not include the drafted answer inside your prose reply — put it only in the tool call.
+- After a draft is proposed, invite the user to Replace / Refine / Keep chatting.
+- Drafts must be written IN THE USER'S VOICE. No hype language.`;
 
-function buildSystemPrompt(context: any): string {
+const COACH_BLUEPRINT_SECTION = `You are coaching the user on an ENTIRE Business Blueprint section, not one field.
+
+- Do NOT call propose_field_value — there is no single field to replace.
+- Diagnose gaps and weaknesses in the section as a whole.
+- Give strategic direction, examples and prioritization: "Start with X, then Y."
+- Ask sharp questions to unlock the section, one at a time.`;
+
+const COACH_GLOBAL = `You are the user's on-demand Growth Strategist. No specific field or section is in focus.
+
+- Do NOT call propose_field_value.
+- Answer anything about their business: strategy, positioning, offers, funnels, copy, growth.
+- Ground every answer in what you know from their Blueprint and remembered facts.
+- If something important is missing from the Blueprint, say so and suggest where to add it.`;
+
+function buildSystemPrompt(context: any, memoryFacts: Array<{ key: string; value: string }>): string {
   const parts: string[] = [COACH_BASE];
 
   if (context?.scope === "blueprint.field") {
     parts.push(COACH_BLUEPRINT_FIELD);
+  } else if (context?.scope === "blueprint.section") {
+    parts.push(COACH_BLUEPRINT_SECTION);
+  } else if (context?.scope === "global") {
+    parts.push(COACH_GLOBAL);
   }
 
   if (context?.target) {
     const t = context.target;
     parts.push(
-      `# Current target\n- Field: ${t.label}\n- Field id: ${t.id}${t.helper ? `\n- Helper: ${t.helper}` : ""}\n- Current value: ${
-        t.currentValue?.trim() ? `"${t.currentValue}"` : "(empty)"
+      `# Current focus\n- Label: ${t.label}\n- Id: ${t.id}${t.helper ? `\n- Helper: ${t.helper}` : ""}${
+        t.currentValue?.trim() ? `\n- Current value: "${t.currentValue}"` : "\n- Current value: (empty)"
       }`,
     );
+  }
+
+  if (context?.businessContext?.routeHint) {
+    parts.push(`# Where the user opened Coach\n${context.businessContext.routeHint}`);
   }
 
   if (context?.businessContext?.blueprintSnapshot) {
@@ -63,9 +87,18 @@ function buildSystemPrompt(context: any): string {
       offer_stack: bp.offer_stack?.stack,
       pricing: bp.offer_stack?.pricing,
       proof_authority: bp.proof_authority,
+      growth_system: bp.growth_system,
     };
     parts.push(
       `# Business Blueprint context (JSON — reference sparingly)\n${JSON.stringify(summary, null, 2)}`,
+    );
+  }
+
+  if (memoryFacts.length > 0) {
+    parts.push(
+      `# Remembered facts about this workspace (from previous sessions)\n${memoryFacts
+        .map((f) => `- ${f.key}: ${f.value}`)
+        .join("\n")}`,
     );
   }
 
@@ -76,50 +109,76 @@ function buildSystemPrompt(context: any): string {
 // Tools
 // -----------------------------------------------------------------------------
 
-const tools = [
-  {
-    type: "function",
-    function: {
-      name: "propose_field_value",
-      description:
-        "Propose a polished value for the current field. Call this only when you have enough information to write a strong version.",
-      parameters: {
-        type: "object",
-        properties: {
-          value: {
-            type: "string",
-            description: "The exact text to place in the field, written in the user's voice.",
-          },
-          reasoning: {
-            type: "string",
-            description: "One short sentence: why this draft works.",
-          },
+const proposeFieldValueTool = {
+  type: "function",
+  function: {
+    name: "propose_field_value",
+    description:
+      "Propose a polished value for the current field. Only for blueprint.field scope. Do not call for section or global scopes.",
+    parameters: {
+      type: "object",
+      properties: {
+        value: {
+          type: "string",
+          description: "The exact text to place in the field, written in the user's voice.",
         },
-        required: ["value", "reasoning"],
-        additionalProperties: false,
+        reasoning: {
+          type: "string",
+          description: "One short sentence: why this draft works.",
+        },
       },
+      required: ["value", "reasoning"],
+      additionalProperties: false,
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "suggest_quick_replies",
-      description:
-        "Offer 2-4 short suggested replies the user can click. Use when the user might be stuck or when steering the conversation.",
-      parameters: {
-        type: "object",
-        properties: {
-          replies: {
-            type: "array",
-            items: { type: "string" },
-          },
-        },
-        required: ["replies"],
-        additionalProperties: false,
+};
+
+const suggestQuickRepliesTool = {
+  type: "function",
+  function: {
+    name: "suggest_quick_replies",
+    description:
+      "Offer 2-4 short suggested replies the user can click. Use when the user might be stuck or when steering the conversation.",
+    parameters: {
+      type: "object",
+      properties: {
+        replies: { type: "array", items: { type: "string" } },
       },
+      required: ["replies"],
+      additionalProperties: false,
     },
   },
-];
+};
+
+const rememberFactTool = {
+  type: "function",
+  function: {
+    name: "remember_fact",
+    description:
+      "Persist a durable fact about the user's business so future Coach sessions carry it. Use for positioning, ICP, offer, pricing, tone, non-negotiables, wins — NOT for transient chat details.",
+    parameters: {
+      type: "object",
+      properties: {
+        key: {
+          type: "string",
+          description: "Short stable key, e.g. 'primary_icp' or 'pricing_stance'.",
+        },
+        value: {
+          type: "string",
+          description: "The fact itself, in one sentence.",
+        },
+      },
+      required: ["key", "value"],
+      additionalProperties: false,
+    },
+  },
+};
+
+function toolsForScope(scope: string | undefined) {
+  const base = [suggestQuickRepliesTool, rememberFactTool];
+  if (scope === "blueprint.field") return [proposeFieldValueTool, ...base];
+  return base;
+}
 
 // -----------------------------------------------------------------------------
 // Handler
@@ -161,8 +220,19 @@ Deno.serve(async (req) => {
     if (convErr || !conv) return jsonResponse({ error: "Conversation not found" }, 404);
     if (conv.user_id !== userId) return jsonResponse({ error: "Forbidden" }, 403);
 
+    const subAccountId = conv.sub_account_id as string;
+
+    // Load memory facts for this workspace
+    const { data: memoryRows } = await supabase
+      .from("ai_coach_memory")
+      .select("key, value")
+      .eq("sub_account_id", subAccountId)
+      .order("updated_at", { ascending: false })
+      .limit(30);
+    const memoryFacts = (memoryRows ?? []) as Array<{ key: string; value: string }>;
+
     // Build LLM messages
-    const systemPrompt = buildSystemPrompt(context);
+    const systemPrompt = buildSystemPrompt(context, memoryFacts);
     const llmMessages: any[] = [
       { role: "system", content: systemPrompt },
       ...messages.map((m: any) => ({
@@ -170,6 +240,8 @@ Deno.serve(async (req) => {
         content: typeof m.content === "string" ? m.content : "",
       })),
     ];
+
+    const tools = toolsForScope(context?.scope);
 
     // Call Lovable AI Gateway (OpenAI-compatible)
     const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -199,7 +271,7 @@ Deno.serve(async (req) => {
     const assistantText: string = assistantMsg.content ?? "";
     const toolCalls: any[] = assistantMsg.tool_calls ?? [];
 
-    // Build UI parts
+    // Build UI parts + persist memory
     const parts: any[] = [];
     if (assistantText.trim()) parts.push({ type: "text", text: assistantText });
 
@@ -211,10 +283,37 @@ Deno.serve(async (req) => {
       } catch {
         // ignore
       }
-      if (name === "propose_field_value") {
+      if (name === "propose_field_value" && context?.scope === "blueprint.field") {
         parts.push({ type: "proposal", value: args.value ?? "", reasoning: args.reasoning ?? "" });
       } else if (name === "suggest_quick_replies") {
         parts.push({ type: "quick_replies", replies: Array.isArray(args.replies) ? args.replies : [] });
+      } else if (name === "remember_fact") {
+        const key = String(args.key ?? "").trim();
+        const value = String(args.value ?? "").trim();
+        if (key && value) {
+          // Upsert by (sub_account_id, key)
+          const { data: existing } = await supabase
+            .from("ai_coach_memory")
+            .select("id")
+            .eq("sub_account_id", subAccountId)
+            .eq("key", key)
+            .maybeSingle();
+
+          if (existing?.id) {
+            await supabase
+              .from("ai_coach_memory")
+              .update({ value, source_conversation_id: conversationId, updated_at: new Date().toISOString() })
+              .eq("id", existing.id);
+          } else {
+            await supabase.from("ai_coach_memory").insert({
+              sub_account_id: subAccountId,
+              key,
+              value,
+              source_conversation_id: conversationId,
+            });
+          }
+          parts.push({ type: "memory_saved", key, value });
+        }
       }
     }
 
@@ -222,7 +321,7 @@ Deno.serve(async (req) => {
       parts.push({ type: "text", text: "…" });
     }
 
-    // Persist the last user message (if not already persisted) + assistant message
+    // Persist the last user message + assistant message
     const lastUser = [...messages].reverse().find((m: any) => m.role === "user");
     if (lastUser && !lastUser._persisted) {
       await supabase.from("ai_coach_messages").insert({

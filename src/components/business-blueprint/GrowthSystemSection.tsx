@@ -6,11 +6,9 @@
 // =============================================================================
 
 import { useState } from "react";
-import { Check, Sparkles, Wand2 } from "lucide-react";
+import { Check, Sparkles, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { toast } from "sonner";
 import {
   GROWTH_TABS,
   type GrowthSystemData,
@@ -27,6 +25,10 @@ import type { EcosystemOfferRow } from "./useEcosystemOffers";
 import AcquisitionTab from "./growth/AcquisitionTab";
 import FunnelArchitectureTab from "./growth/FunnelArchitectureTab";
 import AscensionTab from "./growth/AscensionTab";
+import CoachPanel from "@/components/coach/CoachPanel";
+import { buildBlueprintSectionContext } from "@/lib/coach/buildContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import type { BlueprintRow } from "./types";
 
 interface Props {
   blueprintId: string;
@@ -46,6 +48,8 @@ const GrowthSystemSection = ({
   businessType,
 }: Props) => {
   const [active, setActive] = useState<GrowthTab>("acquisition");
+  const [coachOpen, setCoachOpen] = useState(false);
+  const { activeSubAccountId } = useWorkspace();
   const bt = getBusinessType(businessType);
   const { mappings, addMapping, updateMapping, deleteMapping } = useFunnelMappings(blueprintId);
 
@@ -64,10 +68,6 @@ const GrowthSystemSection = ({
 
   const handleAscensionChange = (patch: Partial<AscensionData>) => {
     onChange({ ascension: { ...data.ascension, ...patch } });
-  };
-
-  const handleAiCoach = () => {
-    toast.info("Growth coach — AI suggestions coming soon");
   };
 
   return (
@@ -123,15 +123,15 @@ const GrowthSystemSection = ({
             </div>
             <div className="flex items-center gap-2">
               {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={handleAiCoach} className="gap-1.5 h-8">
-                    <Wand2 className="w-3.5 h-3.5" />
-                    Coach
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>AI growth coach coming soon</TooltipContent>
-              </Tooltip>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCoachOpen(true)}
+                className="gap-1.5 h-8"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Coach
+              </Button>
             </div>
           </div>
 
@@ -182,6 +182,21 @@ const GrowthSystemSection = ({
           )}
         </div>
       </div>
+
+      <CoachPanel
+        open={coachOpen}
+        onOpenChange={setCoachOpen}
+        context={
+          activeSubAccountId
+            ? buildBlueprintSectionContext(
+                "growth_system",
+                "Growth System",
+                { growth_system: data } as unknown as BlueprintRow,
+                activeSubAccountId,
+              )
+            : null
+        }
+      />
     </div>
   );
 };

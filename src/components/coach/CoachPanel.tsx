@@ -29,7 +29,42 @@ interface Props {
 }
 
 const openerFor = (context: CoachContext | null): CoachMessage | null => {
-  if (!context?.target) return null;
+  if (!context) return null;
+
+  if (context.scope === "global") {
+    const text =
+      "Hoi! Ik ben je **Growth Strategist**. Ik ken je Blueprint en denk mee over strategie, aanbod, funnels of copy. Waar wil je vandaag scherper op worden?";
+    return {
+      id: "opener",
+      role: "assistant",
+      content: text,
+      parts: [
+        { type: "text", text },
+        {
+          type: "quick_replies",
+          replies: ["Wat is nu mijn grootste bottleneck?", "Check mijn positionering", "Ideeën voor mijn volgende aanbod"],
+        },
+      ],
+    };
+  }
+
+  if (context.scope === "blueprint.section" && context.target) {
+    const text = `Laten we samen door **${context.target.label}** heen lopen. Ik zie wat je al hebt ingevuld — waar wil je beginnen?`;
+    return {
+      id: "opener",
+      role: "assistant",
+      content: text,
+      parts: [
+        { type: "text", text },
+        {
+          type: "quick_replies",
+          replies: ["Wat mist er nog?", "Wat is het zwakst?", "Geef me een prioriteitenlijstje"],
+        },
+      ],
+    };
+  }
+
+  if (!context.target) return null;
   const label = context.target.label;
   const hasValue = !!context.target.currentValue?.trim();
   const text = hasValue
@@ -275,6 +310,15 @@ function PartRenderer({
             Refine
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (part.type === "memory_saved") {
+    return (
+      <div className="text-[11px] text-muted-foreground inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/60 border border-border">
+        <Sparkles className="w-3 h-3 text-primary" />
+        Onthouden: <span className="font-medium text-foreground">{part.key}</span>
       </div>
     );
   }
