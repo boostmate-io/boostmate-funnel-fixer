@@ -4,6 +4,12 @@ interface ExecuteAIActionParams {
   slug: string;
   inputs?: Record<string, any>;
   extraInstructions?: string;
+  /**
+   * Optional per-caller output structure override.
+   * When provided, the edge function uses this instead of the AI Action's
+   * own `output_structure` (which stays as fallback for other modules).
+   */
+  outputStructure?: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
 }
 
 interface ExecuteAIActionResult {
@@ -19,12 +25,14 @@ export async function executeAIAction({
   slug,
   inputs = {},
   extraInstructions,
+  outputStructure,
 }: ExecuteAIActionParams): Promise<ExecuteAIActionResult> {
   const { data, error } = await supabase.functions.invoke("execute-ai-action", {
     body: {
       slug,
       inputs,
       extra_instructions: extraInstructions,
+      output_structure: outputStructure,
     },
   });
 
