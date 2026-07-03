@@ -14,6 +14,7 @@ import AuthorityContextInsightUI from "./interfaces/AuthorityContextInsightUI";
 import RiskReversalGuaranteeUI from "./interfaces/RiskReversalGuaranteeUI";
 import UrgencyExclusivityDecisionUI from "./interfaces/UrgencyExclusivityDecisionUI";
 import FAQObjectionsUI from "./interfaces/FAQObjectionsUI";
+import FinalCTAUI from "./interfaces/FinalCTAUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
@@ -70,6 +71,8 @@ const ComponentUIRenderer = ({
       return <UrgencyExclusivityDecisionUI {...props} />;
     case "faq_objections_ui":
       return <FAQObjectionsUI {...props} />;
+    case "final_cta_ui":
+      return <FinalCTAUI {...props} />;
     default:
       return <GenericComponentUI {...props} />;
   }
