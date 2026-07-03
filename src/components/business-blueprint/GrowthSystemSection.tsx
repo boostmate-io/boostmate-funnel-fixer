@@ -6,11 +6,9 @@
 // =============================================================================
 
 import { useState } from "react";
-import { Check, Sparkles, Wand2 } from "lucide-react";
+import { Check, Sparkles, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { toast } from "sonner";
 import {
   GROWTH_TABS,
   type GrowthSystemData,
@@ -27,6 +25,10 @@ import type { EcosystemOfferRow } from "./useEcosystemOffers";
 import AcquisitionTab from "./growth/AcquisitionTab";
 import FunnelArchitectureTab from "./growth/FunnelArchitectureTab";
 import AscensionTab from "./growth/AscensionTab";
+import CoachPanel from "@/components/coach/CoachPanel";
+import { buildBlueprintSectionContext } from "@/lib/coach/buildContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import type { BlueprintRow } from "./types";
 
 interface Props {
   blueprintId: string;
