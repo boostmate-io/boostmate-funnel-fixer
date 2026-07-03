@@ -775,6 +775,14 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
               )
             : null
         }
+        onApplyBlueprintWrites={async (writes) => {
+          if (!activeSubAccountId) return;
+          const { applyBlueprintWrites } = await import("@/lib/coach/applyBlueprintWrites");
+          const { toast } = await import("sonner");
+          const res = await applyBlueprintWrites(activeSubAccountId, writes);
+          if (res.error) toast.error(`Kon Blueprint niet bijwerken: ${res.error}`);
+          else toast.success(`${res.applied} veld(en) bijgewerkt — herlaad de sectie om ze te zien`);
+        }}
       />
     </div>
   );

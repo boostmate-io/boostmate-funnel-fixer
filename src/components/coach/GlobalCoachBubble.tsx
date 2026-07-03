@@ -3,13 +3,16 @@
 // Uses the SAME CoachPanel + coach-chat engine as every scoped Coach entry.
 // =============================================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import CoachPanel from "@/components/coach/CoachPanel";
 import { buildGlobalContext } from "@/lib/coach/buildContext";
+import { applyBlueprintWrites } from "@/lib/coach/applyBlueprintWrites";
+import type { CoachBlueprintWrite } from "@/lib/coach/types";
 import type { BlueprintRow } from "@/components/business-blueprint/types";
 
 const GlobalCoachBubble = () => {
@@ -44,6 +47,26 @@ const GlobalCoachBubble = () => {
     return buildGlobalContext(blueprint, activeSubAccountId, `Route: ${location.pathname} · module: ${module}`);
   }, [activeSubAccountId, blueprint, location.pathname, location.search]);
 
+  const handleApplyBlueprintWrites = useCallback(
+    async (writes: CoachBlueprintWrite[]) => {
+      if (!activeSubAccountId) return;
+      const res = await applyBlueprintWrites(activeSubAccountId, writes);
+      if (res.error) {
+        toast.error(`Kon Blueprint niet bijwerken: ${res.error}`);
+      } else {
+        toast.success(`${res.applied} veld(en) bijgewerkt`);
+        // Refresh local snapshot so subsequent turns see the new values.
+        const { data } = await supabase
+          .from("business_blueprints")
+          .select("*")
+          .eq("sub_account_id", activeSubAccountId)
+          .maybeSingle();
+        setBlueprint((data as unknown as BlueprintRow) ?? null);
+      }
+    },
+    [activeSubAccountId],
+  );
+
   if (!activeSubAccountId) return null;
 
   return (
@@ -60,7 +83,12 @@ const GlobalCoachBubble = () => {
         <span className="text-sm font-semibold">Coach</span>
       </button>
 
-      <CoachPanel open={open} onOpenChange={setOpen} context={context} />
+      <CoachPanel
+        open={open}
+        onOpenChange={setOpen}
+        context={context}
+        onApplyBlueprintWrites={handleApplyBlueprintWrites}
+      />
     </>
   );
 };
