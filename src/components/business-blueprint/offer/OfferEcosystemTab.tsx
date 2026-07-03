@@ -50,14 +50,20 @@ const OfferCardRow = ({
   onDelete,
   isCore,
   cur,
+  openCoach,
+  tierLabel,
 }: {
   offer: EcosystemOfferRow;
   onUpdate: (patch: Partial<Pick<EcosystemOfferRow, "name" | "data">>) => void;
   onDelete: () => void;
   isCore: boolean;
   cur: string;
+  openCoach: (spec: OfferCoachSpec) => void;
+  tierLabel: string;
 }) => {
   const [open, setOpen] = useState(false);
+  const coachId = (field: string) => `offer_stack.ecosystem.${offer.id}.${field}`;
+  const canCoach = !isCore;
 
   return (
     <div className="rounded-lg border border-border bg-background overflow-hidden">
@@ -77,6 +83,20 @@ const OfferCardRow = ({
           className="h-9 font-medium border-0 bg-transparent px-2 focus-visible:ring-1"
           disabled={isCore}
         />
+        {canCoach && (
+          <CoachIconButton
+            compact
+            onClick={() =>
+              openCoach({
+                id: coachId("name"),
+                label: `${tierLabel} — Offer Name`,
+                helper: "Short, evocative name for this offer.",
+                currentValue: offer.name ?? "",
+                apply: (v) => onUpdate({ name: v }),
+              })
+            }
+          />
+        )}
         {typeof offer.data?.price === "number" && offer.data.price > 0 && (
           <Badge variant="secondary" className="text-xs tabular-nums shrink-0">
             {cur}{offer.data.price.toLocaleString()}
@@ -123,7 +143,23 @@ const OfferCardRow = ({
             </div>
           </div>
           <div>
-            <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</Label>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-xs font-medium text-muted-foreground block">Description</Label>
+              {canCoach && (
+                <CoachIconButton
+                  compact
+                  onClick={() =>
+                    openCoach({
+                      id: coachId("description"),
+                      label: `${tierLabel} — Description`,
+                      helper: "What this offer is in 1–2 sentences.",
+                      currentValue: offer.data?.description ?? "",
+                      apply: (v) => onUpdate({ data: { ...offer.data, description: v } }),
+                    })
+                  }
+                />
+              )}
+            </div>
             <AutoTextarea
               value={offer.data?.description ?? ""}
               onChange={(e) => onUpdate({ data: { ...offer.data, description: e.target.value } })}
@@ -134,7 +170,23 @@ const OfferCardRow = ({
             />
           </div>
           <div>
-            <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Core Outcome</Label>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-xs font-medium text-muted-foreground block">Core Outcome</Label>
+              {canCoach && (
+                <CoachIconButton
+                  compact
+                  onClick={() =>
+                    openCoach({
+                      id: coachId("core_outcome"),
+                      label: `${tierLabel} — Core Outcome`,
+                      helper: "What the buyer walks away with.",
+                      currentValue: offer.data?.core_outcome ?? "",
+                      apply: (v) => onUpdate({ data: { ...offer.data, core_outcome: v } }),
+                    })
+                  }
+                />
+              )}
+            </div>
             <Input
               value={offer.data?.core_outcome ?? ""}
               onChange={(e) => onUpdate({ data: { ...offer.data, core_outcome: e.target.value } })}
