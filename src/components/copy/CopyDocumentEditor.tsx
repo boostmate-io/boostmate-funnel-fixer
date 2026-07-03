@@ -42,6 +42,7 @@ interface CopyComponentDef {
   ui_interface_slug: string;
   icon: string;
   output_structure: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
+  required_blueprint_fields: string[];
 }
 
 interface CopyFramework {
