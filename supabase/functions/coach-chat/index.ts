@@ -84,8 +84,61 @@ growth_system.<sub>.<key>
 
 Only write to paths that make sense for the user's request. Use the current Blueprint JSON to see what already exists and what's empty.`;
 
-function buildSystemPrompt(context: any, memoryFacts: Array<{ key: string; value: string }>): string {
-  const parts: string[] = [COACH_BASE];
+// In-memory cache for admin-editable prompts (per edge instance, 60s TTL).
+type PromptSet = { base: string; field: string; section: string; global: string };
+const PROMPT_FALLBACK: PromptSet = {
+  base: COACH_BASE,
+  field: COACH_BLUEPRINT_FIELD,
+  section: COACH_BLUEPRINT_SECTION,
+  global: COACH_GLOBAL,
+};
+let promptCache: { at: number; prompts: PromptSet } | null = null;
+const PROMPT_TTL_MS = 60_000;
+
+async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
+  if (promptCache && Date.now() - promptCache.at < PROMPT_TTL_MS) return promptCache.prompts;
+  try {
+    const { data: action } = await supabase
+      .from("ai_actions")
+      .select("id")
+      .eq("slug", "coach-chat")
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!action?.id) return PROMPT_FALLBACK;
+
+    const { data: links } = await supabase
+      .from("ai_action_instruction_blocks")
+      .select("instruction_block_id")
+      .eq("ai_action_id", action.id);
+    const ids = (links ?? []).map((l: any) => l.instruction_block_id);
+    if (ids.length === 0) return PROMPT_FALLBACK;
+
+    const { data: blocks } = await supabase
+      .from("ai_instruction_blocks")
+      .select("name, content")
+      .in("id", ids);
+
+    const byName = new Map<string, string>((blocks ?? []).map((b: any) => [b.name, b.content]));
+    const prompts: PromptSet = {
+      base: byName.get("coach:base") || PROMPT_FALLBACK.base,
+      field: byName.get("coach:blueprint-field") || PROMPT_FALLBACK.field,
+      section: byName.get("coach:blueprint-section") || PROMPT_FALLBACK.section,
+      global: byName.get("coach:global") || PROMPT_FALLBACK.global,
+    };
+    promptCache = { at: Date.now(), prompts };
+    return prompts;
+  } catch (err) {
+    console.error("[coach-chat] loadCoachPrompts failed, using fallback:", err);
+    return PROMPT_FALLBACK;
+  }
+}
+
+function buildSystemPrompt(
+  context: any,
+  memoryFacts: Array<{ key: string; value: string }>,
+  prompts: PromptSet,
+): string {
+  const parts: string[] = [prompts.base];
 
   const locale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
   const langName = locale === "nl" ? "Dutch (Nederlands)" : "English";
@@ -94,51 +147,15 @@ function buildSystemPrompt(context: any, memoryFacts: Array<{ key: string; value
   );
 
   if (context?.scope === "blueprint.field") {
-    parts.push(COACH_BLUEPRINT_FIELD);
+    parts.push(prompts.field);
   } else if (context?.scope === "blueprint.section") {
-    parts.push(COACH_BLUEPRINT_SECTION);
+    parts.push(prompts.section);
     parts.push(BLUEPRINT_FIELD_PATHS);
   } else if (context?.scope === "global") {
-    parts.push(COACH_GLOBAL);
+    parts.push(prompts.global);
     parts.push(BLUEPRINT_FIELD_PATHS);
   }
-
-  if (context?.target) {
-    const t = context.target;
-    parts.push(
-      `# Current focus\n- Label: ${t.label}\n- Id: ${t.id}${t.helper ? `\n- Helper: ${t.helper}` : ""}${
-        t.currentValue?.trim() ? `\n- Current value: "${t.currentValue}"` : "\n- Current value: (empty)"
-      }`,
-    );
-  }
-
-  if (context?.businessContext?.routeHint) {
-    parts.push(`# Where the user opened Coach\n${context.businessContext.routeHint}`);
-  }
-
-  if (context?.businessContext?.blueprintSnapshot) {
-    const bp = context.businessContext.blueprintSnapshot;
-    const summary = {
-      customer_clarity: bp.customer_clarity,
-      offer_angle: bp.offer_stack?.angle,
-      offer_stack: bp.offer_stack?.stack,
-      pricing: bp.offer_stack?.pricing,
-      proof_authority: bp.proof_authority,
-      growth_system: bp.growth_system,
-    };
-    parts.push(
-      `# Business Blueprint context (JSON — reference sparingly)\n${JSON.stringify(summary, null, 2)}`,
-    );
-  }
-
-  if (memoryFacts.length > 0) {
-    parts.push(
-      `# Remembered facts about this workspace (from previous sessions)\n${memoryFacts
-        .map((f) => `- ${f.key}: ${f.value}`)
-        .join("\n")}`,
-    );
-  }
-
+...
   return parts.join("\n\n---\n\n");
 }
 
@@ -333,7 +350,8 @@ Deno.serve(async (req) => {
     const memoryFacts = (memoryRows ?? []) as Array<{ key: string; value: string }>;
 
     // Build LLM messages
-    const systemPrompt = buildSystemPrompt(context, memoryFacts);
+    const prompts = await loadCoachPrompts(supabase);
+    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts);
     const llmMessages: any[] = [
       { role: "system", content: systemPrompt },
       ...messages.map((m: any) => ({
