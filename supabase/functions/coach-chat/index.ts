@@ -417,6 +417,37 @@ function normalizeCurrentFieldProposal(context: any, value: string): string {
 function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) {
   if (!Array.isArray(writesArg)) return [];
 
+  const listSection = context?.target?.listSection;
+  if (listSection && typeof listSection === "object") {
+    const base: string = String(listSection.basePath ?? "").replace(/\.$/, "");
+    const fieldKeys = new Set<string>(
+      (Array.isArray(listSection.itemFields) ? listSection.itemFields : []).map((f: any) => String(f.key)),
+    );
+    const fieldLabelByKey = new Map<string, string>(
+      (Array.isArray(listSection.itemFields) ? listSection.itemFields : []).map((f: any) => [
+        String(f.key),
+        String(f.label ?? f.key),
+      ]),
+    );
+    const out: { path: string; label: string; value: string }[] = [];
+    for (const raw of writesArg) {
+      if (!raw || typeof raw.path !== "string" || typeof raw.value !== "string") continue;
+      const path = String(raw.path);
+      if (!path.startsWith(`${base}.`)) continue;
+      const rest = path.slice(base.length + 1).split(".");
+      if (rest.length !== 2) continue;
+      const [itemKey, fieldKey] = rest;
+      if (!/^new_\d+$/.test(itemKey)) continue;
+      if (!fieldKeys.has(fieldKey)) continue;
+      const value = String(raw.value ?? "").trim();
+      if (!value) continue;
+      const itemIdx = Number(itemKey.slice(4)) + 1;
+      const label = String(raw.label ?? `Item ${itemIdx} — ${fieldLabelByKey.get(fieldKey) ?? fieldKey}`);
+      out.push({ path, label, value });
+    }
+    return out;
+  }
+
   const allowedPaths = allowedBlueprintWritePaths(context, messages);
   const emptyOnly = latestUserAsksForEmptyOnly(messages);
   const byPath = new Map<string, { path: string; label: string; value: string }>();
