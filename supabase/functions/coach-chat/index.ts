@@ -30,7 +30,8 @@ Principles:
 - Reference what the user already wrote elsewhere in their Business Blueprint when relevant.
 - Be concise. One or two thoughts per turn.
 - When you learn a durable fact about the business (positioning, ICP, offer, pricing, tone, non-negotiables, wins), call the remember_fact tool so future sessions carry that context.
-- If the user seems stuck, offer 2-3 concrete quick replies via suggest_quick_replies.`;
+- If the user seems stuck, offer 2-3 concrete quick replies via suggest_quick_replies.
+- Never answer a direct request to fill, draft, update, or write Blueprint fields with only quick replies. A direct write request must produce a Blueprint write proposal.`;
 
 const COACH_BLUEPRINT_FIELD = `You are coaching the user on a single Business Blueprint field.
 
@@ -258,6 +259,26 @@ function toolsForScope(scope: string | undefined) {
   return base;
 }
 
+const WRITE_INTENT_RE =
+  /\b(fill|draft|generate|write|update|complete|create|make|set|apply|invul|invullen|vul|vullen|uitwerk|uitwerken|schrijf|maak|werk uit|bijwerk|aanvul|aanvullen)\b/i;
+const NOT_FILLED_RE = /\b(not filled|isn['’]?t filled|nothing happened|niet ingevuld|niets ingevuld|er gebeurt niets|werkt niet)\b/i;
+const BLUEPRINT_AREA_RE =
+  /\b(customer clarity|dream client|avatar|icp|pain|problem|desire|goal|transformation|offer|pricing|proof|authority|growth system|blueprint|sectie|section|veld|field)\b/i;
+
+function isBlueprintWriteIntent(scope: string | undefined, messages: any[]) {
+  if (scope !== "blueprint.section" && scope !== "global") return false;
+  const userMessages = messages.filter((m: any) => m?.role !== "assistant");
+  const latest = String(userMessages.at(-1)?.content ?? "");
+  const recent = userMessages
+    .slice(-4)
+    .map((m: any) => String(m?.content ?? ""))
+    .join("\n");
+
+  if (WRITE_INTENT_RE.test(latest) && BLUEPRINT_AREA_RE.test(latest)) return true;
+  if (NOT_FILLED_RE.test(latest) && (WRITE_INTENT_RE.test(recent) || BLUEPRINT_AREA_RE.test(recent))) return true;
+  return false;
+}
+
 // -----------------------------------------------------------------------------
 // Handler
 // -----------------------------------------------------------------------------
@@ -320,6 +341,7 @@ Deno.serve(async (req) => {
     ];
 
     const tools = toolsForScope(context?.scope);
+    const shouldForceBlueprintWrites = isBlueprintWriteIntent(context?.scope, messages);
 
     // Call Lovable AI Gateway (OpenAI-compatible)
     const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -332,7 +354,9 @@ Deno.serve(async (req) => {
         model: "google/gemini-3-flash-preview",
         messages: llmMessages,
         tools,
-        tool_choice: "auto",
+        tool_choice: shouldForceBlueprintWrites
+          ? { type: "function", function: { name: "propose_blueprint_writes" } }
+          : "auto",
       }),
     });
 
