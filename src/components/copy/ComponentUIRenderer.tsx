@@ -12,6 +12,7 @@ import ProcessMechanismUI from "./interfaces/ProcessMechanismUI";
 import AdditionalResultsProofUI from "./interfaces/AdditionalResultsProofUI";
 import AuthorityContextInsightUI from "./interfaces/AuthorityContextInsightUI";
 import RiskReversalGuaranteeUI from "./interfaces/RiskReversalGuaranteeUI";
+import UrgencyExclusivityDecisionUI from "./interfaces/UrgencyExclusivityDecisionUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
@@ -64,6 +65,8 @@ const ComponentUIRenderer = ({
       return <AuthorityContextInsightUI {...props} />;
     case "risk_reversal_guarantee_ui":
       return <RiskReversalGuaranteeUI {...props} />;
+    case "urgency_exclusivity_decision_ui":
+      return <UrgencyExclusivityDecisionUI {...props} />;
     default:
       return <GenericComponentUI {...props} />;
   }
