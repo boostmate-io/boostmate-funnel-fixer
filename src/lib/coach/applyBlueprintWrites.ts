@@ -85,5 +85,15 @@ export async function applyBlueprintWrites(
     .eq("id", row.id);
 
   if (updErr) return { applied: 0, error: updErr.message };
+
+  // Broadcast so any mounted useBlueprint hook (or other listeners) reload
+  // their local snapshot without a page refresh.
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("blueprint:updated", { detail: { subAccountId } }),
+    );
+  }
+
   return { applied };
 }
+

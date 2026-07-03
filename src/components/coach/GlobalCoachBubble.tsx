@@ -71,17 +71,20 @@ const GlobalCoachBubble = () => {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open Growth Strategist"
-        className="fixed bottom-6 right-6 z-40 group flex items-center gap-2 pl-3 pr-4 py-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-xl hover:scale-[1.03] transition-all"
-      >
-        <span className="w-7 h-7 rounded-full bg-primary-foreground/15 flex items-center justify-center">
-          <Sparkles className="w-4 h-4" />
-        </span>
-        <span className="text-sm font-semibold">Coach</span>
-      </button>
+      {!open && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Open Growth Strategist"
+          className="fixed bottom-6 right-6 z-40 group flex items-center gap-2 pl-3 pr-4 py-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-xl hover:scale-[1.03] transition-all"
+        >
+          <span className="w-7 h-7 rounded-full bg-primary-foreground/15 flex items-center justify-center">
+            <Sparkles className="w-4 h-4" />
+          </span>
+          <span className="text-sm font-semibold">Coach</span>
+        </button>
+      )}
+
 
       <CoachPanel
         open={open}

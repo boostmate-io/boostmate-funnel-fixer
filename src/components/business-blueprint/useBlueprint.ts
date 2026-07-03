@@ -74,6 +74,19 @@ export function useBlueprint() {
     void load();
   }, [load]);
 
+  // Reload when Coach (or any other flow) writes to the blueprint so fields
+  // update live without a manual refresh.
+  useEffect(() => {
+    if (!activeSubAccountId) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail || detail.subAccountId === activeSubAccountId) void load();
+    };
+    window.addEventListener("blueprint:updated", handler);
+    return () => window.removeEventListener("blueprint:updated", handler);
+  }, [activeSubAccountId, load]);
+
+
   const updateCustomerClarity = useCallback(
     (patch: Partial<CustomerClarityData>) => {
       setBlueprint((prev) => {
