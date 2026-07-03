@@ -293,7 +293,7 @@ export const BLUEPRINT_FIELDS: BlueprintFieldDef[] = [
     "offer_stack.angle.core_promise.desired_outcome",
     "Desired Outcome (Core Promise)",
     "text",
-    ["core transformation promise", "desired outcome", "transformation promise", "belofte", "gewenste uitkomst"],
+    ["desired outcome", "promise outcome", "gewenste uitkomst"],
     { helper: "Specific transformation the client walks away with" },
   ),
   field(
