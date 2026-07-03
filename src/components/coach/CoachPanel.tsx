@@ -247,12 +247,14 @@ function PartRenderer({
   onQuickReply,
   onApply,
   onRefine,
+  onApplyBlueprintWrites,
 }: {
   part: CoachMessagePart;
   isUser: boolean;
   onQuickReply: (r: string) => void;
   onApply: (value: string) => void;
   onRefine: (value: string) => void;
+  onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
 }) {
   if (part.type === "text") {
     if (!part.text.trim()) return null;
@@ -320,16 +322,96 @@ function PartRenderer({
     );
   }
 
-  if (part.type === "memory_saved") {
+  if (part.type === "blueprint_writes") {
     return (
-      <div className="text-[11px] text-muted-foreground inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/60 border border-border">
-        <Sparkles className="w-3 h-3 text-primary" />
-        Onthouden: <span className="font-medium text-foreground">{part.key}</span>
-      </div>
+      <BlueprintWritesCard
+        writes={part.writes}
+        reasoning={part.reasoning}
+        onApplyAll={onApplyBlueprintWrites}
+      />
     );
   }
 
+  // memory_saved is intentionally hidden from the UI — memory still persists
+  // server-side. A future Memory Inspector in Settings will surface it.
+  if (part.type === "memory_saved") return null;
+
   return null;
+}
+
+function BlueprintWritesCard({
+  writes,
+  reasoning,
+  onApplyAll,
+}: {
+  writes: CoachBlueprintWrite[];
+  reasoning?: string;
+  onApplyAll?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+}) {
+  const [applying, setApplying] = useState(false);
+  const [applied, setApplied] = useState(false);
+
+  const handleApply = async () => {
+    if (!onApplyAll || applying || applied) return;
+    setApplying(true);
+    try {
+      await onApplyAll(writes);
+      setApplied(true);
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border-2 border-primary/40 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-3 space-y-2 shadow-sm w-full">
+      <div className="flex items-center gap-1.5">
+        <Sparkles className="w-3.5 h-3.5 text-primary" />
+        <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+          Blueprint updates ({writes.length})
+        </Badge>
+      </div>
+      <div className="space-y-1.5 max-h-72 overflow-y-auto">
+        {writes.map((w, i) => (
+          <div key={i} className="rounded-lg border bg-background p-2">
+            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+              {w.label}
+            </div>
+            <div className="text-sm text-foreground whitespace-pre-wrap mt-0.5">
+              {w.value}
+            </div>
+          </div>
+        ))}
+      </div>
+      {reasoning && (
+        <p className="text-[11px] text-muted-foreground italic">{reasoning}</p>
+      )}
+      <div className="flex flex-wrap gap-1.5 pt-1">
+        <Button
+          size="sm"
+          className="h-7 gap-1.5"
+          onClick={handleApply}
+          disabled={!onApplyAll || applying || applied}
+        >
+          {applied ? (
+            <>
+              <Check className="w-3 h-3" />
+              Applied
+            </>
+          ) : applying ? (
+            <>
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Applying…
+            </>
+          ) : (
+            <>
+              <Check className="w-3 h-3" />
+              Apply all
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 // Minimal **bold** support — no full markdown yet, keeps bundle small.
