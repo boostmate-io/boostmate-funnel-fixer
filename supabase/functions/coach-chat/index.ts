@@ -357,6 +357,22 @@ Deno.serve(async (req) => {
       }
       if (name === "propose_field_value" && context?.scope === "blueprint.field") {
         parts.push({ type: "proposal", value: args.value ?? "", reasoning: args.reasoning ?? "" });
+      } else if (
+        name === "propose_blueprint_writes" &&
+        (context?.scope === "blueprint.section" || context?.scope === "global")
+      ) {
+        const writes = Array.isArray(args.writes)
+          ? args.writes
+              .filter((w: any) => w && typeof w.path === "string" && typeof w.value === "string")
+              .map((w: any) => ({
+                path: String(w.path),
+                label: String(w.label ?? w.path),
+                value: String(w.value),
+              }))
+          : [];
+        if (writes.length > 0) {
+          parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
+        }
       } else if (name === "suggest_quick_replies") {
         parts.push({ type: "quick_replies", replies: Array.isArray(args.replies) ? args.replies : [] });
       } else if (name === "remember_fact") {
