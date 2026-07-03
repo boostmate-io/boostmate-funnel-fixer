@@ -202,9 +202,53 @@ const rememberFactTool = {
   },
 };
 
+const proposeBlueprintWritesTool = {
+  type: "function",
+  function: {
+    name: "propose_blueprint_writes",
+    description:
+      "Propose one or more concrete Blueprint field writes as a batch. Use for section/global scope when the user asks to fill in, draft, or generate blueprint content. The user must click Apply — you do NOT write directly. Use the dot-path field paths provided in the system prompt.",
+    parameters: {
+      type: "object",
+      properties: {
+        writes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              path: {
+                type: "string",
+                description: "Dot-path, e.g. 'customer_clarity.avatar_who'.",
+              },
+              label: {
+                type: "string",
+                description: "Human label for the field, shown to the user.",
+              },
+              value: {
+                type: "string",
+                description: "The exact text to write into the field, in the user's voice.",
+              },
+            },
+            required: ["path", "label", "value"],
+            additionalProperties: false,
+          },
+        },
+        reasoning: {
+          type: "string",
+          description: "One short sentence: why these drafts.",
+        },
+      },
+      required: ["writes"],
+      additionalProperties: false,
+    },
+  },
+};
+
 function toolsForScope(scope: string | undefined) {
   const base = [suggestQuickRepliesTool, rememberFactTool];
   if (scope === "blueprint.field") return [proposeFieldValueTool, ...base];
+  if (scope === "blueprint.section" || scope === "global")
+    return [proposeBlueprintWritesTool, ...base];
   return base;
 }
 
