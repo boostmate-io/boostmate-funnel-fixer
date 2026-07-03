@@ -208,11 +208,13 @@ function MessageBubble({
   onQuickReply,
   onApply,
   onRefine,
+  onApplyBlueprintWrites,
 }: {
   message: CoachMessage;
   onQuickReply: (r: string) => void;
   onApply: (value: string) => void;
   onRefine: (value: string) => void;
+  onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
 }) {
   const isUser = message.role === "user";
   return (
@@ -231,6 +233,7 @@ function MessageBubble({
             onQuickReply={onQuickReply}
             onApply={onApply}
             onRefine={onRefine}
+            onApplyBlueprintWrites={onApplyBlueprintWrites}
           />
         ))}
       </div>
