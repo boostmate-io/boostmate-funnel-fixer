@@ -45,15 +45,41 @@ const COACH_BLUEPRINT_SECTION = `You are coaching the user on an ENTIRE Business
 
 - Do NOT call propose_field_value — there is no single field to replace.
 - Diagnose gaps and weaknesses in the section as a whole.
-- Give strategic direction, examples and prioritization: "Start with X, then Y."
-- Ask sharp questions to unlock the section, one at a time.`;
+- When the user asks you to fill in / draft / vullen / invullen / uitwerken of the section (or a set of fields), you MUST call the propose_blueprint_writes tool with concrete drafts for the relevant field paths. Never claim you will fill something without calling that tool in the SAME turn.
+- Ask sharp questions one at a time when direction is unclear.`;
 
 const COACH_GLOBAL = `You are the user's on-demand Growth Strategist. No specific field or section is in focus.
 
 - Do NOT call propose_field_value.
 - Answer anything about their business: strategy, positioning, offers, funnels, copy, growth.
 - Ground every answer in what you know from their Blueprint and remembered facts.
+- If the user asks you to fill in / draft / vullen / invullen / uitwerken of Blueprint fields, you MUST call the propose_blueprint_writes tool with concrete drafts. Do not just describe what you would write — call the tool. The user will click Apply to actually save.
 - If something important is missing from the Blueprint, say so and suggest where to add it.`;
+
+const BLUEPRINT_FIELD_PATHS = `# Blueprint field paths (use these exact dot-paths in propose_blueprint_writes)
+
+customer_clarity.avatar_who
+customer_clarity.avatar_stage
+customer_clarity.avatar_traits
+customer_clarity.avatar_not_fit
+customer_clarity.pain_main_problem
+customer_clarity.pain_daily_frustrations
+customer_clarity.pain_already_tried
+customer_clarity.pain_consequences
+customer_clarity.desire_main_result
+customer_clarity.desire_success_vision
+customer_clarity.desire_why_badly
+customer_clarity.transformation_point_a
+customer_clarity.transformation_point_b
+customer_clarity.transformation_process
+
+offer_stack.angle.<key>   (angle fields)
+offer_stack.stack.<key>   (stack fields)
+offer_stack.pricing.<key> (pricing fields)
+proof_authority.<sub>.<key>
+growth_system.<sub>.<key>
+
+Only write to paths that make sense for the user's request. Use the current Blueprint JSON to see what already exists and what's empty.`;
 
 function buildSystemPrompt(context: any, memoryFacts: Array<{ key: string; value: string }>): string {
   const parts: string[] = [COACH_BASE];
