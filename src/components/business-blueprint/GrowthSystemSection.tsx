@@ -48,6 +48,8 @@ const GrowthSystemSection = ({
   businessType,
 }: Props) => {
   const [active, setActive] = useState<GrowthTab>("acquisition");
+  const [coachOpen, setCoachOpen] = useState(false);
+  const { activeSubAccountId } = useWorkspace();
   const bt = getBusinessType(businessType);
   const { mappings, addMapping, updateMapping, deleteMapping } = useFunnelMappings(blueprintId);
 
@@ -66,10 +68,6 @@ const GrowthSystemSection = ({
 
   const handleAscensionChange = (patch: Partial<AscensionData>) => {
     onChange({ ascension: { ...data.ascension, ...patch } });
-  };
-
-  const handleAiCoach = () => {
-    toast.info("Growth coach — AI suggestions coming soon");
   };
 
   return (
