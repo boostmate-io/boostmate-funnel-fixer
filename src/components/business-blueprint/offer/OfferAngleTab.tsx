@@ -4,7 +4,7 @@
 //        New/Better/Faster/Easier → Signature Framework → Core Promise
 // =============================================================================
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Lightbulb, Wand2, Loader2, Sparkles, Shield, FileText, Target } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,10 @@ import {
   calcAngleProgress,
 } from "../offerDesignTypes";
 import { getBusinessType } from "../businessTypes";
-import CoachPanel from "../CoachPanel";
+import CoachPanel from "@/components/coach/CoachPanel";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { buildBlueprintFieldContext } from "@/lib/coach/buildContext";
+import type { BlueprintRow } from "../types";
 
 interface Props {
   data: OfferAngleData;
@@ -32,18 +35,38 @@ interface Props {
   embedded?: boolean;
 }
 
+interface CoachSpec {
+  key: keyof OfferAngleData;
+  label: string;
+  helper?: string;
+  placeholder?: string;
+}
+
 const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
   const bt = getBusinessType(businessType);
   const noun = bt.customerNoun;
   const progress = calcAngleProgress(data);
-  const [coachOpen, setCoachOpen] = useState(false);
-  const [coachField, setCoachField] = useState<string | null>(null);
+  const [coachSpec, setCoachSpec] = useState<CoachSpec | null>(null);
   const [genNamesBusy, setGenNamesBusy] = useState(false);
+  const { activeSubAccountId } = useWorkspace();
 
-  const openCoach = (label: string) => {
-    setCoachField(label);
-    setCoachOpen(true);
-  };
+  const openCoach = (spec: CoachSpec) => setCoachSpec(spec);
+
+  const coachContext = useMemo(() => {
+    if (!coachSpec || !activeSubAccountId) return null;
+    const snapshot = { offer_stack: { angle: data } } as unknown as BlueprintRow;
+    return buildBlueprintFieldContext(
+      {
+        id: coachSpec.key as string,
+        label: coachSpec.label,
+        helper: coachSpec.helper,
+        placeholder: coachSpec.placeholder,
+        currentValue: (data[coachSpec.key] as string) || "",
+      },
+      snapshot,
+      activeSubAccountId,
+    );
+  }, [coachSpec, data, activeSubAccountId]);
 
   const handleGenerateNames = () => {
     setGenNamesBusy(true);
