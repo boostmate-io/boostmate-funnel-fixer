@@ -432,7 +432,8 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
 
         {/* ═══ PREVIEW ═══ */}
         {activeView === "preview" && (
-          <div className="overflow-y-auto p-6 max-w-3xl mx-auto">
+          <div className="h-full overflow-y-auto">
+            <div className="p-6 max-w-3xl mx-auto">
             <h2 className="text-2xl font-display font-bold text-foreground mb-8">{docName}</h2>
             {docComponents.length === 0 ? (
               <p className="text-muted-foreground text-sm">No components added yet.</p>
@@ -486,6 +487,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                 })}
               </div>
             )}
+            </div>
           </div>
         )}
 
