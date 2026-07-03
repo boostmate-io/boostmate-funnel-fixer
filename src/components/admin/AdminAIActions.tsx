@@ -390,6 +390,9 @@ const AdminAIActions = () => {
                     <Plus className="w-3 h-3 mr-1" /> Add Field
                   </Button>
                 </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Used by non-copy modules (Outreach, Audit, …). For Copy Components, the component's own output structure overrides this — this stays as fallback.
+                </p>
                 {((editing.output_structure as OutputField[]) || []).map((field, idx) => (
                   <div key={idx} className="flex items-center gap-2 p-2 border border-border rounded-md bg-muted/30">
                     <Input
