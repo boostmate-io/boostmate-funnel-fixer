@@ -29,9 +29,10 @@ export function useBlueprint() {
   const growthSaveTimer = useRef<number | null>(null);
   const proofSaveTimer = useRef<number | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!activeSubAccountId || !user) return;
-    setLoading(true);
+    const silent = opts?.silent === true;
+    if (!silent) setLoading(true);
     const { data, error } = await supabase
       .from("business_blueprints")
       .select("*")
@@ -40,7 +41,7 @@ export function useBlueprint() {
 
     if (error) {
       toast.error("Could not load blueprint");
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
 
@@ -53,7 +54,7 @@ export function useBlueprint() {
         .single();
       if (createErr) {
         toast.error("Could not create blueprint");
-        setLoading(false);
+        if (!silent) setLoading(false);
         return;
       }
       row = created as unknown as BlueprintRow;
@@ -67,7 +68,7 @@ export function useBlueprint() {
     setOfferDesign(normalized);
     setProofAuthority(normalizeProofAuthority(row.proof_authority));
     setBlueprint(row);
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, [activeSubAccountId, user]);
 
   useEffect(() => {
@@ -80,7 +81,7 @@ export function useBlueprint() {
     if (!activeSubAccountId) return;
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (!detail || detail.subAccountId === activeSubAccountId) void load();
+      if (!detail || detail.subAccountId === activeSubAccountId) void load({ silent: true });
     };
     window.addEventListener("blueprint:updated", handler);
     return () => window.removeEventListener("blueprint:updated", handler);
