@@ -9,7 +9,12 @@ import { useState } from "react";
 import {
   Award, Users2, MessageSquareWarning, BookOpen, Plus, Trash2, Link as LinkIcon,
   Sparkles, Shield, Star, BadgeCheck, BarChart3, Quote, Trophy, Lightbulb, Check, Info,
+  MessageSquare,
 } from "lucide-react";
+import CoachPanel from "@/components/coach/CoachPanel";
+import { buildBlueprintSectionContext } from "@/lib/coach/buildContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import type { BlueprintRow } from "./types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
