@@ -196,7 +196,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
                   handleSend();
                 }
               }}
-              placeholder="Type your message… (Enter to send)"
+              placeholder={t.placeholder}
               rows={2}
               className="resize-none text-sm"
               disabled={status === "sending"}
