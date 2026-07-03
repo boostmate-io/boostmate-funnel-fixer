@@ -81,7 +81,7 @@ export function useBlueprint() {
     if (!activeSubAccountId) return;
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (!detail || detail.subAccountId === activeSubAccountId) void load();
+      if (!detail || detail.subAccountId === activeSubAccountId) void load({ silent: true });
     };
     window.addEventListener("blueprint:updated", handler);
     return () => window.removeEventListener("blueprint:updated", handler);
