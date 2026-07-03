@@ -421,6 +421,8 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                       cur={cur}
                       onUpdate={(patch) => updateOffer(offer.id, patch)}
                       onDelete={() => deleteOffer(offer.id)}
+                      openCoach={openCoach}
+                      tierLabel={tier.label}
                     />
                   ))
                 )}
@@ -439,6 +441,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
         saving={saving}
         businessType={businessType}
       />
+      {panel}
     </SectionShell>
   );
 };
