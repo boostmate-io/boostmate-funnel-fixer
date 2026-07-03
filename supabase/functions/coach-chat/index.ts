@@ -284,6 +284,7 @@ function buildSystemPrompt(
   context: any,
   memoryFacts: Array<{ key: string; value: string }>,
   prompts: PromptSet,
+  messages: any[] = [],
 ): string {
   const parts: string[] = [prompts.base];
 
@@ -309,6 +310,17 @@ function buildSystemPrompt(
 
   if (context?.businessContext?.blueprintSnapshot) {
     parts.push(`# Current Business Blueprint JSON\n${JSON.stringify(context.businessContext.blueprintSnapshot, null, 2)}`);
+  }
+
+  const allowedPaths = allowedBlueprintWritePaths(context, messages);
+  if (allowedPaths && allowedPaths.size > 0) {
+    parts.push(
+      `# Current write target — hard constraint\nFor the user's latest request, propose Blueprint writes ONLY for these path(s):\n${[
+        ...allowedPaths,
+      ]
+        .map((path) => `- ${path} — ${BLUEPRINT_FIELD_META[path]?.kind ?? "textarea"} — ${BLUEPRINT_FIELD_META[path]?.label ?? path}`)
+        .join("\n")}\nDo not write to any other Blueprint path.`,
+    );
   }
 
   if (memoryFacts.length > 0) {
@@ -696,7 +708,7 @@ Deno.serve(async (req) => {
 
     // Build LLM messages
     const prompts = await loadCoachPrompts(supabase);
-    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts);
+    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts, messages);
     const llmMessages: any[] = [
       { role: "system", content: systemPrompt },
       ...messages.map((m: any) => ({
@@ -757,7 +769,7 @@ Deno.serve(async (req) => {
         name === "propose_blueprint_writes" &&
         (context?.scope === "blueprint.section" || context?.scope === "global")
       ) {
-        const writes = sanitizeBlueprintWrites(args.writes, messages);
+        const writes = sanitizeBlueprintWrites(args.writes, messages, context);
         if (writes.length > 0) {
           parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
         }
