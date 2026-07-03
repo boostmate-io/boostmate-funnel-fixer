@@ -1,20 +1,21 @@
 // =============================================================================
 // OfferStackTab — Tab 2 (redesigned)
-// Cards everywhere. Quick-add chips create editable cards. Delivery type uses
-// the shared DELIVERY_LIBRARY picker.
+// Every editable field has an AI Coach entry point, placed top-right of the
+// field's label row (or inline next to an unlabelled input).
 // =============================================================================
 
 import { Layers, Trash2, Package, Library, MessageCircle, Gift, Clock, Map, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SectionShell from "./SectionShell";
 import BuilderCard from "./BuilderCard";
 import TimeframePicker from "./TimeframePicker";
 import DeliveryTypePicker from "./DeliveryTypePicker";
+import CoachIconButton from "./CoachIconButton";
+import { useOfferCoach } from "./useOfferCoach";
 import {
   type OfferStackData,
   type DeliverableCard,
@@ -40,10 +41,25 @@ interface Props {
   embedded?: boolean;
 }
 
+/** Small helper: label row with a compact Coach icon on the right. */
+const LabelRow = ({
+  label,
+  onCoach,
+}: {
+  label: React.ReactNode;
+  onCoach?: () => void;
+}) => (
+  <div className="flex items-center justify-between mb-1.5">
+    <Label className="text-xs font-medium text-muted-foreground block">{label}</Label>
+    {onCoach && <CoachIconButton compact onClick={onCoach} />}
+  </div>
+);
+
 const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
   const bt = getBusinessType(businessType);
   const noun = bt.customerNoun;
   const progress = calcStackProgress(data);
+  const { openCoach, panel } = useOfferCoach(() => ({ offer_stack: { stack: data } }));
 
   // ----- Deliverables -----
   const addDeliverable = () =>
@@ -163,7 +179,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         >
           {data.deliverables.length > 0 && (
             <div className="space-y-3">
-              {data.deliverables.map((d) => (
+              {data.deliverables.map((d, idx) => (
                 <div key={d.id} className="rounded-lg border border-border bg-background p-4 space-y-3">
                   <div className="flex items-start gap-2">
                     <Input
@@ -171,6 +187,19 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       onChange={(e) => updateDeliverable(d.id, { name: e.target.value })}
                       placeholder="Deliverable name (e.g. Weekly 1:1 Coaching Calls)"
                       className="h-9 font-medium"
+                    />
+                    <CoachIconButton
+                      compact
+                      onClick={() =>
+                        openCoach({
+                          id: `offer_stack.stack.deliverables.${d.id}.name`,
+                          label: `Deliverable ${idx + 1} — Name`,
+                          helper: "A short, benefit-driven name for this deliverable.",
+                          placeholder: "e.g. Weekly 1:1 Coaching Calls",
+                          currentValue: d.name ?? "",
+                          apply: (v) => updateDeliverable(d.id, { name: v }),
+                        })
+                      }
                     />
                     <Button
                       size="icon"
@@ -181,13 +210,28 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                  <AutoTextarea
-                    value={d.description ?? ""}
-                    onChange={(e) => updateDeliverable(d.id, { description: e.target.value })}
-                    placeholder="Short description…"
-                    rows={2}
-                    className="resize-none text-sm"
-                  />
+                  <div>
+                    <LabelRow
+                      label="Description"
+                      onCoach={() =>
+                        openCoach({
+                          id: `offer_stack.stack.deliverables.${d.id}.description`,
+                          label: `Deliverable ${idx + 1} — Description`,
+                          helper: "1–2 sentences describing what the client gets and how it works.",
+                          placeholder: "Short description…",
+                          currentValue: d.description ?? "",
+                          apply: (v) => updateDeliverable(d.id, { description: v }),
+                        })
+                      }
+                    />
+                    <AutoTextarea
+                      value={d.description ?? ""}
+                      onChange={(e) => updateDeliverable(d.id, { description: e.target.value })}
+                      placeholder="Short description…"
+                      rows={2}
+                      className="resize-none text-sm"
+                    />
+                  </div>
                   <div className="space-y-3">
                     <div>
                       <Label className="text-[11px] font-medium text-muted-foreground mb-1 block">
@@ -251,7 +295,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           {data.resources.length > 0 && (
             <div className="space-y-3">
               <div className="space-y-3">
-                {data.resources.map((r) => (
+                {data.resources.map((r, idx) => (
                   <div key={r.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
                     <div className="flex items-start gap-2">
                       <Input
@@ -259,6 +303,18 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         onChange={(e) => updateResource(r.id, { name: e.target.value })}
                         placeholder="Resource name"
                         className="h-9 font-medium"
+                      />
+                      <CoachIconButton
+                        compact
+                        onClick={() =>
+                          openCoach({
+                            id: `offer_stack.stack.resources.${r.id}.name`,
+                            label: `Resource ${idx + 1} — Name`,
+                            helper: "Clear name for this template or resource.",
+                            currentValue: r.name ?? "",
+                            apply: (v) => updateResource(r.id, { name: v }),
+                          })
+                        }
                       />
                       <Button
                         size="icon"
@@ -269,19 +325,47 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                    <Input
-                      value={r.resource_type ?? ""}
-                      onChange={(e) => updateResource(r.id, { resource_type: e.target.value })}
-                      placeholder="Type (Template, Ebook, Checklist…)"
-                      className="h-8 text-sm"
-                    />
-                    <AutoTextarea
-                      value={r.description ?? ""}
-                      onChange={(e) => updateResource(r.id, { description: e.target.value })}
-                      placeholder="Short description…"
-                      rows={2}
-                      className="resize-none text-sm"
-                    />
+                    <div>
+                      <LabelRow
+                        label="Type"
+                        onCoach={() =>
+                          openCoach({
+                            id: `offer_stack.stack.resources.${r.id}.resource_type`,
+                            label: `Resource ${idx + 1} — Type`,
+                            helper: "Template, Ebook, Checklist, Swipe file…",
+                            currentValue: r.resource_type ?? "",
+                            apply: (v) => updateResource(r.id, { resource_type: v }),
+                          })
+                        }
+                      />
+                      <Input
+                        value={r.resource_type ?? ""}
+                        onChange={(e) => updateResource(r.id, { resource_type: e.target.value })}
+                        placeholder="Type (Template, Ebook, Checklist…)"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <LabelRow
+                        label="Description"
+                        onCoach={() =>
+                          openCoach({
+                            id: `offer_stack.stack.resources.${r.id}.description`,
+                            label: `Resource ${idx + 1} — Description`,
+                            helper: "Short description of what's inside and how it's used.",
+                            currentValue: r.description ?? "",
+                            apply: (v) => updateResource(r.id, { description: v }),
+                          })
+                        }
+                      />
+                      <AutoTextarea
+                        value={r.description ?? ""}
+                        onChange={(e) => updateResource(r.id, { description: e.target.value })}
+                        placeholder="Short description…"
+                        rows={2}
+                        className="resize-none text-sm"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -320,7 +404,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           {data.support_channels.length > 0 && (
             <div className="space-y-3">
               <div className="space-y-3">
-                {data.support_channels.map((s) => (
+                {data.support_channels.map((s, idx) => (
                   <div key={s.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
                     <div className="flex items-start gap-2">
                       <Input
@@ -328,6 +412,18 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         onChange={(e) => updateSupport(s.id, { name: e.target.value })}
                         placeholder="Channel name (e.g. Slack)"
                         className="h-9 font-medium"
+                      />
+                      <CoachIconButton
+                        compact
+                        onClick={() =>
+                          openCoach({
+                            id: `offer_stack.stack.support_channels.${s.id}.name`,
+                            label: `Support Channel ${idx + 1} — Name`,
+                            helper: "Which channel do clients use? (Slack, Voxer, Zoom…)",
+                            currentValue: s.name ?? "",
+                            apply: (v) => updateSupport(s.id, { name: v }),
+                          })
+                        }
                       />
                       <Button
                         size="icon"
@@ -338,19 +434,47 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                    <Input
-                      value={s.frequency ?? ""}
-                      onChange={(e) => updateSupport(s.id, { frequency: e.target.value })}
-                      placeholder="Frequency / availability (e.g. Mon–Fri 9–5 CET)"
-                      className="h-8 text-sm"
-                    />
-                    <AutoTextarea
-                      value={s.description ?? ""}
-                      onChange={(e) => updateSupport(s.id, { description: e.target.value })}
-                      placeholder="Short description…"
-                      rows={2}
-                      className="resize-none text-sm"
-                    />
+                    <div>
+                      <LabelRow
+                        label="Frequency / Availability"
+                        onCoach={() =>
+                          openCoach({
+                            id: `offer_stack.stack.support_channels.${s.id}.frequency`,
+                            label: `Support Channel ${idx + 1} — Frequency`,
+                            helper: "When are you available on this channel?",
+                            currentValue: s.frequency ?? "",
+                            apply: (v) => updateSupport(s.id, { frequency: v }),
+                          })
+                        }
+                      />
+                      <Input
+                        value={s.frequency ?? ""}
+                        onChange={(e) => updateSupport(s.id, { frequency: e.target.value })}
+                        placeholder="Frequency / availability (e.g. Mon–Fri 9–5 CET)"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <LabelRow
+                        label="Description"
+                        onCoach={() =>
+                          openCoach({
+                            id: `offer_stack.stack.support_channels.${s.id}.description`,
+                            label: `Support Channel ${idx + 1} — Description`,
+                            helper: "What kind of questions are answered here? Expected response time?",
+                            currentValue: s.description ?? "",
+                            apply: (v) => updateSupport(s.id, { description: v }),
+                          })
+                        }
+                      />
+                      <AutoTextarea
+                        value={s.description ?? ""}
+                        onChange={(e) => updateSupport(s.id, { description: e.target.value })}
+                        placeholder="Short description…"
+                        rows={2}
+                        className="resize-none text-sm"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -374,7 +498,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         >
           {data.bonuses.length > 0 && (
             <div className="space-y-3">
-              {data.bonuses.map((b) => (
+              {data.bonuses.map((b, idx) => (
                 <div key={b.id} className="rounded-lg border border-border bg-background p-4 space-y-3">
                   <div className="flex items-start gap-2">
                     <Input
@@ -382,6 +506,18 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       onChange={(e) => updateBonus(b.id, { name: e.target.value })}
                       placeholder="Bonus name"
                       className="h-9 font-medium"
+                    />
+                    <CoachIconButton
+                      compact
+                      onClick={() =>
+                        openCoach({
+                          id: `offer_stack.stack.bonuses.${b.id}.name`,
+                          label: `Bonus ${idx + 1} — Name`,
+                          helper: "A punchy name for this bonus.",
+                          currentValue: b.name ?? "",
+                          apply: (v) => updateBonus(b.id, { name: v }),
+                        })
+                      }
                     />
                     <Button
                       size="icon"
@@ -392,19 +528,47 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                  <AutoTextarea
-                    value={b.description ?? ""}
-                    onChange={(e) => updateBonus(b.id, { description: e.target.value })}
-                    placeholder="Short description…"
-                    rows={2}
-                    className="resize-none text-sm"
-                  />
-                  <Input
-                    value={b.perceived_value ?? ""}
-                    onChange={(e) => updateBonus(b.id, { perceived_value: e.target.value })}
-                    placeholder="Perceived value (e.g. €497 value)"
-                    className="h-9 text-sm"
-                  />
+                  <div>
+                    <LabelRow
+                      label="Description"
+                      onCoach={() =>
+                        openCoach({
+                          id: `offer_stack.stack.bonuses.${b.id}.description`,
+                          label: `Bonus ${idx + 1} — Description`,
+                          helper: "What is this bonus and why is it valuable?",
+                          currentValue: b.description ?? "",
+                          apply: (v) => updateBonus(b.id, { description: v }),
+                        })
+                      }
+                    />
+                    <AutoTextarea
+                      value={b.description ?? ""}
+                      onChange={(e) => updateBonus(b.id, { description: e.target.value })}
+                      placeholder="Short description…"
+                      rows={2}
+                      className="resize-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <LabelRow
+                      label="Perceived Value"
+                      onCoach={() =>
+                        openCoach({
+                          id: `offer_stack.stack.bonuses.${b.id}.perceived_value`,
+                          label: `Bonus ${idx + 1} — Perceived Value`,
+                          helper: "The stated dollar value of this bonus (e.g. €497 value).",
+                          currentValue: b.perceived_value ?? "",
+                          apply: (v) => updateBonus(b.id, { perceived_value: v }),
+                        })
+                      }
+                    />
+                    <Input
+                      value={b.perceived_value ?? ""}
+                      onChange={(e) => updateBonus(b.id, { perceived_value: e.target.value })}
+                      placeholder="Perceived value (e.g. €497 value)"
+                      className="h-9 text-sm"
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -461,6 +625,18 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                           placeholder="Phase name (e.g. Awareness)"
                           className="h-9 font-medium"
                         />
+                        <CoachIconButton
+                          compact
+                          onClick={() =>
+                            openCoach({
+                              id: `offer_stack.stack.milestones.${m.id}.phase_name`,
+                              label: `Milestone ${idx + 1} — Phase Name`,
+                              helper: "Short, evocative name for this phase.",
+                              currentValue: m.phase_name ?? "",
+                              apply: (v) => updateMilestone(m.id, { phase_name: v }),
+                            })
+                          }
+                        />
                         <Button
                           size="icon"
                           variant="ghost"
@@ -471,20 +647,48 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         </Button>
                       </div>
                       <div className="space-y-2">
-                        <AutoTextarea
-                          value={m.description ?? ""}
-                          onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
-                          placeholder="Description"
-                          rows={2}
-                          className="resize-none text-sm"
-                        />
-                        <AutoTextarea
-                          value={m.expected_outcome ?? ""}
-                          onChange={(e) => updateMilestone(m.id, { expected_outcome: e.target.value })}
-                          placeholder="Expected outcome"
-                          rows={2}
-                          className="resize-none text-sm"
-                        />
+                        <div>
+                          <LabelRow
+                            label="Description"
+                            onCoach={() =>
+                              openCoach({
+                                id: `offer_stack.stack.milestones.${m.id}.description`,
+                                label: `Milestone ${idx + 1} — Description`,
+                                helper: "What happens during this phase?",
+                                currentValue: m.description ?? "",
+                                apply: (v) => updateMilestone(m.id, { description: v }),
+                              })
+                            }
+                          />
+                          <AutoTextarea
+                            value={m.description ?? ""}
+                            onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
+                            placeholder="Description"
+                            rows={2}
+                            className="resize-none text-sm"
+                          />
+                        </div>
+                        <div>
+                          <LabelRow
+                            label="Expected Outcome"
+                            onCoach={() =>
+                              openCoach({
+                                id: `offer_stack.stack.milestones.${m.id}.expected_outcome`,
+                                label: `Milestone ${idx + 1} — Expected Outcome`,
+                                helper: "The concrete result the client walks away with after this phase.",
+                                currentValue: m.expected_outcome ?? "",
+                                apply: (v) => updateMilestone(m.id, { expected_outcome: v }),
+                              })
+                            }
+                          />
+                          <AutoTextarea
+                            value={m.expected_outcome ?? ""}
+                            onChange={(e) => updateMilestone(m.id, { expected_outcome: e.target.value })}
+                            placeholder="Expected outcome"
+                            rows={2}
+                            className="resize-none text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -494,6 +698,8 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           )}
         </BuilderCard>
       </div>
+
+      {panel}
     </SectionShell>
   );
 };

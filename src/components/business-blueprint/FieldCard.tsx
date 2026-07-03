@@ -56,22 +56,19 @@ const FieldCard = ({ field, value, onChange, onCoach }: Props) => {
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{field.helper}</p>
           )}
         </div>
-      </div>
-
-      <div className="px-5 py-2 flex-1">
-        {renderInput(field, value, onChange)}
-      </div>
-
-      <div className="px-3 pb-3 pt-1 flex items-center gap-1 border-t border-border/50 mt-1">
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+          className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 shrink-0"
           onClick={onCoach}
         >
           <MessageSquare className="w-3 h-3" />
           Coach
         </Button>
+      </div>
+
+      <div className="px-5 pt-2 pb-4 flex-1">
+        {renderInput(field, value, onChange)}
       </div>
     </div>
   );

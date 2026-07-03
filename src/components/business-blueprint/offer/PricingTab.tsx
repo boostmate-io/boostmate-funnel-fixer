@@ -1,7 +1,7 @@
 // =============================================================================
 // PricingTab — Tab 3 (redesigned)
-// Structured Premium Upgrade and Recurring Offer mini-builders.
-// Guarantee details textarea added.
+// AI Coach entry point on every editable text field. Numeric-only fields
+// (price, amount) don't get a Coach button — nothing to draft.
 // =============================================================================
 
 import { DollarSign, Trash2, Repeat, Crown, Shield } from "lucide-react";
@@ -10,12 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
-import { Badge } from "@/components/ui/badge";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SectionShell from "./SectionShell";
 import BuilderCard from "./BuilderCard";
 import DeliveryTypePicker from "./DeliveryTypePicker";
+import CoachIconButton from "./CoachIconButton";
+import { useOfferCoach } from "./useOfferCoach";
 import {
   type PricingData,
   type PaymentPlan,
@@ -45,10 +46,24 @@ const numberOrEmpty = (raw: string): number | "" => {
   return Number.isFinite(n) ? n : "";
 };
 
+const LabelRow = ({
+  label,
+  onCoach,
+}: {
+  label: React.ReactNode;
+  onCoach?: () => void;
+}) => (
+  <div className="flex items-center justify-between mb-1.5">
+    <Label className="text-xs font-medium text-muted-foreground block">{label}</Label>
+    {onCoach && <CoachIconButton compact onClick={onCoach} />}
+  </div>
+);
+
 const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const progress = calcPricingProgress(data);
+  const { openCoach, panel } = useOfferCoach(() => ({ offer_stack: { pricing: data } }));
 
   // Payment plans
   const addPlan = () =>
@@ -101,13 +116,15 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
       <div className="space-y-5">
         {/* Core Price */}
         <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
-            </div>
-            <div>
-              <Label className="text-lg font-display font-bold text-foreground">Core Price</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">The headline price for your main offer.</p>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <DollarSign className="w-4 h-4" />
+              </div>
+              <div>
+                <Label className="text-lg font-display font-bold text-foreground">Core Price</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">The headline price for your main offer.</p>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2 max-w-xs">
@@ -134,7 +151,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
         >
           {data.payment_plans.length > 0 && (
             <div className="space-y-2">
-              {data.payment_plans.map((p) => (
+              {data.payment_plans.map((p, idx) => (
                 <div key={p.id} className="rounded-lg border border-border bg-background p-3 grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-12 sm:col-span-4">
                     <Select value={p.type} onValueChange={(v) => updatePlan(p.id, { type: v as PaymentPlanType })}>
@@ -148,12 +165,26 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                       </SelectContent>
                     </Select>
                     {p.type === "custom" && (
-                      <Input
-                        value={p.custom_label ?? ""}
-                        onChange={(e) => updatePlan(p.id, { custom_label: e.target.value })}
-                        placeholder="Plan label"
-                        className="h-8 text-sm mt-2"
-                      />
+                      <div className="mt-2 flex items-center gap-1">
+                        <Input
+                          value={p.custom_label ?? ""}
+                          onChange={(e) => updatePlan(p.id, { custom_label: e.target.value })}
+                          placeholder="Plan label"
+                          className="h-8 text-sm"
+                        />
+                        <CoachIconButton
+                          compact
+                          onClick={() =>
+                            openCoach({
+                              id: `offer_stack.pricing.payment_plans.${p.id}.custom_label`,
+                              label: `Payment Plan ${idx + 1} — Label`,
+                              helper: "Short, clear label for this custom plan.",
+                              currentValue: p.custom_label ?? "",
+                              apply: (v) => updatePlan(p.id, { custom_label: v }),
+                            })
+                          }
+                        />
+                      </div>
                     )}
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -170,12 +201,26 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                     </div>
                   </div>
                   <div className="col-span-5 sm:col-span-4">
-                    <Input
-                      value={p.duration ?? ""}
-                      onChange={(e) => updatePlan(p.id, { duration: e.target.value })}
-                      placeholder="Duration (e.g. 3 months)"
-                      className="h-9 text-sm"
-                    />
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={p.duration ?? ""}
+                        onChange={(e) => updatePlan(p.id, { duration: e.target.value })}
+                        placeholder="Duration (e.g. 3 months)"
+                        className="h-9 text-sm"
+                      />
+                      <CoachIconButton
+                        compact
+                        onClick={() =>
+                          openCoach({
+                            id: `offer_stack.pricing.payment_plans.${p.id}.duration`,
+                            label: `Payment Plan ${idx + 1} — Duration`,
+                            helper: "How long does the plan run?",
+                            currentValue: p.duration ?? "",
+                            apply: (v) => updatePlan(p.id, { duration: v }),
+                          })
+                        }
+                      />
+                    </div>
                   </div>
                   <div className="col-span-1 flex justify-end">
                     <Button
@@ -216,7 +261,19 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
             <div className="mt-4 rounded-lg border border-border bg-background p-4 space-y-3">
               <div className="space-y-3">
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Upgrade Name</Label>
+                  <LabelRow
+                    label="Upgrade Name"
+                    onCoach={() =>
+                      openCoach({
+                        id: "offer_stack.pricing.premium_upgrade.name",
+                        label: "Premium Upgrade — Name",
+                        helper: "A short, aspirational name for the premium tier.",
+                        placeholder: "VIP Day, Done-for-You package…",
+                        currentValue: data.premium_upgrade?.name ?? "",
+                        apply: (v) => updatePremium({ name: v }),
+                      })
+                    }
+                  />
                   <Input
                     value={data.premium_upgrade?.name ?? ""}
                     onChange={(e) => updatePremium({ name: e.target.value })}
@@ -240,7 +297,18 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                 </div>
               </div>
               <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</Label>
+                <LabelRow
+                  label="Description"
+                  onCoach={() =>
+                    openCoach({
+                      id: "offer_stack.pricing.premium_upgrade.description",
+                      label: "Premium Upgrade — Description",
+                      helper: "What's included in the premium tier?",
+                      currentValue: data.premium_upgrade?.description ?? "",
+                      apply: (v) => updatePremium({ description: v }),
+                    })
+                  }
+                />
                 <AutoTextarea
                   value={data.premium_upgrade?.description ?? ""}
                   onChange={(e) => updatePremium({ description: e.target.value })}
@@ -250,9 +318,18 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                 />
               </div>
               <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  Additional Value / Outcome
-                </Label>
+                <LabelRow
+                  label="Additional Value / Outcome"
+                  onCoach={() =>
+                    openCoach({
+                      id: "offer_stack.pricing.premium_upgrade.additional_value",
+                      label: "Premium Upgrade — Additional Value",
+                      helper: "What additional outcome does this unlock beyond the core offer?",
+                      currentValue: data.premium_upgrade?.additional_value ?? "",
+                      apply: (v) => updatePremium({ additional_value: v }),
+                    })
+                  }
+                />
                 <AutoTextarea
                   value={data.premium_upgrade?.additional_value ?? ""}
                   onChange={(e) => updatePremium({ additional_value: e.target.value })}
@@ -288,7 +365,18 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
             <div className="mt-4 rounded-lg border border-border bg-background p-4 space-y-3">
               <div className="space-y-3">
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Offer Name</Label>
+                  <LabelRow
+                    label="Offer Name"
+                    onCoach={() =>
+                      openCoach({
+                        id: "offer_stack.pricing.recurring_offer.name",
+                        label: "Recurring Offer — Name",
+                        helper: "Short, memorable name for the recurring offer.",
+                        currentValue: data.recurring_offer?.name ?? "",
+                        apply: (v) => updateRecurring({ name: v }),
+                      })
+                    }
+                  />
                   <Input
                     value={data.recurring_offer?.name ?? ""}
                     onChange={(e) => updateRecurring({ name: e.target.value })}
@@ -312,7 +400,18 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                 </div>
               </div>
               <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</Label>
+                <LabelRow
+                  label="Description"
+                  onCoach={() =>
+                    openCoach({
+                      id: "offer_stack.pricing.recurring_offer.description",
+                      label: "Recurring Offer — Description",
+                      helper: "What is the recurring offer? 1–2 sentences.",
+                      currentValue: data.recurring_offer?.description ?? "",
+                      apply: (v) => updateRecurring({ description: v }),
+                    })
+                  }
+                />
                 <AutoTextarea
                   value={data.recurring_offer?.description ?? ""}
                   onChange={(e) => updateRecurring({ description: e.target.value })}
@@ -322,9 +421,18 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                 />
               </div>
               <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  Ongoing Value Delivered
-                </Label>
+                <LabelRow
+                  label="Ongoing Value Delivered"
+                  onCoach={() =>
+                    openCoach({
+                      id: "offer_stack.pricing.recurring_offer.ongoing_value",
+                      label: "Recurring Offer — Ongoing Value",
+                      helper: "What value is delivered every month?",
+                      currentValue: data.recurring_offer?.ongoing_value ?? "",
+                      apply: (v) => updateRecurring({ ongoing_value: v }),
+                    })
+                  }
+                />
                 <AutoTextarea
                   value={data.recurring_offer?.ongoing_value ?? ""}
                   onChange={(e) => updateRecurring({ ongoing_value: e.target.value })}
@@ -392,9 +500,18 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
             </div>
             {data.guarantee_type !== "none" && (
               <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  Guarantee Details / Terms
-                </Label>
+                <LabelRow
+                  label="Guarantee Details / Terms"
+                  onCoach={() =>
+                    openCoach({
+                      id: "offer_stack.pricing.guarantee_details",
+                      label: "Guarantee Details / Terms",
+                      helper: "The concrete terms of the guarantee. Clear, specific, buyer-friendly.",
+                      currentValue: data.guarantee_details ?? "",
+                      apply: (v) => onChange({ guarantee_details: v }),
+                    })
+                  }
+                />
                 <AutoTextarea
                   value={data.guarantee_details ?? ""}
                   onChange={(e) => onChange({ guarantee_details: e.target.value })}
@@ -409,6 +526,8 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
           </div>
         </div>
       </div>
+
+      {panel}
     </SectionShell>
   );
 };
