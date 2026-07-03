@@ -39,6 +39,17 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { loading } = useWorkspace();
 
+  // Allow deep-linking to a specific module from anywhere in the app
+  // (used e.g. by the "Complete Blueprint" CTA in copy components).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail === "string") handleModuleChange(detail);
+    };
+    window.addEventListener("boostmate:navigate-module", handler);
+    return () => window.removeEventListener("boostmate:navigate-module", handler);
+  }, []);
+
   const fullHeightModules = ["funnels", "assets-library", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
 
   if (loading) {
