@@ -150,7 +150,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
                 Coach — {context?.target?.label ?? "Growth Strategist"}
               </SheetTitle>
               <SheetDescription className="text-xs">
-                Chat until we land on the right answer.
+                {t.subtitle}
               </SheetDescription>
             </div>
           </div>
