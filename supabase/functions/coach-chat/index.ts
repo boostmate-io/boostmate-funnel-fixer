@@ -200,10 +200,6 @@ const BLUEPRINT_FIELD_META: Record<string, BlueprintFieldMeta> = {
   },
 };
 
-const BLUEPRINT_KEY_TO_PATH = new Map(
-  Object.keys(BLUEPRINT_FIELD_META).map((path) => [path.split(".").at(-1)!, path]),
-);
-
 const OFFER_ANGLE_FIELD_META: Record<string, BlueprintFieldMeta> = {
   "offer_stack.angle.main_offer_name": {
     kind: "textarea",
@@ -244,6 +240,10 @@ const OFFER_ANGLE_FIELD_META: Record<string, BlueprintFieldMeta> = {
 
 Object.assign(BLUEPRINT_FIELD_META, OFFER_ANGLE_FIELD_META);
 
+const BLUEPRINT_KEY_TO_PATH = new Map(
+  Object.keys(BLUEPRINT_FIELD_META).map((path) => [path.split(".").at(-1)!, path]),
+);
+
 const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = {
   avatar: [
     "customer_clarity.avatar_who",
@@ -266,6 +266,15 @@ const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = {
     "customer_clarity.transformation_point_a",
     "customer_clarity.transformation_point_b",
     "customer_clarity.transformation_process",
+  ],
+  offer_angle: [
+    "offer_stack.angle.main_offer_name",
+    "offer_stack.angle.short_description",
+    "offer_stack.angle.core_outcome",
+    "offer_stack.angle.angle_new_vehicle",
+    "offer_stack.angle.angle_better_results",
+    "offer_stack.angle.angle_faster_outcome",
+    "offer_stack.angle.angle_easier_process",
   ],
 };
 
