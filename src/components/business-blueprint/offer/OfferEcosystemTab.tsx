@@ -217,6 +217,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
     offerDesign,
   });
   const progress = calcEcosystemProgress(tierCounts);
+  const { openCoach, panel } = useOfferCoach(() => ({ offer_ecosystem: offers }));
 
   const [editing, setEditing] = useState<{ id: string; isPrimary: boolean } | null>(null);
 
