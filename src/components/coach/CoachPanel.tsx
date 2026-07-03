@@ -1,21 +1,14 @@
 // =============================================================================
-// CoachPanel — scope-agnostic AI Coach side sheet.
-// Consumes a CoachContext (Blueprint field, Copy component, Funnel node, ...).
-// Renders chat + proposed-answer cards + quick replies + composer.
+// CoachPanel — scope-agnostic AI Coach floating panel.
+// NOT a modal: sits bottom-right, does NOT overlay/dim the page. The rest of
+// the app stays fully interactive while chatting.
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, Loader2, RefreshCw, Check } from "lucide-react";
+import { Send, Sparkles, Loader2, RefreshCw, Check, X } from "lucide-react";
 import { useCoachChat } from "@/lib/coach/useCoachChat";
 import type { CoachContext, CoachMessage, CoachMessagePart, CoachBlueprintWrite } from "@/lib/coach/types";
 import { cn } from "@/lib/utils";
@@ -58,8 +51,8 @@ const openerFor = (context: CoachContext | null): CoachMessage | null => {
       ? `Laten we samen door **${context.target.label}** heen lopen. Ik zie wat je al hebt ingevuld — waar wil je beginnen?`
       : `Let's walk through **${context.target.label}** together. I can see what you've already filled in — where do you want to start?`;
     const replies = nl
-      ? ["Wat mist er nog?", "Wat is het zwakst?", "Geef me een prioriteitenlijstje"]
-      : ["What's still missing?", "What's the weakest part?", "Give me a priority list"];
+      ? ["Wat mist er nog?", "Wat is het zwakst?", "Vul de hele sectie voor me in"]
+      : ["What's still missing?", "What's the weakest part?", "Fill in the whole section for me"];
     return {
       id: "opener",
       role: "assistant",
@@ -114,11 +107,11 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
     refinePrompt: nl
       ? "Scherp deze versie verder aan, houd de kern maar maak hem sterker:"
       : "Sharpen this version further — keep the core, make it stronger:",
+    close: nl ? "Sluiten" : "Close",
   };
 
   useEffect(() => {
     if (open) {
-      // scroll to bottom on new message
       requestAnimationFrame(() => {
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       });
@@ -134,88 +127,93 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
 
   const handleApply = (value: string) => {
     onApply?.(value);
+    // Field-scope: closing after apply still makes sense so the user sees the update.
     onOpenChange(false);
   };
 
+  if (!open) return null;
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col p-0 gap-0">
-        <SheetHeader className="p-5 border-b bg-card">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <SheetTitle className="text-base font-display truncate">
-                Coach — {context?.target?.label ?? "Growth Strategist"}
-              </SheetTitle>
-              <SheetDescription className="text-xs">
-                {t.subtitle}
-              </SheetDescription>
-            </div>
+    <div
+      role="dialog"
+      aria-label="AI Coach"
+      className="fixed bottom-6 right-6 z-50 w-[400px] max-w-[calc(100vw-2rem)] h-[640px] max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200"
+    >
+      {/* Header */}
+      <div className="p-4 border-b bg-card flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+          <Sparkles className="w-4 h-4 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-display font-semibold truncate">
+            Coach — {context?.target?.label ?? "Growth Strategist"}
           </div>
-        </SheetHeader>
-
-        {/* Messages */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-muted/20"
+          <div className="text-[11px] text-muted-foreground truncate">{t.subtitle}</div>
+        </div>
+        <button
+          type="button"
+          aria-label={t.close}
+          onClick={() => onOpenChange(false)}
+          className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
         >
-          {displayMessages.map((m) => (
-            <MessageBubble
-              key={m.id}
-              message={m}
-              onQuickReply={(r) => handleSend(r)}
-              onApply={handleApply}
-              onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
-              onApplyBlueprintWrites={onApplyBlueprintWrites}
-            />
-          ))}
-          {status === "sending" && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground pl-1">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              {t.thinking}
-            </div>
-          )}
-          {error && (
-            <div className="text-xs text-destructive bg-destructive/10 rounded-lg p-2">
-              {error}
-            </div>
-          )}
-        </div>
+          <X className="w-4 h-4" />
+        </button>
+      </div>
 
-        {/* Composer */}
-        <div className="border-t bg-card p-3">
-          <div className="flex items-end gap-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder={t.placeholder}
-              rows={2}
-              className="resize-none text-sm"
-              disabled={status === "sending"}
-            />
-            <Button
-              size="icon"
-              onClick={() => handleSend()}
-              disabled={!input.trim() || status === "sending"}
-            >
-              {status === "sending" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </Button>
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-muted/20">
+        {displayMessages.map((m) => (
+          <MessageBubble
+            key={m.id}
+            message={m}
+            onQuickReply={(r) => handleSend(r)}
+            onApply={handleApply}
+            onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
+            onApplyBlueprintWrites={onApplyBlueprintWrites}
+          />
+        ))}
+        {status === "sending" && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground pl-1">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            {t.thinking}
           </div>
+        )}
+        {error && (
+          <div className="text-xs text-destructive bg-destructive/10 rounded-lg p-2">{error}</div>
+        )}
+      </div>
+
+      {/* Composer */}
+      <div className="border-t bg-card p-3">
+        <div className="flex items-end gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder={t.placeholder}
+            rows={2}
+            className="resize-none text-sm"
+            disabled={status === "sending"}
+          />
+          <Button
+            size="icon"
+            onClick={() => handleSend()}
+            disabled={!input.trim() || status === "sending"}
+          >
+            {status === "sending" ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+          </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </div>
   );
 };
 
@@ -239,12 +237,7 @@ function MessageBubble({
   const isUser = message.role === "user";
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
-      <div
-        className={cn(
-          "max-w-[85%] space-y-2",
-          isUser ? "items-end" : "items-start",
-        )}
-      >
+      <div className={cn("max-w-[90%] space-y-2", isUser ? "items-end" : "items-start")}>
         {message.parts.map((part, idx) => (
           <PartRenderer
             key={idx}
@@ -352,8 +345,6 @@ function PartRenderer({
     );
   }
 
-  // memory_saved is intentionally hidden from the UI — memory still persists
-  // server-side. A future Memory Inspector in Settings will surface it.
   if (part.type === "memory_saved") return null;
 
   return null;
@@ -396,9 +387,7 @@ function BlueprintWritesCard({
             <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
               {w.label}
             </div>
-            <div className="text-sm text-foreground whitespace-pre-wrap mt-0.5">
-              {w.value}
-            </div>
+            <div className="text-sm text-foreground whitespace-pre-wrap mt-0.5">{w.value}</div>
           </div>
         ))}
       </div>
@@ -434,7 +423,6 @@ function BlueprintWritesCard({
   );
 }
 
-// Minimal **bold** support — no full markdown yet, keeps bundle small.
 function renderInlineBold(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((p, i) =>
