@@ -37,6 +37,7 @@ export function buildBlueprintFieldContext(
     businessContext: {
       subAccountId,
       blueprintSnapshot: blueprint,
+      locale: currentLocale(),
     },
   };
 }
