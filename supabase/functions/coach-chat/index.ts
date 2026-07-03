@@ -503,19 +503,6 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) 
   return [...byPath.values()];
 }
 
-function fallbackBlueprintWrites(messages: any[], context: any) {
-  const allowedPaths = allowedBlueprintWritePaths(context, messages);
-  if (!allowedPaths || allowedPaths.size === 0) return [];
-
-  const snapshot = context?.businessContext?.blueprintSnapshot;
-  const paths = [...allowedPaths].filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
-  return paths.map((path) => ({
-    path,
-    label: BLUEPRINT_FIELD_META[path]?.label ?? path,
-    value: "—",
-  }));
-}
-
 // -----------------------------------------------------------------------------
 // Tools
 // -----------------------------------------------------------------------------
@@ -806,7 +793,15 @@ Deno.serve(async (req) => {
     }
 
     if (parts.length === 0) {
-      parts.push({ type: "text", text: "…" });
+      const locale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
+      parts.push({
+        type: "text",
+        text: shouldForceBlueprintWrites
+          ? locale === "nl"
+            ? "Ik kon hiervoor geen passende Blueprint-updates maken. Probeer het nog één keer met de naam van de sectie of het veld."
+            : "I couldn't create matching Blueprint updates for that. Please try once more with the section or field name."
+          : "…",
+      });
     }
 
     // Persist the last user message + assistant message
