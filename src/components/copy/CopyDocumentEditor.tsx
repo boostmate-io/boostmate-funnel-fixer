@@ -376,12 +376,30 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                       )}
                     </div>
                   </div>
+                  {missingBlueprintFields.length > 0 && (
+                    <div className="mb-4 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 flex items-start gap-3">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-2">
+                        <p className="text-xs text-foreground">
+                          This component may not generate optimal copy because your Business Blueprint is missing:
+                        </p>
+                        <ul className="list-disc list-inside text-xs text-muted-foreground space-y-0.5">
+                          {missingBlueprintFields.map((f) => (
+                            <li key={f.slug}>{f.label}</li>
+                          ))}
+                        </ul>
+                        <Button variant="outline" size="sm" className="text-xs h-7" onClick={openBlueprintModule}>
+                          Complete Blueprint
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   <ComponentUIRenderer
                     uiInterfaceSlug={activeDef.ui_interface_slug}
                     componentSlug={activeDef.slug}
                     aiActionSlug={activeDef.ai_action_slug}
                     componentInstructions={[globalInstructions, activeDef.instructions].filter(Boolean).join("\n\n")}
-                    context={getContext()}
+                    context={getContextForComponent(activeDef)}
                     inputs={activeComp.inputs as Record<string, any>}
                     outputs={activeComp.outputs as Record<string, any>}
                     outputStructure={activeDef.output_structure}
