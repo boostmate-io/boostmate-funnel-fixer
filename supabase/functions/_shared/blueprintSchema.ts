@@ -503,10 +503,11 @@ export function renderBlueprintFieldPathsPrompt(): string {
   });
 
   const footer = `
-NOTE: Only the paths listed above can be written by the Coach. Structured
-sub-fields (framework, core_promise, stack cards, pricing plans, proof items,
-growth mappings, …) exist in the Blueprint but are NOT in this list — never
-invent path names, never propose writes for them.
+NOTE: Only the paths listed above can be written by the Coach. Some structured
+builders expose safe writable sub-fields in this list (for example framework
+pillars and core_promise). Other structured areas that are NOT listed (stack
+cards, pricing plans, proof items, growth mappings, …) must never be invented
+or written to.
 
 Rules:
 - Only write to paths the user's request actually implies. If the user asks for one field, write ONLY that path.
