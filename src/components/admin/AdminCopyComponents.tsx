@@ -133,6 +133,7 @@ const AdminCopyComponents = () => {
         ui_interface_slug: editing.ui_interface_slug || "generic_ui",
         icon: editing.icon || "Gem",
         config: editing.config || {},
+        output_structure: (editing.output_structure || []) as any,
         is_active: editing.is_active ?? true,
         sort_order: editing.sort_order ?? 0,
       };
@@ -182,6 +183,7 @@ const AdminCopyComponents = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{comp.name}</span>
                   <Badge variant="secondary" className="text-xs font-mono">{comp.ui_interface_slug}</Badge>
+                  <Badge variant="outline" className="text-xs">{(comp.output_structure || []).length} output fields</Badge>
                   {!comp.is_active && <Badge variant="outline" className="text-xs">Inactive</Badge>}
                 </div>
                 <p className="text-xs text-muted-foreground">{comp.description.slice(0, 80)}</p>
