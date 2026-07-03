@@ -123,15 +123,15 @@ const GrowthSystemSection = ({
             </div>
             <div className="flex items-center gap-2">
               {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={handleAiCoach} className="gap-1.5 h-8">
-                    <Wand2 className="w-3.5 h-3.5" />
-                    Coach
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>AI growth coach coming soon</TooltipContent>
-              </Tooltip>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCoachOpen(true)}
+                className="gap-1.5 h-8"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Coach
+              </Button>
             </div>
           </div>
 
