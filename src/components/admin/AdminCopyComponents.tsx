@@ -89,6 +89,7 @@ interface CopyComponent {
   icon: string;
   config: any;
   output_structure: OutputField[];
+  required_blueprint_fields: string[];
   is_active: boolean;
   sort_order: number;
 }
