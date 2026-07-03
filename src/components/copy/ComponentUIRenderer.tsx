@@ -7,6 +7,7 @@ import FounderStoryUI from "./interfaces/FounderStoryUI";
 import DesiredOutcomesUI from "./interfaces/DesiredOutcomesUI";
 import ResultsProofUI from "./interfaces/ResultsProofUI";
 import CoreOutcomesUI from "./interfaces/CoreOutcomesUI";
+import ProgramDeliverablesUI from "./interfaces/ProgramDeliverablesUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
