@@ -2,6 +2,7 @@ import { User, AlertTriangle, Target, ArrowRightLeft, type LucideIcon } from "lu
 import type { ClaritySubBlock, CustomerClarityData } from "./types";
 import { getBusinessType, type BusinessTypeId } from "./businessTypes";
 import { getFieldCopy } from "./clarityCopy";
+import { getBlueprintFieldByKey } from "@shared/blueprintSchema";
 
 export type FieldType = "textarea" | "chips-single" | "chips-multi" | "tags";
 
@@ -44,17 +45,31 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
   const NounSingular = cap(nounSingular);
   const typeLabel = bt.label.toLowerCase();
 
-  /** Build a field definition merged with niche-specific copy. */
+  /**
+   * Build a field definition merged with niche-specific copy AND cross-checked
+   * against the shared blueprint schema (single source of truth). If a key or
+   * kind drifts from the schema, we log a warning in development so the
+   * mismatch surfaces immediately.
+   */
   const f = (
     base: Omit<FieldDef, "placeholder" | "helper"> & { placeholder?: string; helper?: string },
   ): FieldDef => {
+    const schema = getBlueprintFieldByKey(base.key);
+    if (import.meta.env?.DEV) {
+      if (!schema) {
+        console.warn(`[blueprint] clarityConfig: unknown field "${base.key}" — add it to supabase/functions/_shared/blueprintSchema.ts`);
+      } else if (schema.kind !== base.type) {
+        console.warn(`[blueprint] clarityConfig: kind mismatch for "${base.key}" (UI="${base.type}", schema="${schema.kind}")`);
+      }
+    }
     const copy = getFieldCopy(bt.id, base.key);
     return {
       ...base,
       placeholder: copy.placeholder ?? base.placeholder,
-      helper: copy.helper ?? base.helper,
+      helper: copy.helper ?? base.helper ?? schema?.helper,
     };
   };
+
 
   return [
     {
