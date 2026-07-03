@@ -560,6 +560,7 @@ export type Database = {
           instructions: string
           is_active: boolean
           name: string
+          output_structure: Json
           slug: string
           sort_order: number
           ui_interface_slug: string
@@ -575,6 +576,7 @@ export type Database = {
           instructions?: string
           is_active?: boolean
           name?: string
+          output_structure?: Json
           slug: string
           sort_order?: number
           ui_interface_slug?: string
@@ -590,6 +592,7 @@ export type Database = {
           instructions?: string
           is_active?: boolean
           name?: string
+          output_structure?: Json
           slug?: string
           sort_order?: number
           ui_interface_slug?: string
