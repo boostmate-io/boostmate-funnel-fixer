@@ -185,7 +185,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           placeholder="e.g. The first 90-day program that combines somatic work with strategic positioning…"
           value={data.angle_new_vehicle ?? ""}
           onChange={(v) => onChange({ angle_new_vehicle: v })}
-          onCoach={() => openCoach("New Vehicle")}
+          onCoach={() => openCoach({ key: "angle_new_vehicle", label: "New Vehicle", helper: "What makes your method genuinely new compared to what they already tried?" })}
         />
         <AngleField
           label="Better Results"
@@ -193,7 +193,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           placeholder="e.g. Because we combine strategy with implementation in the same week…"
           value={data.angle_better_results ?? ""}
           onChange={(v) => onChange({ angle_better_results: v })}
-          onCoach={() => openCoach("Better Results")}
+          onCoach={() => openCoach({ key: "angle_better_results", label: "Better Results", helper: "Why does your method produce better results?" })}
         />
         <AngleField
           label="Faster Outcome"
@@ -201,7 +201,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           placeholder="e.g. We compress 6 months of trial-and-error into 30 days of guided execution…"
           value={data.angle_faster_outcome ?? ""}
           onChange={(v) => onChange({ angle_faster_outcome: v })}
-          onCoach={() => openCoach("Faster Outcome")}
+          onCoach={() => openCoach({ key: "angle_faster_outcome", label: "Faster Outcome", helper: "How do clients get results faster?" })}
         />
         <AngleField
           label="Easier Process"
@@ -209,7 +209,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           placeholder="e.g. Done-with-you templates, weekly accountability, no guesswork…"
           value={data.angle_easier_process ?? ""}
           onChange={(v) => onChange({ angle_easier_process: v })}
-          onCoach={() => openCoach("Easier Process")}
+          onCoach={() => openCoach({ key: "angle_easier_process", label: "Easier Process", helper: "How do you make the process feel easier?" })}
         />
       </div>
 
