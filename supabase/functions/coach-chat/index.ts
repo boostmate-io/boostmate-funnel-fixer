@@ -36,6 +36,7 @@ Principles:
 const COACH_BLUEPRINT_FIELD = `You are coaching the user on a single Business Blueprint field.
 
 - Understand the field's intent (label + helper) before asking anything.
+- Respect the current field kind. If the target kind is "tags" or "chips", proposed values MUST be a short comma-separated list of items, never a paragraph.
 - If the field already has content, do NOT ignore it — ask what to sharpen, expand, or reframe.
 - If the field is empty, ask 1-2 grounding questions first, then draft.
 - When you have enough information, call the propose_field_value tool with a polished draft. Do not include the drafted answer inside your prose reply — put it only in the tool call.
@@ -106,6 +107,95 @@ const PROMPT_FALLBACK: PromptSet = {
 let promptCache: { at: number; prompts: PromptSet } | null = null;
 const PROMPT_TTL_MS = 60_000;
 
+type BlueprintFieldKind = "textarea" | "tags" | "chips";
+type BlueprintFieldMeta = { kind: BlueprintFieldKind; label: string; aliases: string[] };
+
+const BLUEPRINT_FIELD_META: Record<string, BlueprintFieldMeta> = {
+  "customer_clarity.avatar_who": {
+    kind: "textarea",
+    label: "Who is your ideal client",
+    aliases: ["avatar_who", "who is your ideal client", "ideal client", "ideale klant"],
+  },
+  "customer_clarity.avatar_stage": {
+    kind: "textarea",
+    label: "Stage or situation they are in",
+    aliases: ["avatar_stage", "stage or situation", "situation they are in", "fase", "situatie"],
+  },
+  "customer_clarity.avatar_traits": {
+    kind: "tags",
+    label: "Traits or mindset that define them",
+    aliases: [
+      "avatar_traits",
+      "traits or mindset",
+      "traits or mindset that define them",
+      "traits",
+      "mindset",
+      "eigenschappen",
+      "mindsets",
+      "kenmerken",
+    ],
+  },
+  "customer_clarity.avatar_not_fit": {
+    kind: "textarea",
+    label: "Who is NOT a good fit",
+    aliases: ["avatar_not_fit", "who is not a good fit", "not a good fit", "not fit", "geen goede fit"],
+  },
+  "customer_clarity.pain_main_problem": {
+    kind: "textarea",
+    label: "Main problem",
+    aliases: ["pain_main_problem", "main problem", "one big problem", "pain", "probleem"],
+  },
+  "customer_clarity.pain_daily_frustrations": {
+    kind: "textarea",
+    label: "Daily frustrations",
+    aliases: ["pain_daily_frustrations", "daily frustrations", "frustrations", "dagelijkse frustraties"],
+  },
+  "customer_clarity.pain_already_tried": {
+    kind: "textarea",
+    label: "What they already tried",
+    aliases: ["pain_already_tried", "already tried", "what they already tried", "al geprobeerd"],
+  },
+  "customer_clarity.pain_consequences": {
+    kind: "textarea",
+    label: "Consequences of not solving it",
+    aliases: ["pain_consequences", "consequences", "not solving", "gevolgen"],
+  },
+  "customer_clarity.desire_main_result": {
+    kind: "textarea",
+    label: "Main result they want",
+    aliases: ["desire_main_result", "main result", "result they want", "resultaat"],
+  },
+  "customer_clarity.desire_success_vision": {
+    kind: "textarea",
+    label: "Vision of success",
+    aliases: ["desire_success_vision", "success vision", "vision of success", "succesvisie"],
+  },
+  "customer_clarity.desire_why_badly": {
+    kind: "textarea",
+    label: "Why they want it badly",
+    aliases: ["desire_why_badly", "why they want it", "why badly", "waarom"],
+  },
+  "customer_clarity.transformation_point_a": {
+    kind: "textarea",
+    label: "Where they are now",
+    aliases: ["transformation_point_a", "point a", "where they are now", "waar ze nu staan"],
+  },
+  "customer_clarity.transformation_point_b": {
+    kind: "textarea",
+    label: "Where they want to be",
+    aliases: ["transformation_point_b", "point b", "where they want to be", "waar ze willen zijn"],
+  },
+  "customer_clarity.transformation_process": {
+    kind: "textarea",
+    label: "Transformation process",
+    aliases: ["transformation_process", "transformation process", "transformatieproces"],
+  },
+};
+
+const BLUEPRINT_KEY_TO_PATH = new Map(
+  Object.keys(BLUEPRINT_FIELD_META).map((path) => [path.split(".").at(-1)!, path]),
+);
+
 async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
   if (promptCache && Date.now() - promptCache.at < PROMPT_TTL_MS) return promptCache.prompts;
   try {
@@ -166,8 +256,139 @@ function buildSystemPrompt(
     parts.push(prompts.global);
     parts.push(BLUEPRINT_FIELD_PATHS);
   }
-...
+
+  if (context?.target) {
+    parts.push(`# Current target\n${JSON.stringify(context.target, null, 2)}`);
+  }
+
+  if (context?.businessContext?.blueprintSnapshot) {
+    parts.push(`# Current Business Blueprint JSON\n${JSON.stringify(context.businessContext.blueprintSnapshot, null, 2)}`);
+  }
+
+  if (memoryFacts.length > 0) {
+    parts.push(
+      `# Remembered business facts\n${memoryFacts
+        .map((fact) => `- ${fact.key}: ${fact.value}`)
+        .join("\n")}`,
+    );
+  }
+
   return parts.join("\n\n---\n\n");
+}
+
+function latestUserText(messages: any[]): string {
+  return String([...messages].reverse().find((m: any) => m?.role !== "assistant")?.content ?? "");
+}
+
+function normalizeForMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/["'“”‘’`]/g, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/[^a-z0-9\s.]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function canonicalBlueprintPath(rawPath: string): string {
+  const path = String(rawPath ?? "").trim();
+  if (BLUEPRINT_FIELD_META[path]) return path;
+  const key = path.split(".").at(-1) ?? path;
+  return BLUEPRINT_KEY_TO_PATH.get(key) ?? path;
+}
+
+function requestedSingleBlueprintPath(messages: any[]): string | null {
+  const latest = latestUserText(messages);
+  if (!WRITE_INTENT_RE.test(latest)) return null;
+
+  const normalized = normalizeForMatch(latest);
+  const matches = Object.entries(BLUEPRINT_FIELD_META).filter(([path, meta]) => {
+    const normalizedPath = normalizeForMatch(path);
+    const normalizedKey = normalizeForMatch(path.split(".").at(-1) ?? path);
+    const aliases = [meta.label, ...meta.aliases].map(normalizeForMatch);
+    return [normalizedPath, normalizedKey, ...aliases].some(
+      (needle) => needle.length > 2 && normalized.includes(needle),
+    );
+  });
+
+  return matches.length === 1 ? matches[0][0] : null;
+}
+
+function cleanTagCandidate(value: string): string {
+  return value
+    .replace(/^[-–—•\d.)\s]+/g, "")
+    .replace(/\b(they|them|their|clients|customers|women|people|mensen|klanten|vrouwen|ze|zij)\b\s*/gi, "")
+    .replace(/\b(are|is|have|has|tend to be|tend to|often|usually|mostly|zijn|hebben|vaak|meestal)\b\s*/gi, "")
+    .replace(/\b(who|that|die)\b\s*/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[.!?;:]+$/g, "")
+    .trim();
+}
+
+function normalizeTagOrChipValue(raw: string): string {
+  const text = String(raw ?? "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+
+  const commaItems = text.split(/[,;\n•]+/).map(cleanTagCandidate).filter(Boolean);
+  const alreadyList = commaItems.length >= 2 && commaItems.every((item) => item.split(/\s+/).length <= 7);
+  const sourceItems = alreadyList
+    ? commaItems
+    : text
+        .replace(/[.!?]+/g, ",")
+        .split(/[,;\n•]+|\s+\b(?:and|or|but|en|of|maar)\b\s+/i)
+        .map(cleanTagCandidate)
+        .filter(Boolean);
+
+  const seen = new Set<string>();
+  const items = sourceItems
+    .map((item) => item.split(/\s+/).slice(0, 7).join(" ").trim())
+    .filter((item) => {
+      if (item.length < 2) return false;
+      const key = item.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 10);
+
+  return items.join(", ");
+}
+
+function normalizeFieldValue(path: string, value: string): string {
+  const meta = BLUEPRINT_FIELD_META[path];
+  if (meta?.kind === "tags" || meta?.kind === "chips") return normalizeTagOrChipValue(value);
+  return String(value ?? "").trim();
+}
+
+function normalizeCurrentFieldProposal(context: any, value: string): string {
+  const kind = context?.target?.kind;
+  if (kind === "tags" || kind === "chips") return normalizeTagOrChipValue(value);
+
+  const targetId = String(context?.target?.id ?? "");
+  const path = canonicalBlueprintPath(targetId);
+  return normalizeFieldValue(path, value);
+}
+
+function sanitizeBlueprintWrites(writesArg: any, messages: any[]) {
+  if (!Array.isArray(writesArg)) return [];
+
+  const requestedPath = requestedSingleBlueprintPath(messages);
+  const byPath = new Map<string, { path: string; label: string; value: string }>();
+
+  for (const raw of writesArg) {
+    if (!raw || typeof raw.path !== "string" || typeof raw.value !== "string") continue;
+    const path = canonicalBlueprintPath(raw.path);
+    if (requestedPath && path !== requestedPath) continue;
+
+    const value = normalizeFieldValue(path, raw.value);
+    if (!value) continue;
+
+    const label = String(raw.label ?? BLUEPRINT_FIELD_META[path]?.label ?? path);
+    if (!byPath.has(path)) byPath.set(path, { path, label, value });
+  }
+
+  return [...byPath.values()];
 }
 
 // -----------------------------------------------------------------------------
