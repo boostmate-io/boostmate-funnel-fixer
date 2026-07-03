@@ -369,6 +369,51 @@ function requestedSingleBlueprintPath(messages: any[]): string | null {
   return matches[0].path;
 }
 
+function getDeepValue(source: any, path: string): unknown {
+  return path.split(".").reduce((cursor, key) => cursor?.[key], source);
+}
+
+function isEmptyBlueprintValue(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return value.trim().length === 0;
+  if (Array.isArray(value)) return value.length === 0;
+  return false;
+}
+
+function requestedBlueprintSubBlock(messages: any[]): string | null {
+  const latest = latestUserText(messages);
+  if (!WRITE_INTENT_RE.test(latest)) return null;
+
+  const normalized = normalizeForMatch(latest);
+  const matches = Object.entries(BLUEPRINT_SUB_BLOCK_ALIASES)
+    .map(([block, aliases]) => {
+      const score = aliases
+        .map(normalizeForMatch)
+        .filter((needle) => needle.length > 2)
+        .reduce((best, needle) => (normalized.includes(needle) ? Math.max(best, 20 + needle.length) : best), 0);
+      return { block, score };
+    })
+    .filter((match) => match.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (matches.length === 0) return null;
+  if (matches.length > 1 && matches[0].score === matches[1].score) return null;
+  return matches[0].block;
+}
+
+function allowedBlueprintWritePaths(context: any, messages: any[]): Set<string> | null {
+  const requestedPath = requestedSingleBlueprintPath(messages);
+  if (requestedPath) return new Set([requestedPath]);
+
+  const requestedBlock = requestedBlueprintSubBlock(messages);
+  if (!requestedBlock) return null;
+
+  const snapshot = context?.businessContext?.blueprintSnapshot;
+  const paths = BLUEPRINT_SUB_BLOCK_PATHS[requestedBlock] ?? [];
+  const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
+  return new Set(emptyPaths.length > 0 ? emptyPaths : paths);
+}
+
 function cleanTagCandidate(value: string): string {
   return value
     .replace(/^[-–—•\d.)\s]+/g, "")
@@ -425,16 +470,16 @@ function normalizeCurrentFieldProposal(context: any, value: string): string {
   return normalizeFieldValue(path, value);
 }
 
-function sanitizeBlueprintWrites(writesArg: any, messages: any[]) {
+function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) {
   if (!Array.isArray(writesArg)) return [];
 
-  const requestedPath = requestedSingleBlueprintPath(messages);
+  const allowedPaths = allowedBlueprintWritePaths(context, messages);
   const byPath = new Map<string, { path: string; label: string; value: string }>();
 
   for (const raw of writesArg) {
     if (!raw || typeof raw.path !== "string" || typeof raw.value !== "string") continue;
     const path = canonicalBlueprintPath(raw.path);
-    if (requestedPath && path !== requestedPath) continue;
+    if (allowedPaths && !allowedPaths.has(path)) continue;
 
     const value = normalizeFieldValue(path, raw.value);
     if (!value) continue;
@@ -444,6 +489,19 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[]) {
   }
 
   return [...byPath.values()];
+}
+
+function fallbackBlueprintWrites(messages: any[], context: any) {
+  const allowedPaths = allowedBlueprintWritePaths(context, messages);
+  if (!allowedPaths || allowedPaths.size === 0) return [];
+
+  const snapshot = context?.businessContext?.blueprintSnapshot;
+  const paths = [...allowedPaths].filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
+  return paths.map((path) => ({
+    path,
+    label: BLUEPRINT_FIELD_META[path]?.label ?? path,
+    value: "—",
+  }));
 }
 
 // -----------------------------------------------------------------------------
