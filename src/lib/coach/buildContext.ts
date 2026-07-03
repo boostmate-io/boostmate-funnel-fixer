@@ -3,8 +3,11 @@
 // Add a new builder here when a new module plugs into the Coach engine.
 // =============================================================================
 
+import i18n from "@/i18n";
 import type { BlueprintRow } from "@/components/business-blueprint/types";
 import type { CoachContext, CoachTarget } from "./types";
+
+const currentLocale = () => (i18n.language ?? "en").split("-")[0];
 
 interface BlueprintFieldSpec {
   id: string;          // stable field key (e.g. "avatar_who")
