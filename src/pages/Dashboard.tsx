@@ -20,6 +20,7 @@ import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
 import AdminPanel from "@/components/admin/AdminPanel";
 import OutreachModule from "@/components/outreach/OutreachModule";
 import BusinessBlueprintModule from "@/components/business-blueprint/BusinessBlueprintModule";
+import GlobalCoachBubble from "@/components/coach/GlobalCoachBubble";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -186,6 +187,7 @@ const Dashboard = () => {
           )}
         </main>
       </div>
+      <GlobalCoachBubble />
     </div>
   );
 };
