@@ -4,6 +4,14 @@
 // and persists messages + facts to Lovable Cloud.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import {
+  BLUEPRINT_FIELDS,
+  BLUEPRINT_FIELD_BY_PATH,
+  BLUEPRINT_SUB_BLOCKS,
+  getBlueprintFieldByKey,
+  renderBlueprintFieldPathsPrompt,
+  type BlueprintFieldKind,
+} from "../_shared/blueprintSchema.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -115,200 +123,58 @@ const PROMPT_FALLBACK: PromptSet = {
 let promptCache: { at: number; prompts: PromptSet } | null = null;
 const PROMPT_TTL_MS = 60_000;
 
-type BlueprintFieldKind = "textarea" | "tags" | "chips";
-type BlueprintFieldMeta = { kind: BlueprintFieldKind; label: string; aliases: string[] };
+// The prompt fragment listing every writable field path is generated from the
+// shared blueprint schema. To add a field, edit
+// supabase/functions/_shared/blueprintSchema.ts — this string updates itself.
+const BLUEPRINT_FIELD_PATHS = renderBlueprintFieldPathsPrompt();
 
-const BLUEPRINT_FIELD_META: Record<string, BlueprintFieldMeta> = {
-  "customer_clarity.avatar_who": {
-    kind: "textarea",
-    label: "Who is your ideal client",
-    aliases: ["avatar_who", "who is your ideal client", "ideal client", "ideale klant"],
-  },
-  "customer_clarity.avatar_stage": {
-    kind: "textarea",
-    label: "Stage or situation they are in",
-    aliases: ["avatar_stage", "stage or situation", "situation they are in", "fase", "situatie"],
-  },
-  "customer_clarity.avatar_traits": {
-    kind: "tags",
-    label: "Traits or mindset that define them",
-    aliases: [
-      "avatar_traits",
-      "traits or mindset",
-      "traits or mindset that define them",
-      "traits",
-      "mindset",
-      "eigenschappen",
-      "mindsets",
-      "kenmerken",
-    ],
-  },
-  "customer_clarity.avatar_not_fit": {
-    kind: "textarea",
-    label: "Who is NOT a good fit",
-    aliases: ["avatar_not_fit", "who is not a good fit", "not a good fit", "not fit", "geen goede fit"],
-  },
-  "customer_clarity.pain_main_problem": {
-    kind: "textarea",
-    label: "Main problem",
-    aliases: ["pain_main_problem", "main problem", "one big problem", "hoofdprobleem", "probleem"],
-  },
-  "customer_clarity.pain_daily_frustrations": {
-    kind: "textarea",
-    label: "Daily frustrations",
-    aliases: ["pain_daily_frustrations", "daily frustrations", "frustrations", "dagelijkse frustraties"],
-  },
-  "customer_clarity.pain_already_tried": {
-    kind: "textarea",
-    label: "What they already tried",
-    aliases: ["pain_already_tried", "already tried", "what they already tried", "al geprobeerd"],
-  },
-  "customer_clarity.pain_consequences": {
-    kind: "textarea",
-    label: "Consequences of not solving it",
-    aliases: ["pain_consequences", "consequences", "not solving", "gevolgen"],
-  },
-  "customer_clarity.desire_main_result": {
-    kind: "textarea",
-    label: "Main result they want",
-    aliases: ["desire_main_result", "main result", "result they want", "resultaat"],
-  },
-  "customer_clarity.desire_success_vision": {
-    kind: "textarea",
-    label: "Vision of success",
-    aliases: ["desire_success_vision", "success vision", "vision of success", "succesvisie"],
-  },
-  "customer_clarity.desire_why_badly": {
-    kind: "textarea",
-    label: "Why they want it badly",
-    aliases: ["desire_why_badly", "why they want it", "why badly", "waarom"],
-  },
-  "customer_clarity.transformation_point_a": {
-    kind: "textarea",
-    label: "Where they are now",
-    aliases: ["transformation_point_a", "point a", "where they are now", "waar ze nu staan"],
-  },
-  "customer_clarity.transformation_point_b": {
-    kind: "textarea",
-    label: "Where they want to be",
-    aliases: ["transformation_point_b", "point b", "where they want to be", "waar ze willen zijn"],
-  },
-  "customer_clarity.transformation_process": {
-    kind: "textarea",
-    label: "Transformation process",
-    aliases: ["transformation_process", "transformation process", "transformatieproces"],
-  },
+// In-memory cache for admin-editable prompts (per edge instance, 60s TTL).
+type PromptSet = { base: string; field: string; section: string; global: string };
+const PROMPT_FALLBACK: PromptSet = {
+  base: COACH_BASE,
+  field: COACH_BLUEPRINT_FIELD,
+  section: COACH_BLUEPRINT_SECTION,
+  global: COACH_GLOBAL,
 };
+let promptCache: { at: number; prompts: PromptSet } | null = null;
+const PROMPT_TTL_MS = 60_000;
 
-const OFFER_ANGLE_FIELD_META: Record<string, BlueprintFieldMeta> = {
-  "offer_stack.angle.main_offer_name": {
-    kind: "textarea",
-    label: "Main Offer Name",
-    aliases: ["main_offer_name", "main offer name", "offer name", "flagship name", "naam aanbod"],
-  },
-  "offer_stack.angle.short_description": {
-    kind: "textarea",
-    label: "Short Offer Description",
-    aliases: ["short_description", "short offer description", "offer description", "korte beschrijving"],
-  },
-  "offer_stack.angle.core_outcome": {
-    kind: "textarea",
-    label: "Core Outcome",
-    aliases: ["core_outcome", "core outcome", "primary outcome", "main outcome", "hoofdresultaat"],
-  },
-  "offer_stack.angle.angle_new_vehicle": {
-    kind: "textarea",
-    label: "New Vehicle",
-    aliases: ["angle_new_vehicle", "new vehicle", "new method", "nieuw voertuig", "nieuwe methode"],
-  },
-  "offer_stack.angle.angle_better_results": {
-    kind: "textarea",
-    label: "Better Results",
-    aliases: ["angle_better_results", "better results", "betere resultaten"],
-  },
-  "offer_stack.angle.angle_faster_outcome": {
-    kind: "textarea",
-    label: "Faster Outcome",
-    aliases: ["angle_faster_outcome", "faster outcome", "faster results", "sneller resultaat"],
-  },
-  "offer_stack.angle.angle_easier_process": {
-    kind: "textarea",
-    label: "Easier Process",
-    aliases: ["angle_easier_process", "easier process", "eenvoudiger proces", "makkelijker proces"],
-  },
-};
+// -----------------------------------------------------------------------------
+// Blueprint field/sub-block lookups derived from the shared schema
+// -----------------------------------------------------------------------------
 
-Object.assign(BLUEPRINT_FIELD_META, OFFER_ANGLE_FIELD_META);
+type CoachFieldKind = "textarea" | "tags" | "chips";
 
-const BLUEPRINT_KEY_TO_PATH = new Map(
-  Object.keys(BLUEPRINT_FIELD_META).map((path) => [path.split(".").at(-1)!, path]),
+function coachKind(kind: BlueprintFieldKind): CoachFieldKind {
+  if (kind === "tags") return "tags";
+  if (kind === "chips-single" || kind === "chips-multi") return "chips";
+  return "textarea";
+}
+
+interface CoachFieldMeta {
+  kind: CoachFieldKind;
+  label: string;
+  aliases: string[];
+  aiWritable: boolean;
+}
+
+const BLUEPRINT_FIELD_META: Record<string, CoachFieldMeta> = Object.fromEntries(
+  BLUEPRINT_FIELDS.map((f) => [
+    f.path,
+    { kind: coachKind(f.kind), label: f.label, aliases: f.aliases, aiWritable: f.aiWritable },
+  ]),
 );
 
-const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = {
-  avatar: [
-    "customer_clarity.avatar_who",
-    "customer_clarity.avatar_stage",
-    "customer_clarity.avatar_traits",
-    "customer_clarity.avatar_not_fit",
-  ],
-  pain: [
-    "customer_clarity.pain_main_problem",
-    "customer_clarity.pain_daily_frustrations",
-    "customer_clarity.pain_already_tried",
-    "customer_clarity.pain_consequences",
-  ],
-  desire: [
-    "customer_clarity.desire_main_result",
-    "customer_clarity.desire_success_vision",
-    "customer_clarity.desire_why_badly",
-  ],
-  transformation: [
-    "customer_clarity.transformation_point_a",
-    "customer_clarity.transformation_point_b",
-    "customer_clarity.transformation_process",
-  ],
-  offer_angle: [
-    "offer_stack.angle.main_offer_name",
-    "offer_stack.angle.short_description",
-    "offer_stack.angle.core_outcome",
-    "offer_stack.angle.angle_new_vehicle",
-    "offer_stack.angle.angle_better_results",
-    "offer_stack.angle.angle_faster_outcome",
-    "offer_stack.angle.angle_easier_process",
-  ],
-};
+const BLUEPRINT_KEY_TO_PATH = new Map(BLUEPRINT_FIELDS.map((f) => [f.key, f.path]));
 
-const BLUEPRINT_SUB_BLOCK_ALIASES: Record<string, string[]> = {
-  avatar: [
-    "ideal client avatar",
-    "ideal customer avatar",
-    "avatar",
-    "icp",
-    "ideale klant",
-    "ideale client",
-  ],
-  pain: [
-    "pain friction",
-    "pain and friction",
-    "pain en friction",
-    "pain & friction",
-    "friction",
-    "pijnpunten",
-  ],
-  desire: ["desire goals", "desire and goals", "desire & goals", "desire", "goals", "verlangens", "doelen"],
-  transformation: ["transformation", "transformatie", "point a", "point b"],
-  offer_angle: [
-    "offer angle",
-    "offer angle tab",
-    "angle tab",
-    "offer design angle",
-    "offer design",
-    "aanbod angle",
-    "offer positioning",
-  ],
-};
+const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = Object.fromEntries(
+  BLUEPRINT_SUB_BLOCKS.map((s) => [s.id, s.fieldPaths]),
+);
 
-async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
+const BLUEPRINT_SUB_BLOCK_ALIASES: Record<string, string[]> = Object.fromEntries(
+  BLUEPRINT_SUB_BLOCKS.map((s) => [s.id, s.aliases]),
+);
+
   if (promptCache && Date.now() - promptCache.at < PROMPT_TTL_MS) return promptCache.prompts;
   try {
     const { data: action } = await supabase
