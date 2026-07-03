@@ -34,6 +34,8 @@ export interface CoachContext {
     blueprintSnapshot: BlueprintRow | null;
     activeOfferId?: string;
     routeHint?: string;
+    /** UI locale, e.g. "en" or "nl". Coach replies in this language. */
+    locale?: string;
   };
 }
 
