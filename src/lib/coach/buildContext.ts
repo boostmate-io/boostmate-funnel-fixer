@@ -71,6 +71,51 @@ export function buildBlueprintSectionContext(
 }
 
 /**
+ * List-section Coach — coach the user on populating a container list
+ * (Framework Pillars, Deliverables, Bonuses, …). Renders in the same
+ * Coach engine as blueprint.section but with `target.listSection` so the
+ * edge function can propose multiple new items in a single turn.
+ */
+interface BlueprintListSectionSpec {
+  id: string;
+  label: string;
+  helper?: string;
+  basePath: string;
+  itemFields: { key: string; label: string; kind?: "text" | "textarea"; helper?: string }[];
+  currentCount: number;
+  suggestedCount?: [number, number];
+}
+
+export function buildBlueprintListSectionContext(
+  spec: BlueprintListSectionSpec,
+  blueprint: BlueprintRow | null,
+  subAccountId: string,
+): CoachContext {
+  return {
+    scope: "blueprint.section",
+    intent: "generate",
+    target: {
+      id: `list:${spec.id}`,
+      label: spec.label,
+      kind: "structured",
+      currentValue: null,
+      helper: spec.helper,
+      listSection: {
+        basePath: spec.basePath,
+        itemFields: spec.itemFields,
+        currentCount: spec.currentCount,
+        suggestedCount: spec.suggestedCount,
+      },
+    },
+    businessContext: {
+      subAccountId,
+      blueprintSnapshot: blueprint,
+      locale: currentLocale(),
+    },
+  };
+}
+
+/**
  * Global Growth Strategist — no specific target, full blueprint context.
  * Used by the floating Coach bubble.
  */

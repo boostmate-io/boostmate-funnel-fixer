@@ -196,15 +196,42 @@ function buildSystemPrompt(
     parts.push(`# Current Business Blueprint JSON\n${JSON.stringify(context.businessContext.blueprintSnapshot, null, 2)}`);
   }
 
-  const allowedPaths = allowedBlueprintWritePaths(context, messages);
-  if (allowedPaths && allowedPaths.size > 0) {
+  const listSection = context?.target?.listSection;
+  if (listSection && typeof listSection === "object") {
+    const fields = Array.isArray(listSection.itemFields) ? listSection.itemFields : [];
+    const suggested = Array.isArray(listSection.suggestedCount) && listSection.suggestedCount.length === 2
+      ? `${listSection.suggestedCount[0]}–${listSection.suggestedCount[1]}`
+      : "3–5";
+    const fieldLines = fields
+      .map((f: any) => `  - ${f.key} (${f.kind ?? "text"}) — ${f.label}${f.helper ? `: ${f.helper}` : ""}`)
+      .join("\n");
     parts.push(
-      `# Current write target — hard constraint\nFor the user's latest request, propose Blueprint writes ONLY for these path(s):\n${[
-        ...allowedPaths,
-      ]
-        .map((path) => `- ${path} — ${BLUEPRINT_FIELD_META[path]?.kind ?? "textarea"} — ${BLUEPRINT_FIELD_META[path]?.label ?? path}`)
-        .join("\n")}\nDo not write to any other Blueprint path.`,
+      `# List section mode — CRITICAL
+You are helping the user populate a LIST inside their Business Blueprint.
+List label: ${listSection.label ?? context?.target?.label ?? ""}
+Base path: ${listSection.basePath}
+Currently ${listSection.currentCount ?? 0} item(s) exist.
+
+Each item in this list has these fields:
+${fieldLines}
+
+When the user asks you to suggest / generate / propose / fill / draft items for this list, call the propose_blueprint_writes tool ONCE with one write per (item, field) pair. Use paths of exactly this form:
+  <basePath>.new_0.<fieldKey>
+  <basePath>.new_1.<fieldKey>
+  ...
+Every proposed item MUST include a value for every listed field. Suggested item count: ${suggested} unless the user specifies otherwise. Label each write "Item <n> — <field label>". Do NOT write to any other Blueprint path in this turn.`,
     );
+  } else {
+    const allowedPaths = allowedBlueprintWritePaths(context, messages);
+    if (allowedPaths && allowedPaths.size > 0) {
+      parts.push(
+        `# Current write target — hard constraint\nFor the user's latest request, propose Blueprint writes ONLY for these path(s):\n${[
+          ...allowedPaths,
+        ]
+          .map((path) => `- ${path} — ${BLUEPRINT_FIELD_META[path]?.kind ?? "textarea"} — ${BLUEPRINT_FIELD_META[path]?.label ?? path}`)
+          .join("\n")}\nDo not write to any other Blueprint path.`,
+      );
+    }
   }
 
   if (memoryFacts.length > 0) {
@@ -390,6 +417,37 @@ function normalizeCurrentFieldProposal(context: any, value: string): string {
 function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) {
   if (!Array.isArray(writesArg)) return [];
 
+  const listSection = context?.target?.listSection;
+  if (listSection && typeof listSection === "object") {
+    const base: string = String(listSection.basePath ?? "").replace(/\.$/, "");
+    const fieldKeys = new Set<string>(
+      (Array.isArray(listSection.itemFields) ? listSection.itemFields : []).map((f: any) => String(f.key)),
+    );
+    const fieldLabelByKey = new Map<string, string>(
+      (Array.isArray(listSection.itemFields) ? listSection.itemFields : []).map((f: any) => [
+        String(f.key),
+        String(f.label ?? f.key),
+      ]),
+    );
+    const out: { path: string; label: string; value: string }[] = [];
+    for (const raw of writesArg) {
+      if (!raw || typeof raw.path !== "string" || typeof raw.value !== "string") continue;
+      const path = String(raw.path);
+      if (!path.startsWith(`${base}.`)) continue;
+      const rest = path.slice(base.length + 1).split(".");
+      if (rest.length !== 2) continue;
+      const [itemKey, fieldKey] = rest;
+      if (!/^new_\d+$/.test(itemKey)) continue;
+      if (!fieldKeys.has(fieldKey)) continue;
+      const value = String(raw.value ?? "").trim();
+      if (!value) continue;
+      const itemIdx = Number(itemKey.slice(4)) + 1;
+      const label = String(raw.label ?? `Item ${itemIdx} — ${fieldLabelByKey.get(fieldKey) ?? fieldKey}`);
+      out.push({ path, label, value });
+    }
+    return out;
+  }
+
   const allowedPaths = allowedBlueprintWritePaths(context, messages);
   const emptyOnly = latestUserAsksForEmptyOnly(messages);
   const byPath = new Map<string, { path: string; label: string; value: string }>();
@@ -540,7 +598,7 @@ const NOT_FILLED_RE = /\b(not filled|isn['’]?t filled|nothing happened|niet in
 const BLUEPRINT_AREA_RE =
   /\b(customer clarity|dream client|avatar|icp|pain|problem|desire|goal|transformation|offer|pricing|proof|authority|growth system|blueprint|sectie|section|veld|field)\b/i;
 
-function isBlueprintWriteIntent(scope: string | undefined, messages: any[]) {
+function isBlueprintWriteIntent(scope: string | undefined, messages: any[], context?: any) {
   if (scope !== "blueprint.section" && scope !== "global") return false;
   const userMessages = messages.filter((m: any) => m?.role !== "assistant");
   const latest = String(userMessages.at(-1)?.content ?? "");
@@ -548,6 +606,11 @@ function isBlueprintWriteIntent(scope: string | undefined, messages: any[]) {
     .slice(-4)
     .map((m: any) => String(m?.content ?? ""))
     .join("\n");
+
+  // In list-section mode any add/suggest/generate intent triggers a write.
+  if (context?.target?.listSection && (WRITE_INTENT_RE.test(latest) || /\b(suggest|voorstel|stel voor|geef|give|show|toon|ideas|ideeën|opties|options|add)\b/i.test(latest))) {
+    return true;
+  }
 
   if (WRITE_INTENT_RE.test(latest) && BLUEPRINT_AREA_RE.test(latest)) return true;
   if (NOT_FILLED_RE.test(latest) && (WRITE_INTENT_RE.test(recent) || BLUEPRINT_AREA_RE.test(recent))) return true;
@@ -617,7 +680,7 @@ Deno.serve(async (req) => {
     ];
 
     const tools = toolsForScope(context?.scope);
-    const shouldForceBlueprintWrites = isBlueprintWriteIntent(context?.scope, messages);
+    const shouldForceBlueprintWrites = isBlueprintWriteIntent(context?.scope, messages, context);
 
     // Call Lovable AI Gateway (OpenAI-compatible)
     const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

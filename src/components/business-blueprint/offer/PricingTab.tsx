@@ -63,7 +63,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const progress = calcPricingProgress(data);
-  const { openCoach, panel } = useOfferCoach(() => ({ offer_stack: { pricing: data } }));
+  const { openCoach, openListCoach, panel } = useOfferCoach(() => ({ offer_stack: { pricing: data } }));
 
   // Payment plans
   const addPlan = () =>
@@ -74,6 +74,20 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
     onChange({ payment_plans: data.payment_plans.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
   const removePlan = (id: string) =>
     onChange({ payment_plans: data.payment_plans.filter((p) => p.id !== id) });
+
+  const appendPlan = (item: Record<string, string>) =>
+    onChange({
+      payment_plans: [
+        ...data.payment_plans,
+        {
+          id: newId(),
+          type: "custom",
+          custom_label: (item.custom_label ?? "").trim(),
+          amount: "",
+          duration: (item.duration ?? "").trim(),
+        },
+      ],
+    });
 
   // Premium upgrade
   const updatePremium = (patch: Partial<PremiumUpgrade>) =>
@@ -146,6 +160,21 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
           description="Lower the upfront barrier with flexible options."
           addLabel="Add Payment Plan"
           onAdd={addPlan}
+          onCoach={() =>
+            openListCoach({
+              id: "pricing_payment_plans",
+              label: "Payment Plans",
+              helper: "Flexible payment options that lower the upfront barrier. Coach suggests plan structures — you set the amounts.",
+              basePath: "offer_stack.pricing.payment_plans",
+              itemFields: [
+                { key: "custom_label", label: "Plan Label", kind: "text", helper: "Short plan name (e.g. 'Pay in Full', '3-Pay')." },
+                { key: "duration", label: "Duration", kind: "text", helper: "How long the plan runs (e.g. '3 months', '12 weeks')." },
+              ],
+              currentCount: data.payment_plans.length,
+              suggestedCount: [2, 3],
+              appendItem: appendPlan,
+            })
+          }
           count={data.payment_plans.length}
           emptyText="No plans yet. Most offers convert better with at least 2 options (e.g. Full Pay + 3-Pay)."
         >

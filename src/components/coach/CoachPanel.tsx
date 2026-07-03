@@ -47,6 +47,25 @@ const openerFor = (context: CoachContext | null): CoachMessage | null => {
   }
 
   if (context.scope === "blueprint.section" && context.target) {
+    const ls = context.target.listSection;
+    if (ls) {
+      const [minC, maxC] = ls.suggestedCount ?? [3, 5];
+      const suggest = nl ? `Stel ${minC}–${maxC} items voor` : `Suggest ${minC}–${maxC} items`;
+      const inspire = nl ? "Inspireer me met voorbeelden" : "Inspire me with examples";
+      const ask = nl ? "Stel me eerst wat vragen" : "Ask me a few questions first";
+      const text = nl
+        ? `Ik kan ${minC}–${maxC} **${context.target.label}** voor je voorstellen op basis van je Blueprint. Je kunt daarna per item accepteren of verwerpen.`
+        : `I can propose ${minC}–${maxC} **${context.target.label}** items based on your Blueprint. You'll be able to accept or dismiss each one.`;
+      return {
+        id: "opener",
+        role: "assistant",
+        content: text,
+        parts: [
+          { type: "text", text },
+          { type: "quick_replies", replies: [suggest, inspire, ask] },
+        ],
+      };
+    }
     const text = nl
       ? `Laten we samen door **${context.target.label}** heen lopen. Ik zie wat je al hebt ingevuld — waar wil je beginnen?`
       : `Let's walk through **${context.target.label}** together. I can see what you've already filled in — where do you want to start?`;

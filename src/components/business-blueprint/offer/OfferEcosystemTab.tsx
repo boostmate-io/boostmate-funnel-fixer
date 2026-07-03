@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import {
-  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight, Plus,
+  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight, Plus, MessageSquare,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -217,7 +217,19 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
     offerDesign,
   });
   const progress = calcEcosystemProgress(tierCounts);
-  const { openCoach, panel } = useOfferCoach(() => ({ offer_ecosystem: offers }));
+  const { openCoach, openListCoach, panel } = useOfferCoach(() => ({ offer_ecosystem: offers }));
+
+  const appendEcosystemOffer = async (tier: EcosystemTier, item: Record<string, string>) => {
+    const id = await addOffer(tier);
+    if (!id) return;
+    await updateOffer(id, {
+      name: (item.name ?? "Untitled Offer").trim() || "Untitled Offer",
+      data: {
+        description: (item.description ?? "").trim(),
+        core_outcome: (item.core_outcome ?? "").trim(),
+      } as any,
+    });
+  };
 
   const [editing, setEditing] = useState<{ id: string; isPrimary: boolean } | null>(null);
 
@@ -335,15 +347,42 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                     Add Core Offer
                   </Button>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => addOffer(tier.id)}
-                    className="gap-1.5 h-8 shrink-0"
-                    disabled={!blueprintId}
-                  >
-                    {tier.addLabel}
-                  </Button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        openListCoach({
+                          id: `ecosystem_${tier.id}`,
+                          label: `${tier.label} — Ideas`,
+                          helper: `${tier.description} ${tier.examples}`,
+                          basePath: `offer_ecosystem.${tier.id}`,
+                          itemFields: [
+                            { key: "name", label: "Offer Name", kind: "text", helper: "Short, evocative offer name." },
+                            { key: "description", label: "Description", kind: "textarea", helper: "What this offer is in 1–2 sentences." },
+                            { key: "core_outcome", label: "Core Outcome", kind: "text", helper: "What the buyer walks away with." },
+                          ],
+                          currentCount: tierOffers.length,
+                          suggestedCount: [2, 3],
+                          appendItem: (item) => appendEcosystemOffer(tier.id, item),
+                        })
+                      }
+                      disabled={!blueprintId}
+                      className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Coach
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => addOffer(tier.id)}
+                      className="gap-1.5 h-8"
+                      disabled={!blueprintId}
+                    >
+                      {tier.addLabel}
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -355,11 +394,27 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleGenerateIdeas(tier.id)}
+                        onClick={() =>
+                          openListCoach({
+                            id: `ecosystem_${tier.id}`,
+                            label: `${tier.label} — Ideas`,
+                            helper: `${tier.description} ${tier.examples}`,
+                            basePath: `offer_ecosystem.${tier.id}`,
+                            itemFields: [
+                              { key: "name", label: "Offer Name", kind: "text" },
+                              { key: "description", label: "Description", kind: "textarea" },
+                              { key: "core_outcome", label: "Core Outcome", kind: "text" },
+                            ],
+                            currentCount: 0,
+                            suggestedCount: [2, 3],
+                            appendItem: (item) => appendEcosystemOffer(tier.id, item),
+                          })
+                        }
                         className="gap-1.5 text-primary hover:bg-primary/5"
+                        disabled={!blueprintId}
                       >
                         <Sparkles className="w-3.5 h-3.5" />
-                        Generate Offer Ideas
+                        Ask Coach for Ideas
                       </Button>
                     )}
                   </div>
