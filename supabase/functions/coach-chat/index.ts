@@ -511,7 +511,7 @@ function toolsForScope(scope: string | undefined) {
 }
 
 const WRITE_INTENT_RE =
-  /\b(fill|draft|generate|write|update|complete|create|make|set|apply|invul|invullen|vul|vullen|uitwerk|uitwerken|schrijf|maak|werk uit|bijwerk|aanvul|aanvullen)\b/i;
+  /(?:\b(fill|draft|generate|write|update|complete|create|make|set|apply|invullen|vullen|uitwerken|schrijf|maak|bijwerk|aanvullen)\b|\binvul|\bvul|\buitwerk|werk uit)/i;
 const NOT_FILLED_RE = /\b(not filled|isn['’]?t filled|nothing happened|niet ingevuld|niets ingevuld|er gebeurt niets|werkt niet)\b/i;
 const BLUEPRINT_AREA_RE =
   /\b(customer clarity|dream client|avatar|icp|pain|problem|desire|goal|transformation|offer|pricing|proof|authority|growth system|blueprint|sectie|section|veld|field)\b/i;
