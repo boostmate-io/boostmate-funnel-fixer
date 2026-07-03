@@ -3,13 +3,16 @@
 // Uses the SAME CoachPanel + coach-chat engine as every scoped Coach entry.
 // =============================================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import CoachPanel from "@/components/coach/CoachPanel";
 import { buildGlobalContext } from "@/lib/coach/buildContext";
+import { applyBlueprintWrites } from "@/lib/coach/applyBlueprintWrites";
+import type { CoachBlueprintWrite } from "@/lib/coach/types";
 import type { BlueprintRow } from "@/components/business-blueprint/types";
 
 const GlobalCoachBubble = () => {
