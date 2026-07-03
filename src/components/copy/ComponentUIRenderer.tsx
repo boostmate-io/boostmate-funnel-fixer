@@ -8,6 +8,7 @@ import DesiredOutcomesUI from "./interfaces/DesiredOutcomesUI";
 import ResultsProofUI from "./interfaces/ResultsProofUI";
 import CoreOutcomesUI from "./interfaces/CoreOutcomesUI";
 import ProgramDeliverablesUI from "./interfaces/ProgramDeliverablesUI";
+import ProcessMechanismUI from "./interfaces/ProcessMechanismUI";
 
 interface ComponentUIRendererProps {
   uiInterfaceSlug: string;
