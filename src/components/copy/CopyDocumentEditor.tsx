@@ -80,18 +80,24 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
   const [globalInstructions, setGlobalInstructions] = useState("");
   const [generatingAll, setGeneratingAll] = useState(false);
   const [editingName, setEditingName] = useState(false);
+  const [blueprint, setBlueprint] = useState<any>(null);
 
   const load = useCallback(async () => {
     const offersQuery = activeSubAccountId
       ? supabase.from("offers").select("id, name, data").eq("sub_account_id", activeSubAccountId)
       : supabase.from("offers").select("id, name, data");
 
-    const [{ data: dc }, { data: cd }, { data: fw }, { data: of }, { data: doc }] = await Promise.all([
+    const blueprintQuery = activeSubAccountId
+      ? supabase.from("business_blueprints").select("*").eq("sub_account_id", activeSubAccountId).maybeSingle()
+      : Promise.resolve({ data: null });
+
+    const [{ data: dc }, { data: cd }, { data: fw }, { data: of }, { data: doc }, { data: bp }] = await Promise.all([
       supabase.from("copy_document_components").select("*").eq("document_id", documentId).order("sort_order"),
-      supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug, icon, output_structure").eq("is_active", true).order("sort_order"),
+      supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug, icon, output_structure, required_blueprint_fields").eq("is_active", true).order("sort_order"),
       supabase.from("copy_frameworks").select("id, name, component_slugs, type").eq("is_active", true).eq("type", documentType),
       offersQuery,
       supabase.from("copy_documents").select("context_type, context_offer_id, context_custom_text, global_instructions, name").eq("id", documentId).single(),
+      blueprintQuery,
     ]);
     if (dc) setDocComponents(dc as unknown as DocumentComponent[]);
     if (cd) setComponentDefs(cd as unknown as CopyComponentDef[]);
@@ -104,6 +110,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
       setGlobalInstructions((doc as any).global_instructions || "");
       setDocName((doc as any).name || documentName);
     }
+    setBlueprint(bp || null);
   }, [documentId, documentType, documentName, activeSubAccountId]);
 
   useEffect(() => { load(); }, [load]);
