@@ -182,6 +182,21 @@ const GrowthSystemSection = ({
           )}
         </div>
       </div>
+
+      <CoachPanel
+        open={coachOpen}
+        onOpenChange={setCoachOpen}
+        context={
+          activeSubAccountId
+            ? buildBlueprintSectionContext(
+                "growth_system",
+                "Growth System",
+                { growth_system: data } as unknown as BlueprintRow,
+                activeSubAccountId,
+              )
+            : null
+        }
+      />
     </div>
   );
 };
