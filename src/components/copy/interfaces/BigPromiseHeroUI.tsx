@@ -425,18 +425,6 @@ const HeroSectionUI = ({
         )}
       </SectionCard>
 
-      <SectionCard title="Featured Logos">
-        <Label className="text-xs text-muted-foreground">Label Pattern</Label>
-        <PatternPicker
-          value={inputs.logo_label_pattern || "ai_recommended"}
-          onChange={(v) => s("logo_label_pattern", v)}
-          options={LOGO_LABEL_PATTERNS}
-          customValue={inputs.logo_label_custom}
-          onCustomChange={(v) => s("logo_label_custom", v)}
-          customPlaceholder="Write your own label…"
-        />
-      </SectionCard>
-
       <div className="flex gap-2 pt-2">
         <Button onClick={handleGenerate} disabled={generating} className="gap-2">
           {generating ? (
