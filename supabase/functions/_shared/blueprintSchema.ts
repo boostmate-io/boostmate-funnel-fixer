@@ -77,6 +77,152 @@ const field = (
   helper: opts.helper,
 });
 
+const indexedFields = (
+  basePath: string,
+  itemLabel: string,
+  count: number,
+  specs: Array<{
+    key: string;
+    label: string;
+    kind: BlueprintFieldKind;
+    aliases: string[];
+    helper?: string;
+  }>,
+): BlueprintFieldDef[] =>
+  Array.from({ length: count }, (_, index) =>
+    specs.map((spec) =>
+      field(
+        `${basePath}.${index}.${spec.key}`,
+        `${itemLabel} ${index + 1} — ${spec.label}`,
+        spec.kind,
+        [
+          `${itemLabel.toLowerCase()} ${index + 1} ${spec.label.toLowerCase()}`,
+          `${index + 1} ${itemLabel.toLowerCase()} ${spec.label.toLowerCase()}`,
+          ...spec.aliases,
+        ],
+        { helper: spec.helper },
+      ),
+    ),
+  ).flat();
+
+const OFFER_STACK_FIELDS: BlueprintFieldDef[] = [
+  ...indexedFields("offer_stack.stack.deliverables", "Deliverable", 3, [
+    {
+      key: "name",
+      label: "Name",
+      kind: "text",
+      aliases: ["core deliverable name", "deliverable name", "main service component"],
+      helper: "Short, benefit-driven name for a core deliverable",
+    },
+    {
+      key: "description",
+      label: "Description",
+      kind: "textarea",
+      aliases: ["core deliverable description", "deliverable description"],
+      helper: "1-2 sentences describing what the client receives and how it works",
+    },
+  ]),
+  ...indexedFields("offer_stack.stack.resources", "Resource", 3, [
+    {
+      key: "name",
+      label: "Name",
+      kind: "text",
+      aliases: ["resource name", "template name", "templates resources name"],
+      helper: "Clear name for a template, guide, checklist, swipe file or resource",
+    },
+    {
+      key: "resource_type",
+      label: "Type",
+      kind: "text",
+      aliases: ["resource type", "template type", "resources type"],
+      helper: "Template, guide, checklist, swipe file, workbook, calculator, etc.",
+    },
+    {
+      key: "description",
+      label: "Description",
+      kind: "textarea",
+      aliases: ["resource description", "template description", "templates resources description"],
+      helper: "What is inside the resource and how the client uses it",
+    },
+  ]),
+  ...indexedFields("offer_stack.stack.support_channels", "Support Channel", 2, [
+    {
+      key: "name",
+      label: "Name",
+      kind: "text",
+      aliases: ["support channel name", "support system name"],
+      helper: "Name of the support channel or access point",
+    },
+    {
+      key: "description",
+      label: "Description",
+      kind: "textarea",
+      aliases: ["support channel description", "support system description"],
+      helper: "What support the client gets and when to use it",
+    },
+    {
+      key: "frequency",
+      label: "Frequency",
+      kind: "text",
+      aliases: ["support frequency", "support cadence"],
+      helper: "How often this support is available",
+    },
+  ]),
+  ...indexedFields("offer_stack.stack.bonuses", "Bonus", 2, [
+    {
+      key: "name",
+      label: "Name",
+      kind: "text",
+      aliases: ["bonus name"],
+      helper: "Short, value-driven bonus name",
+    },
+    {
+      key: "description",
+      label: "Description",
+      kind: "textarea",
+      aliases: ["bonus description"],
+      helper: "Why this bonus accelerates or simplifies the result",
+    },
+    {
+      key: "perceived_value",
+      label: "Perceived Value",
+      kind: "text",
+      aliases: ["bonus perceived value", "perceived value"],
+      helper: "Concrete value signal, e.g. €500 value or saves 10 hours",
+    },
+  ]),
+  field(
+    "offer_stack.stack.delivery_timeline",
+    "Delivery Timeline",
+    "text",
+    ["delivery timeline", "program timeline", "delivery timeframe", "doorlooptijd"],
+    { helper: "Use one of: 7_days, 30_days, 60_days, 90_days, 6_months, 12_months, custom" },
+  ),
+  ...indexedFields("offer_stack.stack.milestones", "Milestone", 3, [
+    {
+      key: "phase_name",
+      label: "Phase Name",
+      kind: "text",
+      aliases: ["milestone phase name", "phase name", "milestone name"],
+      helper: "Short phase or milestone name",
+    },
+    {
+      key: "description",
+      label: "Description",
+      kind: "textarea",
+      aliases: ["milestone description", "phase description"],
+      helper: "What happens in this phase",
+    },
+    {
+      key: "expected_outcome",
+      label: "Expected Outcome",
+      kind: "textarea",
+      aliases: ["milestone expected outcome", "phase outcome", "expected outcome"],
+      helper: "What the client can expect to achieve by the end of this phase",
+    },
+  ]),
+];
+
 // =============================================================================
 // FIELD REGISTRY
 // =============================================================================
@@ -310,6 +456,7 @@ export const BLUEPRINT_FIELDS: BlueprintFieldDef[] = [
     ["guarantee", "risk reversal", "garantie", "risico omkering"],
     { helper: "Optional risk reversal promise, one sentence" },
   ),
+  ...OFFER_STACK_FIELDS,
 ];
 
 // =============================================================================
@@ -442,6 +589,27 @@ export const BLUEPRINT_SUB_BLOCKS: BlueprintSubBlockDef[] = [
       "offer_stack.angle.framework.pillars.2.name",
       "offer_stack.angle.framework.pillars.2.description",
     ],
+  },
+  {
+    id: "offer_stack",
+    tabId: "offer_design",
+    label: "Offer Stack",
+    aliases: [
+      "offer stack",
+      "offer stack tab",
+      "stack tab",
+      "tab offer stack",
+      "volledige offer stack",
+      "full offer stack",
+      "core deliverables",
+      "templates resources",
+      "templates & resources",
+      "support system",
+      "bonuses",
+      "delivery timeline",
+      "milestones",
+    ],
+    fieldPaths: OFFER_STACK_FIELDS.map((f) => f.path),
   },
   {
     id: "core_transformation_promise",
