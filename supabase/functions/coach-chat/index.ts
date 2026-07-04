@@ -839,7 +839,7 @@ Deno.serve(async (req) => {
         name === "propose_blueprint_writes" &&
         (context?.scope === "blueprint.section" || context?.scope === "global")
       ) {
-        const writes = sanitizeBlueprintWrites(args.writes, messages, context);
+        const writes = sanitizeBlueprintWrites(args.writes, messages, context, handledPaths);
         if (writes.length > 0) {
           parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
         }
