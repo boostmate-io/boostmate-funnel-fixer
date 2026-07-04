@@ -190,11 +190,120 @@ function normalizeProofAuthorityLists(patch: BlueprintPatch) {
   }
 }
 
+const ECOSYSTEM_TIERS = new Set([
+  "free", "low_ticket", "mid_ticket", "core", "premium", "continuity",
+]);
+
+function partitionEcosystemWrites(writes: BlueprintWrite[]) {
+  const eco: BlueprintWrite[] = [];
+  const rest: BlueprintWrite[] = [];
+  for (const w of writes) {
+    const parts = w.path.split(".");
+    if (
+      parts.length === 4 &&
+      parts[0] === "offer_ecosystem" &&
+      ECOSYSTEM_TIERS.has(parts[1]) &&
+      /^new_\d+$/.test(parts[2]) &&
+      ["name", "description", "core_outcome"].includes(parts[3])
+    ) {
+      eco.push(w);
+    } else {
+      rest.push(w);
+    }
+  }
+  return { eco, rest };
+}
+
+async function applyEcosystemWrites(
+  subAccountId: string,
+  writes: BlueprintWrite[],
+): Promise<number> {
+  if (!writes.length) return 0;
+
+  const [{ data: bp }, { data: userData }] = await Promise.all([
+    supabase
+      .from("business_blueprints")
+      .select("id")
+      .eq("sub_account_id", subAccountId)
+      .maybeSingle(),
+    supabase.auth.getUser(),
+  ]);
+  const blueprintId = bp?.id ?? null;
+  const userId = userData?.user?.id ?? null;
+  if (!blueprintId || !userId) return 0;
+
+  // Group writes by (tier, itemKey)
+  const groups = new Map<string, { tier: string; fields: Record<string, string> }>();
+  for (const w of writes) {
+    const [, tier, itemKey, fieldKey] = w.path.split(".");
+    // Core is auto-synced from tabs 1–3; never insert a manual core row.
+    if (tier === "core") continue;
+    const key = `${tier}::${itemKey}`;
+    if (!groups.has(key)) groups.set(key, { tier, fields: {} });
+    groups.get(key)!.fields[fieldKey] = String(w.value ?? "").trim();
+  }
+
+  if (groups.size === 0) return 0;
+
+  // Fetch current max sort_order per tier so new offers append cleanly.
+  const { data: existing } = await supabase
+    .from("offers")
+    .select("tier, sort_order")
+    .eq("blueprint_id", blueprintId);
+  const maxByTier = new Map<string, number>();
+  for (const row of existing ?? []) {
+    const cur = maxByTier.get((row as any).tier) ?? -1;
+    if ((row as any).sort_order > cur) maxByTier.set((row as any).tier, (row as any).sort_order);
+  }
+
+  const payloads = [...groups.values()].map(({ tier, fields }) => {
+    const next = (maxByTier.get(tier) ?? -1) + 1;
+    maxByTier.set(tier, next);
+    return {
+      name: (fields.name || "Untitled Offer").trim() || "Untitled Offer",
+      tier,
+      source: "blueprint_manual" as const,
+      blueprint_id: blueprintId,
+      sub_account_id: subAccountId,
+      user_id: userId,
+      sort_order: next,
+      data: {
+        description: fields.description ?? "",
+        core_outcome: fields.core_outcome ?? "",
+        delivery_types: [],
+        price: "",
+      },
+    };
+  });
+
+  const { error } = await supabase.from("offers").insert(payloads as any);
+  if (error) {
+    console.error("[applyEcosystemWrites] insert failed", error);
+    return 0;
+  }
+  return payloads.length;
+}
+
 export async function applyBlueprintWrites(
   subAccountId: string,
   writes: BlueprintWrite[],
 ): Promise<{ applied: number; error?: string }> {
   if (!writes.length) return { applied: 0 };
+
+  const { eco, rest } = partitionEcosystemWrites(writes);
+
+  // Handle ecosystem writes (rows in `offers` table) first — they don't touch
+  // the business_blueprints JSON columns.
+  const ecoApplied = await applyEcosystemWrites(subAccountId, eco);
+
+  if (rest.length === 0) {
+    if (ecoApplied > 0 && typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("blueprint:updated", { detail: { subAccountId } }),
+      );
+    }
+    return { applied: ecoApplied };
+  }
 
   // 1) Load current row
   const { data: row, error: loadErr } = await supabase
@@ -204,7 +313,7 @@ export async function applyBlueprintWrites(
     .maybeSingle();
 
   if (loadErr || !row) {
-    return { applied: 0, error: loadErr?.message ?? "Blueprint not found" };
+    return { applied: ecoApplied, error: loadErr?.message ?? "Blueprint not found" };
   }
 
   // 2) Build patch column-by-column
@@ -216,12 +325,12 @@ export async function applyBlueprintWrites(
   };
 
   let applied = 0;
-  for (const w of writes) {
+  for (const w of rest) {
     const segments = w.path.split(".").filter(Boolean);
     if (segments.length < 2) continue;
-    const [root, ...rest] = segments;
+    const [root, ...tail] = segments;
     if (!ROOT_COLUMNS.has(root)) continue;
-    setDeep((patch as any)[root], rest, w.value);
+    setDeep((patch as any)[root], tail, w.value);
     applied++;
   }
 
@@ -236,7 +345,7 @@ export async function applyBlueprintWrites(
     .update(patch as any)
     .eq("id", row.id);
 
-  if (updErr) return { applied: 0, error: updErr.message };
+  if (updErr) return { applied: ecoApplied, error: updErr.message };
 
   // Broadcast so any mounted useBlueprint hook (or other listeners) reload
   // their local snapshot without a page refresh.
@@ -246,6 +355,6 @@ export async function applyBlueprintWrites(
     );
   }
 
-  return { applied };
+  return { applied: applied + ecoApplied };
 }
 
