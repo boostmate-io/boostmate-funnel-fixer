@@ -807,6 +807,27 @@ export const BLUEPRINT_SUB_BLOCKS: BlueprintSubBlockDef[] = [
       "offer_stack.angle.core_promise.guarantee",
     ],
   },
+  {
+    id: "pricing",
+    tabId: "offer_design",
+    label: "Pricing",
+    aliases: ["pricing", "pricing tab", "prijzen", "prijstab"],
+    fieldPaths: PRICING_FIELDS.map((f) => f.path),
+  },
+  {
+    id: "growth_system",
+    tabId: "growth_system",
+    label: "Growth System",
+    aliases: ["growth system", "growth", "acquisition ascension", "groeisysteem"],
+    fieldPaths: GROWTH_SYSTEM_FIELDS.map((f) => f.path),
+  },
+  {
+    id: "proof_authority",
+    tabId: "proof_authority",
+    label: "Proof & Authority",
+    aliases: ["proof authority", "proof & authority", "proof and authority", "bewijs autoriteit"],
+    fieldPaths: PROOF_AUTHORITY_FIELDS.map((f) => f.path),
+  },
 ];
 
 // =============================================================================
