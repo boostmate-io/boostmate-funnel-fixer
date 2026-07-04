@@ -88,12 +88,18 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
         convId = created.id;
       }
 
-      // 3) Load messages
-      const { data: msgs } = await supabase
-        .from("ai_coach_messages")
-        .select("id, role, content, parts, created_at")
-        .eq("conversation_id", convId!)
-        .order("created_at", { ascending: true });
+      // 3) Load messages + prior proposal decisions in parallel
+      const [{ data: msgs }, { data: decisionRows }] = await Promise.all([
+        supabase
+          .from("ai_coach_messages")
+          .select("id, role, content, parts, created_at")
+          .eq("conversation_id", convId!)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("ai_coach_proposal_decisions")
+          .select("message_id, path, decision")
+          .eq("conversation_id", convId!),
+      ]);
 
       setConversationId(convId!);
       setMessages(
@@ -105,9 +111,53 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
           created_at: m.created_at,
         })),
       );
+      const grouped: Record<string, Record<string, ProposalDecision>> = {};
+      for (const row of decisionRows ?? []) {
+        const key = (row as any).message_id ?? "__any__";
+        if (!grouped[key]) grouped[key] = {};
+        grouped[key][(row as any).path] = (row as any).decision as ProposalDecision;
+      }
+      setDecisions(grouped);
       setStatus("idle");
     })();
   }, [enabled, scope, targetKey, subAccountId, userId, targetLabel]);
+
+  const recordDecision = useCallback(
+    async (
+      messageId: string,
+      writes: { path: string; label: string; value: string }[],
+      decision: ProposalDecision,
+    ) => {
+      if (!conversationId || !subAccountId || !userId || writes.length === 0) return;
+      // Only persist fixed Blueprint paths — virtual list/ecosystem
+      // `new_<n>` paths are always unique per turn and shouldn't be filtered.
+      const persistable = writes.filter((w) => !isVirtualListPath(w.path));
+      if (persistable.length === 0) return;
+
+      // Optimistic local update so re-opening the panel shows correct state.
+      setDecisions((prev) => {
+        const next = { ...prev };
+        const bucket = { ...(next[messageId] ?? {}) };
+        for (const w of persistable) bucket[w.path] = decision;
+        next[messageId] = bucket;
+        return next;
+      });
+
+      const payload = persistable.map((w) => ({
+        conversation_id: conversationId,
+        message_id: messageId.startsWith("local-") ? null : messageId,
+        sub_account_id: subAccountId,
+        user_id: userId,
+        path: w.path,
+        decision,
+      }));
+      const { error: upErr } = await supabase
+        .from("ai_coach_proposal_decisions")
+        .upsert(payload, { onConflict: "conversation_id,path" });
+      if (upErr) console.error("[useCoachChat] recordDecision failed:", upErr);
+    },
+    [conversationId, subAccountId, userId],
+  );
 
   const sendMessage = useCallback(
     async (text: string) => {
