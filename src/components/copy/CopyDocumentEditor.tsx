@@ -177,12 +177,23 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
   const updateComponentData = (id: string, inputs: Record<string, any>, outputs: Record<string, any>, isGenerated: boolean) => {
     // Update local state immediately so controlled inputs stay in sync while typing.
     setDocComponents(prev => prev.map(c => c.id === id ? { ...c, inputs, outputs, is_generated: isGenerated } : c));
-    // Persist in the background (fire-and-forget).
-    void supabase.from("copy_document_components").update({
-      inputs: inputs as any,
-      outputs: outputs as any,
-      is_generated: isGenerated,
-    }).eq("id", id);
+    // Persist to DB. The Supabase query builder is a PromiseLike — it only
+    // executes when .then()/await is called, so we MUST attach .then() here
+    // (a bare `void supabase...update()` never sends the request).
+    supabase
+      .from("copy_document_components")
+      .update({
+        inputs: inputs as any,
+        outputs: outputs as any,
+        is_generated: isGenerated,
+      })
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          console.error("Failed to save component data:", error);
+          toast.error("Failed to save changes");
+        }
+      });
   };
 
   const applyFramework = async (frameworkId: string) => {
