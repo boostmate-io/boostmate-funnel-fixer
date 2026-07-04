@@ -339,6 +339,7 @@ function targetRootPrefix(context: any): string | null {
   if (candidate.startsWith("offer_stack.stack")) return "offer_stack.stack";
   if (candidate.startsWith("offer_stack.pricing")) return "offer_stack.pricing";
   if (candidate.startsWith("offer_stack.angle")) return "offer_stack.angle";
+  if (candidate.startsWith("offer_ecosystem")) return "offer_ecosystem";
   if (candidate.startsWith("customer_clarity")) return "customer_clarity";
   if (candidate.startsWith("growth_system")) return "growth_system";
   if (candidate.startsWith("proof_authority")) return "proof_authority";
@@ -346,6 +347,7 @@ function targetRootPrefix(context: any): string | null {
   const label = normalizeForMatch(String(target?.label ?? ""));
   if (label.includes("offer stack")) return "offer_stack.stack";
   if (label.includes("pricing")) return "offer_stack.pricing";
+  if (label.includes("ecosystem")) return "offer_ecosystem";
   if (label.includes("offer angle") || label.includes("angle")) return "offer_stack.angle";
   if (label.includes("customer clarity")) return "customer_clarity";
   if (label.includes("growth system")) return "growth_system";
@@ -481,6 +483,7 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) 
 
   const allowedPaths = allowedBlueprintWritePaths(context, messages);
   const emptyOnly = latestUserAsksForEmptyOnly(messages);
+  const tabPrefix = context?.scope === "global" ? null : targetRootPrefix(context);
   const byPath = new Map<string, { path: string; label: string; value: string }>();
 
   if (allowedPaths && allowedPaths.size === 0) return [];
@@ -492,6 +495,11 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) 
     // Reject unknown paths and paths flagged non-writable in the shared schema.
     if (!meta || !meta.aiWritable) continue;
     if (allowedPaths && !allowedPaths.has(path)) continue;
+    // Hard tab-scope guard: when a Blueprint tab/section is in focus, never
+    // accept writes outside that tab — regardless of whether the request
+    // matched a specific field or sub-block. Prevents "fill the whole X tab"
+    // from leaking proposals into other tabs.
+    if (tabPrefix && path !== tabPrefix && !path.startsWith(`${tabPrefix}.`)) continue;
     if (!allowedPaths && emptyOnly && !isEmptyBlueprintValue(getDeepValue(context?.businessContext?.blueprintSnapshot, path))) continue;
 
     const value = normalizeFieldValue(path, raw.value);
