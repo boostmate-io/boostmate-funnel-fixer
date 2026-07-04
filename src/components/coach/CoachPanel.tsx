@@ -112,7 +112,7 @@ const openerFor = (context: CoachContext | null): CoachMessage | null => {
 };
 
 const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrites }: Props) => {
-  const { messages, status, error, sendMessage } = useCoachChat(context, open);
+  const { messages, status, error, sendMessage, decisions, recordDecision } = useCoachChat(context, open);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
