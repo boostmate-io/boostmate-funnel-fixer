@@ -85,6 +85,20 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
       },
     });
   };
+  const appendPillars = (items: Record<string, string>[]) =>
+    onChange({
+      framework: {
+        ...framework,
+        pillars: [
+          ...(framework.pillars ?? []),
+          ...items.map((item) => ({
+            id: newId(),
+            name: (item.name ?? "").trim(),
+            description: (item.description ?? "").trim(),
+          })),
+        ],
+      },
+    });
 
   const feedback =
     progress >= 100
@@ -292,6 +306,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
               currentCount: framework.pillars?.length ?? 0,
               suggestedCount: [3, 5],
               appendItem: appendPillar,
+              appendItems: appendPillars,
             })
           }
         />

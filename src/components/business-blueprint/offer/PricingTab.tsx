@@ -88,6 +88,19 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
         },
       ],
     });
+  const appendPlans = (items: Record<string, string>[]) =>
+    onChange({
+      payment_plans: [
+        ...data.payment_plans,
+        ...items.map((item) => ({
+          id: newId(),
+          type: "custom" as const,
+          custom_label: (item.custom_label ?? "").trim(),
+          amount: "" as const,
+          duration: (item.duration ?? "").trim(),
+        })),
+      ],
+    });
 
   // Premium upgrade
   const updatePremium = (patch: Partial<PremiumUpgrade>) =>
@@ -173,6 +186,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
               currentCount: data.payment_plans.length,
               suggestedCount: [2, 3],
               appendItem: appendPlan,
+              appendItems: appendPlans,
             })
           }
           count={data.payment_plans.length}

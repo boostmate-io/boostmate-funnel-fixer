@@ -51,7 +51,7 @@ const openerFor = (context: CoachContext | null): CoachMessage | null => {
     if (ls) {
       const [minC, maxC] = ls.suggestedCount ?? [3, 5];
       const suggest = nl ? `Stel ${minC}–${maxC} items voor` : `Suggest ${minC}–${maxC} items`;
-      const inspire = nl ? "Inspireer me met voorbeelden" : "Inspire me with examples";
+      const inspire = nl ? "Stel concrete voorbeelden voor" : "Propose concrete examples";
       const ask = nl ? "Stel me eerst wat vragen" : "Ask me a few questions first";
       const text = nl
         ? `Ik kan ${minC}–${maxC} **${context.target.label}** voor je voorstellen op basis van je Blueprint. Je kunt daarna per item accepteren of verwerpen.`
@@ -185,7 +185,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
           <MessageBubble
             key={m.id}
             message={m}
-            onQuickReply={(r) => handleSend(r)}
+            onQuickReply={(r) => handleSend(expandQuickReplyForContext(r, context))}
             onApply={handleApply}
             onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
             onApplyBlueprintWrites={onApplyBlueprintWrites}
@@ -576,6 +576,29 @@ function renderInlineBold(text: string) {
       <span key={i}>{p}</span>
     ),
   );
+}
+
+function expandQuickReplyForContext(reply: string, context: CoachContext | null) {
+  const text = reply.trim();
+  if (!context?.target) return text;
+
+  const lower = text.toLowerCase();
+  const target = context.target.label;
+
+  if (context.target.listSection) {
+    if (/inspire|examples|voorbeelden|idee|ideas|suggest|propose|voorstel/.test(lower)) {
+      return `${text}. Propose concrete ${target} items as Blueprint updates that I can apply.`;
+    }
+    return text;
+  }
+
+  if (context.scope === "blueprint.field") {
+    if (/give examples|geef voorbeelden|inspire|voorbeelden|rewrite|herschrijf|sharpen|aanscherpen|expand|uitbreiden/.test(lower)) {
+      return `${text}. Draft a concrete value for the ${target} field that I can apply.`;
+    }
+  }
+
+  return text;
 }
 
 export default CoachPanel;
