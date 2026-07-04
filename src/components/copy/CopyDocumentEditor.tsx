@@ -443,67 +443,107 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
 
         {/* ═══ PREVIEW ═══ */}
         {activeView === "preview" && (
-          <div className="h-full overflow-y-auto bg-muted/30">
-            <div className="p-6 max-w-3xl mx-auto">
-            <h2 className="text-2xl font-display font-bold text-foreground mb-6">{docName}</h2>
-            {docComponents.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No components added yet.</p>
-            ) : (
-              <div className="space-y-6">
-                {docComponents.map(dc => {
-                  const def = componentDefs.find(d => d.slug === dc.component_slug);
-                  const outputs = (dc.outputs || {}) as Record<string, any>;
-                  const structureKeys = (def?.output_structure || []).map(o => o.key);
-                  const labelMap = new Map((def?.output_structure || []).map(o => [o.key, o.label]));
-                  const rawKeys = Object.keys(outputs).filter(k => {
-                    const v = outputs[k];
-                    return Array.isArray(v) ? v.length > 0 : !!v;
-                  });
-                  const outputKeys = [
-                    ...structureKeys.filter(k => rawKeys.includes(k)),
-                    ...rawKeys.filter(k => !structureKeys.includes(k)),
-                  ];
-                  const title = def?.name || dc.component_slug;
-                  if (outputKeys.length === 0) return (
-                    <div key={dc.id} className="p-6 border border-dashed border-border rounded-lg bg-background text-center text-sm text-muted-foreground">
-                      <p className="text-xs uppercase tracking-wider font-semibold text-foreground/70 mb-1">{title}</p>
-                      Not generated yet
+          <div className="flex h-full">
+            {/* Sidebar navigation — mirrors builder, scrolls to section */}
+            <div className="w-64 border-r border-border bg-card shrink-0">
+              <ScrollArea className="h-full">
+                <div className="p-3 space-y-1">
+                  {docComponents.length === 0 ? (
+                    <div className="px-3 py-8 text-center">
+                      <Eye className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-xs text-muted-foreground">No components yet</p>
                     </div>
-                  );
-                  return (
-                    <section key={dc.id} className="rounded-lg border border-border bg-background shadow-sm overflow-hidden">
-                      <header className="px-5 py-3 border-b border-border bg-muted/40">
-                        <h3 className="text-sm font-display font-bold text-foreground uppercase tracking-wider">{title}</h3>
-                      </header>
-                      <div className="p-5 space-y-4">
-                        {outputKeys.map(key => {
-                          const label = labelMap.get(key) || key.replace(/_/g, " ");
-                          const value = outputs[key];
-                          return (
-                            <div key={key} className="space-y-1">
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                                {label}
-                              </p>
-                              {Array.isArray(value) ? (
-                                <ul className="list-disc list-inside space-y-1 pl-1">
-                                  {(value as any[]).map((item, i) => (
-                                    <li key={i} className="text-sm text-foreground whitespace-pre-wrap">
-                                      {typeof item === "string" ? item : JSON.stringify(item)}
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{value}</p>
-                              )}
-                            </div>
-                          );
-                        })}
+                  ) : (
+                    docComponents.map((dc, idx) => {
+                      const def = componentDefs.find(d => d.slug === dc.component_slug);
+                      const iconName = getIconForComponent(dc.component_slug);
+                      return (
+                        <button
+                          key={dc.id}
+                          onClick={() => {
+                            const el = document.getElementById(`preview-section-${dc.id}`);
+                            el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors hover:bg-muted/50 text-foreground"
+                        >
+                          <LucideIcon name={iconName} className="w-4 h-4 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{def?.name || dc.component_slug}</p>
+                            {def?.description && (
+                              <p className="text-[10px] text-muted-foreground truncate mt-0.5">{def.description}</p>
+                            )}
+                          </div>
+                          {dc.is_generated && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-muted/30">
+              <div className="p-6 max-w-3xl mx-auto">
+              <h2 className="text-2xl font-display font-bold text-foreground mb-6">{docName}</h2>
+              {docComponents.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No components added yet.</p>
+              ) : (
+                <div className="space-y-6">
+                  {docComponents.map(dc => {
+                    const def = componentDefs.find(d => d.slug === dc.component_slug);
+                    const outputs = (dc.outputs || {}) as Record<string, any>;
+                    const structureKeys = (def?.output_structure || []).map(o => o.key);
+                    const labelMap = new Map((def?.output_structure || []).map(o => [o.key, o.label]));
+                    const rawKeys = Object.keys(outputs).filter(k => {
+                      const v = outputs[k];
+                      return Array.isArray(v) ? v.length > 0 : !!v;
+                    });
+                    const outputKeys = [
+                      ...structureKeys.filter(k => rawKeys.includes(k)),
+                      ...rawKeys.filter(k => !structureKeys.includes(k)),
+                    ];
+                    const title = def?.name || dc.component_slug;
+                    if (outputKeys.length === 0) return (
+                      <div key={dc.id} id={`preview-section-${dc.id}`} className="scroll-mt-6 p-6 border border-dashed border-border rounded-lg bg-background text-center text-sm text-muted-foreground">
+                        <p className="text-xs uppercase tracking-wider font-semibold text-foreground/70 mb-1">{title}</p>
+                        Not generated yet
                       </div>
-                    </section>
-                  );
-                })}
+                    );
+                    return (
+                      <section key={dc.id} id={`preview-section-${dc.id}`} className="scroll-mt-6 rounded-lg border border-border bg-background shadow-sm overflow-hidden">
+                        <header className="px-5 py-3 border-b border-border bg-muted/40">
+                          <h3 className="text-sm font-display font-bold text-foreground uppercase tracking-wider">{title}</h3>
+                        </header>
+                        <div className="p-5 space-y-4">
+                          {outputKeys.map(key => {
+                            const label = labelMap.get(key) || key.replace(/_/g, " ");
+                            const value = outputs[key];
+                            return (
+                              <div key={key} className="space-y-1">
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                  {label}
+                                </p>
+                                {Array.isArray(value) ? (
+                                  <ul className="list-disc list-inside space-y-1 pl-1">
+                                    {(value as any[]).map((item, i) => (
+                                      <li key={i} className="text-sm text-foreground whitespace-pre-wrap">
+                                        {typeof item === "string" ? item : JSON.stringify(item)}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{value}</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              )}
               </div>
-            )}
             </div>
           </div>
         )}
