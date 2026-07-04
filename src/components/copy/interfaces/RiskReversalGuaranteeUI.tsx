@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, RotateCw, Loader2, Shield } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
 import { toast } from "sonner";
@@ -260,9 +261,7 @@ const RiskReversalGuaranteeUI = ({
                   {regeneratingField === key ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />}
                 </Button>
               </div>
-              <div className="text-sm p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap">
-                {outputs[key]}
-              </div>
+              <Textarea value={outputs[key] || ""} onChange={(e) => onOutputsChange({ ...outputs, [key]: e.target.value })} className="text-sm min-h-[70px]" />
             </div>
           ) : null)}
         </div>

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, RotateCw, Loader2 } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
 import { toast } from "sonner";
@@ -320,9 +321,7 @@ const FinalCTAUI = ({
                   {regeneratingField === key ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />}
                 </Button>
               </div>
-              <div className="text-sm p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap">
-                {outputs[key]}
-              </div>
+              <Textarea value={outputs[key] || ""} onChange={(e) => onOutputsChange({ ...outputs, [key]: e.target.value })} className="text-sm min-h-[70px]" />
               {key === "cta_subheadline" && (
                 <div className="mt-2 p-3 rounded-md border border-dashed border-primary/40 bg-primary/5 text-xs text-muted-foreground">
                   [Global CTA button + subline + scarcity line]
