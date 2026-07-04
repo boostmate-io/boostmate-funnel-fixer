@@ -328,7 +328,7 @@ const FAQObjectionsUI = ({
                         {regeneratingField === `faq_${n}_question` ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />}
                       </Button>
                     </div>
-                    <div className="text-sm p-2 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap">{q}</div>
+                    <Textarea value={q || ""} onChange={(e) => onOutputsChange({ ...outputs, [`faq_${n}_question`]: e.target.value })} className="text-sm min-h-[50px]" />
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
