@@ -189,6 +189,8 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
             onApply={handleApply}
             onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
             onApplyBlueprintWrites={onApplyBlueprintWrites}
+            initialDecisions={{ ...(decisions["__any__"] ?? {}), ...(decisions[m.id] ?? {}) }}
+            onDecision={(writes, decision) => recordDecision(m.id, writes, decision)}
           />
         ))}
         {status === "sending" && (
