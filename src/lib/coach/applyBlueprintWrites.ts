@@ -113,6 +113,83 @@ function normalizeOfferStackLists(patch: BlueprintPatch) {
   }
 }
 
+function normalizePricingLists(patch: BlueprintPatch) {
+  const pricing = (patch.offer_stack as any)?.pricing;
+  if (!pricing || typeof pricing !== "object") return;
+
+  if (Array.isArray(pricing.payment_plans)) {
+    pricing.payment_plans = pricing.payment_plans.map((item: any) => ({
+      id: item?.id || crypto.randomUUID(),
+      type: item?.type || (item?.custom_label ? "custom" : "full_pay"),
+      custom_label: item?.custom_label ?? "",
+      amount: item?.amount ?? "",
+      duration: item?.duration ?? "",
+    }));
+  }
+}
+
+function normalizeArrayWithIds(arr: any, defaults: Record<string, any>) {
+  if (!Array.isArray(arr)) return arr;
+  return arr.map((item: any) => ({
+    ...defaults,
+    ...(item ?? {}),
+    id: item?.id || crypto.randomUUID(),
+  }));
+}
+
+function normalizeProofAuthorityLists(patch: BlueprintPatch) {
+  const pa = (patch.proof_authority as any);
+  if (!pa || typeof pa !== "object") return;
+
+  if (pa.authority && typeof pa.authority === "object") {
+    pa.authority.founder_stories = normalizeArrayWithIds(pa.authority.founder_stories, {
+      title: "", before: "", challenge: "", breakthrough: "", learned: "",
+      after: "", core_lesson: "", emotional_theme: "", external_link: "",
+    });
+  }
+
+  if (pa.social_proof && typeof pa.social_proof === "object") {
+    pa.social_proof.metrics = normalizeArrayWithIds(pa.social_proof.metrics, {
+      metric: "", value: "", context: "",
+    });
+    pa.social_proof.client_results = normalizeArrayWithIds(pa.social_proof.client_results, {
+      client_type: "", problem: "", result_achieved: "", timeframe: "",
+      explanation: "", measurable_outcome: "", quote: "", proof_type: "", external_link: "",
+    });
+    pa.social_proof.testimonials = normalizeArrayWithIds(pa.social_proof.testimonials, {
+      client_name: "", client_type: "", quote: "", main_outcome: "", tone: "", external_link: "",
+    });
+    pa.social_proof.authority_assets = normalizeArrayWithIds(pa.social_proof.authority_assets, {
+      name: "", description: "", why_it_matters: "", external_link: "",
+    });
+  }
+
+  if (pa.objections && typeof pa.objections === "object") {
+    pa.objections.objections = normalizeArrayWithIds(pa.objections.objections, {
+      objection: "", why_believed: "", reframe: "", supporting_proof: "", emotional_concern: "",
+    });
+    pa.objections.failed_solutions = normalizeArrayWithIds(pa.objections.failed_solutions, {
+      what_tried: "", why_failed: "", why_different: "",
+    });
+    pa.objections.faqs = normalizeArrayWithIds(pa.objections.faqs, {
+      question: "", answer: "",
+    });
+  }
+
+  if (pa.educational && typeof pa.educational === "object") {
+    pa.educational.lessons = normalizeArrayWithIds(pa.educational.lessons, {
+      title: "", main_topic: "", common_challenge: "", core_insight: "",
+      why_matters: "", breakthrough_lesson: "", cta_goal: "", external_link: "",
+    });
+    pa.educational.mistakes = normalizeArrayWithIds(pa.educational.mistakes, {
+      mistake: "", why_made: "", better_approach: "",
+    });
+    pa.educational.belief_shifts = normalizeArrayWithIds(pa.educational.belief_shifts, {
+      old_belief: "", new_belief: "", why_matters: "",
+    });
+  }
+}
+
 export async function applyBlueprintWrites(
   subAccountId: string,
   writes: BlueprintWrite[],
@@ -150,6 +227,8 @@ export async function applyBlueprintWrites(
 
   normalizeFrameworkPillars(patch);
   normalizeOfferStackLists(patch);
+  normalizePricingLists(patch);
+  normalizeProofAuthorityLists(patch);
 
   // 3) Update
   const { error: updErr } = await supabase
