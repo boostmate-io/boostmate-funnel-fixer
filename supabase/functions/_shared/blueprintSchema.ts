@@ -876,6 +876,18 @@ pillars, core_promise and offer stack cards). Other structured areas that are
 NOT listed (pricing plans, proof items, growth mappings, …) must never be
 invented or written to.
 
+# Offer Ecosystem (special — stored as rows in the offers table, not JSON)
+These paths add NEW offers to the Offer Ecosystem tab. Use them when the user
+asks to fill / draft / suggest offers for a specific tier or the whole tab.
+Path shape: offer_ecosystem.<tier>.new_<n>.<field>
+  - <tier>  ∈ free | low_ticket | mid_ticket | premium | continuity
+              (NEVER "core" — the core offer is auto-synced from tabs 1–3)
+  - <n>     is a 0-based index within this batch (new_0, new_1, …)
+  - <field> ∈ name | description | core_outcome
+Every proposed offer MUST include all three fields (name, description, core_outcome).
+Suggested count per tier: 2–3 unless the user says otherwise. Label each write
+"<Tier> — Offer <n> — <Field>".
+
 Rules:
 - Only write to paths the user's request actually implies. If the user asks for one field, write ONLY that path.
 - For kind = tags/chips, value MUST be a comma-separated list of short items, not prose.
