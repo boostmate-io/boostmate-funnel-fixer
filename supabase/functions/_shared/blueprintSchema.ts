@@ -223,6 +223,181 @@ const OFFER_STACK_FIELDS: BlueprintFieldDef[] = [
   ]),
 ];
 
+// ---------- Pricing ---------------------------------------------------------
+const PRICING_FIELDS: BlueprintFieldDef[] = [
+  ...indexedFields("offer_stack.pricing.payment_plans", "Payment Plan", 3, [
+    {
+      key: "custom_label",
+      label: "Label",
+      kind: "text",
+      aliases: ["payment plan label", "plan label", "plan name"],
+      helper: "Short plan name, e.g. 'Pay in Full', '3-Pay'",
+    },
+    {
+      key: "duration",
+      label: "Duration",
+      kind: "text",
+      aliases: ["payment plan duration", "plan duration"],
+      helper: "How long the plan runs, e.g. '3 months', '12 weeks'",
+    },
+  ]),
+  field(
+    "offer_stack.pricing.premium_upgrade.name",
+    "Premium Upgrade — Name",
+    "text",
+    ["premium upgrade name", "premium tier name", "vip name"],
+    { helper: "Short, aspirational name for the premium tier" },
+  ),
+  field(
+    "offer_stack.pricing.premium_upgrade.description",
+    "Premium Upgrade — Description",
+    "textarea",
+    ["premium upgrade description", "premium tier description"],
+    { helper: "What is included in the premium tier, 1-2 sentences" },
+  ),
+  field(
+    "offer_stack.pricing.premium_upgrade.additional_value",
+    "Premium Upgrade — Additional Value",
+    "textarea",
+    ["premium upgrade additional value", "additional value", "extra outcome"],
+    { helper: "What additional outcome this unlocks beyond the core offer" },
+  ),
+  field(
+    "offer_stack.pricing.recurring_offer.name",
+    "Recurring Offer — Name",
+    "text",
+    ["recurring offer name", "recurring name", "membership name"],
+    { helper: "Short, memorable name for the recurring offer" },
+  ),
+  field(
+    "offer_stack.pricing.recurring_offer.description",
+    "Recurring Offer — Description",
+    "textarea",
+    ["recurring offer description", "membership description"],
+    { helper: "What the recurring offer is, 1-2 sentences" },
+  ),
+  field(
+    "offer_stack.pricing.recurring_offer.ongoing_value",
+    "Recurring Offer — Ongoing Value",
+    "textarea",
+    ["recurring offer ongoing value", "ongoing value", "monthly value"],
+    { helper: "What value is delivered every month" },
+  ),
+  field(
+    "offer_stack.pricing.guarantee_details",
+    "Guarantee Details / Terms",
+    "textarea",
+    ["guarantee details", "guarantee terms", "risk reversal details"],
+    { helper: "Concrete, buyer-friendly terms of the guarantee" },
+  ),
+];
+
+// ---------- Growth System ---------------------------------------------------
+const GROWTH_SYSTEM_FIELDS: BlueprintFieldDef[] = [
+  field(
+    "growth_system.acquisition.lead_capture_method",
+    "Lead Capture Method",
+    "text",
+    ["lead capture method", "lead capture", "capture method"],
+    { helper: "Primary way leads enter the ecosystem, e.g. Landing Page, Webinar Registration, Quiz" },
+  ),
+  field(
+    "growth_system.ascension.referral_description",
+    "Referral Description",
+    "textarea",
+    ["referral description", "referral program description", "how referrals work"],
+    { helper: "How the referral program works, 1-2 sentences" },
+  ),
+  field(
+    "growth_system.ascension.reactivation_description",
+    "Reactivation Description",
+    "textarea",
+    ["reactivation description", "winback description", "how reactivation works"],
+    { helper: "How reactivation of past clients works, 1-2 sentences" },
+  ),
+];
+
+// ---------- Proof & Authority -----------------------------------------------
+const PROOF_AUTHORITY_FIELDS: BlueprintFieldDef[] = [
+  field(
+    "proof_authority.authority.trust_reason",
+    "Why Clients Trust You",
+    "textarea",
+    ["trust reason", "why clients trust you", "why they trust you"],
+    { helper: "The core reason clients trust you, 1-2 sentences" },
+  ),
+  field(
+    "proof_authority.authority.signature_proof",
+    "Signature Proof",
+    "textarea",
+    ["signature proof", "flagship proof", "hero proof"],
+    { helper: "The single strongest proof point you lead with" },
+  ),
+  ...indexedFields("proof_authority.authority.founder_stories", "Founder Story", 2, [
+    { key: "title", label: "Title", kind: "text", aliases: ["founder story title"], helper: "Short story title" },
+    { key: "before", label: "Before", kind: "textarea", aliases: ["founder story before"], helper: "Where the founder was before" },
+    { key: "challenge", label: "Challenge", kind: "textarea", aliases: ["founder story challenge"], helper: "The core challenge or turning point" },
+    { key: "breakthrough", label: "Breakthrough", kind: "textarea", aliases: ["founder story breakthrough"], helper: "The breakthrough moment" },
+    { key: "after", label: "After", kind: "textarea", aliases: ["founder story after"], helper: "Where the founder is now" },
+    { key: "core_lesson", label: "Core Lesson", kind: "textarea", aliases: ["founder story core lesson"], helper: "The core lesson for the reader" },
+  ]),
+  ...indexedFields("proof_authority.social_proof.metrics", "Credibility Metric", 3, [
+    { key: "metric", label: "Metric", kind: "text", aliases: ["credibility metric name"], helper: "What is being measured, e.g. 'Clients served'" },
+    { key: "value", label: "Value", kind: "text", aliases: ["credibility metric value"], helper: "The number or figure" },
+    { key: "context", label: "Context", kind: "text", aliases: ["credibility metric context"], helper: "Short context sentence" },
+  ]),
+  ...indexedFields("proof_authority.social_proof.client_results", "Client Result", 3, [
+    { key: "client_type", label: "Client Type", kind: "text", aliases: ["client result type"], helper: "Type of client this result is from" },
+    { key: "problem", label: "Problem", kind: "textarea", aliases: ["client result problem"], helper: "The problem they had" },
+    { key: "result_achieved", label: "Result Achieved", kind: "textarea", aliases: ["client result achieved"], helper: "The concrete result" },
+    { key: "timeframe", label: "Timeframe", kind: "text", aliases: ["client result timeframe"], helper: "In what timeframe" },
+    { key: "explanation", label: "Explanation", kind: "textarea", aliases: ["client result explanation"], helper: "Why it worked" },
+  ]),
+  ...indexedFields("proof_authority.social_proof.testimonials", "Testimonial", 3, [
+    { key: "client_name", label: "Client Name", kind: "text", aliases: ["testimonial name"], helper: "Client's name (first name is fine)" },
+    { key: "client_type", label: "Client Type", kind: "text", aliases: ["testimonial client type"], helper: "Type of client (industry / role)" },
+    { key: "quote", label: "Quote", kind: "textarea", aliases: ["testimonial quote"], helper: "The testimonial quote in the client's voice" },
+    { key: "main_outcome", label: "Main Outcome", kind: "text", aliases: ["testimonial main outcome"], helper: "The main outcome achieved" },
+  ]),
+  ...indexedFields("proof_authority.social_proof.authority_assets", "Authority Asset", 2, [
+    { key: "name", label: "Name", kind: "text", aliases: ["authority asset name"], helper: "Name of the asset (feature, award, podcast, etc.)" },
+    { key: "description", label: "Description", kind: "textarea", aliases: ["authority asset description"], helper: "Short description of the asset" },
+    { key: "why_it_matters", label: "Why It Matters", kind: "textarea", aliases: ["authority asset why it matters"], helper: "Why it establishes authority" },
+  ]),
+  ...indexedFields("proof_authority.objections.objections", "Objection", 3, [
+    { key: "objection", label: "Objection", kind: "textarea", aliases: ["objection text"], helper: "The objection in the buyer's voice" },
+    { key: "why_believed", label: "Why Believed", kind: "textarea", aliases: ["objection why believed"], helper: "Why the buyer believes this" },
+    { key: "reframe", label: "Reframe", kind: "textarea", aliases: ["objection reframe"], helper: "How to reframe the belief" },
+    { key: "supporting_proof", label: "Supporting Proof", kind: "textarea", aliases: ["objection supporting proof"], helper: "Concrete proof that backs the reframe" },
+  ]),
+  ...indexedFields("proof_authority.objections.failed_solutions", "Failed Solution", 3, [
+    { key: "what_tried", label: "What They Tried", kind: "textarea", aliases: ["failed solution what tried"], helper: "What buyers previously tried" },
+    { key: "why_failed", label: "Why It Failed", kind: "textarea", aliases: ["failed solution why failed"], helper: "Why it failed for them" },
+    { key: "why_different", label: "Why This Is Different", kind: "textarea", aliases: ["failed solution why different"], helper: "Why our approach is different" },
+  ]),
+  ...indexedFields("proof_authority.objections.faqs", "FAQ", 4, [
+    { key: "question", label: "Question", kind: "text", aliases: ["faq question"], helper: "The FAQ question" },
+    { key: "answer", label: "Answer", kind: "textarea", aliases: ["faq answer"], helper: "The FAQ answer, direct and buyer-friendly" },
+  ]),
+  ...indexedFields("proof_authority.educational.lessons", "Value Lesson", 3, [
+    { key: "title", label: "Title", kind: "text", aliases: ["lesson title"], helper: "Short lesson title" },
+    { key: "main_topic", label: "Main Topic", kind: "text", aliases: ["lesson main topic"], helper: "The main topic covered" },
+    { key: "common_challenge", label: "Common Challenge", kind: "textarea", aliases: ["lesson common challenge"], helper: "The common challenge addressed" },
+    { key: "core_insight", label: "Core Insight", kind: "textarea", aliases: ["lesson core insight"], helper: "The core insight of the lesson" },
+    { key: "why_matters", label: "Why It Matters", kind: "textarea", aliases: ["lesson why matters"], helper: "Why the lesson matters" },
+  ]),
+  ...indexedFields("proof_authority.educational.mistakes", "Common Mistake", 3, [
+    { key: "mistake", label: "Mistake", kind: "textarea", aliases: ["mistake text"], helper: "Common mistake buyers make" },
+    { key: "why_made", label: "Why It's Made", kind: "textarea", aliases: ["mistake why made"], helper: "Why the mistake is made" },
+    { key: "better_approach", label: "Better Approach", kind: "textarea", aliases: ["mistake better approach"], helper: "The better approach" },
+  ]),
+  ...indexedFields("proof_authority.educational.belief_shifts", "Belief Shift", 3, [
+    { key: "old_belief", label: "Old Belief", kind: "textarea", aliases: ["belief shift old"], helper: "The limiting belief" },
+    { key: "new_belief", label: "New Belief", kind: "textarea", aliases: ["belief shift new"], helper: "The empowering new belief" },
+    { key: "why_matters", label: "Why It Matters", kind: "textarea", aliases: ["belief shift why matters"], helper: "Why the shift matters" },
+  ]),
+];
+
 // =============================================================================
 // FIELD REGISTRY
 // =============================================================================
@@ -457,6 +632,9 @@ export const BLUEPRINT_FIELDS: BlueprintFieldDef[] = [
     { helper: "Optional risk reversal promise, one sentence" },
   ),
   ...OFFER_STACK_FIELDS,
+  ...PRICING_FIELDS,
+  ...GROWTH_SYSTEM_FIELDS,
+  ...PROOF_AUTHORITY_FIELDS,
 ];
 
 // =============================================================================
