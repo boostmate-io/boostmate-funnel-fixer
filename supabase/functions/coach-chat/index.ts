@@ -463,7 +463,7 @@ function normalizeCurrentFieldProposal(context: any, value: string): string {
   return normalizeFieldValue(path, value);
 }
 
-function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) {
+function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, handledPaths: Set<string> = new Set()) {
   if (!Array.isArray(writesArg)) return [];
 
   const listSection = context?.target?.listSection;
