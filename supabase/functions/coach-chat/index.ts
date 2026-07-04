@@ -169,6 +169,7 @@ function buildSystemPrompt(
   memoryFacts: Array<{ key: string; value: string }>,
   prompts: PromptSet,
   messages: any[] = [],
+  handledDecisions: Array<{ path: string; decision: string }> = [],
 ): string {
   const parts: string[] = [prompts.base];
 
