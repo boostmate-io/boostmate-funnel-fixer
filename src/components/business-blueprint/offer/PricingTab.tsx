@@ -17,6 +17,7 @@ import BuilderCard from "./BuilderCard";
 import DeliveryTypePicker from "./DeliveryTypePicker";
 import CoachIconButton from "./CoachIconButton";
 import { useOfferCoach } from "./useOfferCoach";
+import { useLatestRef } from "@/lib/coach/useLatestRef";
 import {
   type PricingData,
   type PaymentPlan,
