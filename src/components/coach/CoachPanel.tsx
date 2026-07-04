@@ -288,6 +288,8 @@ function PartRenderer({
   onApply,
   onRefine,
   onApplyBlueprintWrites,
+  initialDecisions,
+  onDecision,
 }: {
   part: CoachMessagePart;
   isUser: boolean;
@@ -295,6 +297,8 @@ function PartRenderer({
   onApply: (value: string) => void;
   onRefine: (value: string) => void;
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  initialDecisions?: Record<string, "applied" | "dismissed">;
+  onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
 }) {
   if (part.type === "text") {
     if (!part.text.trim()) return null;
