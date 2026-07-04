@@ -330,9 +330,40 @@ function requestedBlueprintSubBlock(messages: any[]): string | null {
   return matches[0].block;
 }
 
+function targetRootPrefix(context: any): string | null {
+  const target = context?.target;
+  const id = String(target?.id ?? "");
+  const listBase = typeof target?.listSection?.basePath === "string" ? target.listSection.basePath : "";
+  const candidate = listBase || id;
+
+  if (candidate.startsWith("offer_stack.stack")) return "offer_stack.stack";
+  if (candidate.startsWith("offer_stack.pricing")) return "offer_stack.pricing";
+  if (candidate.startsWith("offer_stack.angle")) return "offer_stack.angle";
+  if (candidate.startsWith("customer_clarity")) return "customer_clarity";
+  if (candidate.startsWith("growth_system")) return "growth_system";
+  if (candidate.startsWith("proof_authority")) return "proof_authority";
+
+  const label = normalizeForMatch(String(target?.label ?? ""));
+  if (label.includes("offer stack")) return "offer_stack.stack";
+  if (label.includes("pricing")) return "offer_stack.pricing";
+  if (label.includes("offer angle") || label.includes("angle")) return "offer_stack.angle";
+  if (label.includes("customer clarity")) return "customer_clarity";
+  if (label.includes("growth system")) return "growth_system";
+  if (label.includes("proof") || label.includes("authority")) return "proof_authority";
+
+  return null;
+}
+
+function filterPathsToCurrentTarget(paths: Set<string> | null, context: any): Set<string> | null {
+  if (!paths) return null;
+  const prefix = targetRootPrefix(context);
+  if (!prefix || context?.scope === "global") return paths;
+  return new Set([...paths].filter((path) => path === prefix || path.startsWith(`${prefix}.`)));
+}
+
 function allowedBlueprintWritePaths(context: any, messages: any[]): Set<string> | null {
   const requestedPath = requestedSingleBlueprintPath(messages);
-  if (requestedPath) return new Set([requestedPath]);
+  if (requestedPath) return filterPathsToCurrentTarget(new Set([requestedPath]), context);
 
   const requestedBlock = requestedBlueprintSubBlock(messages);
   if (!requestedBlock) return null;
@@ -340,7 +371,7 @@ function allowedBlueprintWritePaths(context: any, messages: any[]): Set<string> 
   const snapshot = context?.businessContext?.blueprintSnapshot;
   const paths = BLUEPRINT_SUB_BLOCK_PATHS[requestedBlock] ?? [];
   const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
-  return new Set(emptyPaths);
+  return filterPathsToCurrentTarget(new Set(emptyPaths), context);
 }
 
 function cleanTagCandidate(value: string): string {
@@ -387,7 +418,7 @@ function normalizeTagOrChipValue(raw: string): string {
 function normalizeFieldValue(path: string, value: string): string {
   const meta = BLUEPRINT_FIELD_META[path];
   if (meta?.kind === "tags" || meta?.kind === "chips") return normalizeTagOrChipValue(value);
-  if (path === "offer_stack.angle.core_promise.timeframe") return normalizeTimeframeValue(value);
+  if (path === "offer_stack.angle.core_promise.timeframe" || path === "offer_stack.stack.delivery_timeline") return normalizeTimeframeValue(value);
   return String(value ?? "").trim();
 }
 

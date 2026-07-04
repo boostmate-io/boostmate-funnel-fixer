@@ -62,6 +62,57 @@ function normalizeFrameworkPillars(patch: BlueprintPatch) {
   );
 }
 
+function normalizeOfferStackLists(patch: BlueprintPatch) {
+  const stack = (patch.offer_stack as any)?.stack;
+  if (!stack || typeof stack !== "object") return;
+
+  if (Array.isArray(stack.deliverables)) {
+    stack.deliverables = stack.deliverables.map((item: any) => ({
+      id: item?.id || crypto.randomUUID(),
+      name: item?.name ?? "",
+      description: item?.description ?? "",
+      delivery_types: Array.isArray(item?.delivery_types) ? item.delivery_types : [],
+      frequency: item?.frequency ?? "weekly",
+    }));
+  }
+
+  if (Array.isArray(stack.resources)) {
+    stack.resources = stack.resources.map((item: any) => ({
+      id: item?.id || crypto.randomUUID(),
+      name: item?.name ?? "",
+      resource_type: item?.resource_type ?? "",
+      description: item?.description ?? "",
+    }));
+  }
+
+  if (Array.isArray(stack.support_channels)) {
+    stack.support_channels = stack.support_channels.map((item: any) => ({
+      id: item?.id || crypto.randomUUID(),
+      name: item?.name ?? "",
+      description: item?.description ?? "",
+      frequency: item?.frequency ?? "",
+    }));
+  }
+
+  if (Array.isArray(stack.bonuses)) {
+    stack.bonuses = stack.bonuses.map((item: any) => ({
+      id: item?.id || crypto.randomUUID(),
+      name: item?.name ?? "",
+      description: item?.description ?? "",
+      perceived_value: item?.perceived_value ?? "",
+    }));
+  }
+
+  if (Array.isArray(stack.milestones)) {
+    stack.milestones = stack.milestones.map((item: any, index: number) => ({
+      id: item?.id || crypto.randomUUID(),
+      phase_name: item?.phase_name ?? `Phase ${index + 1}`,
+      description: item?.description ?? "",
+      expected_outcome: item?.expected_outcome ?? "",
+    }));
+  }
+}
+
 export async function applyBlueprintWrites(
   subAccountId: string,
   writes: BlueprintWrite[],
@@ -98,6 +149,7 @@ export async function applyBlueprintWrites(
   }
 
   normalizeFrameworkPillars(patch);
+  normalizeOfferStackLists(patch);
 
   // 3) Update
   const { error: updErr } = await supabase
