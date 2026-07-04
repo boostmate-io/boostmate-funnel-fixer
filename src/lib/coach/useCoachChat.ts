@@ -12,6 +12,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { CoachContext, CoachMessage, CoachMessagePart } from "./types";
 
 type Status = "idle" | "loading" | "sending" | "error";
+export type ProposalDecision = "applied" | "dismissed";
+
+const isVirtualListPath = (path: string) => /(?:^|\.)new_\d+(?:\.|$)/.test(path);
 
 export function useCoachChat(context: CoachContext | null, enabled: boolean) {
   const { user } = useAuth();
@@ -19,6 +22,9 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
+  // messageId -> path -> decision. Also keyed under "__any__" for decisions
+  // whose message_id is null (older rows or bulk ops).
+  const [decisions, setDecisions] = useState<Record<string, Record<string, ProposalDecision>>>({});
   const initKey = useRef<string | null>(null);
 
   const targetKey = context?.target?.id ?? "__global__";
