@@ -15,6 +15,7 @@ import TimeframePicker from "./TimeframePicker";
 import FrameworkSection from "./FrameworkSection";
 import CoachIconButton from "./CoachIconButton";
 import { useOfferCoach } from "./useOfferCoach";
+import { useLatestRef } from "@/lib/coach/useLatestRef";
 import {
   type OfferAngleData,
   type FrameworkPillar,
