@@ -389,12 +389,18 @@ function BlueprintWritesCard({
   writes,
   reasoning,
   onApplyAll,
+  initialDecisions,
+  onDecision,
 }: {
   writes: CoachBlueprintWrite[];
   reasoning?: string;
   onApplyAll?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  initialDecisions?: Record<string, "applied" | "dismissed">;
+  onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
 }) {
-  const [states, setStates] = useState<ItemState[]>(() => writes.map(() => "pending"));
+  const [states, setStates] = useState<ItemState[]>(() =>
+    writes.map((w) => (initialDecisions?.[w.path] ?? "pending") as ItemState),
+  );
   const [batchApplying, setBatchApplying] = useState(false);
 
   const setAt = (i: number, s: ItemState) =>
@@ -411,6 +417,7 @@ function BlueprintWritesCard({
     try {
       await onApplyAll([writes[i]]);
       setAt(i, "applied");
+      onDecision?.([writes[i]], "applied");
     } catch {
       setAt(i, "pending");
     }
@@ -419,15 +426,18 @@ function BlueprintWritesCard({
   const handleDismissOne = (i: number) => {
     if (states[i] !== "pending") return;
     setAt(i, "dismissed");
+    onDecision?.([writes[i]], "dismissed");
   };
 
   const handleApplyAllRemaining = async () => {
     if (!onApplyAll || batchApplying || !pendingIndices.length) return;
     setBatchApplying(true);
+    const targets = pendingIndices.map((i) => writes[i]);
     setStates((prev) => prev.map((s) => (s === "pending" ? "applying" : s)));
     try {
-      await onApplyAll(pendingIndices.map((i) => writes[i]));
+      await onApplyAll(targets);
       setStates((prev) => prev.map((s) => (s === "applying" ? "applied" : s)));
+      onDecision?.(targets, "applied");
     } catch {
       setStates((prev) => prev.map((s) => (s === "applying" ? "pending" : s)));
     } finally {
@@ -436,7 +446,9 @@ function BlueprintWritesCard({
   };
 
   const handleDismissAll = () => {
+    const targets = pendingIndices.map((i) => writes[i]);
     setStates((prev) => prev.map((s) => (s === "pending" ? "dismissed" : s)));
+    if (targets.length) onDecision?.(targets, "dismissed");
   };
 
   return (
