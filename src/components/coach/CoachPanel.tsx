@@ -372,6 +372,8 @@ function PartRenderer({
         writes={part.writes}
         reasoning={part.reasoning}
         onApplyAll={onApplyBlueprintWrites}
+        initialDecisions={initialDecisions}
+        onDecision={onDecision}
       />
     );
   }
