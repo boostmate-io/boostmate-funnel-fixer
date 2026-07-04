@@ -44,6 +44,8 @@ export interface OfferListCoachSpec {
   suggestedCount?: [number, number];
   /** Called once per Coach-proposed item that the user accepts. */
   appendItem: (item: Record<string, string>) => void | Promise<void>;
+  /** Optional batch append so Apply all preserves every item in one state update. */
+  appendItems?: (items: Record<string, string>[]) => void | Promise<void>;
   /** Optional: current list length, for prompting. Defaults to 0. */
   currentCount?: number;
 }
@@ -117,7 +119,12 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
       if (!groups.has(itemKey)) groups.set(itemKey, {});
       groups.get(itemKey)![fieldKey] = String(w.value ?? "");
     }
-    for (const item of groups.values()) {
+    const items = [...groups.values()];
+    if (listSpec.appendItems) {
+      await listSpec.appendItems(items);
+      return;
+    }
+    for (const item of items) {
       await listSpec.appendItem(item);
     }
   };
