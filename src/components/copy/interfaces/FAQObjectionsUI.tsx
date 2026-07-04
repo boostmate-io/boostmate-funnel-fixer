@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, RotateCw, Loader2, ChevronDown } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
 import { toast } from "sonner";
@@ -287,9 +288,7 @@ const FAQObjectionsUI = ({
                   {regeneratingField === key ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />}
                 </Button>
               </div>
-              <div className="text-sm p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap">
-                {outputs[key]}
-              </div>
+              <Textarea value={outputs[key] || ""} onChange={(e) => onOutputsChange({ ...outputs, [key]: e.target.value })} className="text-sm min-h-[70px]" />
             </div>
           ) : null)}
 
@@ -329,7 +328,7 @@ const FAQObjectionsUI = ({
                         {regeneratingField === `faq_${n}_question` ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />}
                       </Button>
                     </div>
-                    <div className="text-sm p-2 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap">{q}</div>
+                    <Textarea value={q || ""} onChange={(e) => onOutputsChange({ ...outputs, [`faq_${n}_question`]: e.target.value })} className="text-sm min-h-[50px]" />
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
@@ -340,7 +339,7 @@ const FAQObjectionsUI = ({
                         {regeneratingField === `faq_${n}_answer` ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />}
                       </Button>
                     </div>
-                    <div className="text-sm p-2 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap">{a}</div>
+                    <Textarea value={a || ""} onChange={(e) => onOutputsChange({ ...outputs, [`faq_${n}_answer`]: e.target.value })} className="text-sm min-h-[80px]" />
                   </div>
                 </CardContent>
               </Card>
