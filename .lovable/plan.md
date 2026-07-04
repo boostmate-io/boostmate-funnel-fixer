@@ -1,51 +1,50 @@
-## Doel
+## Situatie
 
-Elke sectie waar meerdere items toegevoegd kunnen worden krijgt een **sectie-brede "Coach"-knop** naast de "Add"-knop. Die knop opent de AI Coach met de volledige sectie als scope. De Coach stelt een lijst voorstellen voor die via het bestaande **Blueprint updates**-kader (per item apply/dismiss, of alles tegelijk) worden toegevoegd — exact hetzelfde patroon als bij losse velden.
+De vorige fix loste twee dingen tegelijk op, maar ongelijkmatig:
 
-## Betrokken secties (Offer Design)
+1. **Generiek (goed)** — `targetRootPrefix` + `filterPathsToCurrentTarget` in `coach-chat/index.ts` herkennen álle blueprint‑tabs: `customer_clarity`, `offer_stack.angle`, `offer_stack.stack`, `offer_stack.pricing`, `growth_system`, `proof_authority`. Zodra deze filter draait wordt élk voorstel dat buiten het actieve tab valt eruit gegooid.
 
-- **Offer Angle** → Signature Mechanism / Framework → Core Pillars
-- **Offer Stack** → Deliverables, Resources, Support Channels, Bonuses, Milestones
-- **Pricing** → Payment Plans
-- **Offer Ecosystem** → Non-core offers (front-end, upsell, downsell, back-end)
+2. **Niet‑generiek (het gat)** — die filter wordt vandaag alleen ingeschakeld wanneer de gebruiker één specifiek veld of één benoemde sub‑block noemt ("vul avatar in"). Bij een tab‑brede vraag ("vul de volledige offer stack tab in", "vul de pricing tab in", …) geeft `allowedBlueprintWritePaths` `null` terug en valt de tab‑prefix filter weg. De AI mag dan technisch nog steeds naar andere tabs schrijven — de reden waarom Offer Stack in jouw test toch Angle/Clarity velden voorstelde was: OFFER_STACK_FIELDS bestond niet in het schema, dus de AI viel terug op wat wél in het schema stond (Angle/Clarity).
 
-## UX
+3. **Schema‑dekking** — alleen `customer_clarity`, `offer_stack.angle` en `offer_stack.stack` staan in `blueprintSchema.ts`. `offer_stack.pricing`, `offer_stack.ecosystem`, `growth_system` en `proof_authority` hebben nog geen velden gedefinieerd, dus daar kan de coach sowieso niets voor voorstellen.
 
-- Knop rechtsboven in elke `BuilderCard`, links van of naast de bestaande "Add"-knop. Label: `Coach` met `MessageSquare`-icoon, zelfde styling als de veld-Coach knop (consistentie met vorige afspraak).
-- Empty state krijgt daarnaast een tweede prominente "Ask Coach to suggest…"-CTA onder de bestaande "Add first…"-knop, zodat leeg-scherm meteen naar de Coach leidt.
-- Als er al items zijn: de sectie-Coach blijft beschikbaar. De Coach weet dan dat hij mag *aanvullen* i.p.v. van nul beginnen (zie prompt-instructie hieronder).
+Kort antwoord op je vraag: **de logica is generiek, maar de afdwinging + de schema‑dekking niet**. Daarom werkt het nu voor Offer Stack maar niet gegarandeerd voor de andere tabs.
 
-## Coach-flow
+## Plan — één keer generiek maken
 
-1. Gebruiker klikt sectie-Coach → `CoachPanel` opent met een nieuwe scope `blueprint.list_section`.
-2. De user-vraag opent bv. met een quick-reply zoals *"Suggest 3–5 pillars for my framework"*.
-3. Coach antwoordt met een `blueprint_writes`-part waarin elke voorgestelde item-veld één write is met een gestructureerd pad (bv. `offer_stack.angle.framework.pillars.<newId>.name` + `.description`).
-4. Bestaand Blueprint-updates kader toont alle voorstellen; user kan per item of allemaal apply/dismiss. Apply voegt items daadwerkelijk toe aan de array via `applyBlueprintWrites` (die al array-indices en objecten aankan sinds vorige iteratie — we breiden uit met stabiel-gegenereerde IDs voor nieuwe items).
+### 1. Tab‑prefix filter altijd afdwingen (`supabase/functions/coach-chat/index.ts`)
 
-## Technische details
+In `sanitizeBlueprintWrites`: ook wanneer `allowedPaths` `null` is (tab‑brede vraag), de tab‑prefix van de actieve context toepassen. Concreet:
 
-**Nieuw**
-- `src/lib/coach/buildContext.ts` → `buildBlueprintListSectionContext(sectionSpec, blueprint, subAccountId)`: bouwt een `CoachContext` met scope `blueprint.list_section`, target = de hele lijst (id = het array-pad, bv. `offer_stack.angle.framework.pillars`), en meta over item-schema (welke velden per item, min/max aantal, korte beschrijving).
-- `src/lib/coach/types.ts` → nieuwe scope `"blueprint.list_section"` + optionele `target.itemSchema: { fields: {key,label,helper}[]; suggestedCount?: [min,max] }`.
-- `src/components/business-blueprint/offer/SectionCoachButton.tsx`: kleine wrapper rond `MessageSquare + "Coach"` voor de header van `BuilderCard`. Zelfde stijl als `CoachIconButton` niet-compact.
-- `src/components/business-blueprint/offer/useOfferSectionCoach.tsx` (of uitbreiding van bestaande `useOfferCoach`): opent panel met list-section-context i.p.v. field-context. Blijft snapshot bouwen op dezelfde manier.
+- Bereken `tabPrefix = targetRootPrefix(context)` bovenaan.
+- Naast de bestaande `allowedPaths`‑check: gooi ieder voorstel weg waarvan `path` niet met `tabPrefix.` begint, tenzij scope `global` is.
+- Doe hetzelfde in `allowedBlueprintWritePaths` voor consistentie.
 
-**Aangepast**
-- `src/components/business-blueprint/offer/BuilderCard.tsx`: extra optionele prop `onCoach?: () => void`. Rendert `SectionCoachButton` links van de "Add"-knop wanneer aanwezig. Empty state krijgt ook een extra "Ask Coach"-CTA (secundair) als `onCoach` gegeven is.
-- `FrameworkSection.tsx`, `OfferStackTab.tsx`, `PricingTab.tsx`, `OfferEcosystemTab.tsx`: elke lijst-sectie geeft nu `onCoach` mee met een goede spec (label = sectienaam, item-schema = velden die de Coach moet vullen, array-pad, huidig aantal items).
-- `supabase/functions/coach-chat/index.ts`:
-  - System-prompt uitbreiden: bij `blueprint.list_section` genereert de Coach een **gestructureerde lijst voorstellen** — één `blueprint_writes` entry per item-veld, gebruikt vers-gegenereerde stabiele IDs (UUID-achtig) in de paden zodat items niet met elkaar collide.
-  - `allowedBlueprintWritePaths` uitbreiden om paden onder het door de client meegegeven `target.id` (het array-pad) toe te staan, ook als de betreffende index nog niet bestaat (nieuwe items).
-  - Redelijk maximum: bv. Coach mag max 6 items per sectie voorstellen tenzij user meer vraagt.
-- `src/lib/coach/applyBlueprintWrites.ts`: controleer dat `setDeep` correct nieuwe object-items met een gegeven ID kan invoegen wanneer het pad `pillars.<uuid>.name` is (i.p.v. numerieke index). Voeg helper `upsertItemById` toe zodat writes voor hetzelfde item-ID in één apply samen één item vormen. Behoud normalisatie voor framework pillars, en voeg vergelijkbare normalisatie toe voor Deliverables/Bonuses/Milestones/PaymentPlans/EcosystemOffers (auto-fill ontbrekende velden met defaults, zorg voor unieke IDs).
+Effect: "vul de volledige X tab in" produceert nooit meer schrijfvoorstellen voor een ander tab, ongeacht welk tab X is.
 
-**Niet gewijzigd**
-- `CoachPanel.tsx` per-item apply/dismiss UI blijft zoals hij is — de nieuwe writes verschijnen automatisch in hetzelfde kader.
-- Bestaande per-item veld-Coach knoppen blijven bestaan (voor wie later één specifiek pillar/deliverable wil verbeteren).
+### 2. Schema uitbreiden voor de resterende tabs (`supabase/functions/_shared/blueprintSchema.ts`)
 
-## Acceptance
+Voeg field‑definities toe voor:
 
-- Op elke lijst-sectie in Offer Angle, Offer Stack, Pricing en Offer Ecosystem staat rechtsboven een "Coach"-knop, ook als de sectie leeg is.
-- Klikken opent de Coach met de sectie als context en een duidelijke quick-reply om een lijst voor te stellen.
-- Coach-voorstellen verschijnen als meerdere items in het Blueprint updates-kader, elk per item apply/dismiss-baar, of allemaal tegelijk apply-baar.
-- Apply voegt volledige items toe (met alle sub-velden ingevuld), zonder duplicaten of "gaten" in de array.
+- `offer_stack.pricing` — hoofdprijs, pricing plans (indexed items: name, description, price, terms), payment terms, guarantee/refund.
+- `offer_stack.ecosystem` — ecosystem offers (indexed items: name, tier, purpose, price, description).
+- `growth_system` — de bestaande UI‑velden 1‑op‑1 spiegelen als schema entries.
+- `proof_authority` — idem: proof items, credentials, testimonials, authority markers.
+
+Voor elke tab: `field(...)` of `indexedFields(...)` volgens hetzelfde patroon als OFFER_STACK_FIELDS, met correcte `helper`, `aliases` en `aiWritable`. Deze lijsten worden dan automatisch opgenomen in `renderBlueprintFieldPathsPrompt()` waardoor de AI ze mag invullen.
+
+### 3. Apply‑pad valideren (`src/lib/coach/applyBlueprintWrites.ts`)
+
+- Bevestigen dat `normalizeOfferStackLists`‑patroon ook wordt toegepast voor pricing plans en ecosystem offers (unieke id's, defaults). Kleine uitbreiding indien nodig — zelfde helper, andere paden.
+- Timeframe/timeline‑normalisatie hergebruiken voor pricing terms indien relevant.
+
+### 4. Deploy + test
+
+- `coach-chat` edge function herdeployen.
+- Manuele check per tab op Anna Burkhardt: "vul de volledige {tab} tab in" voor Customer Clarity, Offer Angle, Offer Stack, Pricing, Ecosystem, Growth System, Proof & Authority — verifiëren dat elk voorstel binnen dat tab valt en dat lege velden worden ingevuld.
+
+## Wat er NIET verandert
+
+- Per‑veld coach‑gedrag (Refine / Replace / Keep) blijft ongewijzigd.
+- List‑section flow (section‑level coach button naast Add) blijft zoals afgesproken.
+- UI in Blueprint tabs blijft ongewijzigd — dit is uitsluitend backend + schema.

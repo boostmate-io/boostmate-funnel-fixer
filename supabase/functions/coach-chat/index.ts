@@ -231,6 +231,13 @@ Every proposed item MUST include a value for every listed field. Suggested item 
           .map((path) => `- ${path} — ${BLUEPRINT_FIELD_META[path]?.kind ?? "textarea"} — ${BLUEPRINT_FIELD_META[path]?.label ?? path}`)
           .join("\n")}\nDo not write to any other Blueprint path.`,
       );
+    } else if (context?.scope !== "global") {
+      const tabPrefix = targetRootPrefix(context);
+      if (tabPrefix) {
+        parts.push(
+          `# Active Blueprint tab — hard scope\nThe user is currently working inside "${tabPrefix}". EVERY path in propose_blueprint_writes MUST start with "${tabPrefix}.". Writes to any other tab (customer_clarity, offer_stack.angle, offer_stack.stack, offer_stack.pricing, offer_ecosystem, growth_system, proof_authority) will be discarded. If the user asks to fill the current tab, only propose writes for fields that live inside "${tabPrefix}".`,
+        );
+      }
     }
   }
 
@@ -339,6 +346,7 @@ function targetRootPrefix(context: any): string | null {
   if (candidate.startsWith("offer_stack.stack")) return "offer_stack.stack";
   if (candidate.startsWith("offer_stack.pricing")) return "offer_stack.pricing";
   if (candidate.startsWith("offer_stack.angle")) return "offer_stack.angle";
+  if (candidate.startsWith("offer_ecosystem")) return "offer_ecosystem";
   if (candidate.startsWith("customer_clarity")) return "customer_clarity";
   if (candidate.startsWith("growth_system")) return "growth_system";
   if (candidate.startsWith("proof_authority")) return "proof_authority";
@@ -346,6 +354,7 @@ function targetRootPrefix(context: any): string | null {
   const label = normalizeForMatch(String(target?.label ?? ""));
   if (label.includes("offer stack")) return "offer_stack.stack";
   if (label.includes("pricing")) return "offer_stack.pricing";
+  if (label.includes("ecosystem")) return "offer_ecosystem";
   if (label.includes("offer angle") || label.includes("angle")) return "offer_stack.angle";
   if (label.includes("customer clarity")) return "customer_clarity";
   if (label.includes("growth system")) return "growth_system";
@@ -481,6 +490,7 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) 
 
   const allowedPaths = allowedBlueprintWritePaths(context, messages);
   const emptyOnly = latestUserAsksForEmptyOnly(messages);
+  const tabPrefix = context?.scope === "global" ? null : targetRootPrefix(context);
   const byPath = new Map<string, { path: string; label: string; value: string }>();
 
   if (allowedPaths && allowedPaths.size === 0) return [];
@@ -492,6 +502,11 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) 
     // Reject unknown paths and paths flagged non-writable in the shared schema.
     if (!meta || !meta.aiWritable) continue;
     if (allowedPaths && !allowedPaths.has(path)) continue;
+    // Hard tab-scope guard: when a Blueprint tab/section is in focus, never
+    // accept writes outside that tab — regardless of whether the request
+    // matched a specific field or sub-block. Prevents "fill the whole X tab"
+    // from leaking proposals into other tabs.
+    if (tabPrefix && path !== tabPrefix && !path.startsWith(`${tabPrefix}.`)) continue;
     if (!allowedPaths && emptyOnly && !isEmptyBlueprintValue(getDeepValue(context?.businessContext?.blueprintSnapshot, path))) continue;
 
     const value = normalizeFieldValue(path, raw.value);
