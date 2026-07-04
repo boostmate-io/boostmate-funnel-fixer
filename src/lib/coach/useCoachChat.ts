@@ -219,5 +219,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
     status,
     error,
     sendMessage,
+    decisions,
+    recordDecision,
   };
 }
