@@ -495,9 +495,46 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) 
 
   if (allowedPaths && allowedPaths.size === 0) return [];
 
+  // Ecosystem writes use a virtual path shape:
+  //   offer_ecosystem.<tier>.new_<n>.<name|description|core_outcome>
+  // They resolve to inserts in the `offers` table at apply time.
+  const ECOSYSTEM_TIERS = new Set(["free", "low_ticket", "mid_ticket", "core", "premium", "continuity"]);
+  const ECOSYSTEM_FIELDS = new Set(["name", "description", "core_outcome"]);
+  const ECOSYSTEM_FIELD_LABELS: Record<string, string> = {
+    name: "Offer Name",
+    description: "Description",
+    core_outcome: "Core Outcome",
+  };
+  const isEcosystemWrite = (path: string) => {
+    const parts = path.split(".");
+    return (
+      parts.length === 4 &&
+      parts[0] === "offer_ecosystem" &&
+      ECOSYSTEM_TIERS.has(parts[1]) &&
+      /^new_\d+$/.test(parts[2]) &&
+      ECOSYSTEM_FIELDS.has(parts[3])
+    );
+  };
+
   for (const raw of writesArg) {
     if (!raw || typeof raw.path !== "string" || typeof raw.value !== "string") continue;
-    const path = canonicalBlueprintPath(raw.path);
+    const rawPath = String(raw.path);
+
+    if (isEcosystemWrite(rawPath)) {
+      if (tabPrefix && tabPrefix !== "offer_ecosystem") continue;
+      if (allowedPaths && !allowedPaths.has(rawPath)) continue;
+      const value = String(raw.value ?? "").trim();
+      if (!value) continue;
+      const [, tier, itemKey, fieldKey] = rawPath.split(".");
+      const itemIdx = Number(itemKey.slice(4)) + 1;
+      const label = String(
+        raw.label ?? `${tier.replace("_", " ")} — Offer ${itemIdx} — ${ECOSYSTEM_FIELD_LABELS[fieldKey] ?? fieldKey}`,
+      );
+      if (!byPath.has(rawPath)) byPath.set(rawPath, { path: rawPath, label, value });
+      continue;
+    }
+
+    const path = canonicalBlueprintPath(rawPath);
     const meta = BLUEPRINT_FIELD_META[path];
     // Reject unknown paths and paths flagged non-writable in the shared schema.
     if (!meta || !meta.aiWritable) continue;
