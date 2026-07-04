@@ -96,7 +96,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
           id: newId(),
           type: "custom" as const,
           custom_label: (item.custom_label ?? "").trim(),
-          amount: "",
+          amount: "" as const,
           duration: (item.duration ?? "").trim(),
         })),
       ],
