@@ -185,6 +185,67 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         },
       ],
     });
+  const appendDeliverables = (items: Record<string, string>[]) =>
+    onChange({
+      deliverables: [
+        ...data.deliverables,
+        ...items.map((item) => ({
+          id: newId(),
+          name: (item.name ?? "").trim(),
+          description: (item.description ?? "").trim(),
+          delivery_types: [],
+          frequency: "weekly" as const,
+        })),
+      ],
+    });
+  const appendResources = (items: Record<string, string>[]) =>
+    onChange({
+      resources: [
+        ...data.resources,
+        ...items.map((item) => ({
+          id: newId(),
+          name: (item.name ?? "").trim(),
+          resource_type: (item.resource_type ?? "").trim(),
+          description: (item.description ?? "").trim(),
+        })),
+      ],
+    });
+  const appendSupports = (items: Record<string, string>[]) =>
+    onChange({
+      support_channels: [
+        ...data.support_channels,
+        ...items.map((item) => ({
+          id: newId(),
+          name: (item.name ?? "").trim(),
+          description: (item.description ?? "").trim(),
+          frequency: (item.frequency ?? "").trim(),
+        })),
+      ],
+    });
+  const appendBonuses = (items: Record<string, string>[]) =>
+    onChange({
+      bonuses: [
+        ...data.bonuses,
+        ...items.map((item) => ({
+          id: newId(),
+          name: (item.name ?? "").trim(),
+          description: (item.description ?? "").trim(),
+          perceived_value: (item.perceived_value ?? "").trim(),
+        })),
+      ],
+    });
+  const appendMilestones = (items: Record<string, string>[]) =>
+    onChange({
+      milestones: [
+        ...data.milestones,
+        ...items.map((item, index) => ({
+          id: newId(),
+          phase_name: (item.phase_name ?? `Phase ${data.milestones.length + index + 1}`).trim(),
+          description: (item.description ?? "").trim(),
+          expected_outcome: (item.expected_outcome ?? "").trim(),
+        })),
+      ],
+    });
 
   const feedback =
     progress >= 100
@@ -250,6 +311,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
               currentCount: data.deliverables.length,
               suggestedCount: [3, 5],
               appendItem: appendDeliverable,
+              appendItems: appendDeliverables,
             })
           }
           count={data.deliverables.length}
@@ -367,6 +429,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
               currentCount: data.resources.length,
               suggestedCount: [3, 5],
               appendItem: appendResource,
+              appendItems: appendResources,
             })
           }
           count={data.resources.length}
@@ -492,6 +555,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
               currentCount: data.support_channels.length,
               suggestedCount: [2, 4],
               appendItem: appendSupport,
+              appendItems: appendSupports,
             })
           }
           count={data.support_channels.length}
@@ -617,6 +681,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
               currentCount: data.bonuses.length,
               suggestedCount: [2, 4],
               appendItem: appendBonus,
+              appendItems: appendBonuses,
             })
           }
           count={data.bonuses.length}
@@ -746,6 +811,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
               currentCount: data.milestones.length,
               suggestedCount: [3, 5],
               appendItem: appendMilestone,
+              appendItems: appendMilestones,
             })
           }
           count={data.milestones.length}
