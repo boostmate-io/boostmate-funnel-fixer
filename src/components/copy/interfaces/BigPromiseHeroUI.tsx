@@ -125,14 +125,6 @@ const TESTIMONIAL_SOURCES: Option[] = [
   { value: "custom", label: "Custom Testimonial" },
 ];
 
-const LOGO_LABEL_PATTERNS: Option[] = [
-  AI,
-  { value: "trusted_by", label: "Trusted By" },
-  { value: "clients_include", label: "Clients Include" },
-  { value: "featured_in", label: "Featured In" },
-  { value: "used_by", label: "Used By" },
-  { value: "custom", label: "Custom" },
-];
 
 const SectionCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <Card className="border-border/50">
