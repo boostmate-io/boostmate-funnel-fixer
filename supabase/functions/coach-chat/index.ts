@@ -231,6 +231,13 @@ Every proposed item MUST include a value for every listed field. Suggested item 
           .map((path) => `- ${path} — ${BLUEPRINT_FIELD_META[path]?.kind ?? "textarea"} — ${BLUEPRINT_FIELD_META[path]?.label ?? path}`)
           .join("\n")}\nDo not write to any other Blueprint path.`,
       );
+    } else if (context?.scope !== "global") {
+      const tabPrefix = targetRootPrefix(context);
+      if (tabPrefix) {
+        parts.push(
+          `# Active Blueprint tab — hard scope\nThe user is currently working inside "${tabPrefix}". EVERY path in propose_blueprint_writes MUST start with "${tabPrefix}.". Writes to any other tab (customer_clarity, offer_stack.angle, offer_stack.stack, offer_stack.pricing, offer_ecosystem, growth_system, proof_authority) will be discarded. If the user asks to fill the current tab, only propose writes for fields that live inside "${tabPrefix}".`,
+        );
+      }
     }
   }
 
