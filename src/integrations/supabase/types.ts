@@ -380,6 +380,47 @@ export type Database = {
           },
         ]
       }
+      ai_coach_proposal_decisions: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          decision: string
+          id: string
+          message_id: string | null
+          path: string
+          sub_account_id: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          message_id?: string | null
+          path: string
+          sub_account_id: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          message_id?: string | null
+          path?: string
+          sub_account_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_coach_proposal_decisions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_coach_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_instruction_blocks: {
         Row: {
           content: string
