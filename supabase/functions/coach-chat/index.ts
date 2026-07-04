@@ -667,11 +667,15 @@ const proposeBlueprintWritesTool = {
   },
 };
 
-function toolsForScope(scope: string | undefined) {
+function toolsForScope(scope: string | undefined, includeWrites: boolean) {
   const base = [suggestQuickRepliesTool, rememberFactTool];
   if (scope === "blueprint.field") return [proposeFieldValueTool, ...base];
-  if (scope === "blueprint.section" || scope === "global")
-    return [proposeBlueprintWritesTool, ...base];
+  if (scope === "blueprint.section" || scope === "global") {
+    // Only expose the writes tool when the current turn shows write intent.
+    // Prevents the model from re-emitting previously-applied proposals when
+    // the user is just asking a question (e.g. "what's a good core price?").
+    return includeWrites ? [proposeBlueprintWritesTool, ...base] : base;
+  }
   return base;
 }
 
