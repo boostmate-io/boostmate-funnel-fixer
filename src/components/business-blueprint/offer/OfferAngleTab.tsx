@@ -15,6 +15,7 @@ import TimeframePicker from "./TimeframePicker";
 import FrameworkSection from "./FrameworkSection";
 import CoachIconButton from "./CoachIconButton";
 import { useOfferCoach } from "./useOfferCoach";
+import { useLatestRef } from "@/lib/coach/useLatestRef";
 import {
   type OfferAngleData,
   type FrameworkPillar,
@@ -72,25 +73,29 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
   };
 
   const framework = data.framework ?? { pillars: [] };
+  const dataRef = useLatestRef(data);
+  const onChangeRef = useLatestRef(onChange);
   const appendPillar = (item: Record<string, string>) => {
+    const currentFramework = dataRef.current.framework ?? { pillars: [] };
     const nextPillar: FrameworkPillar = {
       id: newId(),
       name: (item.name ?? "").trim(),
       description: (item.description ?? "").trim(),
     };
-    onChange({
+    onChangeRef.current({
       framework: {
-        ...framework,
-        pillars: [...(framework.pillars ?? []), nextPillar],
+        ...currentFramework,
+        pillars: [...(currentFramework.pillars ?? []), nextPillar],
       },
     });
   };
-  const appendPillars = (items: Record<string, string>[]) =>
-    onChange({
+  const appendPillars = (items: Record<string, string>[]) => {
+    const currentFramework = dataRef.current.framework ?? { pillars: [] };
+    onChangeRef.current({
       framework: {
-        ...framework,
+        ...currentFramework,
         pillars: [
-          ...(framework.pillars ?? []),
+          ...(currentFramework.pillars ?? []),
           ...items.map((item) => ({
             id: newId(),
             name: (item.name ?? "").trim(),
@@ -99,6 +104,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
         ],
       },
     });
+  };
 
   const feedback =
     progress >= 100

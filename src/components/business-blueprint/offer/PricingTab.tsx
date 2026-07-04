@@ -17,6 +17,7 @@ import BuilderCard from "./BuilderCard";
 import DeliveryTypePicker from "./DeliveryTypePicker";
 import CoachIconButton from "./CoachIconButton";
 import { useOfferCoach } from "./useOfferCoach";
+import { useLatestRef } from "@/lib/coach/useLatestRef";
 import {
   type PricingData,
   type PaymentPlan,
@@ -65,6 +66,11 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
   const progress = calcPricingProgress(data);
   const { openCoach, openListCoach, panel } = useOfferCoach(() => ({ offer_stack: { pricing: data } }));
 
+  // Refs so Coach-captured callbacks always read the LATEST data/onChange,
+  // not the snapshot from the render when the Coach button was clicked.
+  const dataRef = useLatestRef(data);
+  const onChangeRef = useLatestRef(onChange);
+
   // Payment plans
   const addPlan = () =>
     onChange({
@@ -76,9 +82,9 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
     onChange({ payment_plans: data.payment_plans.filter((p) => p.id !== id) });
 
   const appendPlan = (item: Record<string, string>) =>
-    onChange({
+    onChangeRef.current({
       payment_plans: [
-        ...data.payment_plans,
+        ...dataRef.current.payment_plans,
         {
           id: newId(),
           type: "custom",
@@ -89,9 +95,9 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
       ],
     });
   const appendPlans = (items: Record<string, string>[]) =>
-    onChange({
+    onChangeRef.current({
       payment_plans: [
-        ...data.payment_plans,
+        ...dataRef.current.payment_plans,
         ...items.map((item) => ({
           id: newId(),
           type: "custom" as const,

@@ -16,6 +16,7 @@ import TimeframePicker from "./TimeframePicker";
 import DeliveryTypePicker from "./DeliveryTypePicker";
 import CoachIconButton from "./CoachIconButton";
 import { useOfferCoach } from "./useOfferCoach";
+import { useLatestRef } from "@/lib/coach/useLatestRef";
 import {
   type OfferStackData,
   type DeliverableCard,
@@ -124,10 +125,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
     onChange({ milestones: data.milestones.filter((m) => m.id !== id) });
 
   // ----- Section-Coach appenders (list_section mode) -----
+  // Refs so batch appends always operate on the LATEST data, not the
+  // snapshot captured when the Coach button was clicked.
+  const dataRef = useLatestRef(data);
+  const onChangeRef = useLatestRef(onChange);
   const appendDeliverable = (item: Record<string, string>) =>
-    onChange({
+    onChangeRef.current({
       deliverables: [
-        ...data.deliverables,
+        ...dataRef.current.deliverables,
         {
           id: newId(),
           name: (item.name ?? "").trim(),
@@ -138,9 +143,9 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
       ],
     });
   const appendResource = (item: Record<string, string>) =>
-    onChange({
+    onChangeRef.current({
       resources: [
-        ...data.resources,
+        ...dataRef.current.resources,
         {
           id: newId(),
           name: (item.name ?? "").trim(),
@@ -150,9 +155,9 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
       ],
     });
   const appendSupport = (item: Record<string, string>) =>
-    onChange({
+    onChangeRef.current({
       support_channels: [
-        ...data.support_channels,
+        ...dataRef.current.support_channels,
         {
           id: newId(),
           name: (item.name ?? "").trim(),
@@ -162,9 +167,9 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
       ],
     });
   const appendBonus = (item: Record<string, string>) =>
-    onChange({
+    onChangeRef.current({
       bonuses: [
-        ...data.bonuses,
+        ...dataRef.current.bonuses,
         {
           id: newId(),
           name: (item.name ?? "").trim(),
@@ -174,21 +179,21 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
       ],
     });
   const appendMilestone = (item: Record<string, string>) =>
-    onChange({
+    onChangeRef.current({
       milestones: [
-        ...data.milestones,
+        ...dataRef.current.milestones,
         {
           id: newId(),
-          phase_name: (item.phase_name ?? `Phase ${data.milestones.length + 1}`).trim(),
+          phase_name: (item.phase_name ?? `Phase ${dataRef.current.milestones.length + 1}`).trim(),
           description: (item.description ?? "").trim(),
           expected_outcome: (item.expected_outcome ?? "").trim(),
         },
       ],
     });
   const appendDeliverables = (items: Record<string, string>[]) =>
-    onChange({
+    onChangeRef.current({
       deliverables: [
-        ...data.deliverables,
+        ...dataRef.current.deliverables,
         ...items.map((item) => ({
           id: newId(),
           name: (item.name ?? "").trim(),
@@ -199,9 +204,9 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
       ],
     });
   const appendResources = (items: Record<string, string>[]) =>
-    onChange({
+    onChangeRef.current({
       resources: [
-        ...data.resources,
+        ...dataRef.current.resources,
         ...items.map((item) => ({
           id: newId(),
           name: (item.name ?? "").trim(),
@@ -211,9 +216,9 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
       ],
     });
   const appendSupports = (items: Record<string, string>[]) =>
-    onChange({
+    onChangeRef.current({
       support_channels: [
-        ...data.support_channels,
+        ...dataRef.current.support_channels,
         ...items.map((item) => ({
           id: newId(),
           name: (item.name ?? "").trim(),
@@ -223,9 +228,9 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
       ],
     });
   const appendBonuses = (items: Record<string, string>[]) =>
-    onChange({
+    onChangeRef.current({
       bonuses: [
-        ...data.bonuses,
+        ...dataRef.current.bonuses,
         ...items.map((item) => ({
           id: newId(),
           name: (item.name ?? "").trim(),
@@ -235,17 +240,18 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
       ],
     });
   const appendMilestones = (items: Record<string, string>[]) =>
-    onChange({
+    onChangeRef.current({
       milestones: [
-        ...data.milestones,
+        ...dataRef.current.milestones,
         ...items.map((item, index) => ({
           id: newId(),
-          phase_name: (item.phase_name ?? `Phase ${data.milestones.length + index + 1}`).trim(),
+          phase_name: (item.phase_name ?? `Phase ${dataRef.current.milestones.length + index + 1}`).trim(),
           description: (item.description ?? "").trim(),
           expected_outcome: (item.expected_outcome ?? "").trim(),
         })),
       ],
     });
+
 
   const feedback =
     progress >= 100
