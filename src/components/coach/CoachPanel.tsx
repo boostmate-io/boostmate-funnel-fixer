@@ -112,7 +112,7 @@ const openerFor = (context: CoachContext | null): CoachMessage | null => {
 };
 
 const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrites }: Props) => {
-  const { messages, status, error, sendMessage } = useCoachChat(context, open);
+  const { messages, status, error, sendMessage, decisions, recordDecision } = useCoachChat(context, open);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -189,6 +189,8 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
             onApply={handleApply}
             onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
             onApplyBlueprintWrites={onApplyBlueprintWrites}
+            initialDecisions={{ ...(decisions["__any__"] ?? {}), ...(decisions[m.id] ?? {}) }}
+            onDecision={(writes, decision) => recordDecision(m.id, writes, decision)}
           />
         ))}
         {status === "sending" && (
@@ -246,12 +248,16 @@ function MessageBubble({
   onApply,
   onRefine,
   onApplyBlueprintWrites,
+  initialDecisions,
+  onDecision,
 }: {
   message: CoachMessage;
   onQuickReply: (r: string) => void;
   onApply: (value: string) => void;
   onRefine: (value: string) => void;
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  initialDecisions?: Record<string, "applied" | "dismissed">;
+  onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
 }) {
   const isUser = message.role === "user";
   return (
@@ -266,6 +272,8 @@ function MessageBubble({
             onApply={onApply}
             onRefine={onRefine}
             onApplyBlueprintWrites={onApplyBlueprintWrites}
+            initialDecisions={initialDecisions}
+            onDecision={onDecision}
           />
         ))}
       </div>
@@ -280,6 +288,8 @@ function PartRenderer({
   onApply,
   onRefine,
   onApplyBlueprintWrites,
+  initialDecisions,
+  onDecision,
 }: {
   part: CoachMessagePart;
   isUser: boolean;
@@ -287,6 +297,8 @@ function PartRenderer({
   onApply: (value: string) => void;
   onRefine: (value: string) => void;
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  initialDecisions?: Record<string, "applied" | "dismissed">;
+  onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
 }) {
   if (part.type === "text") {
     if (!part.text.trim()) return null;
@@ -360,6 +372,8 @@ function PartRenderer({
         writes={part.writes}
         reasoning={part.reasoning}
         onApplyAll={onApplyBlueprintWrites}
+        initialDecisions={initialDecisions}
+        onDecision={onDecision}
       />
     );
   }
@@ -375,12 +389,18 @@ function BlueprintWritesCard({
   writes,
   reasoning,
   onApplyAll,
+  initialDecisions,
+  onDecision,
 }: {
   writes: CoachBlueprintWrite[];
   reasoning?: string;
   onApplyAll?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  initialDecisions?: Record<string, "applied" | "dismissed">;
+  onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
 }) {
-  const [states, setStates] = useState<ItemState[]>(() => writes.map(() => "pending"));
+  const [states, setStates] = useState<ItemState[]>(() =>
+    writes.map((w) => (initialDecisions?.[w.path] ?? "pending") as ItemState),
+  );
   const [batchApplying, setBatchApplying] = useState(false);
 
   const setAt = (i: number, s: ItemState) =>
@@ -397,6 +417,7 @@ function BlueprintWritesCard({
     try {
       await onApplyAll([writes[i]]);
       setAt(i, "applied");
+      onDecision?.([writes[i]], "applied");
     } catch {
       setAt(i, "pending");
     }
@@ -405,15 +426,18 @@ function BlueprintWritesCard({
   const handleDismissOne = (i: number) => {
     if (states[i] !== "pending") return;
     setAt(i, "dismissed");
+    onDecision?.([writes[i]], "dismissed");
   };
 
   const handleApplyAllRemaining = async () => {
     if (!onApplyAll || batchApplying || !pendingIndices.length) return;
     setBatchApplying(true);
+    const targets = pendingIndices.map((i) => writes[i]);
     setStates((prev) => prev.map((s) => (s === "pending" ? "applying" : s)));
     try {
-      await onApplyAll(pendingIndices.map((i) => writes[i]));
+      await onApplyAll(targets);
       setStates((prev) => prev.map((s) => (s === "applying" ? "applied" : s)));
+      onDecision?.(targets, "applied");
     } catch {
       setStates((prev) => prev.map((s) => (s === "applying" ? "pending" : s)));
     } finally {
@@ -422,7 +446,9 @@ function BlueprintWritesCard({
   };
 
   const handleDismissAll = () => {
+    const targets = pendingIndices.map((i) => writes[i]);
     setStates((prev) => prev.map((s) => (s === "pending" ? "dismissed" : s)));
+    if (targets.length) onDecision?.(targets, "dismissed");
   };
 
   return (

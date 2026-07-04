@@ -169,6 +169,7 @@ function buildSystemPrompt(
   memoryFacts: Array<{ key: string; value: string }>,
   prompts: PromptSet,
   messages: any[] = [],
+  handledDecisions: Array<{ path: string; decision: string }> = [],
 ): string {
   const parts: string[] = [prompts.base];
 
@@ -245,6 +246,14 @@ Every proposed item MUST include a value for every listed field. Suggested item 
     parts.push(
       `# Remembered business facts\n${memoryFacts
         .map((fact) => `- ${fact.key}: ${fact.value}`)
+        .join("\n")}`,
+    );
+  }
+
+  if (handledDecisions.length > 0) {
+    parts.push(
+      `# Already handled in this conversation — HARD CONSTRAINT\nThe user has already accepted or dismissed proposals for these Blueprint paths. Do NOT include any of them in propose_blueprint_writes again unless the user explicitly asks to redo that specific field.\n${handledDecisions
+        .map((d) => `- ${d.path} (${d.decision})`)
         .join("\n")}`,
     );
   }
@@ -454,7 +463,7 @@ function normalizeCurrentFieldProposal(context: any, value: string): string {
   return normalizeFieldValue(path, value);
 }
 
-function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) {
+function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, handledPaths: Set<string> = new Set()) {
   if (!Array.isArray(writesArg)) return [];
 
   const listSection = context?.target?.listSection;
@@ -538,6 +547,10 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any) 
     const meta = BLUEPRINT_FIELD_META[path];
     // Reject unknown paths and paths flagged non-writable in the shared schema.
     if (!meta || !meta.aiWritable) continue;
+    // Never re-propose a Blueprint path the user already accepted or dismissed
+    // in this conversation. Virtual list/ecosystem `new_<n>` paths are handled
+    // earlier and skipped here anyway.
+    if (handledPaths.has(path)) continue;
     if (allowedPaths && !allowedPaths.has(path)) continue;
     // Hard tab-scope guard: when a Blueprint tab/section is in focus, never
     // accept writes outside that tab — regardless of whether the request
@@ -746,18 +759,26 @@ Deno.serve(async (req) => {
 
     const subAccountId = conv.sub_account_id as string;
 
-    // Load memory facts for this workspace
-    const { data: memoryRows } = await supabase
-      .from("ai_coach_memory")
-      .select("key, value")
-      .eq("sub_account_id", subAccountId)
-      .order("updated_at", { ascending: false })
-      .limit(30);
+    // Load memory facts + previously handled Blueprint paths for this conversation
+    const [{ data: memoryRows }, { data: decisionRows }] = await Promise.all([
+      supabase
+        .from("ai_coach_memory")
+        .select("key, value")
+        .eq("sub_account_id", subAccountId)
+        .order("updated_at", { ascending: false })
+        .limit(30),
+      supabase
+        .from("ai_coach_proposal_decisions")
+        .select("path, decision")
+        .eq("conversation_id", conversationId),
+    ]);
     const memoryFacts = (memoryRows ?? []) as Array<{ key: string; value: string }>;
+    const handledDecisions = (decisionRows ?? []) as Array<{ path: string; decision: string }>;
+    const handledPaths = new Set(handledDecisions.map((d) => d.path));
 
     // Build LLM messages
     const prompts = await loadCoachPrompts(supabase);
-    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts, messages);
+    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts, messages, handledDecisions);
     const llmMessages: any[] = [
       { role: "system", content: systemPrompt },
       ...messages.map((m: any) => ({
@@ -818,7 +839,7 @@ Deno.serve(async (req) => {
         name === "propose_blueprint_writes" &&
         (context?.scope === "blueprint.section" || context?.scope === "global")
       ) {
-        const writes = sanitizeBlueprintWrites(args.writes, messages, context);
+        const writes = sanitizeBlueprintWrites(args.writes, messages, context, handledPaths);
         if (writes.length > 0) {
           parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
         }
