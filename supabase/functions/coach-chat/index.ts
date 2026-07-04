@@ -746,18 +746,26 @@ Deno.serve(async (req) => {
 
     const subAccountId = conv.sub_account_id as string;
 
-    // Load memory facts for this workspace
-    const { data: memoryRows } = await supabase
-      .from("ai_coach_memory")
-      .select("key, value")
-      .eq("sub_account_id", subAccountId)
-      .order("updated_at", { ascending: false })
-      .limit(30);
+    // Load memory facts + previously handled Blueprint paths for this conversation
+    const [{ data: memoryRows }, { data: decisionRows }] = await Promise.all([
+      supabase
+        .from("ai_coach_memory")
+        .select("key, value")
+        .eq("sub_account_id", subAccountId)
+        .order("updated_at", { ascending: false })
+        .limit(30),
+      supabase
+        .from("ai_coach_proposal_decisions")
+        .select("path, decision")
+        .eq("conversation_id", conversationId),
+    ]);
     const memoryFacts = (memoryRows ?? []) as Array<{ key: string; value: string }>;
+    const handledDecisions = (decisionRows ?? []) as Array<{ path: string; decision: string }>;
+    const handledPaths = new Set(handledDecisions.map((d) => d.path));
 
     // Build LLM messages
     const prompts = await loadCoachPrompts(supabase);
-    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts, messages);
+    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts, messages, handledDecisions);
     const llmMessages: any[] = [
       { role: "system", content: systemPrompt },
       ...messages.map((m: any) => ({
