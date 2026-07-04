@@ -125,14 +125,6 @@ const TESTIMONIAL_SOURCES: Option[] = [
   { value: "custom", label: "Custom Testimonial" },
 ];
 
-const LOGO_LABEL_PATTERNS: Option[] = [
-  AI,
-  { value: "trusted_by", label: "Trusted By" },
-  { value: "clients_include", label: "Clients Include" },
-  { value: "featured_in", label: "Featured In" },
-  { value: "used_by", label: "Used By" },
-  { value: "custom", label: "Custom" },
-];
 
 const SectionCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <Card className="border-border/50">
@@ -431,18 +423,6 @@ const HeroSectionUI = ({
             className="min-h-[60px] text-sm mt-2"
           />
         )}
-      </SectionCard>
-
-      <SectionCard title="Featured Logos">
-        <Label className="text-xs text-muted-foreground">Label Pattern</Label>
-        <PatternPicker
-          value={inputs.logo_label_pattern || "ai_recommended"}
-          onChange={(v) => s("logo_label_pattern", v)}
-          options={LOGO_LABEL_PATTERNS}
-          customValue={inputs.logo_label_custom}
-          onCustomChange={(v) => s("logo_label_custom", v)}
-          customPlaceholder="Write your own label…"
-        />
       </SectionCard>
 
       <div className="flex gap-2 pt-2">
