@@ -248,12 +248,16 @@ function MessageBubble({
   onApply,
   onRefine,
   onApplyBlueprintWrites,
+  initialDecisions,
+  onDecision,
 }: {
   message: CoachMessage;
   onQuickReply: (r: string) => void;
   onApply: (value: string) => void;
   onRefine: (value: string) => void;
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  initialDecisions?: Record<string, "applied" | "dismissed">;
+  onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
 }) {
   const isUser = message.role === "user";
   return (
@@ -268,6 +272,8 @@ function MessageBubble({
             onApply={onApply}
             onRefine={onRefine}
             onApplyBlueprintWrites={onApplyBlueprintWrites}
+            initialDecisions={initialDecisions}
+            onDecision={onDecision}
           />
         ))}
       </div>
