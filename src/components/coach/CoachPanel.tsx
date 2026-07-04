@@ -586,7 +586,7 @@ function expandQuickReplyForContext(reply: string, context: CoachContext | null)
   const target = context.target.label;
 
   if (context.target.listSection) {
-    if (/inspire|examples|voorbeelden|idee|ideas|suggest|propose|stel|voorstel/.test(lower)) {
+    if (/inspire|examples|voorbeelden|idee|ideas|suggest|propose|voorstel/.test(lower)) {
       return `${text}. Propose concrete ${target} items as Blueprint updates that I can apply.`;
     }
     return text;
