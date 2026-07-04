@@ -1,50 +1,58 @@
-## Situatie
+## Doel
 
-De vorige fix loste twee dingen tegelijk op, maar ongelijkmatig:
+De AI Coach mag binnen dezelfde conversatie geen Blueprint-updates meer voorstellen voor velden die de gebruiker al **geaccepteerd** of **afgewezen** heeft. Nu weet noch de server, noch de UI dat een eerder voorstel al is afgehandeld — na een refresh of nieuwe vraag duiken dezelfde 37 items opnieuw op.
 
-1. **Generiek (goed)** — `targetRootPrefix` + `filterPathsToCurrentTarget` in `coach-chat/index.ts` herkennen álle blueprint‑tabs: `customer_clarity`, `offer_stack.angle`, `offer_stack.stack`, `offer_stack.pricing`, `growth_system`, `proof_authority`. Zodra deze filter draait wordt élk voorstel dat buiten het actieve tab valt eruit gegooid.
+## Wat er verandert
 
-2. **Niet‑generiek (het gat)** — die filter wordt vandaag alleen ingeschakeld wanneer de gebruiker één specifiek veld of één benoemde sub‑block noemt ("vul avatar in"). Bij een tab‑brede vraag ("vul de volledige offer stack tab in", "vul de pricing tab in", …) geeft `allowedBlueprintWritePaths` `null` terug en valt de tab‑prefix filter weg. De AI mag dan technisch nog steeds naar andere tabs schrijven — de reden waarom Offer Stack in jouw test toch Angle/Clarity velden voorstelde was: OFFER_STACK_FIELDS bestond niet in het schema, dus de AI viel terug op wat wél in het schema stond (Angle/Clarity).
+1. **Beslissingen worden persistent bewaard** per conversatie (accepted / dismissed per veld).
+2. **De Coach krijgt die lijst mee** bij elke turn en mag die paden niet opnieuw voorstellen.
+3. **De server filtert** als vangnet: elk voorstel met een pad dat al is afgehandeld wordt stilzwijgend verwijderd voor het naar de UI gaat.
+4. **De UI herstelt de status** van eerdere voorstellen na een refresh (Applied / Dismissed badges blijven zichtbaar in plaats van weer als "pending" te verschijnen).
 
-3. **Schema‑dekking** — alleen `customer_clarity`, `offer_stack.angle` en `offer_stack.stack` staan in `blueprintSchema.ts`. `offer_stack.pricing`, `offer_stack.ecosystem`, `growth_system` en `proof_authority` hebben nog geen velden gedefinieerd, dus daar kan de coach sowieso niets voor voorstellen.
+## Gedragsregels
 
-Kort antwoord op je vraag: **de logica is generiek, maar de afdwinging + de schema‑dekking niet**. Daarom werkt het nu voor Offer Stack maar niet gegarandeerd voor de andere tabs.
+- Filtering geldt **alleen binnen dezelfde conversatie**. Een nieuwe conversatie (of een andere tab / doel) is een schone lei.
+- Als de gebruiker expliciet vraagt "opnieuw voorstellen voor veld X" (herformuleerd), telt dat als een nieuwe intentie: dit lost zichzelf op omdat we sowieso alleen filteren bij overeenkomend pad; de coach kan gewoon een ander voorstel maken zolang de gebruiker duidelijk om een herziening vraagt. Voor v1 houden we het simpel: eenmaal afgehandeld = niet meer opnieuw voorstellen. Als dit knelt kunnen we later een "Voorstel opnieuw" knop toevoegen.
+- List-secties (Framework Pillars, Deliverables, Testimonials, …) en Offer Ecosystem gebruiken virtuele `new_<n>` paden die per turn nieuw zijn — daar filteren we **niet** op pad, want elke nieuwe suggestie is uniek. Deze worden gewoon als losse inserts behandeld.
 
-## Plan — één keer generiek maken
+## Technisch plan
 
-### 1. Tab‑prefix filter altijd afdwingen (`supabase/functions/coach-chat/index.ts`)
+### 1. Nieuwe tabel `ai_coach_proposal_decisions`
 
-In `sanitizeBlueprintWrites`: ook wanneer `allowedPaths` `null` is (tab‑brede vraag), de tab‑prefix van de actieve context toepassen. Concreet:
+```
+id uuid pk
+conversation_id uuid -> ai_coach_conversations(id) on delete cascade
+message_id uuid null       -- zodat we bij reload de knop-status per bericht herstellen
+sub_account_id uuid
+user_id uuid
+path text                   -- Blueprint dot-path
+decision text check (decision in ('applied','dismissed'))
+created_at timestamptz default now()
+unique (conversation_id, path)   -- één eindstatus per pad per conversatie
+```
 
-- Bereken `tabPrefix = targetRootPrefix(context)` bovenaan.
-- Naast de bestaande `allowedPaths`‑check: gooi ieder voorstel weg waarvan `path` niet met `tabPrefix.` begint, tenzij scope `global` is.
-- Doe hetzelfde in `allowedBlueprintWritePaths` voor consistentie.
+Met RLS (`user_id = auth.uid()`) + GRANTs op `authenticated` en `service_role` (zoals de andere coach-tabellen).
 
-Effect: "vul de volledige X tab in" produceert nooit meer schrijfvoorstellen voor een ander tab, ongeacht welk tab X is.
+### 2. Client — `CoachPanel.tsx` + `useCoachChat.ts`
 
-### 2. Schema uitbreiden voor de resterende tabs (`supabase/functions/_shared/blueprintSchema.ts`)
+- Bij Apply / Dismiss (per item én bulk) een row schrijven in `ai_coach_proposal_decisions`. Ecosystem- en list-section-paden (`…new_<n>…`) sláán we niet op — die kunnen niet botsen.
+- `useCoachChat` laadt bij openen de decisions van de huidige conversatie en geeft ze mee aan `BlueprintWritesCard` per `message_id`, zodat pending → applied/dismissed correct wordt gerenderd na refresh.
+- Bij `sendMessage` de lijst afgehandelde `path`s meesturen in de request body (of alleen op de server ophalen — zie punt 3).
 
-Voeg field‑definities toe voor:
+### 3. Edge function `coach-chat`
 
-- `offer_stack.pricing` — hoofdprijs, pricing plans (indexed items: name, description, price, terms), payment terms, guarantee/refund.
-- `offer_stack.ecosystem` — ecosystem offers (indexed items: name, tier, purpose, price, description).
-- `growth_system` — de bestaande UI‑velden 1‑op‑1 spiegelen als schema entries.
-- `proof_authority` — idem: proof items, credentials, testimonials, authority markers.
+- Aan het begin van de handler: `select path, decision from ai_coach_proposal_decisions where conversation_id = :id` → `handledPaths: Set<string>`.
+- `buildSystemPrompt`: extra sectie **"# Already handled in this conversation"** met de paden die applied/dismissed zijn, met instructie: *"Do NOT include any of these paths in `propose_blueprint_writes` unless the user explicitly asks to redo them."*
+- `sanitizeBlueprintWrites`: filter elk voorstel waarvan `handledPaths.has(path)`, tenzij het een virtuele list/ecosystem-pad is (`…new_\d+…`).
 
-Voor elke tab: `field(...)` of `indexedFields(...)` volgens hetzelfde patroon als OFFER_STACK_FIELDS, met correcte `helper`, `aliases` en `aiWritable`. Deze lijsten worden dan automatisch opgenomen in `renderBlueprintFieldPathsPrompt()` waardoor de AI ze mag invullen.
+### 4. Samenspel met de vorige fix
 
-### 3. Apply‑pad valideren (`src/lib/coach/applyBlueprintWrites.ts`)
+De vorige fix (writes-tool alleen aanbieden bij schrijf-intentie) blijft van kracht. Deze laag komt erbovenop en dekt het geval waarin de gebruiker wél een schrijf-intentie uit maar de coach anders opnieuw dezelfde velden zou voorstellen.
 
-- Bevestigen dat `normalizeOfferStackLists`‑patroon ook wordt toegepast voor pricing plans en ecosystem offers (unieke id's, defaults). Kleine uitbreiding indien nodig — zelfde helper, andere paden.
-- Timeframe/timeline‑normalisatie hergebruiken voor pricing terms indien relevant.
+## Bestanden
 
-### 4. Deploy + test
-
-- `coach-chat` edge function herdeployen.
-- Manuele check per tab op Anna Burkhardt: "vul de volledige {tab} tab in" voor Customer Clarity, Offer Angle, Offer Stack, Pricing, Ecosystem, Growth System, Proof & Authority — verifiëren dat elk voorstel binnen dat tab valt en dat lege velden worden ingevuld.
-
-## Wat er NIET verandert
-
-- Per‑veld coach‑gedrag (Refine / Replace / Keep) blijft ongewijzigd.
-- List‑section flow (section‑level coach button naast Add) blijft zoals afgesproken.
-- UI in Blueprint tabs blijft ongewijzigd — dit is uitsluitend backend + schema.
+- `supabase/migrations/<new>.sql` — tabel + RLS + grants
+- `supabase/functions/coach-chat/index.ts` — decisions laden, prompt-sectie, filter in `sanitizeBlueprintWrites`
+- `src/lib/coach/useCoachChat.ts` — decisions laden per conversatie, doorgeven
+- `src/components/coach/CoachPanel.tsx` — initial state uit gehydrateerde decisions, insert bij Apply/Dismiss
+- `src/integrations/supabase/types.ts` — regenereert automatisch na migratie
