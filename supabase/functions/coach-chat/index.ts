@@ -45,6 +45,7 @@ const COACH_BLUEPRINT_FIELD = `You are coaching the user on a single Business Bl
 - Respect the current field kind. If the target kind is "tags" or "chips", proposed values MUST be a short comma-separated list of items, never a paragraph.
 - If the field already has content, do NOT ignore it — ask what to sharpen, expand, or reframe.
 - If the field is empty, ask 1-2 grounding questions first, then draft.
+- If the user asks for examples, inspiration, sharpening, expansion, rewriting, generation, or a concrete suggestion, call propose_field_value in the same turn. Do not answer with only more quick replies.
 - When you have enough information, call the propose_field_value tool with a polished draft. Do not include the drafted answer inside your prose reply — put it only in the tool call.
 - After a draft is proposed, invite the user to Replace / Refine / Keep chatting.
 - Drafts must be written IN THE USER'S VOICE. No hype language.`;
@@ -220,7 +221,7 @@ When the user asks you to suggest / generate / propose / fill / draft items for 
   <basePath>.new_0.<fieldKey>
   <basePath>.new_1.<fieldKey>
   ...
-Every proposed item MUST include a value for every listed field. Suggested item count: ${suggested} unless the user specifies otherwise. Label each write "Item <n> — <field label>". Do NOT write to any other Blueprint path in this turn.`,
+Every proposed item MUST include a value for every listed field. Suggested item count: ${suggested} unless the user specifies otherwise. If the user asks for inspiration or examples, still propose concrete list items as Blueprint writes — do not answer with only quick replies. Label each write "Item <n> — <field label>". Do NOT write to any other Blueprint path in this turn.`,
     );
   } else {
     const allowedPaths = allowedBlueprintWritePaths(context, messages);
@@ -707,14 +708,23 @@ function isBlueprintWriteIntent(scope: string | undefined, messages: any[], cont
     .map((m: any) => String(m?.content ?? ""))
     .join("\n");
 
-  // In list-section mode any add/suggest/generate intent triggers a write.
-  if (context?.target?.listSection && (WRITE_INTENT_RE.test(latest) || /\b(suggest|voorstel|stel voor|geef|give|show|toon|ideas|ideeën|opties|options|add)\b/i.test(latest))) {
+  // In list-section mode any add/suggest/generate/examples intent triggers a write.
+  if (context?.target?.listSection && (WRITE_INTENT_RE.test(latest) || /\b(suggest|suggestion|propose|proposal|voorstel|stel voor|geef|give|show|toon|ideas|idea|ideeën|idee|opties|options|examples|example|voorbeelden|voorbeeld|inspire|inspiration|inspiratie|add)\b/i.test(latest))) {
     return true;
   }
 
   if (WRITE_INTENT_RE.test(latest) && BLUEPRINT_AREA_RE.test(latest)) return true;
   if (NOT_FILLED_RE.test(latest) && (WRITE_INTENT_RE.test(recent) || BLUEPRINT_AREA_RE.test(recent))) return true;
   return false;
+}
+
+function isFieldProposalIntent(scope: string | undefined, messages: any[]) {
+  if (scope !== "blueprint.field") return false;
+  const latest = latestUserText(messages);
+  return (
+    WRITE_INTENT_RE.test(latest) ||
+    /\b(example|examples|voorbeelden|voorbeeld|inspire|inspiration|inspiratie|sharpen|aanscherpen|expand|uitbreiden|rewrite|herschrijf|suggest|suggestion|propose|proposal|voorstel|geef|give)\b/i.test(latest)
+  );
 }
 
 // -----------------------------------------------------------------------------
@@ -788,6 +798,7 @@ Deno.serve(async (req) => {
     ];
 
     const shouldForceBlueprintWrites = isBlueprintWriteIntent(context?.scope, messages, context);
+    const shouldForceFieldProposal = isFieldProposalIntent(context?.scope, messages);
     const tools = toolsForScope(context?.scope, shouldForceBlueprintWrites);
 
     // Call Lovable AI Gateway (OpenAI-compatible)
@@ -803,7 +814,9 @@ Deno.serve(async (req) => {
         tools,
         tool_choice: shouldForceBlueprintWrites
           ? { type: "function", function: { name: "propose_blueprint_writes" } }
-          : "auto",
+          : shouldForceFieldProposal
+            ? { type: "function", function: { name: "propose_field_value" } }
+            : "auto",
       }),
     });
 
