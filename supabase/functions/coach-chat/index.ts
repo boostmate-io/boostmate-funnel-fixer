@@ -547,6 +547,10 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
     const meta = BLUEPRINT_FIELD_META[path];
     // Reject unknown paths and paths flagged non-writable in the shared schema.
     if (!meta || !meta.aiWritable) continue;
+    // Never re-propose a Blueprint path the user already accepted or dismissed
+    // in this conversation. Virtual list/ecosystem `new_<n>` paths are handled
+    // earlier and skipped here anyway.
+    if (handledPaths.has(path)) continue;
     if (allowedPaths && !allowedPaths.has(path)) continue;
     // Hard tab-scope guard: when a Blueprint tab/section is in focus, never
     // accept writes outside that tab — regardless of whether the request
