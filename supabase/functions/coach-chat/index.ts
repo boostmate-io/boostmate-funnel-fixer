@@ -250,6 +250,14 @@ Every proposed item MUST include a value for every listed field. Suggested item 
     );
   }
 
+  if (handledDecisions.length > 0) {
+    parts.push(
+      `# Already handled in this conversation — HARD CONSTRAINT\nThe user has already accepted or dismissed proposals for these Blueprint paths. Do NOT include any of them in propose_blueprint_writes again unless the user explicitly asks to redo that specific field.\n${handledDecisions
+        .map((d) => `- ${d.path} (${d.decision})`)
+        .join("\n")}`,
+    );
+  }
+
   return parts.join("\n\n---\n\n");
 }
 
