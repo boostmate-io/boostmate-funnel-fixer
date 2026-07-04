@@ -709,7 +709,7 @@ function isBlueprintWriteIntent(scope: string | undefined, messages: any[], cont
     .join("\n");
 
   // In list-section mode any add/suggest/generate/examples intent triggers a write.
-  if (context?.target?.listSection && (WRITE_INTENT_RE.test(latest) || /\b(suggest|suggestion|propose|proposal|voorstel|stel voor|geef|give|show|toon|ideas|idea|ideeën|idee|opties|options|examples|example|voorbeelden|voorbeeld|inspire|inspiration|inspiratie|add)\b/i.test(latest))) {
+  if (context?.target?.listSection && (WRITE_INTENT_RE.test(latest) || /\b(suggest|suggestion|propose|proposal|voorstel|stel\s+.{0,40}\s+voor|geef|give|show|toon|ideas|idea|ideeën|idee|opties|options|examples|example|voorbeelden|voorbeeld|inspire|inspiration|inspiratie|add)\b/i.test(latest))) {
     return true;
   }
 
