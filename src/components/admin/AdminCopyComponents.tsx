@@ -76,6 +76,7 @@ interface OutputField {
   key: string;
   label: string;
   type: "text" | "array";
+  role?: string;
 }
 
 interface CopyComponent {
@@ -92,6 +93,8 @@ interface CopyComponent {
   required_blueprint_fields: string[];
   is_active: boolean;
   sort_order: number;
+  headline_purpose?: string | null;
+  headline_instruction_block_id?: string | null;
 }
 
 interface AIAction {
@@ -99,19 +102,49 @@ interface AIAction {
   name: string;
 }
 
+interface InstructionBlock {
+  id: string;
+  name: string;
+}
+
+const HEADLINE_PURPOSES: Array<{ value: string; label: string }> = [
+  { value: "none", label: "None (no headline guidance)" },
+  { value: "section_introduction", label: "Section Introduction" },
+  { value: "persuasive", label: "Persuasive Headline" },
+  { value: "cta", label: "CTA Headline" },
+  { value: "story", label: "Story Headline" },
+  { value: "proof", label: "Proof Headline" },
+  { value: "custom", label: "Custom" },
+];
+
+const FIELD_ROLES: Array<{ value: string; label: string }> = [
+  { value: "", label: "— none —" },
+  { value: "section_headline", label: "Section headline (intro)" },
+  { value: "persuasive_headline", label: "Persuasive headline" },
+  { value: "cta_headline", label: "CTA headline" },
+  { value: "story_headline", label: "Story headline" },
+  { value: "proof_headline", label: "Proof headline" },
+  { value: "subheadline", label: "Subheadline" },
+  { value: "body", label: "Body" },
+  { value: "item", label: "Item" },
+];
+
 const AdminCopyComponents = () => {
   const [components, setComponents] = useState<CopyComponent[]>([]);
   const [aiActions, setAIActions] = useState<AIAction[]>([]);
+  const [instructionBlocks, setInstructionBlocks] = useState<InstructionBlock[]>([]);
   const [editing, setEditing] = useState<Partial<CopyComponent> | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [{ data: c }, { data: a }] = await Promise.all([
+    const [{ data: c }, { data: a }, { data: b }] = await Promise.all([
       supabase.from("copy_components").select("*").order("sort_order"),
       supabase.from("ai_actions").select("slug, name").eq("is_active", true).order("name"),
+      supabase.from("ai_instruction_blocks").select("id, name").order("name"),
     ]);
     if (c) setComponents(c as unknown as CopyComponent[]);
     if (a) setAIActions(a as unknown as AIAction[]);
+    if (b) setInstructionBlocks(b as unknown as InstructionBlock[]);
   }, []);
 
   useEffect(() => { load(); }, [load]);
