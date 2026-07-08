@@ -505,14 +505,20 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     docComponents.map((dc, idx) => {
                       const def = componentDefs.find(d => d.slug === dc.component_slug);
                       const iconName = getIconForComponent(dc.component_slug);
+                      const isActive = idx === activeComponentIdx;
                       return (
                         <button
                           key={dc.id}
                           onClick={() => {
+                            setActiveComponentIdx(idx);
                             const el = document.getElementById(`preview-section-${dc.id}`);
                             el?.scrollIntoView({ behavior: "smooth", block: "start" });
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors hover:bg-muted/50 text-foreground"
+                          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                            isActive
+                              ? "bg-primary/10 text-primary border border-primary/20"
+                              : "hover:bg-muted/50 text-foreground"
+                          }`}
                         >
                           <LucideIcon name={iconName} className="w-4 h-4 shrink-0" />
                           <div className="flex-1 min-w-0">
