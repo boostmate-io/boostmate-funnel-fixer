@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, RotateCw, Loader2, Check } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
+import { buildCopyExtraInstructions } from "@/lib/copy/headlineInstructions";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -148,7 +149,7 @@ const DesiredOutcomesUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: componentInstructions || undefined,
+        extraInstructions: buildCopyExtraInstructions("desired-outcomes", componentInstructions),
         outputStructure,
       });
       onOutputsChange(result.output);
@@ -173,7 +174,7 @@ const DesiredOutcomesUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: focus,
+        extraInstructions: buildCopyExtraInstructions("desired-outcomes", focus, { focusFieldKey: fieldKey }),
         outputStructure,
       });
       if (result.output && result.output[fieldKey] !== undefined && result.output[fieldKey] !== "") {

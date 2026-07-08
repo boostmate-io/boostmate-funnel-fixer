@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Sparkles, RotateCw, Loader2 } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
+import { buildCopyExtraInstructions } from "@/lib/copy/headlineInstructions";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -139,7 +140,7 @@ const ProblemAmplifierUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: componentInstructions || undefined,
+        extraInstructions: buildCopyExtraInstructions("problem-amplifier", componentInstructions),
         outputStructure,
       });
       onOutputsChange(result.output);
@@ -164,7 +165,7 @@ const ProblemAmplifierUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: focus,
+        extraInstructions: buildCopyExtraInstructions("problem-amplifier", focus, { focusFieldKey: fieldKey }),
         outputStructure,
       });
       if (result.output && result.output[fieldKey] !== undefined && result.output[fieldKey] !== "") {
