@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, RotateCw, Loader2, ChevronDown } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
+import { buildCopyExtraInstructions } from "@/lib/copy/headlineInstructions";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -151,7 +152,7 @@ const FAQObjectionsUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: componentInstructions || undefined,
+        extraInstructions: buildCopyExtraInstructions("faq-objections", componentInstructions),
         outputStructure: runStructure,
       });
       onOutputsChange(result.output);
@@ -176,7 +177,7 @@ const FAQObjectionsUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: focus,
+        extraInstructions: buildCopyExtraInstructions("faq-objections", focus, { focusFieldKey: fieldKey }),
         outputStructure: runStructure,
       });
       if (result.output && result.output[fieldKey] !== undefined && result.output[fieldKey] !== "") {

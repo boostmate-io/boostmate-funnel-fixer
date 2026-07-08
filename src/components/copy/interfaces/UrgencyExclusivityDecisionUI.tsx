@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, RotateCw, Loader2 } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
+import { buildCopyExtraInstructions } from "@/lib/copy/headlineInstructions";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -162,7 +163,7 @@ const UrgencyExclusivityDecisionUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: componentInstructions || undefined,
+        extraInstructions: buildCopyExtraInstructions("urgency-exclusivity-decision", componentInstructions),
         outputStructure,
       });
       onOutputsChange(result.output);
@@ -187,7 +188,7 @@ const UrgencyExclusivityDecisionUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: focus,
+        extraInstructions: buildCopyExtraInstructions("urgency-exclusivity-decision", focus, { focusFieldKey: fieldKey }),
         outputStructure,
       });
       if (result.output && result.output[fieldKey] !== undefined && result.output[fieldKey] !== "") {

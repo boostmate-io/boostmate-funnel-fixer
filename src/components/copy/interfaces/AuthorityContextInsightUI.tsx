@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, RotateCw, Loader2 } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
+import { buildCopyExtraInstructions } from "@/lib/copy/headlineInstructions";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -174,7 +175,7 @@ const AuthorityContextInsightUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: componentInstructions || undefined,
+        extraInstructions: buildCopyExtraInstructions("authority-context-insight", componentInstructions),
         outputStructure,
       });
       onOutputsChange(result.output);
@@ -199,7 +200,7 @@ const AuthorityContextInsightUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: focus,
+        extraInstructions: buildCopyExtraInstructions("authority-context-insight", focus, { focusFieldKey: fieldKey }),
         outputStructure,
       });
       if (result.output && result.output[fieldKey] !== undefined && result.output[fieldKey] !== "") {
