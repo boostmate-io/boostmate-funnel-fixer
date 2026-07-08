@@ -1,3 +1,4 @@
+import { isCtaFieldHidden } from "@/lib/copy/outputFilters";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -66,7 +67,7 @@ const PAIN_ANGLES = [
 ];
 
 const CTA_OPTIONS: Option[] = [
-  { value: "reuse_hero", label: "Reuse Hero CTA" },
+  { value: "reuse_hero", label: "No CTA (use Hero CTA above)" },
   { value: "generate_new", label: "Generate New CTA" },
 ];
 
@@ -270,7 +271,7 @@ const PainPointsUI = ({
       {hasOutput && (
         <div className="space-y-4 pt-2">
           <h4 className="text-sm font-display font-bold text-foreground">Generated Output</h4>
-          {outputKeys.map(key => outputs[key] ? (
+          {outputKeys.filter(key => !isCtaFieldHidden(key, inputs)).map(key => outputs[key] ? (
             <div key={key} className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label className="text-xs capitalize">{key.replace(/_/g, " ")}</Label>
