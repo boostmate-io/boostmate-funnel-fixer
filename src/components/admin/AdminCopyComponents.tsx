@@ -172,6 +172,8 @@ const AdminCopyComponents = () => {
         required_blueprint_fields: (editing.required_blueprint_fields || []) as any,
         is_active: editing.is_active ?? true,
         sort_order: editing.sort_order ?? 0,
+        headline_purpose: editing.headline_purpose || "none",
+        headline_instruction_block_id: editing.headline_instruction_block_id || null,
       };
 
       if (editing.id) {
