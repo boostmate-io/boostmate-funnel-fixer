@@ -4,7 +4,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Trash2, Settings2, Eye, PenTool, Sparkles, Loader2,
-  ChevronUp, ChevronDown, LayoutList, icons, Gem, AlertTriangle,
+  ChevronUp, ChevronDown, LayoutList, icons, Gem, AlertTriangle, Copy, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import ComponentUIRenderer from "./ComponentUIRenderer";
 import { executeAIAction } from "@/lib/api/aiActions";
 import { buildScopedBlueprintContext, getMissingBlueprintFields } from "@/lib/blueprintFields";
+import { isCtaFieldHidden } from "@/lib/copy/outputFilters";
+
 
 function LucideIcon({ name, className }: { name: string; className?: string }) {
   const IconComp = (icons as any)[name];
