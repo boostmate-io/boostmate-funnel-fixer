@@ -76,6 +76,7 @@ interface OutputField {
   key: string;
   label: string;
   type: "text" | "array";
+  role?: string;
 }
 
 interface CopyComponent {
@@ -92,6 +93,8 @@ interface CopyComponent {
   required_blueprint_fields: string[];
   is_active: boolean;
   sort_order: number;
+  headline_purpose?: string | null;
+  headline_instruction_block_id?: string | null;
 }
 
 interface AIAction {
@@ -99,19 +102,49 @@ interface AIAction {
   name: string;
 }
 
+interface InstructionBlock {
+  id: string;
+  name: string;
+}
+
+const HEADLINE_PURPOSES: Array<{ value: string; label: string }> = [
+  { value: "none", label: "None (no headline guidance)" },
+  { value: "section_introduction", label: "Section Introduction" },
+  { value: "persuasive", label: "Persuasive Headline" },
+  { value: "cta", label: "CTA Headline" },
+  { value: "story", label: "Story Headline" },
+  { value: "proof", label: "Proof Headline" },
+  { value: "custom", label: "Custom" },
+];
+
+const FIELD_ROLES: Array<{ value: string; label: string }> = [
+  { value: "", label: "— none —" },
+  { value: "section_headline", label: "Section headline (intro)" },
+  { value: "persuasive_headline", label: "Persuasive headline" },
+  { value: "cta_headline", label: "CTA headline" },
+  { value: "story_headline", label: "Story headline" },
+  { value: "proof_headline", label: "Proof headline" },
+  { value: "subheadline", label: "Subheadline" },
+  { value: "body", label: "Body" },
+  { value: "item", label: "Item" },
+];
+
 const AdminCopyComponents = () => {
   const [components, setComponents] = useState<CopyComponent[]>([]);
   const [aiActions, setAIActions] = useState<AIAction[]>([]);
+  const [instructionBlocks, setInstructionBlocks] = useState<InstructionBlock[]>([]);
   const [editing, setEditing] = useState<Partial<CopyComponent> | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [{ data: c }, { data: a }] = await Promise.all([
+    const [{ data: c }, { data: a }, { data: b }] = await Promise.all([
       supabase.from("copy_components").select("*").order("sort_order"),
       supabase.from("ai_actions").select("slug, name").eq("is_active", true).order("name"),
+      supabase.from("ai_instruction_blocks").select("id, name").order("name"),
     ]);
     if (c) setComponents(c as unknown as CopyComponent[]);
     if (a) setAIActions(a as unknown as AIAction[]);
+    if (b) setInstructionBlocks(b as unknown as InstructionBlock[]);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -139,6 +172,8 @@ const AdminCopyComponents = () => {
         required_blueprint_fields: (editing.required_blueprint_fields || []) as any,
         is_active: editing.is_active ?? true,
         sort_order: editing.sort_order ?? 0,
+        headline_purpose: editing.headline_purpose || "none",
+        headline_instruction_block_id: editing.headline_instruction_block_id || null,
       };
 
       if (editing.id) {
@@ -261,6 +296,53 @@ const AdminCopyComponents = () => {
                 />
               </div>
 
+              {/* Headline configuration — drives how the section headline of this
+                  component is generated. The linked instruction block content is
+                  appended to the AI prompt whenever a headline-role field is
+                  generated (full section or single-field regeneration). Content
+                  itself lives in ai_instruction_blocks so it stays admin-editable. */}
+              <div className="space-y-1.5 rounded-md border border-border bg-muted/20 p-3">
+                <Label className="text-xs font-medium">Headline Configuration</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Determines how this component's headline is generated. The linked instruction block is appended to the AI prompt when generating any field marked as a headline role.
+                </p>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Headline Purpose</Label>
+                    <Select
+                      value={editing.headline_purpose || "none"}
+                      onValueChange={v => setEditing({ ...editing, headline_purpose: v })}
+                    >
+                      <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {HEADLINE_PURPOSES.map(p => (
+                          <SelectItem key={p.value} value={p.value} className="text-xs">{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Headline Instruction Block</Label>
+                    <Select
+                      value={editing.headline_instruction_block_id || "__none__"}
+                      onValueChange={v => setEditing({ ...editing, headline_instruction_block_id: v === "__none__" ? null : v })}
+                    >
+                      <SelectTrigger className="text-xs h-8"><SelectValue placeholder="No block" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__" className="text-xs">— none —</SelectItem>
+                        {instructionBlocks.map(b => (
+                          <SelectItem key={b.id} value={b.id} className="text-xs">{b.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground pt-1">
+                  Edit block content via <strong>Admin → Instruction Blocks</strong>. Changes propagate to every component linking to that block.
+                </p>
+              </div>
+
+
               {/* Required Business Blueprint fields — used to (a) warn the user
                   before generating and (b) scope the AI context to only what
                   matters for this component. */}
@@ -379,6 +461,23 @@ const AdminCopyComponents = () => {
                       <SelectContent>
                         <SelectItem value="text">Text</SelectItem>
                         <SelectItem value="array">Array</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={field.role || "__none__"}
+                      onValueChange={v => {
+                        const current = [...((editing.output_structure as OutputField[]) || [])];
+                        current[idx] = { ...current[idx], role: v === "__none__" ? undefined : v };
+                        setEditing({ ...editing, output_structure: current });
+                      }}
+                    >
+                      <SelectTrigger className="text-xs h-8 w-40" title="Field role — headline roles receive extra AI guidance">
+                        <SelectValue placeholder="role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FIELD_ROLES.map(r => (
+                          <SelectItem key={r.value || "none"} value={r.value || "__none__"} className="text-xs">{r.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Button

@@ -723,6 +723,8 @@ export type Database = {
           config: Json
           created_at: string
           description: string
+          headline_instruction_block_id: string | null
+          headline_purpose: string
           icon: string
           id: string
           instructions: string
@@ -740,6 +742,8 @@ export type Database = {
           config?: Json
           created_at?: string
           description?: string
+          headline_instruction_block_id?: string | null
+          headline_purpose?: string
           icon?: string
           id?: string
           instructions?: string
@@ -757,6 +761,8 @@ export type Database = {
           config?: Json
           created_at?: string
           description?: string
+          headline_instruction_block_id?: string | null
+          headline_purpose?: string
           icon?: string
           id?: string
           instructions?: string
@@ -769,7 +775,15 @@ export type Database = {
           ui_interface_slug?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "copy_components_headline_instruction_block_id_fkey"
+            columns: ["headline_instruction_block_id"]
+            isOneToOne: false
+            referencedRelation: "ai_instruction_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       copy_document_components: {
         Row: {

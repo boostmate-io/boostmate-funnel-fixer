@@ -14,10 +14,11 @@ interface Props {
   componentSlug: string;
   aiActionSlug: string;
   componentInstructions: string;
+  headlineInstructions?: string;
   context: string;
   inputs: Record<string, any>;
   outputs: Record<string, any>;
-  outputStructure?: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
+  outputStructure?: Array<{ key: string; label: string; type: string; role?: string; item_schema?: any[] }>;
   onInputsChange: (inputs: Record<string, any>) => void;
   onOutputsChange: (outputs: Record<string, any>) => void;
   onGenerated: () => void;
@@ -129,7 +130,7 @@ const PatternPicker = ({
 );
 
 const DesiredOutcomesUI = ({
-  aiActionSlug, componentInstructions, context, inputs, outputs, outputStructure,
+  aiActionSlug, componentInstructions, headlineInstructions, context, inputs, outputs, outputStructure,
   onInputsChange, onOutputsChange, onGenerated,
 }: Props) => {
   const [generating, setGenerating] = useState(false);
@@ -149,7 +150,7 @@ const DesiredOutcomesUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: buildCopyExtraInstructions("desired-outcomes", componentInstructions),
+        extraInstructions: buildCopyExtraInstructions(headlineInstructions, componentInstructions, { outputStructure }),
         outputStructure,
       });
       onOutputsChange(result.output);
@@ -174,7 +175,7 @@ const DesiredOutcomesUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: buildCopyExtraInstructions("desired-outcomes", focus, { focusFieldKey: fieldKey }),
+        extraInstructions: buildCopyExtraInstructions(headlineInstructions, focus, { focusFieldKey: fieldKey, outputStructure }),
         outputStructure,
       });
       if (result.output && result.output[fieldKey] !== undefined && result.output[fieldKey] !== "") {
