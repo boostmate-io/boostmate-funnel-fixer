@@ -139,6 +139,19 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
 
   useEffect(() => { load(); }, [load]);
 
+  // When switching to preview, scroll to the currently active component from the builder
+  useEffect(() => {
+    if (activeView !== "preview") return;
+    const target = docComponents[activeComponentIdx];
+    if (!target) return;
+    // Wait for the preview DOM to mount
+    const id = `preview-section-${target.id}`;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      el?.scrollIntoView({ behavior: "auto", block: "start" });
+    });
+  }, [activeView, activeComponentIdx, docComponents]);
+
   const getHeadlineInstructions = useCallback(
     (def: CopyComponentDef | undefined) => {
       if (!def) return "";
