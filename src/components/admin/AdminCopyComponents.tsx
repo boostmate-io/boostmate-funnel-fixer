@@ -464,10 +464,10 @@ const AdminCopyComponents = () => {
                       </SelectContent>
                     </Select>
                     <Select
-                      value={field.role || ""}
+                      value={field.role || "__none__"}
                       onValueChange={v => {
                         const current = [...((editing.output_structure as OutputField[]) || [])];
-                        current[idx] = { ...current[idx], role: v || undefined };
+                        current[idx] = { ...current[idx], role: v === "__none__" ? undefined : v };
                         setEditing({ ...editing, output_structure: current });
                       }}
                     >
