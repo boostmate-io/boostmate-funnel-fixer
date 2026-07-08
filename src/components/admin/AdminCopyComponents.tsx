@@ -296,6 +296,53 @@ const AdminCopyComponents = () => {
                 />
               </div>
 
+              {/* Headline configuration — drives how the section headline of this
+                  component is generated. The linked instruction block content is
+                  appended to the AI prompt whenever a headline-role field is
+                  generated (full section or single-field regeneration). Content
+                  itself lives in ai_instruction_blocks so it stays admin-editable. */}
+              <div className="space-y-1.5 rounded-md border border-border bg-muted/20 p-3">
+                <Label className="text-xs font-medium">Headline Configuration</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Determines how this component's headline is generated. The linked instruction block is appended to the AI prompt when generating any field marked as a headline role.
+                </p>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Headline Purpose</Label>
+                    <Select
+                      value={editing.headline_purpose || "none"}
+                      onValueChange={v => setEditing({ ...editing, headline_purpose: v })}
+                    >
+                      <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {HEADLINE_PURPOSES.map(p => (
+                          <SelectItem key={p.value} value={p.value} className="text-xs">{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Headline Instruction Block</Label>
+                    <Select
+                      value={editing.headline_instruction_block_id || "__none__"}
+                      onValueChange={v => setEditing({ ...editing, headline_instruction_block_id: v === "__none__" ? null : v })}
+                    >
+                      <SelectTrigger className="text-xs h-8"><SelectValue placeholder="No block" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__" className="text-xs">— none —</SelectItem>
+                        {instructionBlocks.map(b => (
+                          <SelectItem key={b.id} value={b.id} className="text-xs">{b.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground pt-1">
+                  Edit block content via <strong>Admin → Instruction Blocks</strong>. Changes propagate to every component linking to that block.
+                </p>
+              </div>
+
+
               {/* Required Business Blueprint fields — used to (a) warn the user
                   before generating and (b) scope the AI context to only what
                   matters for this component. */}
