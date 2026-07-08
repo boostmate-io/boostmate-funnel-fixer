@@ -21,10 +21,11 @@ interface ComponentUIRendererProps {
   componentSlug: string;
   aiActionSlug: string;
   componentInstructions: string;
+  headlineInstructions?: string;
   context: string;
   inputs: Record<string, any>;
   outputs: Record<string, any>;
-  outputStructure?: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
+  outputStructure?: Array<{ key: string; label: string; type: string; role?: string; item_schema?: any[] }>;
   onInputsChange: (inputs: Record<string, any>) => void;
   onOutputsChange: (outputs: Record<string, any>) => void;
   onGenerated: () => void;
