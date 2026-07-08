@@ -444,6 +444,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     componentSlug={activeDef.slug}
                     aiActionSlug={activeDef.ai_action_slug}
                     componentInstructions={[globalInstructions, activeDef.instructions].filter(Boolean).join("\n\n")}
+                    headlineInstructions={getHeadlineInstructions(activeDef)}
                     context={getContextForComponent(activeDef)}
                     inputs={activeComp.inputs as Record<string, any>}
                     outputs={activeComp.outputs as Record<string, any>}
