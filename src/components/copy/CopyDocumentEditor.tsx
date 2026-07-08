@@ -4,7 +4,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Trash2, Settings2, Eye, PenTool, Sparkles, Loader2,
-  ChevronUp, ChevronDown, LayoutList, icons, Gem, AlertTriangle,
+  ChevronUp, ChevronDown, LayoutList, icons, Gem, AlertTriangle, Copy, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import ComponentUIRenderer from "./ComponentUIRenderer";
 import { executeAIAction } from "@/lib/api/aiActions";
 import { buildScopedBlueprintContext, getMissingBlueprintFields } from "@/lib/blueprintFields";
+import { isCtaFieldHidden } from "@/lib/copy/outputFilters";
+
 
 function LucideIcon({ name, className }: { name: string; className?: string }) {
   const IconComp = (icons as any)[name];
@@ -84,6 +86,8 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
   const [editingName, setEditingName] = useState(false);
   const [blueprint, setBlueprint] = useState<any>(null);
   const [headlineBlocks, setHeadlineBlocks] = useState<Record<string, string>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
 
   const load = useCallback(async () => {
     const offersQuery = activeSubAccountId
@@ -546,6 +550,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                   {docComponents.map(dc => {
                     const def = componentDefs.find(d => d.slug === dc.component_slug);
                     const outputs = (dc.outputs || {}) as Record<string, any>;
+                    const inputs = (dc.inputs || {}) as Record<string, any>;
                     const structureKeys = (def?.output_structure || []).map(o => o.key);
                     const labelMap = new Map((def?.output_structure || []).map(o => [o.key, o.label]));
                     const rawKeys = Object.keys(outputs).filter(k => {
@@ -555,7 +560,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     const outputKeys = [
                       ...structureKeys.filter(k => rawKeys.includes(k)),
                       ...rawKeys.filter(k => !structureKeys.includes(k)),
-                    ];
+                    ].filter(k => !isCtaFieldHidden(k, inputs));
                     const title = def?.name || dc.component_slug;
                     if (outputKeys.length === 0) return (
                       <div key={dc.id} id={`preview-section-${dc.id}`} className="scroll-mt-6 p-6 border border-dashed border-border rounded-lg bg-background text-center text-sm text-muted-foreground">
@@ -563,10 +568,45 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                         Not generated yet
                       </div>
                     );
+
+                    const copySection = async () => {
+                      const parts: string[] = [title.toUpperCase(), ""];
+                      outputKeys.forEach(key => {
+                        const label = labelMap.get(key) || key.replace(/_/g, " ");
+                        const value = outputs[key];
+                        parts.push(label);
+                        if (Array.isArray(value)) {
+                          (value as any[]).forEach(item => {
+                            parts.push(`- ${typeof item === "string" ? item : JSON.stringify(item)}`);
+                          });
+                        } else {
+                          parts.push(String(value ?? ""));
+                        }
+                        parts.push("");
+                      });
+                      try {
+                        await navigator.clipboard.writeText(parts.join("\n").trim() + "\n");
+                        setCopiedId(dc.id);
+                        toast.success(`Copied "${title}"`);
+                        setTimeout(() => setCopiedId(prev => (prev === dc.id ? null : prev)), 1500);
+                      } catch {
+                        toast.error("Copy failed");
+                      }
+                    };
+
                     return (
                       <section key={dc.id} id={`preview-section-${dc.id}`} className="scroll-mt-6 rounded-lg border border-border bg-background shadow-sm overflow-hidden">
-                        <header className="px-5 py-3 border-b border-border bg-muted/40">
+                        <header className="px-5 py-3 border-b border-border bg-muted/40 flex items-center justify-between gap-3">
                           <h3 className="text-sm font-display font-bold text-foreground uppercase tracking-wider">{title}</h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            onClick={copySection}
+                            title={`Copy ${title}`}
+                          >
+                            {copiedId === dc.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </Button>
                         </header>
                         <div className="p-5 space-y-4">
                           {outputKeys.map(key => {
@@ -594,6 +634,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                         </div>
                       </section>
                     );
+
                   })}
                 </div>
               )}

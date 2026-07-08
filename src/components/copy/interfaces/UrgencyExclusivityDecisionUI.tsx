@@ -82,7 +82,7 @@ const RIGHT_FOCUS: Option[] = [
 ];
 
 const CTA_OPTIONS: Option[] = [
-  { value: "reuse_hero", label: "Reuse Hero CTA" },
+  { value: "reuse_hero", label: "No CTA (use Hero CTA above)" },
   { value: "generate_new", label: "Generate New CTA" },
 ];
 
@@ -374,7 +374,8 @@ const UrgencyExclusivityDecisionUI = ({
             </Card>
           </div>
 
-          {/* CTA block */}
+          {/* CTA block — hidden when reusing the Hero CTA */}
+          {inputs.cta_mode !== "reuse_hero" && (
           <div className="space-y-2">
             {["cta_button_text", "cta_subtext", "scarcity_line", "bottom_social_proof"].map(key => outputs[key] ? (
               <div key={key} className="space-y-1.5">
@@ -390,6 +391,8 @@ const UrgencyExclusivityDecisionUI = ({
               </div>
             ) : null)}
           </div>
+          )}
+
         </div>
       )}
     </div>
