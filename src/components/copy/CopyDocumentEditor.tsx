@@ -83,6 +83,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
   const [generatingAll, setGeneratingAll] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [blueprint, setBlueprint] = useState<any>(null);
+  const [headlineBlocks, setHeadlineBlocks] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const offersQuery = activeSubAccountId
@@ -95,14 +96,35 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
 
     const [{ data: dc }, { data: cd }, { data: fw }, { data: of }, { data: doc }, { data: bp }] = await Promise.all([
       supabase.from("copy_document_components").select("*").eq("document_id", documentId).order("sort_order"),
-      supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug, icon, output_structure, required_blueprint_fields").eq("is_active", true).order("sort_order"),
+      supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug, icon, output_structure, required_blueprint_fields, headline_purpose, headline_instruction_block_id").eq("is_active", true).order("sort_order"),
       supabase.from("copy_frameworks").select("id, name, component_slugs, type").eq("is_active", true).eq("type", documentType),
       offersQuery,
       supabase.from("copy_documents").select("context_type, context_offer_id, context_custom_text, global_instructions, name").eq("id", documentId).single(),
       blueprintQuery,
     ]);
     if (dc) setDocComponents(dc as unknown as DocumentComponent[]);
-    if (cd) setComponentDefs(cd as unknown as CopyComponentDef[]);
+    if (cd) {
+      setComponentDefs(cd as unknown as CopyComponentDef[]);
+      // Resolve linked headline instruction blocks in one query
+      const blockIds = Array.from(
+        new Set(
+          (cd as any[])
+            .map((c) => c.headline_instruction_block_id)
+            .filter((v): v is string => !!v),
+        ),
+      );
+      if (blockIds.length > 0) {
+        const { data: blocks } = await supabase
+          .from("ai_instruction_blocks")
+          .select("id, content")
+          .in("id", blockIds);
+        const map: Record<string, string> = {};
+        (blocks || []).forEach((b: any) => { map[b.id] = b.content || ""; });
+        setHeadlineBlocks(map);
+      } else {
+        setHeadlineBlocks({});
+      }
+    }
     if (fw) setFrameworks(fw as unknown as CopyFramework[]);
     if (of) setOffers(of as unknown as Offer[]);
     if (doc) {
@@ -116,6 +138,16 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
   }, [documentId, documentType, documentName, activeSubAccountId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const getHeadlineInstructions = useCallback(
+    (def: CopyComponentDef | undefined) => {
+      if (!def) return "";
+      const id = def.headline_instruction_block_id;
+      if (!id) return "";
+      return headlineBlocks[id] || "";
+    },
+    [headlineBlocks],
+  );
 
   const getContext = useCallback(() => {
     if (contextType === "offer" && contextOfferId) {
