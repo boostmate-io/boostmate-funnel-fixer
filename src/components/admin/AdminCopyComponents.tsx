@@ -463,6 +463,23 @@ const AdminCopyComponents = () => {
                         <SelectItem value="array">Array</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Select
+                      value={field.role || ""}
+                      onValueChange={v => {
+                        const current = [...((editing.output_structure as OutputField[]) || [])];
+                        current[idx] = { ...current[idx], role: v || undefined };
+                        setEditing({ ...editing, output_structure: current });
+                      }}
+                    >
+                      <SelectTrigger className="text-xs h-8 w-40" title="Field role — headline roles receive extra AI guidance">
+                        <SelectValue placeholder="role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FIELD_ROLES.map(r => (
+                          <SelectItem key={r.value || "none"} value={r.value || "__none__"} className="text-xs">{r.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button
                       variant="ghost"
                       size="icon"
