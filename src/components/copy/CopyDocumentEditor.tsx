@@ -86,6 +86,8 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
   const [editingName, setEditingName] = useState(false);
   const [blueprint, setBlueprint] = useState<any>(null);
   const [headlineBlocks, setHeadlineBlocks] = useState<Record<string, string>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
 
   const load = useCallback(async () => {
     const offersQuery = activeSubAccountId
