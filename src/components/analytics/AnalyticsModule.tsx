@@ -146,6 +146,9 @@ const AnalyticsModule = ({
             periodEnd={period.end}
             refreshKey={refreshKey}
             client={activeClient}
+            selectedKPIs={selectedKPIs}
+            onSelectedKPIsChange={setSelectedKPIs}
+            readOnly={readOnly}
           />
 
           <div>
