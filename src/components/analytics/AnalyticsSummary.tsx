@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TrendingUp, TrendingDown, DollarSign, Eye } from "lucide-react";
-import { ReactFlow, Background, ReactFlowProvider, type Node, type Edge } from "@xyflow/react";
+import { ReactFlow, Background, ReactFlowProvider, type Node, type Edge, MarkerType } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { format } from "date-fns";
 import { getMetricsForNodeType } from "./metricDefinitions";
-import { filterTrackableNodes, isTrackableNode } from "./nodeFilters";
+import { isTrackableNode, filterAndRewireEdges } from "./nodeFilters";
 import AnalyticsFunnelNode from "./AnalyticsFunnelNode";
 import AnalyticsTrafficNode from "./AnalyticsTrafficNode";
 
@@ -21,6 +22,9 @@ interface AnalyticsSummaryProps {
   funnelId: string;
   nodes: any[];
   edges: any[];
+  periodStart: Date;
+  periodEnd: Date;
+  refreshKey?: number;
 }
 
 interface StepAggregate {
@@ -30,7 +34,7 @@ interface StepAggregate {
   days: number;
 }
 
-const AnalyticsSummaryInner = ({ funnelId, nodes, edges }: AnalyticsSummaryProps) => {
+const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd, refreshKey }: AnalyticsSummaryProps) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [entries, setEntries] = useState<any[]>([]);
@@ -40,12 +44,15 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges }: AnalyticsSummaryProps
     if (!funnelId) return;
     const load = async () => {
       setLoading(true);
+      const startStr = format(periodStart, "yyyy-MM-dd");
+      const endStr = format(periodEnd, "yyyy-MM-dd");
       const { data: entryData } = await supabase
         .from("funnel_analytics_entries")
         .select("id, date")
         .eq("funnel_id", funnelId)
-        .order("date", { ascending: false })
-        .limit(30);
+        .gte("date", startStr)
+        .lte("date", endStr)
+        .order("date", { ascending: false });
 
       if (!entryData?.length) {
         setEntries([]);
@@ -65,7 +72,7 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges }: AnalyticsSummaryProps
       setLoading(false);
     };
     load();
-  }, [funnelId]);
+  }, [funnelId, periodStart, periodEnd, refreshKey]);
 
   const { totalSpend, totalRevenue, totalDays, roas, stepAggregates, stepAggregateMap } = useMemo(() => {
     let totalSpend = 0;
@@ -108,22 +115,22 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges }: AnalyticsSummaryProps
     return { totalSpend, totalRevenue, totalDays, roas, stepAggregates, stepAggregateMap: stepMap };
   }, [entries, stepMetrics, nodes]);
 
-  // Build ReactFlow nodes with injected analytics metrics
+  // Filter non-trackable nodes and rewire edges around them
+  const filtered = useMemo(() => filterAndRewireEdges(nodes, edges), [nodes, edges]);
+
   const flowNodes: Node[] = useMemo(() => {
-    return nodes.map((n: any) => {
+    return filtered.nodes.map((n: any) => {
       const agg = stepAggregateMap.get(n.id);
       const analyticsMetrics: { label: string; value: string }[] = [];
 
       if (agg) {
         const nodeType = n.type === "trafficSource" ? "trafficSource" : (n.data?.pageType || "opt-in");
         const fields = getMetricsForNodeType(nodeType);
-        // Recompute calculated fields
         const computed: Record<string, number | null> = {};
         fields.forEach((f) => {
           if (f.computed) computed[f.key] = f.computed(agg.totals);
         });
 
-        // Pick top 3 most relevant metrics to show
         const displayFields = fields.slice(0, 4);
         displayFields.forEach((f) => {
           const val = f.computed ? computed[f.key] : agg.totals[f.key];
@@ -144,18 +151,19 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges }: AnalyticsSummaryProps
         selectable: false,
       };
     });
-  }, [nodes, stepAggregateMap]);
+  }, [filtered.nodes, stepAggregateMap]);
 
   const flowEdges: Edge[] = useMemo(() => {
-    return edges.map((e: any) => ({
+    return filtered.edges.map((e: any) => ({
       ...e,
       animated: true,
-      style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+      style: { stroke: "hsl(252, 100%, 64%)", strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(252, 100%, 64%)" },
     }));
-  }, [edges]);
+  }, [filtered.edges]);
 
   if (loading) return <div className="text-muted-foreground text-sm py-4">{t("analytics.loading")}</div>;
-  if (!entries.length) return null;
+  if (!entries.length) return <div className="text-muted-foreground text-sm py-4">{t("analytics.noHistory")}</div>;
 
   return (
     <div className="space-y-6">
@@ -173,7 +181,7 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges }: AnalyticsSummaryProps
       </div>
 
       {/* Funnel visualization with metrics */}
-      <div className="w-full h-[320px] rounded-lg border border-border bg-background overflow-hidden">
+      <div className="w-full h-[420px] rounded-lg border border-border bg-background overflow-hidden">
         <ReactFlow
           nodes={flowNodes}
           edges={flowEdges}
@@ -184,7 +192,7 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges }: AnalyticsSummaryProps
           panOnDrag
           zoomOnScroll
           fitView
-          fitViewOptions={{ padding: 0.3 }}
+          fitViewOptions={{ padding: 0.2 }}
           proOptions={{ hideAttribution: true }}
         >
           <Background gap={16} size={1} />

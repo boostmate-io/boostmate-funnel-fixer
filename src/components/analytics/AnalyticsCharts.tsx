@@ -11,6 +11,9 @@ import { isTrackableNode } from "./nodeFilters";
 interface AnalyticsChartsProps {
   funnelId: string;
   nodes: any[];
+  periodStart: Date;
+  periodEnd: Date;
+  refreshKey?: number;
 }
 
 interface DayData {
@@ -27,7 +30,7 @@ const COLORS = [
   "hsl(280, 70%, 55%)",
 ];
 
-const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
+const AnalyticsCharts = ({ funnelId, nodes, periodStart, periodEnd, refreshKey }: AnalyticsChartsProps) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [entries, setEntries] = useState<any[]>([]);
@@ -38,12 +41,15 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
     if (!funnelId) return;
     const load = async () => {
       setLoading(true);
+      const startStr = format(periodStart, "yyyy-MM-dd");
+      const endStr = format(periodEnd, "yyyy-MM-dd");
       const { data: entryData } = await supabase
         .from("funnel_analytics_entries")
         .select("id, date")
         .eq("funnel_id", funnelId)
-        .order("date", { ascending: true })
-        .limit(30);
+        .gte("date", startStr)
+        .lte("date", endStr)
+        .order("date", { ascending: true });
 
       if (!entryData?.length) {
         setEntries([]);
@@ -63,11 +69,10 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
       setLoading(false);
     };
     load();
-  }, [funnelId]);
+  }, [funnelId, periodStart, periodEnd, refreshKey]);
 
   const trackableIds = useMemo(() => new Set(nodes.filter(isTrackableNode).map((n: any) => n.id)), [nodes]);
 
-  // Build node options for the filter
   const nodeOptions = useMemo(() => {
     const seen = new Map<string, string>();
     stepMetrics.forEach((sm) => {
@@ -79,29 +84,18 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
     return Array.from(seen.entries()).map(([id, label]) => ({ id, label }));
   }, [stepMetrics, trackableIds]);
 
-  // Build available metric keys for selected node(s)
   const { chartData, metricKeys, chartConfig } = useMemo(() => {
     const dateMap = new Map<string, Record<string, number>>();
+    entries.forEach((e) => { dateMap.set(e.id, {}); });
 
-    // Initialize dates
-    entries.forEach((e) => {
-      dateMap.set(e.id, {});
-    });
-
-    const dateById = new Map<string, string>();
-    entries.forEach((e) => dateById.set(e.id, e.date));
-
-    // Collect relevant metrics
     const relevantMetrics = (selectedNode === "__all__"
       ? stepMetrics
       : stepMetrics.filter((sm) => sm.node_id === selectedNode)
     ).filter((sm) => trackableIds.has(sm.node_id));
 
-    // For "__all__", aggregate totals per date; for single node, show that node's metrics
     const allMetricKeys = new Set<string>();
 
     if (selectedNode === "__all__") {
-      // Show total spend, total revenue, total visitors, total conversions
       relevantMetrics.forEach((sm) => {
         const m = (sm.metrics as Record<string, number>) || {};
         const existing = dateMap.get(sm.entry_id) || {};
@@ -112,7 +106,6 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
         dateMap.set(sm.entry_id, existing);
       });
     } else {
-      // Single node: get the node type's defined metrics
       const nodeInfo = nodes.find((n: any) => n.id === selectedNode);
       const nodeType = nodeInfo?.type === "trafficSource" ? "trafficSource" : (nodeInfo?.data?.pageType || "opt-in");
       const fields = getMetricsForNodeType(nodeType);
@@ -124,34 +117,29 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
       });
     }
 
-    // Remove computed percentage fields from "all" view to avoid nonsense aggregations
     if (selectedNode === "__all__") {
       ["conversion_rate", "completion_rate", "acceptance_rate", "open_rate", "click_rate", "cpc"].forEach((k) => allMetricKeys.delete(k));
     }
 
     const metricKeys = Array.from(allMetricKeys);
 
-    // Build chart data sorted by date
     const chartData: DayData[] = entries.map((e) => {
       const row: DayData = { date: format(new Date(e.date), "dd MMM") };
       const vals = dateMap.get(e.id) || {};
-      metricKeys.forEach((k) => {
-        row[k] = vals[k] || 0;
-      });
+      metricKeys.forEach((k) => { row[k] = vals[k] || 0; });
       return row;
     });
 
-    // Build recharts config
     const chartConfig: Record<string, { label: string; color: string }> = {};
     metricKeys.forEach((k, i) => {
       chartConfig[k] = { label: k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()), color: COLORS[i % COLORS.length] };
     });
 
     return { chartData, metricKeys, chartConfig };
-  }, [entries, stepMetrics, selectedNode, nodes]);
+  }, [entries, stepMetrics, selectedNode, nodes, trackableIds]);
 
   if (loading) return <div className="text-muted-foreground text-sm py-4">{t("analytics.loading")}</div>;
-  if (!entries.length) return null;
+  if (!entries.length) return <div className="text-muted-foreground text-sm py-4">{t("analytics.noHistory")}</div>;
 
   return (
     <div className="space-y-4">
@@ -172,7 +160,6 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
       {metricKeys.length > 0 ? (
         <Card>
           <CardContent className="p-4">
-            {/* Legend */}
             <div className="flex flex-wrap gap-4 mb-4">
               {metricKeys.map((k) => (
                 <div key={k} className="flex items-center gap-1.5 text-xs">
