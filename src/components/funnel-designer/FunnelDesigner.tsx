@@ -1668,7 +1668,6 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           nodeLabel={t((detailsNode.data as any).label)}
           customLabel={(detailsNode.data as any).customLabel || ""}
           copyFrameworkId={(detailsNode.data as any).copyFrameworkId || null}
-          copyDocumentId={(detailsNode.data as any).copyDocumentId || null}
           funnelId={currentFunnel?.id || null}
           linkedOfferId={linkedOfferId}
           noteContent={(detailsNode.data as any).noteContent || ""}
