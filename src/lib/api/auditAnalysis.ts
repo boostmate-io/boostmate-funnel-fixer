@@ -56,16 +56,9 @@ export async function createFunnelFromAnalysis(
 ): Promise<string | null> {
   if (nodes.length === 0) return null;
 
-  if (sections.length > 0) {
-    const firstPageNode = nodes.find((n) => n.type === "funnelPage");
-    if (firstPageNode) {
-      firstPageNode.data.copySections = sections.map((s, i) => ({
-        id: `sec_${i}`,
-        title: s.title,
-        description: s.content,
-      }));
-    }
-  }
+  // Note: audit-generated sections are no longer attached to funnel nodes.
+  // Copy is now managed via Copy Frameworks + Copy Documents linked to nodes.
+  void sections;
 
   const { data: funnel, error } = await supabase
     .from("funnels")

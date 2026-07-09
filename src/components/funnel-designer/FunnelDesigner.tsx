@@ -178,6 +178,28 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     setLastSavedSnapshot(JSON.stringify({ n: nodes, e: edges, name: currentFunnel?.name ?? editingTemplate?.name ?? editingSeedTemplate?.name ?? "" }));
   }, [nodes, edges, currentFunnel, editingTemplate, editingSeedTemplate]);
 
+  // Copy framework → component names mapping (for node thumbnail display)
+  const [frameworkComponentNames, setFrameworkComponentNames] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [{ data: fw }, { data: comps }] = await Promise.all([
+        supabase.from("copy_frameworks").select("id, component_slugs"),
+        supabase.from("copy_components").select("slug, name"),
+      ]);
+      if (cancelled) return;
+      const nameBySlug: Record<string, string> = {};
+      (comps || []).forEach((c: any) => { nameBySlug[c.slug] = c.name; });
+      const map: Record<string, string[]> = {};
+      (fw || []).forEach((f: any) => {
+        const slugs: string[] = Array.isArray(f.component_slugs) ? f.component_slugs : (f.component_slugs?.slugs || []);
+        map[f.id] = slugs.map((s) => nameBySlug[s] || s);
+      });
+      setFrameworkComponentNames(map);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
 
   // Check admin role
   useEffect(() => {
@@ -755,11 +777,12 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     return () => window.removeEventListener("funnel-node-image-view", handler);
   }, []);
 
-  const resolveNodeCopySections = useCallback((node: Node) => {
-    if (node.type !== "funnelPage") return [] as Array<{ id: string; title: string; description: string }>;
-    const nodeData = node.data as any;
-    return nodeData.copySections ?? [];
-  }, []);
+  const resolveNodeCopyComponentNames = useCallback((node: Node): string[] => {
+    if (node.type !== "funnelPage") return [];
+    const fid = (node.data as any)?.copyFrameworkId;
+    if (!fid) return [];
+    return frameworkComponentNames[fid] || [];
+  }, [frameworkComponentNames]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -829,9 +852,11 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const saveFunnel = useCallback(async () => {
     if (!userId) return;
 
-    const persistedNodes = nodes.map((node) => node.type === "funnelPage"
-      ? { ...node, data: { ...node.data, copySections: resolveNodeCopySections(node) } }
-      : node);
+    const persistedNodes = nodes.map((node) => {
+      if (node.type !== "funnelPage") return node;
+      const { copySections, ...rest } = (node.data as any) || {};
+      return { ...node, data: rest };
+    });
 
     // If editing a seed template, save to seed_templates table
     if (editingSeedTemplate) {
@@ -903,7 +928,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       }
     }
     loadFunnels();
-  }, [currentFunnel, nodes, edges, t, loadFunnels, loadTemplates, userId, activeSubAccountId, resolveNodeCopySections, editingSeedTemplate, editingTemplate, loadSeedTemplates]);
+  }, [currentFunnel, nodes, edges, t, loadFunnels, loadTemplates, userId, activeSubAccountId, editingSeedTemplate, editingTemplate, loadSeedTemplates]);
 
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeSubAccountId) return;
@@ -1016,9 +1041,11 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
 
   const createNewFunnel = useCallback(async () => {
     if (!userId || !activeSubAccountId) return;
-    const persistedNodes = nodes.map((node) => node.type === "funnelPage"
-      ? { ...node, data: { ...node.data, copySections: resolveNodeCopySections(node) } }
-      : node);
+    const persistedNodes = nodes.map((node) => {
+      if (node.type !== "funnelPage") return node;
+      const { copySections, ...rest } = (node.data as any) || {};
+      return { ...node, data: rest };
+    });
 
     const { data, error } = await supabase.from("funnels").insert({
       user_id: userId, name: funnelName || "Untitled Funnel",
@@ -1059,7 +1086,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
         } catch { /* brief cloning failed silently */ }
       }
     }
-  }, [funnelName, nodes, edges, t, loadFunnels, userId, activeSubAccountId, resolveNodeCopySections]);
+  }, [funnelName, nodes, edges, t, loadFunnels, userId, activeSubAccountId]);
 
   const deleteFunnel = useCallback(async (id: string) => {
     const { error } = await supabase.from("funnels").delete().eq("id", id);
@@ -1473,7 +1500,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                     data: {
                       ...n.data,
                       showImages,
-                      copySections: resolveNodeCopySections(n),
+                      copyComponentNames: resolveNodeCopyComponentNames(n),
                     },
                   }
                 : n;
@@ -1652,7 +1679,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           nodeImage={(detailsNode.data as any).nodeImage || ""}
           waitType={(detailsNode.data as any).waitType || "days"}
           waitDuration={(detailsNode.data as any).waitDuration}
-          copySections={resolveNodeCopySections(detailsNode)}
+          copyComponentNames={resolveNodeCopyComponentNames(detailsNode)}
           funnelName={currentFunnel?.name || ""}
           emailSubject={(detailsNode.data as any).emailSubject || ""}
           textSize={(detailsNode.data as any).textSize}

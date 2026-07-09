@@ -21,7 +21,7 @@ type FunnelNodeData = {
   showImages?: boolean;
   readOnly?: boolean;
   connectedHandles?: string[]; // e.g. ["target-left","target-top","source-yes","source-no"]
-  copySections?: Array<{ id?: string; title: string; description?: string }>;
+  copyComponentNames?: string[];
   // Text styling
   textSize?: number;
   textBold?: boolean;
@@ -357,7 +357,7 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
     window.dispatchEvent(new CustomEvent("funnel-node-dblclick", { detail: { nodeId: id } }));
   }, [id]);
 
-  const copySections = nodeData.copySections ?? [];
+  const copyComponentNames = nodeData.copyComponentNames ?? [];
 
   if (renderStyle === "shape") return <div onDoubleClickCapture={handleDoubleClick}><ShapeStyleRender nodeData={nodeData} onDoubleClick={handleDoubleClick} nodeId={id} /></div>;
   if (renderStyle === "note") return <div onDoubleClickCapture={handleDoubleClick}><NoteStyleRender nodeData={nodeData} /></div>;
@@ -415,11 +415,11 @@ const FunnelNode = memo(({ data, id }: NodeProps) => {
         ) : (
           <div className="space-y-2">
             <WireframeComponent color={nodeData.color} />
-            {!isImageMode && copySections.length > 0 && (
+            {!isImageMode && copyComponentNames.length > 0 && (
               <div className="border-t border-border px-1 pt-2 space-y-1">
-                {copySections.map((section, index) => (
-                  <div key={section.id || `${section.title}-${index}`} className="text-[9px] leading-tight text-muted-foreground break-words border border-border rounded px-1.5 py-1">
-                    {section.title}
+                {copyComponentNames.map((name, index) => (
+                  <div key={`${name}-${index}`} className="text-[9px] leading-tight text-muted-foreground break-words border border-border rounded px-1.5 py-1">
+                    {name}
                   </div>
                 ))}
               </div>
