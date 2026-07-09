@@ -395,16 +395,29 @@
       "quarter": "Quarterly"
     },
     "dataEntries": "Data entries",
+    "renameMetric": "Rename label",
+    "resetLabel": "Reset to default label",
     "savedViews": {
       "title": "Views",
+      "active": "active",
       "saveCurrent": "Save current view...",
-      "saved": "Saved views",
+      "saveChanges": "Save changes...",
+      "saveAsNew": "Save as new",
+      "overwrite": "Overwrite current",
+      "overwritten": "View updated",
+      "saveChoiceTitle": "Save view",
+      "saveChoiceDesc": "Do you want to overwrite \"{{name}}\" or save these changes as a new view?",
+      "clearActive": "Deactivate current view",
+      "saved": "View saved",
       "namePlaceholder": "View name",
       "setDefault": "Set as default",
       "unsetDefault": "Unset default",
       "defaultSet": "Set as default",
       "deleted": "View deleted",
-      "saveError": "Failed to save"
+      "deleteView": "Delete view",
+      "saveError": "Failed to save",
+      "cancel": "Cancel",
+      "saveButton": "Save"
     }
   },
   "agency": {
