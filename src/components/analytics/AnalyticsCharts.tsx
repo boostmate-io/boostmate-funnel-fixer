@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 import { format } from "date-fns";
 import { getMetricsForNodeType } from "./metricDefinitions";
+import { isTrackableNode } from "./nodeFilters";
 
 interface AnalyticsChartsProps {
   funnelId: string;
