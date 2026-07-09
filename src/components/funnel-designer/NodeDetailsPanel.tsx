@@ -581,48 +581,27 @@ const NodeDetailsPanel = ({
               </div>
             )}
 
-            {copyDocumentId ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-foreground bg-primary/5 border border-primary/20 rounded-md px-2 py-1.5">
-                  <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span className="truncate flex-1">{linkedDocName || t("funnelDesigner.copyFramework.documentLinked")}</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs flex-1"
-                    onClick={() => onOpenCopyDocument?.(copyDocumentId)}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 mr-1" /> {t("funnelDesigner.copyFramework.openDocument")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2"
-                    onClick={() => setNodeData("copyDocumentId", null)}
-                    title={t("funnelDesigner.copyFramework.unlink")}
-                  >
-                    <Unlink className="w-3.5 h-3.5 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              copyFrameworkId && (
-                <Button
-                  size="sm"
-                  className="h-8 text-xs w-full"
-                  disabled={creatingDoc || !activeSubAccountId}
-                  onClick={createCopyDocument}
-                >
-                  <Plus className="w-3.5 h-3.5 mr-1" />
-                  {creatingDoc
-                    ? t("funnelDesigner.copyFramework.creating")
-                    : t("funnelDesigner.copyFramework.createDocument")}
-                </Button>
-              )
-            )}
+            {/* Linked Copy Documents grid (1:N — many documents per node) */}
+            <div className="pt-2">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+                {t("funnelDesigner.copyFramework.linkedDocuments", "Linked documents")}
+              </p>
+              <NodeLinkedDocuments
+                funnelNodeId={nodeId}
+                funnelId={funnelId ?? null}
+                subAccountId={activeSubAccountId ?? null}
+                userId={userId}
+                linkedOfferId={linkedOfferId ?? null}
+                defaultFrameworkId={copyFrameworkId ?? null}
+                nodeLabel={customLabel || nodeLabel}
+                funnelName={funnelName}
+                onOpenDocument={onOpenCopyDocument}
+                client={supabaseClient}
+              />
+            </div>
           </div>
         )}
+
 
 
         {/* 5. URL field */}
