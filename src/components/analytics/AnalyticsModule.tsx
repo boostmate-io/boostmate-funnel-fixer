@@ -34,6 +34,7 @@ export interface AnalyticsViewConfig {
   period: AnalyticsPeriod;
   granularity: Granularity;
   selectedMetrics: string[] | null;
+  selectedKPIs: string[] | null;
 }
 
 interface AnalyticsModuleProps {
@@ -43,6 +44,8 @@ interface AnalyticsModuleProps {
   readOnly?: boolean;
   initialConfig?: Partial<AnalyticsViewConfig>;
   hideFunnelSelector?: boolean;
+  titleOverride?: string;
+  subtitleOverride?: string;
 }
 
 const AnalyticsModule = ({
@@ -51,6 +54,8 @@ const AnalyticsModule = ({
   readOnly = false,
   initialConfig,
   hideFunnelSelector = false,
+  titleOverride,
+  subtitleOverride,
 }: AnalyticsModuleProps = {}) => {
   const { t } = useTranslation();
   const activeClient = client || supabase;
