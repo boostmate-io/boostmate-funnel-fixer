@@ -255,6 +255,20 @@ const NodeDetailsPanel = ({
               ))}
             </div>
           )}
+          {isPageOrEmail && (
+            <div className="p-4 border-b border-border space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">
+                {t("funnelDesigner.copyFramework.linkedDocuments", "Linked documents")}
+              </label>
+              <NodeLinkedDocuments
+                funnelNodeId={nodeId}
+                funnelId={funnelId ?? null}
+                readOnly
+                onOpenDocument={onOpenCopyDocument}
+                client={supabaseClient}
+              />
+            </div>
+          )}
           {hasUrl && (
             <div className="p-4 border-b border-border">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("funnelDesigner.nodeUrl")}</label>
