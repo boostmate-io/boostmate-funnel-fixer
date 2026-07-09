@@ -34,7 +34,10 @@ const AnalyticsPeriodFilter = ({ value, onChange }: Props) => {
       onChange({ start: startOfMonth(lm), end: endOfMonth(lm), label });
     } else if (label === "ytd") onChange({ start: startOfYear(today), end: today, label });
     else if (label === "all") onChange({ start: new Date(2000, 0, 1), end: today, label });
-    else if (label === "custom") setCustomOpen(true);
+    else if (label === "custom") {
+      onChange({ start: value.start, end: value.end, label: "custom" });
+      setCustomOpen(true);
+    }
   };
 
   return (
