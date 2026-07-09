@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingUp, TrendingDown, DollarSign, Eye } from "lucide-react";
+
 import { ReactFlow, Background, ReactFlowProvider, type Node, type Edge, MarkerType } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { format } from "date-fns";
@@ -167,19 +167,6 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KPICard icon={<Eye className="w-4 h-4" />} label={t("analytics.summary.daysTracked")} value={totalDays.toString()} />
-        <KPICard icon={<DollarSign className="w-4 h-4" />} label={t("analytics.summary.totalSpend")} value={`€${totalSpend.toFixed(2)}`} variant="destructive" />
-        <KPICard icon={<TrendingUp className="w-4 h-4" />} label={t("analytics.summary.totalRevenue")} value={`€${totalRevenue.toFixed(2)}`} variant="success" />
-        <KPICard
-          icon={roas !== null && roas >= 1 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-          label={t("analytics.summary.roas")}
-          value={roas !== null ? `${roas}x` : "—"}
-          variant={roas !== null && roas >= 1 ? "success" : "destructive"}
-        />
-      </div>
-
       {/* Funnel visualization with metrics */}
       <div className="w-full h-[420px] rounded-lg border border-border bg-background overflow-hidden">
         <ReactFlow
@@ -259,21 +246,6 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
   );
 };
 
-function KPICard({ icon, label, value, variant }: { icon: React.ReactNode; label: string; value: string; variant?: "success" | "destructive" }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-          {icon}
-          {label}
-        </div>
-        <div className={`text-2xl font-display font-bold ${variant === "success" ? "text-green-600 dark:text-green-400" : variant === "destructive" ? "text-red-600 dark:text-red-400" : "text-foreground"}`}>
-          {value}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 const AnalyticsSummary = (props: AnalyticsSummaryProps) => (
   <ReactFlowProvider>

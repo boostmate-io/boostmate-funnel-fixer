@@ -352,6 +352,17 @@
     "startDate": "Start",
     "endDate": "End",
     "savePeriod": "Save Period",
+    "daysTracked": "Days Tracked",
+    "filter": {
+      "last7": "Last 7 days",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "thisMonth": "This month",
+      "lastMonth": "Last month",
+      "ytd": "Year to date",
+      "all": "All time",
+      "custom": "Custom range"
+    },
     "summary": {
       "title": "Overview",
       "daysTracked": "Days Tracked",
