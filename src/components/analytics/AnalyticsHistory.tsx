@@ -12,6 +12,8 @@ interface AnalyticsHistoryProps {
 interface EntryRow {
   id: string;
   date: string;
+  period_end: string;
+  period_type: string;
   stepMetrics: { node_label: string; node_type: string; metrics: Record<string, number> }[];
 }
 
