@@ -293,6 +293,8 @@ const AnalyticsModule = ({
             shareToken={shareToken}
             onShareTokenChange={setShareToken}
             config={currentConfig}
+            activeViewId={activeViewId}
+            activeViewName={activeViewName}
           />
         </>
       )}
