@@ -3,8 +3,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { toast } from "sonner";
-import { X, Upload, ExternalLink, Trash2, Bold, Italic, Underline, Minus, Plus, FileText, Sparkles, Unlink } from "lucide-react";
+import { X, Upload, ExternalLink, Trash2, Bold, Italic, Underline, Minus, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Toggle } from "@/components/ui/toggle";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
+import NodeLinkedDocuments from "@/components/copy/linked/NodeLinkedDocuments";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface CopyFramework {
   id: string;
@@ -62,9 +63,10 @@ interface NodeDetailsPanelProps {
   funnelId?: string | null;
   linkedOfferId?: string | null;
   copyFrameworkId?: string | null;
-  copyDocumentId?: string | null;
   readOnly?: boolean;
   emailSubject?: string;
+  /** Alternative Supabase client (used on shared / read-only pages). */
+  supabaseClient?: SupabaseClient<any, any, any>;
   // Text styling
   textSize?: number;
   textBold?: boolean;
@@ -91,10 +93,10 @@ interface NodeDetailsPanelProps {
 const NodeDetailsPanel = ({
   nodeId, nodeLabel, customLabel, noteContent, renderStyle, pageType,
   nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copyComponentNames, funnelName,
-  funnelId, linkedOfferId, copyFrameworkId, copyDocumentId,
+  funnelId, linkedOfferId, copyFrameworkId,
   readOnly, textSize, textBold, textItalic, textUnderline, textColor, themeColor,
   shapeType, shapeBorderStyle, shapeTransparent, shapeWidth, shapeHeight, shapeColor,
-  emailSubject,
+  emailSubject, supabaseClient,
   onRename, onNoteContentChange, onDataChange, onNodeDataChange, onOpenCopyDocument, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
@@ -105,8 +107,6 @@ const NodeDetailsPanel = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [frameworks, setFrameworks] = useState<CopyFramework[]>([]);
   const [componentDefs, setComponentDefs] = useState<CopyComponentDef[]>([]);
-  const [creatingDoc, setCreatingDoc] = useState(false);
-  const [linkedDocName, setLinkedDocName] = useState<string | null>(null);
 
   // Determine framework type from node context
   const frameworkType = pageType === "email" ? "email_sequence" : "sales_copy";
@@ -122,72 +122,16 @@ const NodeDetailsPanel = ({
 
   useEffect(() => { loadFrameworks(); }, [loadFrameworks]);
 
-  // Load linked doc name
-  useEffect(() => {
-    if (!copyDocumentId) { setLinkedDocName(null); return; }
-    let cancelled = false;
-    supabase.from("copy_documents").select("name").eq("id", copyDocumentId).maybeSingle().then(({ data }) => {
-      if (!cancelled) setLinkedDocName((data as any)?.name ?? null);
-    });
-    return () => { cancelled = true; };
-  }, [copyDocumentId]);
-
   const setNodeData = (key: string, value: any) => {
     if (onNodeDataChange) onNodeDataChange(nodeId, key, value);
     else onDataChange?.(key, value);
-  };
-
-  const createCopyDocument = async () => {
-    if (!copyFrameworkId || !userId || !activeSubAccountId) return;
-    const framework = frameworks.find((f) => f.id === copyFrameworkId);
-    if (!framework) return;
-    setCreatingDoc(true);
-    try {
-      const docName = `${funnelName || "Funnel"} — ${customLabel || nodeLabel}`;
-      const { data: doc, error: docErr } = await supabase
-        .from("copy_documents")
-        .insert({
-          user_id: userId,
-          sub_account_id: activeSubAccountId,
-          name: docName,
-          type: framework.type,
-          funnel_id: funnelId ?? null,
-          funnel_node_id: nodeId,
-          context_type: linkedOfferId ? "offer" : "custom",
-          context_offer_id: linkedOfferId ?? null,
-        })
-        .select("id")
-        .single();
-      if (docErr || !doc) throw docErr;
-
-      const slugs: string[] = Array.isArray(framework.component_slugs)
-        ? framework.component_slugs
-        : (framework.component_slugs?.slugs || []);
-      if (slugs.length > 0) {
-        const rows = slugs.map((slug, i) => ({
-          document_id: doc.id,
-          component_slug: slug,
-          sort_order: i,
-          inputs: {},
-          outputs: {},
-          is_generated: false,
-        }));
-        await supabase.from("copy_document_components").insert(rows as any);
-      }
-
-      setNodeData("copyDocumentId", doc.id);
-      toast.success(t("funnelDesigner.copyFramework.documentCreated"));
-    } catch {
-      toast.error(t("funnelDesigner.copyFramework.createError"));
-    } finally {
-      setCreatingDoc(false);
-    }
   };
 
   const activeFramework = frameworks.find((f) => f.id === copyFrameworkId);
   const activeSlugs: string[] = Array.isArray(activeFramework?.component_slugs)
     ? (activeFramework?.component_slugs as string[])
     : ((activeFramework?.component_slugs as any)?.slugs || []);
+
 
 
   const isNote = renderStyle === "note";
@@ -309,6 +253,20 @@ const NodeDetailsPanel = ({
                   {name}
                 </div>
               ))}
+            </div>
+          )}
+          {isPageOrEmail && (
+            <div className="p-4 border-b border-border space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">
+                {t("funnelDesigner.copyFramework.linkedDocuments", "Linked documents")}
+              </label>
+              <NodeLinkedDocuments
+                funnelNodeId={nodeId}
+                funnelId={funnelId ?? null}
+                readOnly
+                onOpenDocument={onOpenCopyDocument}
+                client={supabaseClient}
+              />
             </div>
           )}
           {hasUrl && (
@@ -637,48 +595,27 @@ const NodeDetailsPanel = ({
               </div>
             )}
 
-            {copyDocumentId ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-foreground bg-primary/5 border border-primary/20 rounded-md px-2 py-1.5">
-                  <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span className="truncate flex-1">{linkedDocName || t("funnelDesigner.copyFramework.documentLinked")}</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs flex-1"
-                    onClick={() => onOpenCopyDocument?.(copyDocumentId)}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 mr-1" /> {t("funnelDesigner.copyFramework.openDocument")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2"
-                    onClick={() => setNodeData("copyDocumentId", null)}
-                    title={t("funnelDesigner.copyFramework.unlink")}
-                  >
-                    <Unlink className="w-3.5 h-3.5 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              copyFrameworkId && (
-                <Button
-                  size="sm"
-                  className="h-8 text-xs w-full"
-                  disabled={creatingDoc || !activeSubAccountId}
-                  onClick={createCopyDocument}
-                >
-                  <Plus className="w-3.5 h-3.5 mr-1" />
-                  {creatingDoc
-                    ? t("funnelDesigner.copyFramework.creating")
-                    : t("funnelDesigner.copyFramework.createDocument")}
-                </Button>
-              )
-            )}
+            {/* Linked Copy Documents grid (1:N — many documents per node) */}
+            <div className="pt-2">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+                {t("funnelDesigner.copyFramework.linkedDocuments", "Linked documents")}
+              </p>
+              <NodeLinkedDocuments
+                funnelNodeId={nodeId}
+                funnelId={funnelId ?? null}
+                subAccountId={activeSubAccountId ?? null}
+                userId={userId}
+                linkedOfferId={linkedOfferId ?? null}
+                defaultFrameworkId={copyFrameworkId ?? null}
+                nodeLabel={customLabel || nodeLabel}
+                funnelName={funnelName}
+                onOpenDocument={onOpenCopyDocument}
+                client={supabaseClient}
+              />
+            </div>
           </div>
         )}
+
 
 
         {/* 5. URL field */}

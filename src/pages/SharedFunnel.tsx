@@ -451,9 +451,10 @@ const SharedFunnelInner = () => {
                 ? frameworkComponentNames[(detailsNode.data as any).copyFrameworkId] || []
                 : []
             }
+            funnelId={(detailsNode.data as any).funnelId || null}
             emailSubject={(detailsNode.data as any).emailSubject || ""}
             readOnly
-            
+            supabaseClient={publicSupabase as any}
             onRename={() => {}}
             onClose={() => setDetailsNodeId(null)}
           />

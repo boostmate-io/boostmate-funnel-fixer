@@ -146,6 +146,9 @@ serve(async (req) => {
 
     for (const field of outputStructure) {
       const f = field as { key: string; label: string; type: string; item_schema?: any[] };
+      // Image fields are user-uploaded (creatives, thumbnails, hero images).
+      // The LLM never sees or produces them — skip them in the tool schema.
+      if (f.type === "image") continue;
       if (f.type === "array") {
         properties[f.key] = {
           type: "array",

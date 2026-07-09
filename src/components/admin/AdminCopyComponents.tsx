@@ -75,8 +75,9 @@ function IconPicker({ value, onChange }: { value: string; onChange: (icon: strin
 interface OutputField {
   key: string;
   label: string;
-  type: "text" | "array";
+  type: "text" | "array" | "image";
   role?: string;
+  is_primary?: boolean;
 }
 
 interface CopyComponent {
@@ -453,7 +454,10 @@ const AdminCopyComponents = () => {
                       value={field.type}
                       onValueChange={v => {
                         const current = [...((editing.output_structure as OutputField[]) || [])];
-                        current[idx] = { ...current[idx], type: v as any };
+                        const nextType = v as OutputField["type"];
+                        current[idx] = { ...current[idx], type: nextType };
+                        // Only image fields can be primary. Ensure at most one primary across the component.
+                        if (nextType !== "image" && current[idx].is_primary) current[idx].is_primary = false;
                         setEditing({ ...editing, output_structure: current });
                       }}
                     >
@@ -461,25 +465,45 @@ const AdminCopyComponents = () => {
                       <SelectContent>
                         <SelectItem value="text">Text</SelectItem>
                         <SelectItem value="array">Array</SelectItem>
+                        <SelectItem value="image">Image</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Select
-                      value={field.role || "__none__"}
-                      onValueChange={v => {
-                        const current = [...((editing.output_structure as OutputField[]) || [])];
-                        current[idx] = { ...current[idx], role: v === "__none__" ? undefined : v };
-                        setEditing({ ...editing, output_structure: current });
-                      }}
-                    >
-                      <SelectTrigger className="text-xs h-8 w-40" title="Field role — headline roles receive extra AI guidance">
-                        <SelectValue placeholder="role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FIELD_ROLES.map(r => (
-                          <SelectItem key={r.value || "none"} value={r.value || "__none__"} className="text-xs">{r.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {field.type === "image" ? (
+                      <Button
+                        type="button"
+                        variant={field.is_primary ? "default" : "outline"}
+                        size="sm"
+                        className="h-8 text-[10px] px-2 w-24"
+                        title="Primary image — used for document thumbnails"
+                        onClick={() => {
+                          const current = [...((editing.output_structure as OutputField[]) || [])];
+                          const nextPrimary = !current[idx].is_primary;
+                          // Ensure only one primary per component.
+                          current.forEach((f, i) => { if (f.type === "image") f.is_primary = i === idx && nextPrimary; });
+                          setEditing({ ...editing, output_structure: current });
+                        }}
+                      >
+                        {field.is_primary ? "★ Primary" : "Set primary"}
+                      </Button>
+                    ) : (
+                      <Select
+                        value={field.role || "__none__"}
+                        onValueChange={v => {
+                          const current = [...((editing.output_structure as OutputField[]) || [])];
+                          current[idx] = { ...current[idx], role: v === "__none__" ? undefined : v };
+                          setEditing({ ...editing, output_structure: current });
+                        }}
+                      >
+                        <SelectTrigger className="text-xs h-8 w-40" title="Field role — headline roles receive extra AI guidance">
+                          <SelectValue placeholder="role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FIELD_ROLES.map(r => (
+                            <SelectItem key={r.value || "none"} value={r.value || "__none__"} className="text-xs">{r.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
