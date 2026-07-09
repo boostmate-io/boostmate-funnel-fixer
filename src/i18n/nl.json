@@ -394,17 +394,30 @@
       "month": "Maandelijks",
       "quarter": "Per kwartaal"
     },
-    "dataEntries": "Data entries",
+    "dataEntries": "Data-entries",
+    "renameMetric": "Label hernoemen",
+    "resetLabel": "Standaardlabel herstellen",
     "savedViews": {
       "title": "Weergaves",
+      "active": "actief",
       "saveCurrent": "Huidige weergave opslaan...",
-      "saved": "Opgeslagen weergaves",
+      "saveChanges": "Wijzigingen opslaan...",
+      "saveAsNew": "Opslaan als nieuw",
+      "overwrite": "Huidige overschrijven",
+      "overwritten": "Weergave bijgewerkt",
+      "saveChoiceTitle": "Weergave opslaan",
+      "saveChoiceDesc": "Wil je \"{{name}}\" overschrijven of deze wijzigingen opslaan als een nieuwe weergave?",
+      "clearActive": "Huidige weergave deactiveren",
+      "saved": "Weergave opgeslagen",
       "namePlaceholder": "Naam van weergave",
       "setDefault": "Als standaard instellen",
       "unsetDefault": "Standaard verwijderen",
       "defaultSet": "Ingesteld als standaard",
       "deleted": "Weergave verwijderd",
-      "saveError": "Opslaan mislukt"
+      "deleteView": "Weergave verwijderen",
+      "saveError": "Opslaan mislukt",
+      "cancel": "Annuleren",
+      "saveButton": "Opslaan"
     }
   },
   "agency": {

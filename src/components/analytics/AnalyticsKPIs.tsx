@@ -3,8 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Settings2 } from "lucide-react";
+import { Settings2, Pencil, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { getMetricsForNodeType, getPrimaryMetric, type MetricField } from "./metricDefinitions";
 import { isTrackableNode } from "./nodeFilters";
@@ -21,6 +22,8 @@ interface Props {
   client: SupabaseClient<any>;
   selectedKPIs?: string[] | null;
   onSelectedKPIsChange?: (keys: string[]) => void;
+  labelOverrides?: Record<string, string>;
+  onLabelOverride?: (key: string, label: string | null) => void;
   readOnly?: boolean;
   title?: string;
 }
@@ -30,9 +33,11 @@ const getNodeType = (n: any): string =>
 
 const AnalyticsKPIs = ({
   funnelId, nodes, edges, periodStart, periodEnd, refreshKey, client,
-  selectedKPIs, onSelectedKPIsChange, readOnly, title,
+  selectedKPIs, onSelectedKPIsChange, labelOverrides, onLabelOverride, readOnly, title,
 }: Props) => {
   const { t } = useTranslation();
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [stepMetrics, setStepMetrics] = useState<any[]>([]);
   const [internalSelected, setInternalSelected] = useState<Set<string> | null>(null);
@@ -128,6 +133,8 @@ const AnalyticsKPIs = ({
     return m;
   }, [stepMetrics]);
 
+  const getOverride = (key: string, fallback: string) => labelOverrides?.[key] || fallback;
+
   const kpis = useMemo(() => {
     const items: { id: string; label: string; metricLabel: string; value: string }[] = [];
     nodeCatalogue.forEach((c) => {
@@ -141,11 +148,18 @@ const AnalyticsKPIs = ({
           : f.type === "percentage"
             ? `${value}%`
             : value.toLocaleString();
-        items.push({ id: key, label: c.label, metricLabel: f.label, value: formatted });
+        items.push({ id: key, label: c.label, metricLabel: getOverride(`kpi:${key}`, f.label), value: formatted });
       });
     });
     return items;
-  }, [nodeCatalogue, totalsByNode, activeSelected]);
+  }, [nodeCatalogue, totalsByNode, activeSelected, labelOverrides]);
+
+  const commitEdit = () => {
+    if (!editingKey || !onLabelOverride) return;
+    onLabelOverride(editingKey, editValue.trim() || null);
+    setEditingKey(null);
+    setEditValue("");
+  };
 
   if (loading) return <div className="text-muted-foreground text-sm py-4">{t("analytics.loading")}</div>;
 
@@ -162,7 +176,7 @@ const AnalyticsKPIs = ({
               {t("analytics.kpisTitle") || "Overview metrics"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 max-h-96 overflow-y-auto" align="end">
+          <PopoverContent className="w-96 max-h-[28rem] overflow-y-auto" align="end">
             <div className="space-y-4">
               {nodeCatalogue.map((c) => (
                 <div key={c.id} className="space-y-1.5">
@@ -170,12 +184,57 @@ const AnalyticsKPIs = ({
                   <div className="space-y-1 pl-1">
                     {c.fields.map((f: MetricField) => {
                       const key = `${c.id}::${f.key}`;
+                      const overrideKey = `kpi:${key}`;
                       const checked = activeSelected.has(key);
+                      const isEditing = editingKey === overrideKey;
+                      const currentLabel = getOverride(overrideKey, f.label);
+                      const hasOverride = !!labelOverrides?.[overrideKey];
                       return (
-                        <label key={key} className="flex items-center gap-2 text-xs cursor-pointer">
+                        <div key={key} className="flex items-center gap-2 text-xs">
                           <Checkbox checked={checked} onCheckedChange={() => toggle(key)} />
-                          <span className={checked ? "text-foreground" : "text-muted-foreground"}>{f.label}</span>
-                        </label>
+                          {isEditing ? (
+                            <>
+                              <Input
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") { setEditingKey(null); setEditValue(""); } }}
+                                onBlur={commitEdit}
+                                autoFocus
+                                className="h-7 text-xs flex-1"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <span
+                                onClick={() => toggle(key)}
+                                className={`flex-1 cursor-pointer truncate ${checked ? "text-foreground" : "text-muted-foreground"}`}
+                                title={currentLabel}
+                              >
+                                {currentLabel}
+                              </span>
+                              {onLabelOverride && (
+                                <>
+                                  <button
+                                    className="p-1 hover:bg-muted rounded"
+                                    title={t("analytics.renameMetric")}
+                                    onClick={() => { setEditingKey(overrideKey); setEditValue(currentLabel); }}
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                  {hasOverride && (
+                                    <button
+                                      className="p-1 hover:bg-muted rounded"
+                                      title={t("analytics.resetLabel")}
+                                      onClick={() => onLabelOverride(overrideKey, null)}
+                                    >
+                                      <RotateCcw className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -203,5 +262,6 @@ const AnalyticsKPIs = ({
     </div>
   );
 };
+
 
 export default AnalyticsKPIs;

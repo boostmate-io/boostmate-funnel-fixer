@@ -29,6 +29,11 @@ export function encodeAnalyticsConfig(config: AnalyticsViewConfig): string {
   if (config.selectedKPIs && config.selectedKPIs.length) {
     params.set("k", config.selectedKPIs.join(","));
   }
+  if (config.labelOverrides && Object.keys(config.labelOverrides).length) {
+    try {
+      params.set("l", btoa(unescape(encodeURIComponent(JSON.stringify(config.labelOverrides)))));
+    } catch {}
+  }
   return params.toString();
 }
 
@@ -50,6 +55,13 @@ export function decodeAnalyticsConfig(search: string): Partial<AnalyticsViewConf
   if (m !== null) out.selectedMetrics = m ? m.split(",").filter(Boolean) : [];
   const k = params.get("k");
   if (k !== null) out.selectedKPIs = k ? k.split(",").filter(Boolean) : [];
+  const l = params.get("l");
+  if (l) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(escape(atob(l))));
+      if (parsed && typeof parsed === "object") out.labelOverrides = parsed;
+    } catch {}
+  }
   return out;
 }
 

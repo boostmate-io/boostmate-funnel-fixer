@@ -9,7 +9,7 @@ import AnalyticsHistory from "./AnalyticsHistory";
 import AnalyticsPeriodFilter, { type AnalyticsPeriod } from "./AnalyticsPeriodFilter";
 import AnalyticsKPIs from "./AnalyticsKPIs";
 import AnalyticsShareDialog from "./AnalyticsShareDialog";
-import AnalyticsSavedViews, { loadDefaultView } from "./AnalyticsSavedViews";
+import AnalyticsSavedViews, { loadDefaultView, type LoadedView } from "./AnalyticsSavedViews";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -36,6 +36,7 @@ export interface AnalyticsViewConfig {
   granularity: Granularity;
   selectedMetrics: string[] | null;
   selectedKPIs: string[] | null;
+  labelOverrides: Record<string, string> | null;
 }
 
 interface AnalyticsModuleProps {
@@ -67,6 +68,8 @@ const AnalyticsModule = ({
   const [shareOpen, setShareOpen] = useState(false);
   const [shareToken, setShareToken] = useState<string | null>(sharedFunnel?.shareToken || null);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [activeViewName, setActiveViewName] = useState<string | null>(null);
 
   const [period, setPeriod] = useState<AnalyticsPeriod>(
     initialConfig?.period ?? { start: subDays(new Date(), 30), end: new Date(), label: "last30" }
@@ -74,6 +77,9 @@ const AnalyticsModule = ({
   const [granularity, setGranularity] = useState<Granularity>(initialConfig?.granularity ?? "day");
   const [selectedMetrics, setSelectedMetrics] = useState<string[] | null>(initialConfig?.selectedMetrics ?? null);
   const [selectedKPIs, setSelectedKPIs] = useState<string[] | null>(initialConfig?.selectedKPIs ?? null);
+  const [labelOverrides, setLabelOverrides] = useState<Record<string, string>>(
+    initialConfig?.labelOverrides ?? {}
+  );
 
   // Fullscreen image viewer for funnel-node thumbnails
   useEffect(() => {
@@ -100,10 +106,16 @@ const AnalyticsModule = ({
     (async () => {
       const def = await loadDefaultView(selectedFunnel.id);
       if (def) {
-        setPeriod(def.period);
-        setGranularity(def.granularity);
-        setSelectedMetrics(def.selectedMetrics);
-        setSelectedKPIs(def.selectedKPIs);
+        setPeriod(def.config.period);
+        setGranularity(def.config.granularity);
+        setSelectedMetrics(def.config.selectedMetrics);
+        setSelectedKPIs(def.config.selectedKPIs);
+        setLabelOverrides(def.config.labelOverrides ?? {});
+        setActiveViewId(def.id);
+        setActiveViewName(def.name);
+      } else {
+        setActiveViewId(null);
+        setActiveViewName(null);
       }
     })();
   }, [selectedFunnel?.id, readOnly]);
@@ -121,24 +133,40 @@ const AnalyticsModule = ({
 
   const currentConfig: AnalyticsViewConfig = useMemo(() => ({
     period, granularity, selectedMetrics, selectedKPIs,
-  }), [period, granularity, selectedMetrics, selectedKPIs]);
+    labelOverrides: Object.keys(labelOverrides).length ? labelOverrides : null,
+  }), [period, granularity, selectedMetrics, selectedKPIs, labelOverrides]);
 
-  const applyConfig = useCallback((cfg: AnalyticsViewConfig) => {
-    setPeriod(cfg.period);
-    setGranularity(cfg.granularity);
-    setSelectedMetrics(cfg.selectedMetrics);
-    setSelectedKPIs(cfg.selectedKPIs);
+  const applyLoadedView = useCallback((v: LoadedView) => {
+    setPeriod(v.config.period);
+    setGranularity(v.config.granularity);
+    setSelectedMetrics(v.config.selectedMetrics);
+    setSelectedKPIs(v.config.selectedKPIs);
+    setLabelOverrides(v.config.labelOverrides ?? {});
+    setActiveViewId(v.id);
+    setActiveViewName(v.name);
+  }, []);
+
+  const setLabelOverride = useCallback((key: string, label: string | null) => {
+    setLabelOverrides((prev) => {
+      const next = { ...prev };
+      if (label && label.trim()) next[key] = label.trim();
+      else delete next[key];
+      return next;
+    });
   }, []);
 
   return (
     <div className="h-full flex flex-col">
       <div className="p-6 border-b border-border">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl font-display font-bold text-foreground">{titleOverride ?? t("analytics.title")}</h1>
             <p className="text-muted-foreground text-sm mt-1">{subtitleOverride ?? t("analytics.subtitle")}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {readOnly && selectedFunnel && (
+              <AnalyticsPeriodFilter value={period} onChange={setPeriod} />
+            )}
             {!hideFunnelSelector && (
               <FunnelSelector
                 selectedFunnelId={selectedFunnel?.id || null}
@@ -157,22 +185,33 @@ const AnalyticsModule = ({
 
       {selectedFunnel ? (
         <div className="flex-1 overflow-auto p-6 space-y-8">
-          <div className="flex items-center justify-end gap-2 flex-wrap">
-            <AnalyticsPeriodFilter value={period} onChange={setPeriod} />
-            {!readOnly && (
+          {!readOnly && (
+            <div className="flex items-center justify-end gap-2 flex-wrap">
+              <AnalyticsPeriodFilter value={period} onChange={setPeriod} />
               <AnalyticsSavedViews
                 funnelId={selectedFunnel.id}
                 currentConfig={currentConfig}
-                onApply={applyConfig}
+                activeViewId={activeViewId}
+                activeViewName={activeViewName}
+                onApply={applyLoadedView}
+                onActiveViewChange={(id, name) => { setActiveViewId(id); setActiveViewName(name); }}
               />
-            )}
-            {!readOnly && (
               <Button size="sm" className="gap-1.5" onClick={() => { setEditingEntry(null); setEntryOpen(true); }}>
                 <Plus className="w-4 h-4" />
                 {t("analytics.addEntry") || "Add data entry"}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
+
+          <AnalyticsSummary
+            funnelId={selectedFunnel.id}
+            nodes={selectedFunnel.nodes}
+            edges={selectedFunnel.edges}
+            periodStart={period.start}
+            periodEnd={period.end}
+            refreshKey={refreshKey}
+            client={activeClient}
+          />
 
           <AnalyticsKPIs
             funnelId={selectedFunnel.id}
@@ -184,18 +223,10 @@ const AnalyticsModule = ({
             client={activeClient}
             selectedKPIs={selectedKPIs}
             onSelectedKPIsChange={setSelectedKPIs}
+            labelOverrides={labelOverrides}
+            onLabelOverride={setLabelOverride}
             readOnly={readOnly}
             title={t("analytics.summary.title")}
-          />
-
-          <AnalyticsSummary
-            funnelId={selectedFunnel.id}
-            nodes={selectedFunnel.nodes}
-            edges={selectedFunnel.edges}
-            periodStart={period.start}
-            periodEnd={period.end}
-            refreshKey={refreshKey}
-            client={activeClient}
           />
 
           <div>
@@ -211,6 +242,8 @@ const AnalyticsModule = ({
               onGranularityChange={setGranularity}
               selectedMetrics={selectedMetrics}
               onSelectedMetricsChange={setSelectedMetrics}
+              labelOverrides={labelOverrides}
+              onLabelOverride={setLabelOverride}
             />
           </div>
 
