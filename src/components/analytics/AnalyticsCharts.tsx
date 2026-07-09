@@ -65,16 +65,19 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
     load();
   }, [funnelId]);
 
+  const trackableIds = useMemo(() => new Set(nodes.filter(isTrackableNode).map((n: any) => n.id)), [nodes]);
+
   // Build node options for the filter
   const nodeOptions = useMemo(() => {
     const seen = new Map<string, string>();
     stepMetrics.forEach((sm) => {
+      if (!trackableIds.has(sm.node_id)) return;
       if (!seen.has(sm.node_id)) {
         seen.set(sm.node_id, sm.node_label || sm.node_type);
       }
     });
     return Array.from(seen.entries()).map(([id, label]) => ({ id, label }));
-  }, [stepMetrics]);
+  }, [stepMetrics, trackableIds]);
 
   // Build available metric keys for selected node(s)
   const { chartData, metricKeys, chartConfig } = useMemo(() => {
