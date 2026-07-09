@@ -18,6 +18,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Bookmark, Check, Star, Trash2, ChevronDown } from "lucide-react";
@@ -31,19 +32,53 @@ interface SavedView {
   is_default: boolean;
 }
 
+export interface LoadedView {
+  id: string;
+  name: string;
+  config: AnalyticsViewConfig;
+}
+
 interface Props {
   funnelId: string;
   currentConfig: AnalyticsViewConfig;
-  onApply: (config: AnalyticsViewConfig) => void;
+  activeViewId: string | null;
+  activeViewName: string | null;
+  onApply: (v: LoadedView) => void;
+  onActiveViewChange: (id: string | null, name: string | null) => void;
 }
 
-const AnalyticsSavedViews = ({ funnelId, currentConfig, onApply }: Props) => {
+const configToJSON = (c: AnalyticsViewConfig) => ({
+  period: {
+    start: c.period.start.toISOString(),
+    end: c.period.end.toISOString(),
+    label: c.period.label,
+  },
+  granularity: c.granularity,
+  selectedMetrics: c.selectedMetrics,
+  selectedKPIs: c.selectedKPIs,
+  labelOverrides: c.labelOverrides,
+});
+
+const configFromJSON = (cfg: any, fallback: AnalyticsViewConfig): AnalyticsViewConfig => ({
+  period: cfg.period
+    ? { start: new Date(cfg.period.start), end: new Date(cfg.period.end), label: cfg.period.label }
+    : fallback.period,
+  granularity: cfg.granularity || fallback.granularity,
+  selectedMetrics: cfg.selectedMetrics ?? null,
+  selectedKPIs: cfg.selectedKPIs ?? null,
+  labelOverrides: cfg.labelOverrides ?? null,
+});
+
+const AnalyticsSavedViews = ({
+  funnelId, currentConfig, activeViewId, activeViewName, onApply, onActiveViewChange,
+}: Props) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { activeSubAccountId } = useWorkspace();
   const [views, setViews] = useState<SavedView[]>([]);
   const [saveOpen, setSaveOpen] = useState(false);
   const [name, setName] = useState("");
+  const [choiceOpen, setChoiceOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!funnelId) return;
@@ -57,50 +92,50 @@ const AnalyticsSavedViews = ({ funnelId, currentConfig, onApply }: Props) => {
 
   useEffect(() => { load(); }, [load]);
 
-  const serializedConfig = (): any => ({
-    period: {
-      start: currentConfig.period.start.toISOString(),
-      end: currentConfig.period.end.toISOString(),
-      label: currentConfig.period.label,
-    },
-    granularity: currentConfig.granularity,
-    selectedMetrics: currentConfig.selectedMetrics,
-    selectedKPIs: currentConfig.selectedKPIs,
-  });
-
-  const handleSave = async () => {
+  const insertNew = async () => {
     if (!user || !activeSubAccountId || !name.trim()) return;
-    const { error } = await supabase.from("analytics_saved_views").insert({
+    const { data, error } = await supabase.from("analytics_saved_views").insert({
       funnel_id: funnelId,
       user_id: user.id,
       sub_account_id: activeSubAccountId,
       name: name.trim(),
-      config: serializedConfig(),
+      config: configToJSON(currentConfig),
       is_default: false,
-    });
-    if (error) toast.error(t("analytics.savedViews.saveError") || "Failed to save view");
+    }).select("id, name").maybeSingle();
+    if (error) toast.error(t("analytics.savedViews.saveError"));
     else {
-      toast.success(t("analytics.savedViews.saved") || "View saved");
+      toast.success(t("analytics.savedViews.saved"));
       setName("");
       setSaveOpen(false);
+      if (data) onActiveViewChange((data as any).id, (data as any).name);
       load();
     }
   };
 
+  const overwriteActive = async () => {
+    if (!activeViewId) return;
+    const { error } = await supabase
+      .from("analytics_saved_views")
+      .update({ config: configToJSON(currentConfig) })
+      .eq("id", activeViewId);
+    if (error) toast.error(t("analytics.savedViews.saveError"));
+    else {
+      toast.success(t("analytics.savedViews.overwritten"));
+      setChoiceOpen(false);
+      load();
+    }
+  };
+
+  const handleSaveClick = () => {
+    if (activeViewId) setChoiceOpen(true);
+    else setSaveOpen(true);
+  };
+
   const handleApply = (v: SavedView) => {
-    const cfg = v.config || {};
-    onApply({
-      period: cfg.period
-        ? { start: new Date(cfg.period.start), end: new Date(cfg.period.end), label: cfg.period.label }
-        : currentConfig.period,
-      granularity: cfg.granularity || currentConfig.granularity,
-      selectedMetrics: cfg.selectedMetrics ?? null,
-      selectedKPIs: cfg.selectedKPIs ?? null,
-    });
+    onApply({ id: v.id, name: v.name, config: configFromJSON(v.config || {}, currentConfig) });
   };
 
   const handleSetDefault = async (v: SavedView) => {
-    // clear existing defaults on this funnel, then set this one
     await supabase
       .from("analytics_saved_views")
       .update({ is_default: false })
@@ -110,9 +145,9 @@ const AnalyticsSavedViews = ({ funnelId, currentConfig, onApply }: Props) => {
       .from("analytics_saved_views")
       .update({ is_default: true })
       .eq("id", v.id);
-    if (error) toast.error(t("analytics.savedViews.saveError") || "Failed to update");
+    if (error) toast.error(t("analytics.savedViews.saveError"));
     else {
-      toast.success(t("analytics.savedViews.defaultSet") || "Set as default");
+      toast.success(t("analytics.savedViews.defaultSet"));
       load();
     }
   };
@@ -122,15 +157,16 @@ const AnalyticsSavedViews = ({ funnelId, currentConfig, onApply }: Props) => {
       .from("analytics_saved_views")
       .update({ is_default: false })
       .eq("id", v.id);
-    if (error) toast.error(t("analytics.savedViews.saveError") || "Failed to update");
+    if (error) toast.error(t("analytics.savedViews.saveError"));
     else load();
   };
 
   const handleDelete = async (v: SavedView) => {
     const { error } = await supabase.from("analytics_saved_views").delete().eq("id", v.id);
-    if (error) toast.error(t("analytics.savedViews.saveError") || "Failed to delete");
+    if (error) toast.error(t("analytics.savedViews.saveError"));
     else {
-      toast.success(t("analytics.savedViews.deleted") || "View deleted");
+      toast.success(t("analytics.savedViews.deleted"));
+      if (v.id === activeViewId) onActiveViewChange(null, null);
       load();
     }
   };
@@ -141,20 +177,27 @@ const AnalyticsSavedViews = ({ funnelId, currentConfig, onApply }: Props) => {
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="gap-1.5">
             <Bookmark className="w-4 h-4" />
-            {t("analytics.savedViews.title") || "Views"}
+            {activeViewName || t("analytics.savedViews.title")}
             <ChevronDown className="w-3 h-3" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-72">
-          <DropdownMenuItem onClick={() => setSaveOpen(true)}>
+          <DropdownMenuItem onClick={handleSaveClick}>
             <Bookmark className="w-4 h-4 mr-2" />
-            {t("analytics.savedViews.saveCurrent") || "Save current view..."}
+            {activeViewId
+              ? t("analytics.savedViews.saveChanges")
+              : t("analytics.savedViews.saveCurrent")}
           </DropdownMenuItem>
+          {activeViewId && (
+            <DropdownMenuItem onClick={() => onActiveViewChange(null, null)}>
+              {t("analytics.savedViews.clearActive")}
+            </DropdownMenuItem>
+          )}
           {views.length > 0 && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-xs text-muted-foreground">
-                {t("analytics.savedViews.saved") || "Saved views"}
+                {t("analytics.savedViews.saved")}
               </DropdownMenuLabel>
               {views.map((v) => (
                 <div key={v.id} className="flex items-center px-1 py-0.5 gap-1 hover:bg-accent rounded-sm">
@@ -164,19 +207,26 @@ const AnalyticsSavedViews = ({ funnelId, currentConfig, onApply }: Props) => {
                     title={v.name}
                   >
                     {v.is_default && <Star className="w-3 h-3 fill-primary text-primary shrink-0" />}
-                    <span className="truncate">{v.name}</span>
+                    <span className="truncate">
+                      {v.name}
+                      {v.id === activeViewId && (
+                        <span className="ml-1 text-[10px] text-primary">
+                          · {t("analytics.savedViews.active")}
+                        </span>
+                      )}
+                    </span>
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); v.is_default ? handleClearDefault(v) : handleSetDefault(v); }}
                     className="p-1 hover:bg-muted rounded"
-                    title={v.is_default ? (t("analytics.savedViews.unsetDefault") || "Unset default") : (t("analytics.savedViews.setDefault") || "Set as default")}
+                    title={v.is_default ? t("analytics.savedViews.unsetDefault") : t("analytics.savedViews.setDefault")}
                   >
                     {v.is_default ? <Check className="w-3.5 h-3.5" /> : <Star className="w-3.5 h-3.5" />}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(v); }}
                     className="p-1 hover:bg-muted rounded text-destructive"
-                    title={t("common.delete") || "Delete"}
+                    title={t("analytics.savedViews.deleteView")}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -187,24 +237,48 @@ const AnalyticsSavedViews = ({ funnelId, currentConfig, onApply }: Props) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {/* Overwrite / Save-as choice */}
+      <Dialog open={choiceOpen} onOpenChange={setChoiceOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("analytics.savedViews.saveChoiceTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("analytics.savedViews.saveChoiceDesc", { name: activeViewName ?? "" })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setChoiceOpen(false)}>
+              {t("analytics.savedViews.cancel")}
+            </Button>
+            <Button variant="secondary" onClick={() => { setChoiceOpen(false); setSaveOpen(true); }}>
+              {t("analytics.savedViews.saveAsNew")}
+            </Button>
+            <Button onClick={overwriteActive}>
+              {t("analytics.savedViews.overwrite")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save-new dialog */}
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("analytics.savedViews.saveCurrent") || "Save current view"}</DialogTitle>
+            <DialogTitle>{t("analytics.savedViews.saveCurrent")}</DialogTitle>
           </DialogHeader>
           <Input
-            placeholder={t("analytics.savedViews.namePlaceholder") || "View name"}
+            placeholder={t("analytics.savedViews.namePlaceholder")}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+            onKeyDown={(e) => { if (e.key === "Enter") insertNew(); }}
             autoFocus
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveOpen(false)}>
-              {t("common.cancel") || "Cancel"}
+              {t("analytics.savedViews.cancel")}
             </Button>
-            <Button onClick={handleSave} disabled={!name.trim()}>
-              {t("common.save") || "Save"}
+            <Button onClick={insertNew} disabled={!name.trim()}>
+              {t("analytics.savedViews.saveButton")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -213,10 +287,10 @@ const AnalyticsSavedViews = ({ funnelId, currentConfig, onApply }: Props) => {
   );
 };
 
-export const loadDefaultView = async (funnelId: string): Promise<AnalyticsViewConfig | null> => {
+export const loadDefaultView = async (funnelId: string): Promise<LoadedView | null> => {
   const { data } = await supabase
     .from("analytics_saved_views")
-    .select("config")
+    .select("id, name, config")
     .eq("funnel_id", funnelId)
     .eq("is_default", true)
     .maybeSingle();
@@ -224,10 +298,15 @@ export const loadDefaultView = async (funnelId: string): Promise<AnalyticsViewCo
   const cfg: any = (data as any).config || {};
   if (!cfg.period) return null;
   return {
-    period: { start: new Date(cfg.period.start), end: new Date(cfg.period.end), label: cfg.period.label },
-    granularity: cfg.granularity || "day",
-    selectedMetrics: cfg.selectedMetrics ?? null,
-    selectedKPIs: cfg.selectedKPIs ?? null,
+    id: (data as any).id,
+    name: (data as any).name,
+    config: {
+      period: { start: new Date(cfg.period.start), end: new Date(cfg.period.end), label: cfg.period.label },
+      granularity: cfg.granularity || "day",
+      selectedMetrics: cfg.selectedMetrics ?? null,
+      selectedKPIs: cfg.selectedKPIs ?? null,
+      labelOverrides: cfg.labelOverrides ?? null,
+    },
   };
 };
 

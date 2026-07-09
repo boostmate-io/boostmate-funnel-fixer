@@ -3,10 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
-import { Settings2 } from "lucide-react";
+import { Settings2, Pencil, RotateCcw } from "lucide-react";
 import { format, startOfWeek, startOfMonth, startOfQuarter } from "date-fns";
 import { getMetricsForNodeType, getPrimaryMetric, type MetricField } from "./metricDefinitions";
 import { isTrackableNode } from "./nodeFilters";
@@ -25,6 +26,8 @@ interface AnalyticsChartsProps {
   onGranularityChange?: (g: Granularity) => void;
   selectedMetrics?: string[] | null;
   onSelectedMetricsChange?: (keys: string[]) => void;
+  labelOverrides?: Record<string, string>;
+  onLabelOverride?: (key: string, label: string | null) => void;
 }
 
 const COLORS = [
@@ -53,8 +56,11 @@ const AnalyticsCharts = ({
   funnelId, nodes, periodStart, periodEnd, refreshKey, client,
   granularity: granularityProp, onGranularityChange,
   selectedMetrics, onSelectedMetricsChange,
+  labelOverrides, onLabelOverride,
 }: AnalyticsChartsProps) => {
   const { t } = useTranslation();
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [entries, setEntries] = useState<any[]>([]);
   const [stepMetrics, setStepMetrics] = useState<any[]>([]);
@@ -176,8 +182,10 @@ const AnalyticsCharts = ({
       const [nodeId, metricKey] = sk.split("::");
       const cat = nodeCatalogue.find((c) => c.id === nodeId);
       const field = cat?.fields.find((f) => f.key === metricKey);
+      const overrideKey = `chart:${sk}`;
+      const defaultLabel = `${cat?.label || nodeId} · ${field?.label || metricKey}`;
       seriesConfig[sk] = {
-        label: `${cat?.label || nodeId} · ${field?.label || metricKey}`,
+        label: labelOverrides?.[overrideKey] || defaultLabel,
         color: COLORS[i % COLORS.length],
       };
     });
@@ -189,7 +197,14 @@ const AnalyticsCharts = ({
     });
 
     return { chartData, seriesConfig };
-  }, [entries, stepMetrics, granularity, activeSelected, nodeCatalogue]);
+  }, [entries, stepMetrics, granularity, activeSelected, nodeCatalogue, labelOverrides]);
+
+  const commitEdit = () => {
+    if (!editingKey || !onLabelOverride) return;
+    onLabelOverride(editingKey, editValue.trim() || null);
+    setEditingKey(null);
+    setEditValue("");
+  };
 
   if (loading) return <div className="text-muted-foreground text-sm py-4">{t("analytics.loading")}</div>;
   if (!entries.length) return <div className="text-muted-foreground text-sm py-4">{t("analytics.noHistory")}</div>;
