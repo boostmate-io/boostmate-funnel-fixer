@@ -370,8 +370,13 @@
       "totalRevenue": "Totale Omzet",
       "roas": "ROAS",
       "totalMetrics": "Totalen",
-      "avgPerDay": "Gem. / Dag"
+      "avgPerDay": "Gem. / Dag",
+      "funnelView": "Funnelweergave",
+      "tableView": "Tabelweergave"
     },
+    "share": "Delen",
+    "addEntry": "Data invoeren",
+    "editEntry": "Data-entry bewerken",
     "charts": {
       "title": "Trends",
       "allSteps": "Alle stappen (totalen)",

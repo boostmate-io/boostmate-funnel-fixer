@@ -370,8 +370,13 @@
       "totalRevenue": "Total Revenue",
       "roas": "ROAS",
       "totalMetrics": "Totals",
-      "avgPerDay": "Avg / Day"
+      "avgPerDay": "Avg / Day",
+      "funnelView": "Funnel view",
+      "tableView": "Table view"
     },
+    "share": "Share",
+    "addEntry": "Add data entry",
+    "editEntry": "Edit data entry",
     "charts": {
       "title": "Trends",
       "allSteps": "All steps (totals)",
