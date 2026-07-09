@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { publicSupabase } from "@/integrations/supabase/publicClient";
-import AnalyticsModule from "@/components/analytics/AnalyticsModule";
-import { decodeAnalyticsConfig } from "@/components/analytics/AnalyticsShareDialog";
+import AnalyticsModule, { type AnalyticsViewConfig } from "@/components/analytics/AnalyticsModule";
 import logo from "@/assets/logo-boostmate.svg";
 
 const SharedAnalytics = () => {
   const { token } = useParams<{ token: string }>();
-  const location = useLocation();
   const [funnel, setFunnel] = useState<any>(null);
+  const [initialConfig, setInitialConfig] = useState<Partial<AnalyticsViewConfig> | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -17,11 +16,38 @@ const SharedAnalytics = () => {
     (async () => {
       const { data, error: err } = await publicSupabase
         .from("funnels")
-        .select("id, name, nodes, edges, share_token")
+        .select("id, name, nodes, edges, share_token, shared_view_id")
         .eq("share_token", token)
         .maybeSingle();
-      if (err || !data) setError(true);
-      else setFunnel(data);
+      if (err || !data) {
+        setError(true);
+        setLoading(false);
+        return;
+      }
+      setFunnel(data);
+
+      const sharedViewId = (data as any).shared_view_id;
+      if (sharedViewId) {
+        const { data: view } = await publicSupabase
+          .from("analytics_saved_views")
+          .select("config")
+          .eq("id", sharedViewId)
+          .maybeSingle();
+        const cfg: any = (view as any)?.config;
+        if (cfg?.period) {
+          setInitialConfig({
+            period: {
+              start: new Date(cfg.period.start),
+              end: new Date(cfg.period.end),
+              label: cfg.period.label,
+            },
+            granularity: cfg.granularity || "day",
+            selectedMetrics: cfg.selectedMetrics ?? null,
+            selectedKPIs: cfg.selectedKPIs ?? null,
+            labelOverrides: cfg.labelOverrides ?? null,
+          });
+        }
+      }
       setLoading(false);
     })();
   }, [token]);
@@ -41,8 +67,6 @@ const SharedAnalytics = () => {
       </div>
     );
   }
-
-  const initialConfig = decodeAnalyticsConfig(location.search);
 
   return (
     <div className="h-screen flex flex-col bg-background">

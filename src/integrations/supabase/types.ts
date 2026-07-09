@@ -1132,6 +1132,7 @@ export type Database = {
           project_id: string | null
           seed_template_id: string | null
           share_token: string | null
+          shared_view_id: string | null
           sub_account_id: string | null
           template_id: string | null
           template_type: string | null
@@ -1150,6 +1151,7 @@ export type Database = {
           project_id?: string | null
           seed_template_id?: string | null
           share_token?: string | null
+          shared_view_id?: string | null
           sub_account_id?: string | null
           template_id?: string | null
           template_type?: string | null
@@ -1168,6 +1170,7 @@ export type Database = {
           project_id?: string | null
           seed_template_id?: string | null
           share_token?: string | null
+          shared_view_id?: string | null
           sub_account_id?: string | null
           template_id?: string | null
           template_type?: string | null
