@@ -17,6 +17,8 @@ import FunnelNode from "@/components/funnel-designer/FunnelNode";
 import TrafficSourceNode from "@/components/funnel-designer/TrafficSourceNode";
 import SequenceGroupNode from "@/components/funnel-designer/SequenceGroupNode";
 import NodeDetailsPanel from "@/components/funnel-designer/NodeDetailsPanel";
+import TrafficSourceDetailsPanel from "@/components/funnel-designer/TrafficSourceDetailsPanel";
+import { resolveDocumentThumbnails } from "@/lib/copy/documentThumbnail";
 import { toggleSequenceCollapse } from "@/components/funnel-designer/sequenceGroupUtils";
 import BriefFiller from "@/components/funnel-brief/BriefFiller";
 import { BriefStructure, BriefValues, BriefApprovedFields } from "@/components/funnel-brief/types";
@@ -172,6 +174,7 @@ const SharedFunnelInner = () => {
   const canOpenReadOnlyDetails = useCallback((node: Node | undefined) => {
     if (!node) return false;
     if (node.type === "sequenceGroup") return true;
+    if (node.type === "trafficSource") return true;
     if (node.type !== "funnelPage") return false;
     const nodeData = node.data as any;
     const renderStyle = nodeData.renderStyle ?? "page";
