@@ -194,13 +194,15 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
             nodesDraggable={false}
             nodesConnectable={false}
             elementsSelectable={false}
-            panOnDrag={false}
+            panOnDrag={true}
             zoomOnScroll={false}
-            zoomOnPinch={false}
+            zoomOnPinch={true}
             zoomOnDoubleClick={false}
             preventScrolling={false}
             fitView
             fitViewOptions={{ padding: 0.2 }}
+            minZoom={0.2}
+            maxZoom={2}
             proOptions={{ hideAttribution: true }}
           >
             <Background gap={16} size={1} />
