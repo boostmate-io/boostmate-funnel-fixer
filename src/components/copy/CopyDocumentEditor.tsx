@@ -348,7 +348,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     <div className="px-3 py-8 text-center">
                       <PenTool className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
                       <p className="text-xs text-muted-foreground mb-2">No components yet</p>
-                      <p className="text-[10px] text-muted-foreground">Go to Settings to add components or apply a framework.</p>
+                      <p className="text-[10px] text-muted-foreground">Choose a framework in Settings to load its components.</p>
                     </div>
                   ) : (
                     docComponents.map((dc, idx) => {
@@ -452,7 +452,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     <PenTool className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-display font-bold text-foreground mb-2">No components yet</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Go to Settings to add components or apply a framework.
+                      Choose a framework in Settings to load its components.
                     </p>
                     <Button variant="outline" size="sm" onClick={() => setActiveView("settings")}>
                       <Settings2 className="w-4 h-4 mr-1.5" /> Open Settings
