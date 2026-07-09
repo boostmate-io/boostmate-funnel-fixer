@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { CalendarDays } from "lucide-react";
+
 import { format } from "date-fns";
 import { getPrimaryMetric } from "./metricDefinitions";
 import { isTrackableNode } from "./nodeFilters";
