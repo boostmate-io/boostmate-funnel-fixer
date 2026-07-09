@@ -178,6 +178,28 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     setLastSavedSnapshot(JSON.stringify({ n: nodes, e: edges, name: currentFunnel?.name ?? editingTemplate?.name ?? editingSeedTemplate?.name ?? "" }));
   }, [nodes, edges, currentFunnel, editingTemplate, editingSeedTemplate]);
 
+  // Copy framework → component names mapping (for node thumbnail display)
+  const [frameworkComponentNames, setFrameworkComponentNames] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [{ data: fw }, { data: comps }] = await Promise.all([
+        supabase.from("copy_frameworks").select("id, component_slugs"),
+        supabase.from("copy_components").select("slug, name"),
+      ]);
+      if (cancelled) return;
+      const nameBySlug: Record<string, string> = {};
+      (comps || []).forEach((c: any) => { nameBySlug[c.slug] = c.name; });
+      const map: Record<string, string[]> = {};
+      (fw || []).forEach((f: any) => {
+        const slugs: string[] = Array.isArray(f.component_slugs) ? f.component_slugs : (f.component_slugs?.slugs || []);
+        map[f.id] = slugs.map((s) => nameBySlug[s] || s);
+      });
+      setFrameworkComponentNames(map);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
 
   // Check admin role
   useEffect(() => {
@@ -755,11 +777,12 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     return () => window.removeEventListener("funnel-node-image-view", handler);
   }, []);
 
-  const resolveNodeCopySections = useCallback((node: Node) => {
-    if (node.type !== "funnelPage") return [] as Array<{ id: string; title: string; description: string }>;
-    const nodeData = node.data as any;
-    return nodeData.copySections ?? [];
-  }, []);
+  const resolveNodeCopyComponentNames = useCallback((node: Node): string[] => {
+    if (node.type !== "funnelPage") return [];
+    const fid = (node.data as any)?.copyFrameworkId;
+    if (!fid) return [];
+    return frameworkComponentNames[fid] || [];
+  }, [frameworkComponentNames]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
