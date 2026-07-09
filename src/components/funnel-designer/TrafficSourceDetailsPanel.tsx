@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { X, Plus, Link2, Unlink, ExternalLink } from "lucide-react";
+import { X, Plus, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { resolveDocumentThumbnails } from "@/lib/copy/documentThumbnail";
@@ -154,7 +154,7 @@ const TrafficSourceDetailsPanel = ({
               <div className="max-h-72 overflow-auto">
                 {available.length === 0 ? (
                   <p className="text-xs text-muted-foreground p-3 text-center">
-                    No unlinked ad documents in this workspace.
+                    No available ad documents in this workspace.
                   </p>
                 ) : (
                   available.map((d) => (
