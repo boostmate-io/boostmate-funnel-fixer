@@ -120,16 +120,22 @@ const AnalyticsCharts = ({
   }, [nodeCatalogue]);
 
   useEffect(() => {
-    if (selectedMetrics !== undefined) return; // controlled
-    if (internalSelected !== null) return;
     if (!nodeCatalogue.length) return;
+    // Controlled + null means parent hasn't initialized — push defaults up.
+    if (selectedMetrics === null && onSelectedMetricsChange) {
+      onSelectedMetricsChange(Array.from(derivedDefault));
+      return;
+    }
+    if (selectedMetrics !== undefined) return;
+    if (internalSelected !== null) return;
     setInternalSelected(new Set(derivedDefault));
-  }, [nodeCatalogue, internalSelected, derivedDefault, selectedMetrics]);
+  }, [nodeCatalogue, internalSelected, derivedDefault, selectedMetrics, onSelectedMetricsChange]);
 
   const activeSelected: Set<string> = useMemo(() => {
     if (selectedMetrics !== undefined && selectedMetrics !== null) return new Set(selectedMetrics);
-    return internalSelected ?? new Set<string>();
-  }, [selectedMetrics, internalSelected]);
+    if (selectedMetrics === null) return derivedDefault; // fallback while parent state initializes
+    return internalSelected ?? derivedDefault;
+  }, [selectedMetrics, internalSelected, derivedDefault]);
 
   const toggleMetric = (key: string) => {
     const next = new Set(activeSelected);
