@@ -82,15 +82,6 @@ const AnalyticsKPIs = ({ funnelId, nodes, periodStart, periodEnd, refreshKey }: 
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <CalendarDays className="w-4 h-4" />
-            {t("analytics.daysTracked") || "Days Tracked"}
-          </div>
-          <div className="text-2xl font-display font-bold text-foreground">{entries.length}</div>
-        </CardContent>
-      </Card>
       {kpis.map((k) => (
         <Card key={k.id}>
           <CardContent className="p-4">
