@@ -109,23 +109,36 @@ const CopyDocumentsModule = () => {
     return m;
   }, [frameworks]);
 
+  const genericFramework = useMemo(
+    () => frameworks.find((f) => f.type === GENERIC_TYPE),
+    [frameworks],
+  );
+
   const openPicker = () => {
+    // No framework registered for this type → fall back to the generic one.
     if (frameworksForActiveType.length === 0) {
-      toast.error("No framework available for this type. Create one in Admin → Copy Frameworks.");
+      if (!genericFramework) {
+        toast.error("No framework available. Create one in Admin → Copy Frameworks.");
+        return;
+      }
+      createDocument(genericFramework.id, activeType);
       return;
     }
     if (frameworksForActiveType.length === 1) {
-      createDocument(frameworksForActiveType[0].id);
+      createDocument(frameworksForActiveType[0].id, activeType);
       return;
     }
     setPickerFrameworkId(frameworksForActiveType[0].id);
     setPickerOpen(true);
   };
 
-  const createDocument = async (frameworkId: string) => {
+  const createDocument = async (frameworkId: string, typeOverride?: string) => {
     if (!user || !activeSubAccountId) return;
     const framework = frameworkById[frameworkId];
     if (!framework) { toast.error("Framework not found"); return; }
+    // When creating a doc under a specific tab (e.g. "Sales Copy") but using
+    // the Generic framework as fallback, keep the doc under the active tab.
+    const docType = typeOverride || framework.type;
     setCreating(true);
     try {
       const { data, error } = await supabase
@@ -134,7 +147,7 @@ const CopyDocumentsModule = () => {
           user_id: user.id,
           sub_account_id: activeSubAccountId,
           name: `Untitled ${framework.name}`,
-          type: framework.type,
+          type: docType,
           framework_id: framework.id,
           status: "draft",
         } as any)
