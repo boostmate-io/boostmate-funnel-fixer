@@ -29,7 +29,7 @@ const AnalyticsHistory = ({ funnelId }: AnalyticsHistoryProps) => {
       setLoading(true);
       const { data } = await supabase
         .from("funnel_analytics_entries")
-        .select("id, date")
+        .select("id, date, period_end, period_type")
         .eq("funnel_id", funnelId)
         .order("date", { ascending: false })
         .limit(30);
@@ -46,9 +46,11 @@ const AnalyticsHistory = ({ funnelId }: AnalyticsHistoryProps) => {
         .select("entry_id, node_label, node_type, metrics")
         .in("entry_id", entryIds);
 
-      const rows: EntryRow[] = data.map((e) => ({
+      const rows: EntryRow[] = data.map((e: any) => ({
         id: e.id,
         date: e.date,
+        period_end: e.period_end || e.date,
+        period_type: e.period_type || "day",
         stepMetrics: (metrics || [])
           .filter((m) => m.entry_id === e.id)
           .map((m) => ({ node_label: m.node_label, node_type: m.node_type, metrics: (m.metrics as Record<string, number>) || {} })),
