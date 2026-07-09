@@ -374,7 +374,15 @@
     },
     "charts": {
       "title": "Trends",
-      "allSteps": "All steps (totals)"
+      "allSteps": "All steps (totals)",
+      "customize": "Metrics",
+      "noMetricsSelected": "Select at least one metric to display."
+    },
+    "granularity": {
+      "day": "Daily",
+      "week": "Weekly",
+      "month": "Monthly",
+      "quarter": "Quarterly"
     }
   },
   "agency": {
