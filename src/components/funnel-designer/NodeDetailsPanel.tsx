@@ -598,50 +598,89 @@ const NodeDetailsPanel = ({
           </div>
         )}
 
-        {/* 3. Copy sections */}
+        {/* 3. Copy Framework */}
         {(renderStyle === "page" || pageType === "email") && (
-          <div className="p-4 border-b border-border">
-            <CopySections
-              linkedAssetId={linkedAssetId}
-              localSections={copySections || []}
-              onLocalSectionsChange={(sections) => onDataChange?.("copySections", sections)}
-              onLinkAsset={(assetId) => {
-                onLinkAsset(assetId);
-                loadAssets();
-              }}
-              defaultAssetName={defaultAssetName}
-            />
+          <div className="p-4 border-b border-border space-y-3">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" /> {t("funnelDesigner.copyFramework.label")}
+            </label>
+            <Select
+              value={copyFrameworkId || "__none"}
+              onValueChange={(v) => setNodeData("copyFrameworkId", v === "__none" ? null : v)}
+            >
+              <SelectTrigger className="text-xs h-8">
+                <SelectValue placeholder={t("funnelDesigner.copyFramework.choose")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none" className="text-xs">{t("funnelDesigner.copyFramework.none")}</SelectItem>
+                {frameworks.map((f) => (
+                  <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {activeFramework && activeSlugs.length > 0 && (
+              <div className="rounded-md border border-border bg-muted/30 p-2 space-y-1">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {t("funnelDesigner.copyFramework.componentsPreview")}
+                </p>
+                <ul className="text-xs text-foreground space-y-0.5">
+                  {activeSlugs.map((slug) => {
+                    const def = componentDefs.find((c) => c.slug === slug);
+                    return (
+                      <li key={slug} className="flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground/60" />
+                        {def?.name || slug}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {copyDocumentId ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs text-foreground bg-primary/5 border border-primary/20 rounded-md px-2 py-1.5">
+                  <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="truncate flex-1">{linkedDocName || t("funnelDesigner.copyFramework.documentLinked")}</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs flex-1"
+                    onClick={() => onOpenCopyDocument?.(copyDocumentId)}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 mr-1" /> {t("funnelDesigner.copyFramework.openDocument")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => setNodeData("copyDocumentId", null)}
+                    title={t("funnelDesigner.copyFramework.unlink")}
+                  >
+                    <Unlink className="w-3.5 h-3.5 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              copyFrameworkId && (
+                <Button
+                  size="sm"
+                  className="h-8 text-xs w-full"
+                  disabled={creatingDoc || !activeSubAccountId}
+                  onClick={createCopyDocument}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  {creatingDoc
+                    ? t("funnelDesigner.copyFramework.creating")
+                    : t("funnelDesigner.copyFramework.createDocument")}
+                </Button>
+              )
+            )}
           </div>
         )}
 
-        {/* 4. Link Sales Copy asset */}
-        {isPageOrEmail && renderStyle === "page" && (
-          <div className="p-4 border-b border-border space-y-3">
-            <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.linkAsset")}</label>
-            <div className="flex gap-2">
-              <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
-                <SelectTrigger className="text-xs h-8">
-                  <SelectValue placeholder={t("funnelDesigner.selectAsset")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {assets.map((a) => (
-                    <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedAssetId && selectedAssetId !== linkedAssetId && (
-                <Button size="sm" className="h-8 px-2" onClick={handleLink}>
-                  <Link2 className="w-3.5 h-3.5" />
-                </Button>
-              )}
-              {linkedAssetId && (
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleUnlink}>
-                  <Unlink className="w-3.5 h-3.5 text-destructive" />
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* 5. URL field */}
         {isPageOrEmail && (
