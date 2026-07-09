@@ -41,6 +41,7 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
   const [loading, setLoading] = useState(false);
   const [entries, setEntries] = useState<any[]>([]);
   const [stepMetrics, setStepMetrics] = useState<any[]>([]);
+  const [trafficAdThumbnails, setTrafficAdThumbnails] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     if (!funnelId) return;
@@ -72,6 +73,30 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
     };
     load();
   }, [funnelId, periodStart, periodEnd, refreshKey, client]);
+
+  // Load ad thumbnails linked to each trafficSource node (via copy_documents.funnel_node_id)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const trafficIds = (nodes || []).filter((n: any) => n.type === "trafficSource").map((n: any) => n.id);
+      if (trafficIds.length === 0) { setTrafficAdThumbnails({}); return; }
+      const { data: docs } = await client
+        .from("copy_documents")
+        .select("id, funnel_node_id")
+        .in("funnel_node_id", trafficIds);
+      if (!docs || docs.length === 0) { if (!cancelled) setTrafficAdThumbnails({}); return; }
+      const { resolveDocumentThumbnails } = await import("@/lib/copy/documentThumbnail");
+      const thumbs = await resolveDocumentThumbnails((docs as any[]).map((d) => d.id), { client: client as any });
+      const byNode: Record<string, string[]> = {};
+      for (const d of docs as any[]) {
+        const url = thumbs[d.id];
+        if (!url) continue;
+        (byNode[d.funnel_node_id] ||= []).push(url);
+      }
+      if (!cancelled) setTrafficAdThumbnails(byNode);
+    })();
+    return () => { cancelled = true; };
+  }, [(nodes || []).map((n: any) => n.type === "trafficSource" ? n.id : "").join("|"), client, refreshKey]);
 
   const { stepAggregates, stepAggregateMap } = useMemo(() => {
     const trackableIds = new Set(nodes.filter(isTrackableNode).map((n: any) => n.id));
@@ -129,13 +154,17 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
       }
       return {
         ...n,
-        data: { ...n.data, analyticsMetrics },
+        data: {
+          ...n.data,
+          analyticsMetrics,
+          adThumbnails: n.type === "trafficSource" ? (trafficAdThumbnails[n.id] || []) : undefined,
+        },
         draggable: false,
         connectable: false,
         selectable: false,
       };
     });
-  }, [filtered.nodes, stepAggregateMap]);
+  }, [filtered.nodes, stepAggregateMap, trafficAdThumbnails]);
 
   const flowEdges: Edge[] = useMemo(() => {
     return filtered.edges.map((e: any) => ({
