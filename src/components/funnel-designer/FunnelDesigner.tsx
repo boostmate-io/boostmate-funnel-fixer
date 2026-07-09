@@ -1161,10 +1161,11 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     };
   }, [setNodes]);
 
-  const handleLinkAsset = useCallback((assetId: string | null) => {
-    if (!detailsNodeId) return;
-    setNodes((nds) => nds.map((n) => n.id === detailsNodeId ? { ...n, data: { ...n.data, linkedAssetId: assetId } } : n));
-  }, [detailsNodeId, setNodes]);
+  const handleOpenCopyDocument = useCallback((docId: string) => {
+    window.dispatchEvent(new CustomEvent("boostmate:navigate-module", { detail: "copy-documents" }));
+    window.dispatchEvent(new CustomEvent("boostmate:open-copy-document", { detail: docId }));
+  }, []);
+
 
   const handleRenameNode = useCallback((name: string) => {
     if (!detailsNodeId) return;
