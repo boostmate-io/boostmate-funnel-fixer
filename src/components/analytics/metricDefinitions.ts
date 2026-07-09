@@ -10,7 +10,29 @@ export interface MetricField {
 export const getPrimaryMetric = (nodeType: string): MetricField | null => {
   const fields = getMetricsForNodeType(nodeType).filter((f) => !f.computed);
   if (!fields.length) return null;
-  // Prefer the most meaningful "result" metric (2nd raw), otherwise first.
+  const priority: Record<string, string[]> = {
+    trafficSource: ["clicks"],
+    "opt-in": ["conversions"],
+    squeeze: ["conversions"],
+    bridge: ["completions"],
+    webinar: ["completions"],
+    sales: ["revenue", "purchases"],
+    checkout: ["revenue", "purchases"],
+    "order-form": ["revenue", "purchases"],
+    tripwire: ["revenue", "purchases"],
+    upsell: ["accepted"],
+    downsell: ["accepted"],
+    application: ["conversions"],
+    calendar: ["conversions"],
+    "thank-you": ["visitors"],
+    confirmation: ["visitors"],
+    membership: ["visitors"],
+  };
+  const preferKeys = priority[nodeType] || (nodeType.toLowerCase().includes("email") ? ["clicked"] : []);
+  for (const k of preferKeys) {
+    const f = fields.find((x) => x.key === k);
+    if (f) return f;
+  }
   return fields[1] || fields[0];
 };
 
