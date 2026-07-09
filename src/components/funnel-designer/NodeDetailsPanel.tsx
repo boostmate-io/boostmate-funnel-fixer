@@ -109,7 +109,8 @@ const NodeDetailsPanel = ({
   const [componentDefs, setComponentDefs] = useState<CopyComponentDef[]>([]);
 
   // Determine framework type from node context
-  const frameworkType = pageType === "email" ? "email_sequence" : "sales_copy";
+  const isEmailNode = pageType === "email" || pageType === "broadcast-email";
+  const frameworkType = isEmailNode ? "email_sequence" : "sales_copy";
 
   const loadFrameworks = useCallback(async () => {
     const [{ data: fw }, { data: cd }] = await Promise.all([
@@ -214,7 +215,7 @@ const NodeDetailsPanel = ({
     const hasUrl = !isNoteOrText && !isShape && !!nodeUrl;
     const hasImage = !isNoteOrText && !isShape && !!nodeImage;
     const hasCopyComponents = copyComponentNames && copyComponentNames.length > 0;
-    const hasAnyDetails = hasNotes || hasNodeNotes || hasUrl || hasImage || hasCopyComponents || (pageType === "email" && !!emailSubject);
+    const hasAnyDetails = hasNotes || hasNodeNotes || hasUrl || hasImage || hasCopyComponents || (isEmailNode && !!emailSubject);
 
     return (
       <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
@@ -225,7 +226,7 @@ const NodeDetailsPanel = ({
           </Button>
         </div>
         <div className="flex-1 overflow-auto">
-          {isPageOrEmail && pageType === "email" && !!emailSubject && (
+          {isPageOrEmail && isEmailNode && !!emailSubject && (
             <div className="p-4 border-b border-border">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Subject line</label>
               <p className="text-sm text-foreground whitespace-pre-wrap">{emailSubject}</p>
@@ -528,7 +529,7 @@ const NodeDetailsPanel = ({
               placeholder={nodeLabel}
               className="text-sm h-8"
             />
-            {pageType === "email" && (
+            {isEmailNode && (
               <>
                 <label className="text-xs font-medium text-muted-foreground">Subject line</label>
                 <Input
@@ -556,7 +557,7 @@ const NodeDetailsPanel = ({
         )}
 
         {/* 3. Copy Framework */}
-        {(renderStyle === "page" || pageType === "email") && (
+        {(renderStyle === "page" || isEmailNode) && (
           <div className="p-4 border-b border-border space-y-3">
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" /> {t("funnelDesigner.copyFramework.label")}
@@ -607,6 +608,7 @@ const NodeDetailsPanel = ({
                 userId={userId}
                 linkedOfferId={linkedOfferId ?? null}
                 defaultFrameworkId={copyFrameworkId ?? null}
+                documentType={frameworkType}
                 nodeLabel={customLabel || nodeLabel}
                 funnelName={funnelName}
                 onOpenDocument={onOpenCopyDocument}

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { X, Plus, Link2, Unlink, ExternalLink } from "lucide-react";
+import { X, Plus, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { resolveDocumentThumbnails } from "@/lib/copy/documentThumbnail";
@@ -13,6 +13,7 @@ interface Props {
   label: string;
   funnelId?: string | null;
   funnelName?: string;
+  subAccountId?: string | null;
   readOnly?: boolean;
   onOpenCopyDocument?: (id: string) => void;
   onClose: () => void;
@@ -24,7 +25,7 @@ interface Props {
  * documents to a traffic source node (updates `copy_documents.funnel_node_id`).
  */
 const TrafficSourceDetailsPanel = ({
-  nodeId, label, funnelId, funnelName, readOnly,
+  nodeId, label, funnelId, funnelName, subAccountId, readOnly,
   onOpenCopyDocument, onClose, supabaseClient,
 }: Props) => {
   const sb = (supabaseClient || supabase) as SupabaseClient<any, any, any>;
@@ -32,12 +33,12 @@ const TrafficSourceDetailsPanel = ({
   const [linked, setLinked] = useState<LinkedDocument[]>([]);
   const [available, setAvailable] = useState<LinkedDocument[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, string | undefined>>({});
-  const [subAccountId, setSubAccountId] = useState<string | null>(null);
+  const [resolvedSubAccountId, setResolvedSubAccountId] = useState<string | null>(null);
   const [metaFrameworkName, setMetaFrameworkName] = useState<string>("Meta Ad");
 
   const load = useCallback(async () => {
     // Resolve current sub_account for the user (needed to filter available docs).
-    let subId: string | null = subAccountId;
+    let subId: string | null = subAccountId ?? resolvedSubAccountId;
     if (!readOnly && !subId) {
       const { data: auth } = await sb.auth.getUser();
       if (auth.user?.id) {
@@ -49,7 +50,7 @@ const TrafficSourceDetailsPanel = ({
           .limit(1)
           .maybeSingle();
         subId = (memb as any)?.sub_account_id || null;
-        setSubAccountId(subId);
+        setResolvedSubAccountId(subId);
       }
     }
 
@@ -71,16 +72,16 @@ const TrafficSourceDetailsPanel = ({
     setLinked(linkedList);
 
     if (!readOnly && subId) {
-      // Available: meta_ad docs in the same workspace, not linked to any node
-      // (or linked to a different node — still attachable, will move).
+      // Available: all Meta Ad docs in the same workspace, except docs already
+      // linked to this traffic source. If one is linked elsewhere, attaching it
+      // moves that document to the current traffic source.
       const { data: avail } = await sb
         .from("copy_documents")
         .select("id, name, type, status, updated_at, funnel_node_id")
         .eq("sub_account_id", subId)
         .eq("type", "meta_ad")
-        .is("funnel_node_id", null)
         .order("updated_at", { ascending: false });
-      setAvailable(((avail || []) as any[]).filter((d) => d.id) as LinkedDocument[]);
+      setAvailable(((avail || []) as any[]).filter((d) => d.id && d.funnel_node_id !== nodeId) as LinkedDocument[]);
     }
 
     const allIds = linkedList.map((d) => d.id);
@@ -90,7 +91,7 @@ const TrafficSourceDetailsPanel = ({
     } else {
       setThumbnails({});
     }
-  }, [sb, nodeId, readOnly, subAccountId]);
+  }, [sb, nodeId, readOnly, subAccountId, resolvedSubAccountId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -101,13 +102,18 @@ const TrafficSourceDetailsPanel = ({
       .eq("id", docId);
     if (error) { toast.error("Attach failed"); return; }
     toast.success("Document attached");
+    window.dispatchEvent(new CustomEvent("boostmate:funnel-copy-documents-changed", { detail: { funnelNodeId: nodeId } }));
     load();
   };
 
   const detach = async (id: string) => {
     const { error } = await sb.from("copy_documents").update({ funnel_node_id: null } as any).eq("id", id);
     if (error) toast.error("Detach failed");
-    else { toast.success("Document detached"); load(); }
+    else {
+      toast.success("Document detached");
+      window.dispatchEvent(new CustomEvent("boostmate:funnel-copy-documents-changed", { detail: { funnelNodeId: nodeId } }));
+      load();
+    }
   };
 
   return (
@@ -148,7 +154,7 @@ const TrafficSourceDetailsPanel = ({
               <div className="max-h-72 overflow-auto">
                 {available.length === 0 ? (
                   <p className="text-xs text-muted-foreground p-3 text-center">
-                    No unlinked ad documents in this workspace.
+                    No available ad documents in this workspace.
                   </p>
                 ) : (
                   available.map((d) => (

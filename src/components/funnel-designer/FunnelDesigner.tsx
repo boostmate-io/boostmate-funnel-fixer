@@ -203,6 +203,12 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
 
   // Ad thumbnails linked to each trafficSource node (via copy_documents.funnel_node_id)
   const [trafficAdThumbnails, setTrafficAdThumbnails] = useState<Record<string, string[]>>({});
+  const [copyLinkRefreshKey, setCopyLinkRefreshKey] = useState(0);
+  useEffect(() => {
+    const refresh = () => setCopyLinkRefreshKey((key) => key + 1);
+    window.addEventListener("boostmate:funnel-copy-documents-changed", refresh);
+    return () => window.removeEventListener("boostmate:funnel-copy-documents-changed", refresh);
+  }, []);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -224,7 +230,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       if (!cancelled) setTrafficAdThumbnails(byNode);
     })();
     return () => { cancelled = true; };
-  }, [nodes.map((n) => n.type === "trafficSource" ? n.id : "").join("|"), currentFunnel?.id, detailsNodeId]);
+  }, [nodes.map((n) => n.type === "trafficSource" ? n.id : "").join("|"), currentFunnel?.id, detailsNodeId, copyLinkRefreshKey]);
 
 
   // Check admin role
@@ -1794,6 +1800,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           label={(detailsNode.data as any).label || "Traffic source"}
           funnelId={currentFunnel?.id || null}
           funnelName={currentFunnel?.name || ""}
+          subAccountId={activeSubAccountId ?? null}
           onOpenCopyDocument={handleOpenCopyDocument}
           onClose={() => setDetailsNodeId(null)}
         />
