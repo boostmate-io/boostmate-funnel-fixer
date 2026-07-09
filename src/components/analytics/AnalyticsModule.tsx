@@ -95,8 +95,8 @@ const AnalyticsModule = ({
   };
 
   const currentConfig: AnalyticsViewConfig = useMemo(() => ({
-    period, granularity, selectedMetrics,
-  }), [period, granularity, selectedMetrics]);
+    period, granularity, selectedMetrics, selectedKPIs,
+  }), [period, granularity, selectedMetrics, selectedKPIs]);
 
   return (
     <div className="h-full flex flex-col">
