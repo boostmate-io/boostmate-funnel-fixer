@@ -393,6 +393,18 @@
       "week": "Wekelijks",
       "month": "Maandelijks",
       "quarter": "Per kwartaal"
+    },
+    "dataEntries": "Data entries",
+    "savedViews": {
+      "title": "Weergaves",
+      "saveCurrent": "Huidige weergave opslaan...",
+      "saved": "Opgeslagen weergaves",
+      "namePlaceholder": "Naam van weergave",
+      "setDefault": "Als standaard instellen",
+      "unsetDefault": "Standaard verwijderen",
+      "defaultSet": "Ingesteld als standaard",
+      "deleted": "Weergave verwijderd",
+      "saveError": "Opslaan mislukt"
     }
   },
   "agency": {

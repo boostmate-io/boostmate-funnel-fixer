@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { subDays } from "date-fns";
 import FunnelSelector from "./FunnelSelector";
@@ -9,6 +9,7 @@ import AnalyticsHistory from "./AnalyticsHistory";
 import AnalyticsPeriodFilter, { type AnalyticsPeriod } from "./AnalyticsPeriodFilter";
 import AnalyticsKPIs from "./AnalyticsKPIs";
 import AnalyticsShareDialog from "./AnalyticsShareDialog";
+import AnalyticsSavedViews, { loadDefaultView } from "./AnalyticsSavedViews";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -38,7 +39,6 @@ export interface AnalyticsViewConfig {
 }
 
 interface AnalyticsModuleProps {
-  // Shared-mode props
   sharedFunnel?: SelectedFunnel | null;
   client?: SupabaseClient<any>;
   readOnly?: boolean;
@@ -66,6 +66,7 @@ const AnalyticsModule = ({
   const [entryOpen, setEntryOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareToken, setShareToken] = useState<string | null>(sharedFunnel?.shareToken || null);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   const [period, setPeriod] = useState<AnalyticsPeriod>(
     initialConfig?.period ?? { start: subDays(new Date(), 30), end: new Date(), label: "last30" }
@@ -74,12 +75,36 @@ const AnalyticsModule = ({
   const [selectedMetrics, setSelectedMetrics] = useState<string[] | null>(initialConfig?.selectedMetrics ?? null);
   const [selectedKPIs, setSelectedKPIs] = useState<string[] | null>(initialConfig?.selectedKPIs ?? null);
 
+  // Fullscreen image viewer for funnel-node thumbnails
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const src = (e as CustomEvent).detail?.src;
+      if (src) setFullscreenImage(src);
+    };
+    window.addEventListener("funnel-node-image-view", handler);
+    return () => window.removeEventListener("funnel-node-image-view", handler);
+  }, []);
+
   // Load share_token for currently-selected funnel (private mode)
   useEffect(() => {
     if (readOnly || !selectedFunnel?.id) return;
     (async () => {
       const { data } = await supabase.from("funnels").select("share_token").eq("id", selectedFunnel.id).maybeSingle();
       setShareToken((data as any)?.share_token || null);
+    })();
+  }, [selectedFunnel?.id, readOnly]);
+
+  // Load default saved view on funnel change (private mode only)
+  useEffect(() => {
+    if (readOnly || !selectedFunnel?.id) return;
+    (async () => {
+      const def = await loadDefaultView(selectedFunnel.id);
+      if (def) {
+        setPeriod(def.period);
+        setGranularity(def.granularity);
+        setSelectedMetrics(def.selectedMetrics);
+        setSelectedKPIs(def.selectedKPIs);
+      }
     })();
   }, [selectedFunnel?.id, readOnly]);
 
@@ -97,6 +122,13 @@ const AnalyticsModule = ({
   const currentConfig: AnalyticsViewConfig = useMemo(() => ({
     period, granularity, selectedMetrics, selectedKPIs,
   }), [period, granularity, selectedMetrics, selectedKPIs]);
+
+  const applyConfig = useCallback((cfg: AnalyticsViewConfig) => {
+    setPeriod(cfg.period);
+    setGranularity(cfg.granularity);
+    setSelectedMetrics(cfg.selectedMetrics);
+    setSelectedKPIs(cfg.selectedKPIs);
+  }, []);
 
   return (
     <div className="h-full flex flex-col">
@@ -125,17 +157,21 @@ const AnalyticsModule = ({
 
       {selectedFunnel ? (
         <div className="flex-1 overflow-auto p-6 space-y-8">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-lg font-display font-semibold text-foreground">{t("analytics.summary.title")}</h2>
-            <div className="flex items-center gap-2">
-              <AnalyticsPeriodFilter value={period} onChange={setPeriod} />
-              {!readOnly && (
-                <Button size="sm" className="gap-1.5" onClick={() => { setEditingEntry(null); setEntryOpen(true); }}>
-                  <Plus className="w-4 h-4" />
-                  {t("analytics.addEntry") || "Add data entry"}
-                </Button>
-              )}
-            </div>
+          <div className="flex items-center justify-end gap-2 flex-wrap">
+            <AnalyticsPeriodFilter value={period} onChange={setPeriod} />
+            {!readOnly && (
+              <AnalyticsSavedViews
+                funnelId={selectedFunnel.id}
+                currentConfig={currentConfig}
+                onApply={applyConfig}
+              />
+            )}
+            {!readOnly && (
+              <Button size="sm" className="gap-1.5" onClick={() => { setEditingEntry(null); setEntryOpen(true); }}>
+                <Plus className="w-4 h-4" />
+                {t("analytics.addEntry") || "Add data entry"}
+              </Button>
+            )}
           </div>
 
           <AnalyticsKPIs
@@ -149,6 +185,17 @@ const AnalyticsModule = ({
             selectedKPIs={selectedKPIs}
             onSelectedKPIsChange={setSelectedKPIs}
             readOnly={readOnly}
+            title={t("analytics.summary.title")}
+          />
+
+          <AnalyticsSummary
+            funnelId={selectedFunnel.id}
+            nodes={selectedFunnel.nodes}
+            edges={selectedFunnel.edges}
+            periodStart={period.start}
+            periodEnd={period.end}
+            refreshKey={refreshKey}
+            client={activeClient}
           />
 
           <div>
@@ -167,18 +214,8 @@ const AnalyticsModule = ({
             />
           </div>
 
-          <AnalyticsSummary
-            funnelId={selectedFunnel.id}
-            nodes={selectedFunnel.nodes}
-            edges={selectedFunnel.edges}
-            periodStart={period.start}
-            periodEnd={period.end}
-            refreshKey={refreshKey}
-            client={activeClient}
-          />
-
           <div>
-            <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t("analytics.history")}</h2>
+            <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t("analytics.dataEntries") || "Data entries"}</h2>
             <AnalyticsHistory
               funnelId={selectedFunnel.id}
               nodes={selectedFunnel.nodes}
@@ -226,6 +263,16 @@ const AnalyticsModule = ({
           />
         </>
       )}
+
+      <Dialog open={!!fullscreenImage} onOpenChange={(open) => { if (!open) setFullscreenImage(null); }}>
+        <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 gap-0 overflow-hidden">
+          <div className="w-full h-full overflow-auto bg-black">
+            {fullscreenImage && (
+              <img src={fullscreenImage} alt="Screenshot" className="w-full h-auto block" />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
