@@ -496,98 +496,6 @@ export type Database = {
           },
         ]
       }
-      asset_sections: {
-        Row: {
-          asset_id: string
-          content: string | null
-          created_at: string
-          description: string
-          id: string
-          sort_order: number
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          asset_id: string
-          content?: string | null
-          created_at?: string
-          description?: string
-          id?: string
-          sort_order?: number
-          title?: string
-          updated_at?: string
-        }
-        Update: {
-          asset_id?: string
-          content?: string | null
-          created_at?: string
-          description?: string
-          id?: string
-          sort_order?: number
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "asset_sections_asset_id_fkey"
-            columns: ["asset_id"]
-            isOneToOne: false
-            referencedRelation: "assets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      assets: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          project_id: string | null
-          sub_account_id: string | null
-          type: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          project_id?: string | null
-          sub_account_id?: string | null
-          type?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          project_id?: string | null
-          sub_account_id?: string | null
-          type?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "assets_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "assets_sub_account_id_fkey"
-            columns: ["sub_account_id"]
-            isOneToOne: false
-            referencedRelation: "sub_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       audits: {
         Row: {
           conversion_rate: string
@@ -886,6 +794,8 @@ export type Database = {
           context_offer_id: string | null
           context_type: string
           created_at: string
+          funnel_id: string | null
+          funnel_node_id: string | null
           global_instructions: string
           id: string
           name: string
@@ -899,6 +809,8 @@ export type Database = {
           context_offer_id?: string | null
           context_type?: string
           created_at?: string
+          funnel_id?: string | null
+          funnel_node_id?: string | null
           global_instructions?: string
           id?: string
           name?: string
@@ -912,6 +824,8 @@ export type Database = {
           context_offer_id?: string | null
           context_type?: string
           created_at?: string
+          funnel_id?: string | null
+          funnel_node_id?: string | null
           global_instructions?: string
           id?: string
           name?: string
@@ -926,6 +840,13 @@ export type Database = {
             columns: ["context_offer_id"]
             isOneToOne: false
             referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "copy_documents_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
             referencedColumns: ["id"]
           },
           {
