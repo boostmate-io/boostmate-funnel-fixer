@@ -131,37 +131,116 @@ const GenericComponentUI = ({
         </div>
       )}
 
-      {/* Text output section */}
-      {hasTextOutput && (
+      {/* Text/richtext/array output section — always visible for defined outputs */}
+      {nonImageStructure.length > 0 && (
         <div className="space-y-4">
           <h4 className="text-sm font-display font-bold text-foreground">Output</h4>
-          {outputKeys.map(key => (
-            <div key={key} className="space-y-1.5">
-              <Label className="text-xs capitalize">{key.replace(/_/g, " ")}</Label>
-              {Array.isArray(outputs[key]) ? (
-                <div className="space-y-1">
-                  {(outputs[key] as string[]).map((item, i) => (
-                    <Textarea
-                      key={i}
-                      value={typeof item === "string" ? item : JSON.stringify(item)}
-                      onChange={e => {
-                        const updated = [...outputs[key]];
-                        updated[i] = e.target.value;
-                        onOutputsChange({ ...outputs, [key]: updated });
+          {nonImageStructure.map((field) => {
+            const key = field.key;
+            const label = field.label || key.replace(/_/g, " ");
+            const rawValue = outputs[key];
+
+            // Array fields (e.g. headline variations) with item_schema
+            if (field.type === "array") {
+              const items: any[] = Array.isArray(rawValue) ? rawValue : [];
+              const displayItems = items.length > 0 ? items : [{}];
+              const itemSchema = field.item_schema || [];
+
+              return (
+                <div key={key} className="space-y-2">
+                  <Label className="text-xs capitalize">{label}</Label>
+                  <div className="space-y-2">
+                    {displayItems.map((item, i) => (
+                      <div key={i} className="rounded-md border border-border p-3 space-y-2 bg-muted/30">
+                        {itemSchema.length > 0 ? (
+                          itemSchema.map((sub: any) => (
+                            <div key={sub.key} className="space-y-1">
+                              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                {sub.label || sub.key}
+                              </Label>
+                              <Textarea
+                                value={typeof item === "object" ? (item?.[sub.key] ?? "") : (i === 0 ? String(item ?? "") : "")}
+                                onChange={(e) => {
+                                  const updated = [...items];
+                                  while (updated.length <= i) updated.push({});
+                                  updated[i] = { ...(updated[i] || {}), [sub.key]: e.target.value };
+                                  onOutputsChange({ ...outputs, [key]: updated });
+                                }}
+                                className="min-h-[40px] text-sm"
+                              />
+                            </div>
+                          ))
+                        ) : (
+                          <Textarea
+                            value={typeof item === "string" ? item : (item ? JSON.stringify(item) : "")}
+                            onChange={(e) => {
+                              const updated = [...items];
+                              while (updated.length <= i) updated.push("");
+                              updated[i] = e.target.value;
+                              onOutputsChange({ ...outputs, [key]: updated });
+                            }}
+                            className="min-h-[40px] text-sm"
+                          />
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => {
+                        const next = [...(items.length > 0 ? items : []), itemSchema.length > 0 ? {} : ""];
+                        onOutputsChange({ ...outputs, [key]: next });
                       }}
-                      className="min-h-[40px] text-sm"
-                    />
-                  ))}
+                    >
+                      + Add item
+                    </Button>
+                  </div>
                 </div>
-              ) : (
+              );
+            }
+
+            // Richtext = large textarea (WYSIWYG placeholder)
+            if (field.type === "richtext") {
+              return (
+                <div key={key} className="space-y-1.5">
+                  <Label className="text-xs capitalize">{label}</Label>
+                  <Textarea
+                    value={typeof rawValue === "string" ? rawValue : ""}
+                    onChange={(e) => onOutputsChange({ ...outputs, [key]: e.target.value })}
+                    placeholder="Write or generate content..."
+                    className="min-h-[400px] text-sm leading-relaxed"
+                  />
+                </div>
+              );
+            }
+
+            // long_text
+            if (field.type === "long_text") {
+              return (
+                <div key={key} className="space-y-1.5">
+                  <Label className="text-xs capitalize">{label}</Label>
+                  <Textarea
+                    value={typeof rawValue === "string" ? rawValue : ""}
+                    onChange={(e) => onOutputsChange({ ...outputs, [key]: e.target.value })}
+                    className="min-h-[120px] text-sm"
+                  />
+                </div>
+              );
+            }
+
+            // Default: text
+            return (
+              <div key={key} className="space-y-1.5">
+                <Label className="text-xs capitalize">{label}</Label>
                 <Textarea
-                  value={typeof outputs[key] === "string" ? outputs[key] : ""}
-                  onChange={e => onOutputsChange({ ...outputs, [key]: e.target.value })}
-                  className="min-h-[80px] text-sm"
+                  value={typeof rawValue === "string" ? rawValue : ""}
+                  onChange={(e) => onOutputsChange({ ...outputs, [key]: e.target.value })}
+                  className="min-h-[60px] text-sm"
                 />
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -182,8 +261,8 @@ const GenericComponentUI = ({
         </div>
       )}
 
-      {/* Raw output fallback */}
-      {outputs.raw && !outputKeys.filter(k => k !== "raw").length && (
+      {/* Raw output fallback — only when no structure was defined at all */}
+      {nonImageStructure.length === 0 && outputs.raw && (
         <div className="space-y-1.5">
           <Label className="text-xs">Generated Content</Label>
           <Textarea

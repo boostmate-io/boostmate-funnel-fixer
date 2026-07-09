@@ -1,77 +1,41 @@
-# Plan: Framework-driven Copy Documents + Meta Ads + Grid view
+## Wijzigingen
 
-## 1. Document = framework (data + UX)
+### 1. Document aanmaken – fallback naar generiek framework
+- **`CopyDocumentsModule.tsx` → `openPicker`/`createDocument`:**
+  - 0 frameworks voor het type → automatisch het **Generic framework** koppelen (met `generic_copy` component). Document heeft dus altijd minstens één invulbaar component.
+  - 1 framework voor het type → automatisch koppelen (huidig gedrag).
+  - >1 frameworks → picker openen met keuze; extra optie **"Generic (blank)"** bovenaan zodat de gebruiker bewust generiek kan kiezen.
 
-### Schema
-- `copy_documents.framework_id uuid references copy_frameworks(id)` — nullable, gezet op alle nieuwe documenten.
+### 2. Nieuw document type: `generic`
+- **Migratie** voegt toe:
+  - `ai_action` `generate_generic_copy`: input `prompt` (textarea) + `context`; output `content` (type `richtext`, `is_primary: true`).
+  - `copy_component` `generic_copy`: output_structure = `content` (richtext). UI valt terug op `GenericComponentUI`.
+  - `copy_framework` **"Generic Copy"**: `type = 'generic'`, `component_slugs = ["generic_copy"]`.
+- **`CopyDocumentsModule.tsx`:** extra tab **"Generic"** (icon `FileText`) in `DOCUMENT_TYPES`.
+- Het Generic framework wordt óók gebruikt als fallback bij andere types zonder framework (zie punt 1), zodat je overal een werkend document krijgt.
 
-### Editor (`CopyDocumentEditor.tsx`)
-- Settings tab: **weg** → "Add Component"-dropdown, per-component up/down/delete, "Save as Framework".
-- Settings tab: **blijft** → naam, context source, global instructions.
-- Settings tab: **nieuw** → read-only regel "Framework: {naam}" + knop "Change framework". Bij wisselen: bevestigen, dan alle huidige `copy_document_components` vervangen door de componenten van het nieuwe framework.
-- Builder tab: componentlijst komt uit het framework in vaste volgorde. Geen manuele add/remove/reorder.
-- Empty state: als document geen framework heeft (legacy), toon "Kies een framework in Settings".
+### 3. Framework kiezen vanuit Document Settings
+- **`CopyDocumentEditor.tsx` Settings-tab:**
+  - "Change framework"-knop blijft; lijst frameworks gefilterd op `document.type`.
+  - Als geen frameworks voor dit type → val terug op het Generic framework (dat is dan de enige optie).
 
-### Copy Documents module (`CopyDocumentsModule.tsx`)
-- "New Document" opent klein dialog: framework kiezen binnen het actieve type. Als er maar één framework in dat type bestaat → direct aanmaken.
-- Bij aanmaak: `type` + `framework_id` invullen en meteen `copy_document_components`-rijen invoegen op basis van `framework.component_slugs`.
+### 4. Richtext (WYSIWYG) output veldtype
+- **`GenericComponentUI.tsx`:** rendering voor `type: "richtext"` — grote textarea (`min-h-[400px]`) als eerste implementatie, geen nieuwe dependency.
 
-### Funnel-node aanmaak (`NodeLinkedDocuments.tsx`)
-- `framework_id` mee opslaan (component-slugs worden al ingevoegd — enkel `framework_id`-veld toevoegen).
+### 5. Alle output-velden meteen tonen (ook zonder generatie)
+- **`GenericComponentUI.tsx`:**
+  - Render **altijd** één veld per entry in `outputStructure` (niet-image), ongeacht of `outputs[key]` bestaat of leeg is.
+  - Voor `array`/`item_schema`-velden: toon 1 lege rij als default, met "Add item"-knop.
+  - Image-velden blijven altijd getoond (huidige gedrag).
 
-## 2. Meta Ads: framework + component + AI action seeden
+## Bestanden
 
-Dit doen we via een migratie zodat je niets manueel hoeft te configureren.
-
-### AI action `generate_meta_ad`
-- `type`: `generation`
-- Genereert een volledige Meta Ad in één call.
-- `output_structure` (voor tool schema, image wordt gefilterd door edge function):
-  - `ad_angle` (text) — hoek/kern-idee
-  - `primary_texts` (array van text) — 3 varianten
-  - `headlines` (array van text) — 5 varianten (Meta max 40 tekens per stuk)
-  - `description` (text)
-  - `cta_label` (text) — bv. "Learn More", "Sign Up"
-  - `image_brief` (text) — beschrijving van gewenste visual voor de designer
-- `input_structure`: context (offer/custom), `campaign_goal`, `target_audience`, `key_promise`, `must_include` (optioneel).
-- Instructies: directe DR-copy, benefits over features, houd headlines onder 40 chars, primary_text 90-125 chars sweet spot, geen clickbait, native tone.
-
-### Copy component `meta_ad`
-- `slug: meta_ad`, `ai_action_slug: generate_meta_ad`, `ui_interface_slug: generic`.
-- `icon: Megaphone`.
-- `output_structure`: bovenstaande velden **+** `creative` (type `image`, `is_primary: true`) — image wordt niet door AI ingevuld, wordt door user geüpload.
-- `required_blueprint_fields`: `["offer_design", "customer_clarity"]` (voor context als er geen offer gekoppeld is).
-
-### Copy framework "Meta Ad Copy"
-- `type: meta_ad`
-- `component_slugs: ["meta_ad"]`
-- `is_active: true`
-
-### `DOCUMENT_TYPES` in `CopyDocumentsModule.tsx`
-- Regel toevoegen: `{ type: "meta_ad", icon: Megaphone, label: "Meta Ads" }`.
-
-## 3. Grid view in Copy Documents module
-
-De bestaande verticale lijst (`CopyDocumentsModule.tsx`) vervangen door een **card-grid** met dezelfde look-and-feel als `LinkedDocumentsGrid`:
-
-- Responsive grid: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`.
-- Elke kaart: thumbnail (aspect-video) via `resolveDocumentThumbnail` (dezelfde helper als op funnel-nodes — pakt automatisch het eerste `image`-veld uit het document, valt terug op framework-icon + gradient).
-- Onder de thumbnail: titel, framework-label, status pill (draft/ready/shipped), laatst-bijgewerkt tijd.
-- Kaart-menu (⋯): Open, Delete. Klik op de kaart zelf = openen.
-- "New Document"-knop rechtsboven, opent framework-picker (zie §1).
-
-Om code-duplicatie te vermijden: `LinkedDocumentsGrid` blijft gebruikt worden, maar met een lichte uitbreiding zodat hij ook zonder `funnel_node_id`-context bruikbaar is (props `onCreate` optioneel maken en `readOnly=false` toestaan zonder detach-actie). Copy Documents module gebruikt dezelfde grid-component met eigen fetch (op `sub_account_id + type`).
-
-## 4. Bestanden
-
-- `supabase/migrations/…` — kolom `framework_id` op `copy_documents` + seed rows voor `ai_actions`, `copy_components`, `copy_frameworks` (Meta Ads).
-- `src/components/copy/CopyDocumentsModule.tsx` — grid + framework-picker + `meta_ad` tab.
-- `src/components/copy/CopyDocumentEditor.tsx` — Settings component-management weg, "Change framework" toevoegen, `framework_id` opslaan.
-- `src/components/copy/linked/LinkedDocumentsGrid.tsx` — kleine props-aanpassing zodat generiek herbruikbaar (zonder detach).
-- `src/components/copy/linked/NodeLinkedDocuments.tsx` — `framework_id` mee opslaan bij insert.
-- `src/i18n/en.json` + `nl.json` — Meta Ads label + nieuwe strings.
+- `supabase/migrations/…` — Generic AI action + component + framework.
+- `src/components/copy/CopyDocumentsModule.tsx` — Generic tab, auto-fallback naar Generic framework, "Generic (blank)"-optie in picker.
+- `src/components/copy/CopyDocumentEditor.tsx` — Framework-picker in Settings toont Generic als fallback.
+- `src/components/copy/interfaces/GenericComponentUI.tsx` — Altijd outputvelden tonen + `richtext`-veldtype.
 
 ## Buiten scope
 
-- Bestaande documenten migreren (blijven werken; `framework_id` blijft null tot je ze opent en een framework kiest via "Change framework").
-- Andere content types (LinkedIn ads, email, VSL) — dezelfde methode werkt, maar wordt later apart geseed.
+- Geen wijziging aan andere dedicated component-UI's (BigPromiseHero, PainPoints, etc.) — die renderen hun eigen structuur al altijd.
+- Geen echte rich-text editor met toolbar; grote textarea nu, upgrade later indien gewenst.
