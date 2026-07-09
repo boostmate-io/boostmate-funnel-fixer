@@ -1117,7 +1117,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   }, []);
 
   const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
-    if (node.type === "funnelPage" || node.type === "sequenceGroup") setDetailsNodeId(node.id);
+    if (node.type === "funnelPage" || node.type === "sequenceGroup" || node.type === "trafficSource") setDetailsNodeId(node.id);
   }, []);
 
   // When a sequence group is deleted, restore its children visibility and edges (don't delete children)
@@ -1501,6 +1501,15 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                       ...n.data,
                       showImages,
                       copyComponentNames: resolveNodeCopyComponentNames(n),
+                    },
+                  }
+                : n.type === "trafficSource"
+                ? {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      showImages,
+                      adThumbnails: trafficAdThumbnails[n.id] || [],
                     },
                   }
                 : n;
