@@ -47,7 +47,7 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnl
         .select("id, date, period_end, period_type")
         .eq("funnel_id", funnelId)
         .order("date", { ascending: false })
-        .limit(50);
+        .limit(500);
 
       if (!data?.length) { setEntries([]); setLoading(false); return; }
 
