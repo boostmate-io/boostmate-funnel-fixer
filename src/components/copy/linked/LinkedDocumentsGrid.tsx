@@ -1,4 +1,4 @@
-import { FileText, ExternalLink, Trash2, Unlink, Plus, icons, Gem, MoreHorizontal } from "lucide-react";
+import { FileText, ExternalLink, Trash2, Unlink, Plus, icons, Gem, MoreHorizontal, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -33,6 +33,7 @@ interface LinkedDocumentsGridProps {
   onCreate?: () => void;
   onDetach?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
   createLabel?: string;
   emptyLabel?: string;
   /** Tailwind grid-cols classes. Default: `grid-cols-1 sm:grid-cols-2`. */
@@ -64,6 +65,7 @@ const LinkedDocumentsGrid = ({
   onCreate,
   onDetach,
   onDelete,
+  onDuplicate,
   createLabel = "New document",
   emptyLabel = "No linked documents yet.",
   gridClassName = "grid-cols-1 sm:grid-cols-2",
