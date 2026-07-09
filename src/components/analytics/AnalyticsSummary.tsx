@@ -246,21 +246,6 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
   );
 };
 
-function KPICard({ icon, label, value, variant }: { icon: React.ReactNode; label: string; value: string; variant?: "success" | "destructive" }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-          {icon}
-          {label}
-        </div>
-        <div className={`text-2xl font-display font-bold ${variant === "success" ? "text-green-600 dark:text-green-400" : variant === "destructive" ? "text-red-600 dark:text-red-400" : "text-foreground"}`}>
-          {value}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 const AnalyticsSummary = (props: AnalyticsSummaryProps) => (
   <ReactFlowProvider>
