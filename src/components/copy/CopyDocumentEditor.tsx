@@ -111,7 +111,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
       supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug, icon, output_structure, required_blueprint_fields, headline_purpose, headline_instruction_block_id").eq("is_active", true).order("sort_order"),
       supabase.from("copy_frameworks").select("id, name, component_slugs, type").eq("is_active", true).eq("type", documentType),
       offersQuery,
-      supabase.from("copy_documents").select("context_type, context_offer_id, context_custom_text, global_instructions, name").eq("id", documentId).single(),
+      supabase.from("copy_documents").select("context_type, context_offer_id, context_custom_text, global_instructions, name, framework_id").eq("id", documentId).single(),
       blueprintQuery,
     ]);
     if (dc) setDocComponents(dc as unknown as DocumentComponent[]);
@@ -145,6 +145,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
       setContextCustomText((doc as any).context_custom_text || "");
       setGlobalInstructions((doc as any).global_instructions || "");
       setDocName((doc as any).name || documentName);
+      setFrameworkId((doc as any).framework_id || null);
     }
     setBlueprint(bp || null);
   }, [documentId, documentType, documentName, activeSubAccountId]);
