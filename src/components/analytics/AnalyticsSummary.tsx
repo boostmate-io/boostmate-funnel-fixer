@@ -97,7 +97,7 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
     });
 
     const nodeOrder = new Map<string, number>();
-    nodes.forEach((n: any, i: number) => nodeOrder.set(n.id, i));
+    sortNodesByFlow(nodes, edges).forEach((n: any, i: number) => nodeOrder.set(n.id, i));
     const stepAggregates = Array.from(stepMap.entries())
       .sort(([a], [b]) => (nodeOrder.get(a) ?? 99) - (nodeOrder.get(b) ?? 99))
       .map(([, v]) => v);
