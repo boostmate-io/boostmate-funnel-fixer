@@ -1,0 +1,1 @@
+UPDATE public.copy_components SET description = 'Meta ad copy, description, CTA and creative.' WHERE slug = 'meta_ad';

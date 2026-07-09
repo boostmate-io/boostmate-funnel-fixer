@@ -7,11 +7,13 @@ type AnalyticsTrafficNodeData = {
   icon: string;
   color: string;
   analyticsMetrics?: { label: string; value: string }[];
+  adThumbnails?: string[];
 };
 
 const AnalyticsTrafficNode = memo(({ data }: NodeProps) => {
   const d = data as unknown as AnalyticsTrafficNodeData;
   const IconComponent = (Icons as any)[d.icon] || Icons.Globe;
+  const thumbs = (d.adThumbnails || []).filter(Boolean);
 
   return (
     <div className="bg-card rounded-xl border border-border shadow-card w-[140px] overflow-hidden">
@@ -21,6 +23,16 @@ const AnalyticsTrafficNode = memo(({ data }: NodeProps) => {
         </div>
         <span className="text-[10px] font-medium text-foreground text-center truncate w-full">{d.label}</span>
       </div>
+      {thumbs.length > 0 && (
+        <div className="px-2 pb-2 space-y-1">
+          {thumbs.slice(0, 2).map((src, i) => (
+            <img key={i} src={src} alt="Ad" loading="lazy" className="w-full h-14 object-cover rounded border border-border" />
+          ))}
+          {thumbs.length > 2 && (
+            <p className="text-[9px] text-muted-foreground text-center">+{thumbs.length - 2} more</p>
+          )}
+        </div>
+      )}
       {d.analyticsMetrics && d.analyticsMetrics.length > 0 && (
         <div className="border-t border-border bg-muted/30 px-3 py-2 space-y-0.5">
           {d.analyticsMetrics.map((m, i) => (

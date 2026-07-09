@@ -1,4 +1,4 @@
-import { FileText, ExternalLink, Trash2, Unlink, Plus, icons, Gem, MoreHorizontal } from "lucide-react";
+import { FileText, ExternalLink, Trash2, Unlink, Plus, icons, Gem, MoreHorizontal, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -33,6 +33,7 @@ interface LinkedDocumentsGridProps {
   onCreate?: () => void;
   onDetach?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
   createLabel?: string;
   emptyLabel?: string;
   /** Tailwind grid-cols classes. Default: `grid-cols-1 sm:grid-cols-2`. */
@@ -64,6 +65,7 @@ const LinkedDocumentsGrid = ({
   onCreate,
   onDetach,
   onDelete,
+  onDuplicate,
   createLabel = "New document",
   emptyLabel = "No linked documents yet.",
   gridClassName = "grid-cols-1 sm:grid-cols-2",
@@ -98,13 +100,13 @@ const LinkedDocumentsGrid = ({
               onClick={() => onOpen?.(doc.id)}
             >
               {/* Thumbnail */}
-              <div className="aspect-video bg-gradient-to-br from-muted/40 to-muted/10 flex items-center justify-center relative">
+              <div className="h-32 bg-gradient-to-br from-muted/40 to-muted/10 flex items-center justify-center relative overflow-hidden">
                 {thumb ? (
-                  <img src={thumb} alt={doc.name} className="w-full h-full object-cover" loading="lazy" />
+                  <img src={thumb} alt={doc.name} className="w-full h-full object-cover object-center" loading="lazy" />
                 ) : (
                   <LucideIcon name={framework?.icon || "FileText"} className="w-8 h-8 text-muted-foreground/60" />
                 )}
-                {!readOnly && (onDetach || onDelete) && (
+                {!readOnly && (onDetach || onDelete || onDuplicate) && (
                   <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -121,6 +123,11 @@ const LinkedDocumentsGrid = ({
                         {onOpen && (
                           <DropdownMenuItem onClick={() => onOpen(doc.id)}>
                             <ExternalLink className="w-3.5 h-3.5 mr-2" /> Open
+                          </DropdownMenuItem>
+                        )}
+                        {onDuplicate && (
+                          <DropdownMenuItem onClick={() => onDuplicate(doc.id)}>
+                            <Copy className="w-3.5 h-3.5 mr-2" /> Duplicate
                           </DropdownMenuItem>
                         )}
                         {onDetach && (
