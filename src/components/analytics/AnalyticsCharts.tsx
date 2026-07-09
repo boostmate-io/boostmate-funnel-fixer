@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +10,9 @@ import { Settings2 } from "lucide-react";
 import { format, startOfWeek, startOfMonth, startOfQuarter } from "date-fns";
 import { getMetricsForNodeType, getPrimaryMetric, type MetricField } from "./metricDefinitions";
 import { isTrackableNode } from "./nodeFilters";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+export type Granularity = "day" | "week" | "month" | "quarter";
 
 interface AnalyticsChartsProps {
   funnelId: string;
@@ -18,21 +20,17 @@ interface AnalyticsChartsProps {
   periodStart: Date;
   periodEnd: Date;
   refreshKey?: number;
+  client: SupabaseClient<any>;
+  granularity?: Granularity;
+  onGranularityChange?: (g: Granularity) => void;
+  selectedMetrics?: string[] | null;
+  onSelectedMetricsChange?: (keys: string[]) => void;
 }
 
-type Granularity = "day" | "week" | "month" | "quarter";
-
 const COLORS = [
-  "hsl(252, 100%, 64%)",
-  "hsl(340, 82%, 52%)",
-  "hsl(200, 90%, 50%)",
-  "hsl(142, 71%, 45%)",
-  "hsl(32, 95%, 55%)",
-  "hsl(280, 70%, 55%)",
-  "hsl(16, 85%, 55%)",
-  "hsl(180, 70%, 40%)",
-  "hsl(50, 90%, 50%)",
-  "hsl(300, 70%, 55%)",
+  "hsl(252, 100%, 64%)", "hsl(340, 82%, 52%)", "hsl(200, 90%, 50%)", "hsl(142, 71%, 45%)",
+  "hsl(32, 95%, 55%)", "hsl(280, 70%, 55%)", "hsl(16, 85%, 55%)", "hsl(180, 70%, 40%)",
+  "hsl(50, 90%, 50%)", "hsl(300, 70%, 55%)",
 ];
 
 const getNodeType = (n: any): string =>
@@ -44,7 +42,6 @@ const bucketDate = (date: Date, g: Granularity): Date => {
   if (g === "quarter") return startOfQuarter(date);
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 };
-
 const formatBucket = (date: Date, g: Granularity): string => {
   if (g === "week") return `W${format(date, "II '·' dd MMM")}`;
   if (g === "month") return format(date, "MMM yyyy");
@@ -52,13 +49,23 @@ const formatBucket = (date: Date, g: Granularity): string => {
   return format(date, "dd MMM");
 };
 
-const AnalyticsCharts = ({ funnelId, nodes, periodStart, periodEnd, refreshKey }: AnalyticsChartsProps) => {
+const AnalyticsCharts = ({
+  funnelId, nodes, periodStart, periodEnd, refreshKey, client,
+  granularity: granularityProp, onGranularityChange,
+  selectedMetrics, onSelectedMetricsChange,
+}: AnalyticsChartsProps) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [entries, setEntries] = useState<any[]>([]);
   const [stepMetrics, setStepMetrics] = useState<any[]>([]);
-  const [granularity, setGranularity] = useState<Granularity>("day");
-  const [selected, setSelected] = useState<Set<string> | null>(null);
+  const [internalGranularity, setInternalGranularity] = useState<Granularity>("day");
+  const [internalSelected, setInternalSelected] = useState<Set<string> | null>(null);
+
+  const granularity: Granularity = granularityProp ?? internalGranularity;
+  const setGranularity = (g: Granularity) => {
+    if (onGranularityChange) onGranularityChange(g);
+    else setInternalGranularity(g);
+  };
 
   useEffect(() => {
     if (!funnelId) return;
@@ -66,7 +73,7 @@ const AnalyticsCharts = ({ funnelId, nodes, periodStart, periodEnd, refreshKey }
       setLoading(true);
       const startStr = format(periodStart, "yyyy-MM-dd");
       const endStr = format(periodEnd, "yyyy-MM-dd");
-      const { data: entryData } = await supabase
+      const { data: entryData } = await client
         .from("funnel_analytics_entries")
         .select("id, date")
         .eq("funnel_id", funnelId)
@@ -75,27 +82,21 @@ const AnalyticsCharts = ({ funnelId, nodes, periodStart, periodEnd, refreshKey }
         .order("date", { ascending: true });
 
       if (!entryData?.length) {
-        setEntries([]);
-        setStepMetrics([]);
-        setLoading(false);
-        return;
+        setEntries([]); setStepMetrics([]); setLoading(false); return;
       }
-
       setEntries(entryData);
-      const { data: metrics } = await supabase
+      const { data: metrics } = await client
         .from("funnel_step_metrics")
         .select("entry_id, node_id, node_label, node_type, metrics")
-        .in("entry_id", entryData.map((e) => e.id));
-
+        .in("entry_id", entryData.map((e: any) => e.id));
       setStepMetrics(metrics || []);
       setLoading(false);
     };
     load();
-  }, [funnelId, periodStart, periodEnd, refreshKey]);
+  }, [funnelId, periodStart, periodEnd, refreshKey, client]);
 
   const trackableNodes = useMemo(() => nodes.filter(isTrackableNode), [nodes]);
 
-  // Build metric catalogue per node (only raw, non-computed)
   const nodeCatalogue = useMemo(() => {
     return trackableNodes.map((n: any) => {
       const nodeType = getNodeType(n);
@@ -111,33 +112,36 @@ const AnalyticsCharts = ({ funnelId, nodes, periodStart, periodEnd, refreshKey }
     });
   }, [trackableNodes]);
 
-  // Initialize selection to primary of each node once catalogue is known
-  useEffect(() => {
-    if (selected !== null) return;
-    if (!nodeCatalogue.length) return;
-    const init = new Set<string>();
-    nodeCatalogue.forEach((c) => {
-      if (c.primaryKey) init.add(`${c.id}::${c.primaryKey}`);
-    });
-    setSelected(init);
-  }, [nodeCatalogue, selected]);
+  // Determine which selection to use: controlled prop, internal state, or auto-derive from primary metrics.
+  const derivedDefault = useMemo(() => {
+    const s = new Set<string>();
+    nodeCatalogue.forEach((c) => { if (c.primaryKey) s.add(`${c.id}::${c.primaryKey}`); });
+    return s;
+  }, [nodeCatalogue]);
 
-  const activeSelected = selected ?? new Set<string>();
+  useEffect(() => {
+    if (selectedMetrics !== undefined) return; // controlled
+    if (internalSelected !== null) return;
+    if (!nodeCatalogue.length) return;
+    setInternalSelected(new Set(derivedDefault));
+  }, [nodeCatalogue, internalSelected, derivedDefault, selectedMetrics]);
+
+  const activeSelected: Set<string> = useMemo(() => {
+    if (selectedMetrics !== undefined && selectedMetrics !== null) return new Set(selectedMetrics);
+    return internalSelected ?? new Set<string>();
+  }, [selectedMetrics, internalSelected]);
 
   const toggleMetric = (key: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev ?? []);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
+    const next = new Set(activeSelected);
+    next.has(key) ? next.delete(key) : next.add(key);
+    if (onSelectedMetricsChange) onSelectedMetricsChange(Array.from(next));
+    else setInternalSelected(next);
   };
 
   const { chartData, seriesConfig } = useMemo(() => {
-    // Build: bucketKey -> seriesKey -> sum
     const buckets = new Map<string, { label: string; date: Date; values: Record<string, number> }>();
     const entryById = new Map(entries.map((e) => [e.id, e]));
 
-    // Prime buckets from entries so empty series still show a line
     entries.forEach((e) => {
       const d = bucketDate(new Date(e.date), granularity);
       const key = d.toISOString();
@@ -161,7 +165,7 @@ const AnalyticsCharts = ({ funnelId, nodes, periodStart, periodEnd, refreshKey }
     const sorted = Array.from(buckets.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
     const seriesKeys = Array.from(activeSelected);
 
-    const seriesConfig: Record<string, { label: string; color: string; nodeLabel: string; metricLabel: string }> = {};
+    const seriesConfig: Record<string, { label: string; color: string }> = {};
     seriesKeys.forEach((sk, i) => {
       const [nodeId, metricKey] = sk.split("::");
       const cat = nodeCatalogue.find((c) => c.id === nodeId);
@@ -169,8 +173,6 @@ const AnalyticsCharts = ({ funnelId, nodes, periodStart, periodEnd, refreshKey }
       seriesConfig[sk] = {
         label: `${cat?.label || nodeId} · ${field?.label || metricKey}`,
         color: COLORS[i % COLORS.length],
-        nodeLabel: cat?.label || nodeId,
-        metricLabel: field?.label || metricKey,
       };
     });
 
@@ -192,9 +194,7 @@ const AnalyticsCharts = ({ funnelId, nodes, periodStart, periodEnd, refreshKey }
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
         <Select value={granularity} onValueChange={(v) => setGranularity(v as Granularity)}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="day">{t("analytics.granularity.day") || "Daily"}</SelectItem>
             <SelectItem value="week">{t("analytics.granularity.week") || "Weekly"}</SelectItem>
@@ -256,16 +256,9 @@ const AnalyticsCharts = ({ funnelId, nodes, periodStart, periodEnd, refreshKey }
                   <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                   <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                   {seriesKeys.map((sk) => (
-                    <Line
-                      key={sk}
-                      type="monotone"
-                      dataKey={sk}
-                      name={seriesConfig[sk].label}
-                      stroke={seriesConfig[sk].color}
-                      strokeWidth={2}
-                      dot={{ r: 3, fill: seriesConfig[sk].color }}
-                      activeDot={{ r: 6 }}
-                    />
+                    <Line key={sk} type="monotone" dataKey={sk} name={seriesConfig[sk].label}
+                      stroke={seriesConfig[sk].color} strokeWidth={2}
+                      dot={{ r: 3, fill: seriesConfig[sk].color }} activeDot={{ r: 6 }} />
                   ))}
                 </LineChart>
               </ResponsiveContainer>

@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo, Fragment } from "react";
 import { useTranslation } from "react-i18next";
-import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Pencil } from "lucide-react";
@@ -8,12 +7,15 @@ import { format } from "date-fns";
 import { getPrimaryMetric } from "./metricDefinitions";
 import { filterTrackableNodes } from "./nodeFilters";
 import type { EditingEntry } from "./AnalyticsModule";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface AnalyticsHistoryProps {
   funnelId: string;
   nodes: any[];
   refreshKey?: number;
-  onEdit: (entry: EditingEntry) => void;
+  onEdit?: (entry: EditingEntry) => void;
+  client: SupabaseClient<any>;
+  readOnly?: boolean;
 }
 
 interface EntryRow {
@@ -29,7 +31,7 @@ function getNodeType(node: any): string {
   return node?.data?.pageType || "opt-in";
 }
 
-const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit }: AnalyticsHistoryProps) => {
+const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnly }: AnalyticsHistoryProps) => {
   const { t } = useTranslation();
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -39,21 +41,17 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit }: AnalyticsHist
     if (!funnelId) return;
     const load = async () => {
       setLoading(true);
-      const { data } = await supabase
+      const { data } = await client
         .from("funnel_analytics_entries")
         .select("id, date, period_end, period_type")
         .eq("funnel_id", funnelId)
         .order("date", { ascending: false })
         .limit(50);
 
-      if (!data?.length) {
-        setEntries([]);
-        setLoading(false);
-        return;
-      }
+      if (!data?.length) { setEntries([]); setLoading(false); return; }
 
-      const entryIds = data.map((e) => e.id);
-      const { data: metrics } = await supabase
+      const entryIds = data.map((e: any) => e.id);
+      const { data: metrics } = await client
         .from("funnel_step_metrics")
         .select("entry_id, node_id, node_label, node_type, metrics")
         .in("entry_id", entryIds);
@@ -64,17 +62,16 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit }: AnalyticsHist
         period_end: e.period_end || e.date,
         period_type: e.period_type || "day",
         stepMetrics: (metrics || [])
-          .filter((m) => m.entry_id === e.id)
-          .map((m) => ({ node_id: m.node_id, node_label: m.node_label, node_type: m.node_type, metrics: (m.metrics as Record<string, number>) || {} })),
+          .filter((m: any) => m.entry_id === e.id)
+          .map((m: any) => ({ node_id: m.node_id, node_label: m.node_label, node_type: m.node_type, metrics: (m.metrics as Record<string, number>) || {} })),
       }));
 
       setEntries(rows);
       setLoading(false);
     };
     load();
-  }, [funnelId, refreshKey]);
+  }, [funnelId, refreshKey, client]);
 
-  // Determine trackable nodes + a "primary metric per step" column set for the header
   const trackableNodes = useMemo(() => filterTrackableNodes(nodes || []), [nodes]);
   const stepColumns = useMemo(() => {
     return trackableNodes.map((n: any) => {
@@ -123,7 +120,7 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit }: AnalyticsHist
                 </div>
               </TableHead>
             ))}
-            <TableHead className="w-10"></TableHead>
+            {!readOnly && <TableHead className="w-10"></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -151,22 +148,22 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit }: AnalyticsHist
                     const val = col.metricKey && sm ? sm.metrics[col.metricKey] : undefined;
                     return <TableCell key={col.nodeId} className="whitespace-nowrap">{formatValue(val, col.metricType)}</TableCell>;
                   })}
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={(e) => { e.stopPropagation(); onEdit({ id: row.id, date: row.date, period_end: row.period_end, period_type: row.period_type }); }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                  </TableCell>
+                  {!readOnly && (
+                    <TableCell>
+                      <Button
+                        variant="ghost" size="icon" className="h-7 w-7"
+                        onClick={(e) => { e.stopPropagation(); onEdit?.({ id: row.id, date: row.date, period_end: row.period_end, period_type: row.period_type }); }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
                 {isOpen && row.stepMetrics.map((sm, i) => (
                   <TableRow key={`${row.id}-${i}`} className="bg-muted/20">
                     <TableCell></TableCell>
                     <TableCell className="text-sm pl-8">{sm.node_label || sm.node_type}</TableCell>
-                    <TableCell colSpan={stepColumns.length + 1}>
+                    <TableCell colSpan={stepColumns.length + (readOnly ? 0 : 1)}>
                       <div className="flex flex-wrap gap-3 text-xs">
                         {Object.entries(sm.metrics).map(([k, v]) => (
                           <span key={k} className="text-muted-foreground">

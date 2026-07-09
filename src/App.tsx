@@ -10,6 +10,7 @@ import Index from "./pages/Index.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import InviteRegistration from "./pages/InviteRegistration.tsx";
 import SharedFunnel from "./pages/SharedFunnel.tsx";
+import SharedAnalytics from "./pages/SharedAnalytics.tsx";
 import SharedBrief from "./pages/SharedBrief.tsx";
 import SharedOffer from "./pages/SharedOffer.tsx";
 import SharedBlueprint from "./pages/SharedBlueprint.tsx";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/" element={<WithAuth><Index /></WithAuth>} />
           <Route path="/invite/:code" element={<InviteRegistration />} />
           <Route path="/shared/:token" element={<SharedFunnel />} />
+          <Route path="/analytics/:token" element={<SharedAnalytics />} />
           <Route path="/brief/:token" element={<SharedBrief />} />
           <Route path="/offer/:token" element={<SharedOffer />} />
           <Route path="/blueprint/:token" element={<SharedBlueprint />} />
