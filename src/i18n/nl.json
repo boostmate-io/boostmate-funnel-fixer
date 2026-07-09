@@ -374,7 +374,15 @@
     },
     "charts": {
       "title": "Trends",
-      "allSteps": "Alle stappen (totalen)"
+      "allSteps": "Alle stappen (totalen)",
+      "customize": "Statistieken",
+      "noMetricsSelected": "Selecteer minstens één statistiek."
+    },
+    "granularity": {
+      "day": "Dagelijks",
+      "week": "Wekelijks",
+      "month": "Maandelijks",
+      "quarter": "Per kwartaal"
     }
   },
   "agency": {
