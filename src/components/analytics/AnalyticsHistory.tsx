@@ -134,6 +134,7 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnl
             {!readOnly && <TableHead className="w-10"></TableHead>}
           </TableRow>
         </TableHeader>
+        <TableBody>
           {pagedEntries.map((row) => {
             const isOpen = expanded.has(row.id);
             const isRange = row.date !== row.period_end;
