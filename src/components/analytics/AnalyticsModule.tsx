@@ -72,6 +72,7 @@ const AnalyticsModule = ({
   );
   const [granularity, setGranularity] = useState<Granularity>(initialConfig?.granularity ?? "day");
   const [selectedMetrics, setSelectedMetrics] = useState<string[] | null>(initialConfig?.selectedMetrics ?? null);
+  const [selectedKPIs, setSelectedKPIs] = useState<string[] | null>(initialConfig?.selectedKPIs ?? null);
 
   // Load share_token for currently-selected funnel (private mode)
   useEffect(() => {
