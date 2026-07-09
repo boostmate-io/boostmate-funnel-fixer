@@ -103,8 +103,8 @@ const AnalyticsModule = ({
       <div className="p-6 border-b border-border">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-display font-bold text-foreground">{t("analytics.title")}</h1>
-            <p className="text-muted-foreground text-sm mt-1">{t("analytics.subtitle")}</p>
+            <h1 className="text-2xl font-display font-bold text-foreground">{titleOverride ?? t("analytics.title")}</h1>
+            <p className="text-muted-foreground text-sm mt-1">{subtitleOverride ?? t("analytics.subtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
             {!hideFunnelSelector && (
