@@ -66,6 +66,7 @@ const LinkedDocumentsGrid = ({
   onDelete,
   createLabel = "New document",
   emptyLabel = "No linked documents yet.",
+  gridClassName = "grid-cols-1 sm:grid-cols-2",
 }: LinkedDocumentsGridProps) => {
   if (documents.length === 0) {
     return (
