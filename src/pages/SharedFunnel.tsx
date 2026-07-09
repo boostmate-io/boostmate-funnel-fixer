@@ -82,6 +82,7 @@ const SharedFunnelInner = () => {
   const [showOffer, setShowOffer] = useState(false);
   const [linkedOfferId, setLinkedOfferId] = useState<string | null>(null);
   const [frameworkComponentNames, setFrameworkComponentNames] = useState<Record<string, string[]>>({});
+  const [trafficAdThumbnails, setTrafficAdThumbnails] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +103,29 @@ const SharedFunnelInner = () => {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Traffic-source ad thumbnails (via linked meta_ad copy_documents)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const trafficIds = localNodes.filter((n) => n.type === "trafficSource").map((n) => n.id);
+      if (trafficIds.length === 0) { setTrafficAdThumbnails({}); return; }
+      const { data: docs } = await publicSupabase
+        .from("copy_documents")
+        .select("id, funnel_node_id")
+        .in("funnel_node_id", trafficIds);
+      if (!docs || docs.length === 0) { if (!cancelled) setTrafficAdThumbnails({}); return; }
+      const thumbs = await resolveDocumentThumbnails((docs as any[]).map((d) => d.id), { client: publicSupabase as any });
+      const byNode: Record<string, string[]> = {};
+      for (const d of docs as any[]) {
+        const url = thumbs[d.id];
+        if (!url) continue;
+        (byNode[d.funnel_node_id] ||= []).push(url);
+      }
+      if (!cancelled) setTrafficAdThumbnails(byNode);
+    })();
+    return () => { cancelled = true; };
+  }, [localNodes.map((n) => n.type === "trafficSource" ? n.id : "").join("|")]);
 
   useEffect(() => {
     if (!token) return;
