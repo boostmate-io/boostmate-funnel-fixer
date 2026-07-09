@@ -296,6 +296,7 @@ const SharedFunnelInner = () => {
           copyComponentNames: n.type === "funnelPage" && (n.data as any)?.copyFrameworkId
             ? frameworkComponentNames[(n.data as any).copyFrameworkId] || []
             : [],
+          adThumbnails: n.type === "trafficSource" ? (trafficAdThumbnails[n.id] || []) : undefined,
         },
       };
       if (isSeqGroup) {
@@ -316,7 +317,7 @@ const SharedFunnelInner = () => {
       }
       return base;
     }),
-    [localNodes, selectedNodeId, showImages, connectedHandlesMap, frameworkComponentNames]
+    [localNodes, selectedNodeId, showImages, connectedHandlesMap, frameworkComponentNames, trafficAdThumbnails]
   );
 
 
@@ -504,8 +505,20 @@ const SharedFunnelInner = () => {
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Notes</label>
                   <p className="text-sm text-foreground whitespace-pre-wrap">{(detailsNode.data as any).notes}</p>
-                </div>
-              )}
+          </div>
+        )}
+
+        {detailsNode && detailsNode.type === "trafficSource" && !showBrief && !showOffer && (
+          <TrafficSourceDetailsPanel
+            nodeId={detailsNode.id}
+            label={(detailsNode.data as any).label || "Traffic source"}
+            funnelId={funnel.id || null}
+            funnelName={funnel.name}
+            readOnly
+            supabaseClient={publicSupabase as any}
+            onClose={() => setDetailsNodeId(null)}
+          />
+        )}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   {((detailsNode.data as any).childIds?.length ?? 0)} step{((detailsNode.data as any).childIds?.length ?? 0) === 1 ? "" : "s"}
