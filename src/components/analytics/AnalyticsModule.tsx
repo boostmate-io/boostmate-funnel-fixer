@@ -243,7 +243,7 @@ const AnalyticsModule = ({
               selectedMetrics={selectedMetrics}
               onSelectedMetricsChange={setSelectedMetrics}
               labelOverrides={labelOverrides}
-              onLabelOverride={setLabelOverride}
+              onLabelOverride={readOnly ? undefined : setLabelOverride}
             />
           </div>
 
