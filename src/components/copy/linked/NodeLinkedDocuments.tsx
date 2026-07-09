@@ -150,6 +150,52 @@ const NodeLinkedDocuments = ({
     else { toast.success("Document deleted"); load(); }
   };
 
+  const duplicate = async (id: string) => {
+    if (readOnly || !userId || !subAccountId) return;
+    const { data: src, error: srcErr } = await sb
+      .from("copy_documents")
+      .select("name, type, framework_id, context_type, context_offer_id, context_custom_text, global_instructions, funnel_id, funnel_node_id")
+      .eq("id", id)
+      .single();
+    if (srcErr || !src) { toast.error("Duplicate failed"); return; }
+    const { data: newDoc, error: insErr } = await sb
+      .from("copy_documents")
+      .insert({
+        user_id: userId,
+        sub_account_id: subAccountId,
+        name: `${(src as any).name} (copy)`,
+        type: (src as any).type,
+        framework_id: (src as any).framework_id,
+        context_type: (src as any).context_type,
+        context_offer_id: (src as any).context_offer_id,
+        context_custom_text: (src as any).context_custom_text,
+        global_instructions: (src as any).global_instructions,
+        funnel_id: (src as any).funnel_id,
+        funnel_node_id: (src as any).funnel_node_id,
+        status: "draft",
+      } as any)
+      .select("id")
+      .single();
+    if (insErr || !newDoc) { toast.error("Duplicate failed"); return; }
+    const { data: comps } = await sb
+      .from("copy_document_components")
+      .select("component_slug, sort_order, inputs, outputs, is_generated")
+      .eq("document_id", id);
+    if (comps && comps.length > 0) {
+      const rows = comps.map((c: any) => ({
+        document_id: (newDoc as any).id,
+        component_slug: c.component_slug,
+        sort_order: c.sort_order,
+        inputs: c.inputs || {},
+        outputs: c.outputs || {},
+        is_generated: c.is_generated || false,
+      }));
+      await sb.from("copy_document_components").insert(rows as any);
+    }
+    toast.success("Document duplicated");
+    load();
+  };
+
   return (
     <LinkedDocumentsGrid
       documents={documents}
@@ -160,6 +206,7 @@ const NodeLinkedDocuments = ({
       onCreate={readOnly ? undefined : createDocument}
       onDetach={readOnly ? undefined : detach}
       onDelete={readOnly ? undefined : remove}
+      onDuplicate={readOnly ? undefined : duplicate}
       createLabel={creating ? "Creating..." : "New document"}
       emptyLabel={readOnly ? "No linked documents." : "No linked documents yet."}
     />

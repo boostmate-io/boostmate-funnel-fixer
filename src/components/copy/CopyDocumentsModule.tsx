@@ -190,6 +190,52 @@ const CopyDocumentsModule = () => {
     }
   };
 
+  const duplicateDocument = async (id: string) => {
+    if (!user || !activeSubAccountId) return;
+    const { data: src, error: srcErr } = await supabase
+      .from("copy_documents")
+      .select("name, type, framework_id, context_type, context_offer_id, context_custom_text, global_instructions, funnel_id, funnel_node_id")
+      .eq("id", id)
+      .single();
+    if (srcErr || !src) { toast.error("Duplicate failed"); return; }
+    const { data: newDoc, error: insErr } = await supabase
+      .from("copy_documents")
+      .insert({
+        user_id: user.id,
+        sub_account_id: activeSubAccountId,
+        name: `${(src as any).name} (copy)`,
+        type: (src as any).type,
+        framework_id: (src as any).framework_id,
+        context_type: (src as any).context_type,
+        context_offer_id: (src as any).context_offer_id,
+        context_custom_text: (src as any).context_custom_text,
+        global_instructions: (src as any).global_instructions,
+        funnel_id: (src as any).funnel_id,
+        funnel_node_id: (src as any).funnel_node_id,
+        status: "draft",
+      } as any)
+      .select("id, name, type, status, framework_id, updated_at")
+      .single();
+    if (insErr || !newDoc) { toast.error("Duplicate failed"); return; }
+    const { data: comps } = await supabase
+      .from("copy_document_components")
+      .select("component_slug, sort_order, inputs, outputs, is_generated")
+      .eq("document_id", id);
+    if (comps && comps.length > 0) {
+      const rows = comps.map((c: any) => ({
+        document_id: (newDoc as any).id,
+        component_slug: c.component_slug,
+        sort_order: c.sort_order,
+        inputs: c.inputs || {},
+        outputs: c.outputs || {},
+        is_generated: c.is_generated || false,
+      }));
+      await supabase.from("copy_document_components").insert(rows as any);
+    }
+    setDocuments((prev) => [newDoc as unknown as CopyDocument, ...prev]);
+    toast.success("Document duplicated");
+  };
+
   const filtered = documents.filter((d) => d.type === activeType);
 
   if (selectedDoc) {
@@ -245,6 +291,7 @@ const CopyDocumentsModule = () => {
                   if (doc) setSelectedDoc(doc);
                 }}
                 onDelete={deleteDocument}
+                onDuplicate={duplicateDocument}
                 gridClassName="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
               />
             )}
