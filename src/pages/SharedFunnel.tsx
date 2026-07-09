@@ -408,7 +408,7 @@ const SharedFunnelInner = () => {
             nodeId={detailsNode.id}
             nodeLabel={(detailsNode.data as any).label || ""}
             customLabel={(detailsNode.data as any).customLabel || ""}
-            linkedAssetId={null}
+            
             noteContent={(detailsNode.data as any).noteContent || ""}
             renderStyle={(detailsNode.data as any).renderStyle || "page"}
             pageType={(detailsNode.data as any).pageType || ""}
@@ -420,7 +420,7 @@ const SharedFunnelInner = () => {
             copySections={(detailsNode.data as any).copySections || []}
             emailSubject={(detailsNode.data as any).emailSubject || ""}
             readOnly
-            onLinkAsset={() => {}}
+            
             onRename={() => {}}
             onClose={() => setDetailsNodeId(null)}
           />
