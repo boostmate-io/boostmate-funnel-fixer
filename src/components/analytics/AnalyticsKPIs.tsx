@@ -151,7 +151,10 @@ const AnalyticsKPIs = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {title && (
+          <h2 className="text-lg font-display font-semibold text-foreground">{title}</h2>
+        )}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2">
