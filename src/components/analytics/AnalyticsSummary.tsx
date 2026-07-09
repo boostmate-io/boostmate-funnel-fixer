@@ -7,6 +7,7 @@ import "@xyflow/react/dist/style.css";
 import { format } from "date-fns";
 import { getMetricsForNodeType } from "./metricDefinitions";
 import { isTrackableNode, filterAndRewireEdges } from "./nodeFilters";
+import { sortNodesByFlow } from "./flowOrder";
 import { prettyTypeLabel } from "./typeLabels";
 import AnalyticsFunnelNode from "./AnalyticsFunnelNode";
 import AnalyticsTrafficNode from "./AnalyticsTrafficNode";
@@ -96,13 +97,13 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
     });
 
     const nodeOrder = new Map<string, number>();
-    nodes.forEach((n: any, i: number) => nodeOrder.set(n.id, i));
+    sortNodesByFlow(nodes, edges).forEach((n: any, i: number) => nodeOrder.set(n.id, i));
     const stepAggregates = Array.from(stepMap.entries())
       .sort(([a], [b]) => (nodeOrder.get(a) ?? 99) - (nodeOrder.get(b) ?? 99))
       .map(([, v]) => v);
 
     return { stepAggregates, stepAggregateMap: stepMap };
-  }, [stepMetrics, nodes]);
+  }, [stepMetrics, nodes, edges]);
 
   const filtered = useMemo(() => filterAndRewireEdges(nodes, edges), [nodes, edges]);
 
