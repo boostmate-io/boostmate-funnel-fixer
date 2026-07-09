@@ -89,7 +89,7 @@ const AnalyticsHistory = ({ funnelId }: AnalyticsHistoryProps) => {
         <TableHeader>
           <TableRow>
             <TableHead className="w-10"></TableHead>
-            <TableHead>{t("analytics.date")}</TableHead>
+            <TableHead>{t("analytics.period") || "Period"}</TableHead>
             <TableHead>{t("analytics.totalSpend")}</TableHead>
             <TableHead>{t("analytics.totalRevenue")}</TableHead>
           </TableRow>
@@ -98,11 +98,20 @@ const AnalyticsHistory = ({ funnelId }: AnalyticsHistoryProps) => {
           {entries.map((row) => {
             const isOpen = expanded.has(row.id);
             const summary = getSummary(row);
+            const isRange = row.date !== row.period_end;
+            const label = row.period_type === "month"
+              ? format(new Date(row.date), "MMMM yyyy")
+              : isRange
+                ? `${format(new Date(row.date), "dd MMM")} – ${format(new Date(row.period_end), "dd MMM yyyy")}`
+                : format(new Date(row.date), "dd MMM yyyy");
             return (
               <>
                 <TableRow key={row.id} className="cursor-pointer hover:bg-muted/50" onClick={() => toggle(row.id)}>
                   <TableCell>{isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</TableCell>
-                  <TableCell className="font-medium">{format(new Date(row.date), "dd MMM yyyy")}</TableCell>
+                  <TableCell className="font-medium">
+                    {label}
+                    <span className="ml-2 text-xs text-muted-foreground capitalize">({row.period_type})</span>
+                  </TableCell>
                   <TableCell>€{summary.spend.toFixed(2)}</TableCell>
                   <TableCell>€{summary.revenue.toFixed(2)}</TableCell>
                 </TableRow>
