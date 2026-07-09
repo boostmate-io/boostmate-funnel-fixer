@@ -110,8 +110,14 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnl
   if (loading) return <div className="text-muted-foreground text-sm py-4">{t("analytics.loading")}</div>;
   if (!entries.length) return <div className="text-muted-foreground text-sm py-4">{t("analytics.noHistory")}</div>;
 
+  const totalPages = Math.max(1, Math.ceil(entries.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pagedEntries = entries.slice(pageStart, pageStart + pageSize);
+
   return (
-    <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
+    <div className="space-y-3">
+      <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
