@@ -505,20 +505,8 @@ const SharedFunnelInner = () => {
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Notes</label>
                   <p className="text-sm text-foreground whitespace-pre-wrap">{(detailsNode.data as any).notes}</p>
-          </div>
-        )}
-
-        {detailsNode && detailsNode.type === "trafficSource" && !showBrief && !showOffer && (
-          <TrafficSourceDetailsPanel
-            nodeId={detailsNode.id}
-            label={(detailsNode.data as any).label || "Traffic source"}
-            funnelId={funnel.id || null}
-            funnelName={funnel.name}
-            readOnly
-            supabaseClient={publicSupabase as any}
-            onClose={() => setDetailsNodeId(null)}
-          />
-        )}
+                </div>
+              )}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   {((detailsNode.data as any).childIds?.length ?? 0)} step{((detailsNode.data as any).childIds?.length ?? 0) === 1 ? "" : "s"}
@@ -532,6 +520,18 @@ const SharedFunnelInner = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {detailsNode && detailsNode.type === "trafficSource" && !showBrief && !showOffer && (
+          <TrafficSourceDetailsPanel
+            nodeId={detailsNode.id}
+            label={(detailsNode.data as any).label || "Traffic source"}
+            funnelId={funnel.id || null}
+            funnelName={funnel.name}
+            readOnly
+            supabaseClient={publicSupabase as any}
+            onClose={() => setDetailsNodeId(null)}
+          />
         )}
       </div>
 
