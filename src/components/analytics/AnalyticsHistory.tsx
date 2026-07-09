@@ -37,6 +37,10 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnl
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [page, setPage] = useState<number>(1);
+
+  useEffect(() => { setPage(1); }, [pageSize, funnelId, refreshKey]);
 
   useEffect(() => {
     if (!funnelId) return;
