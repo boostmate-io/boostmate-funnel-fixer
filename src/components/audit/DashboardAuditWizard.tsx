@@ -10,7 +10,7 @@ import AuditResults from "./AuditResults";
 import { AuditFormData, AuditResult } from "@/types/audit";
 import { mockResult } from "./mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
-import { analyzeAudit, createSalesCopyAsset, createFunnelFromAnalysis } from "@/lib/api/auditAnalysis";
+import { analyzeAudit, createFunnelFromAnalysis } from "@/lib/api/auditAnalysis";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -82,20 +82,13 @@ const DashboardAuditWizard = ({ onBack, onComplete }: DashboardAuditWizardProps)
       const subAccountId = activeSubAccountId || null;
       const domain = data.landingPageUrl.replace(/^https?:\/\//, "").split("/")[0];
 
-      const assetId = await createSalesCopyAsset(
-        user.id,
-        subAccountId,
-        `Sales Copy - ${domain}`,
-        analysis.sections
-      );
-
       await createFunnelFromAnalysis(
         user.id,
         subAccountId,
         `Funnel - ${domain}`,
         analysis.nodes,
         analysis.edges,
-        assetId
+        analysis.sections
       );
     }
 
