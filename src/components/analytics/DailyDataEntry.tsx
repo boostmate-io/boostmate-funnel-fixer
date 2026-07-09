@@ -6,16 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CalendarIcon, Save } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from "date-fns";
 import { toast } from "sonner";
 import { getMetricsForNodeType, type MetricField } from "./metricDefinitions";
+import { filterTrackableNodes } from "./nodeFilters";
+import { cn } from "@/lib/utils";
 
 interface FunnelNode {
   id: string;
   type: string;
-  data: { label: string; customLabel?: string; pageType?: string; trafficType?: string };
+  data: { label: string; customLabel?: string; pageType?: string; trafficType?: string; renderStyle?: string };
 }
 
 interface DailyDataEntryProps {
@@ -23,6 +26,8 @@ interface DailyDataEntryProps {
   nodes: FunnelNode[];
   edges: any[];
 }
+
+type PeriodType = "day" | "week" | "month" | "custom";
 
 // Sort nodes in flow order using edges
 function sortNodesByFlow(nodes: FunnelNode[], edges: any[]): FunnelNode[] {
@@ -48,7 +53,6 @@ function sortNodesByFlow(nodes: FunnelNode[], edges: any[]): FunnelNode[] {
       if (child && !visited.has(child.id)) queue.push(child);
     });
   }
-  // Add any unvisited nodes
   nodes.forEach((n) => { if (!visited.has(n.id)) ordered.push(n); });
   return ordered;
 }
@@ -58,15 +62,35 @@ function getNodeType(node: FunnelNode): string {
   return node.data?.pageType || "opt-in";
 }
 
+function computeRange(type: PeriodType, start: Date, customEnd?: Date): { start: Date; end: Date } {
+  if (type === "day") return { start, end: start };
+  if (type === "week") return { start: startOfWeek(start, { weekStartsOn: 1 }), end: endOfWeek(start, { weekStartsOn: 1 }) };
+  if (type === "month") return { start: startOfMonth(start), end: endOfMonth(start) };
+  return { start, end: customEnd && customEnd >= start ? customEnd : start };
+}
+
+function formatRange(type: PeriodType, start: Date, end: Date): string {
+  if (type === "day") return format(start, "dd MMM yyyy");
+  if (type === "month") return format(start, "MMMM yyyy");
+  return `${format(start, "dd MMM")} – ${format(end, "dd MMM yyyy")}`;
+}
+
 const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [date, setDate] = useState<Date>(new Date());
+  const [periodType, setPeriodType] = useState<PeriodType>("day");
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date>(new Date());
   const [metricsData, setMetricsData] = useState<Record<string, Record<string, number>>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const orderedNodes = useMemo(() => sortNodesByFlow(nodes, edges), [nodes, edges]);
+  const range = useMemo(() => computeRange(periodType, startDate, endDate), [periodType, startDate, endDate]);
+
+  const orderedNodes = useMemo(
+    () => filterTrackableNodes(sortNodesByFlow(nodes, edges)),
+    [nodes, edges]
+  );
 
   const nodeMetricFields = useMemo(() => {
     const map: Record<string, MetricField[]> = {};
@@ -76,17 +100,20 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
     return map;
   }, [orderedNodes]);
 
-  // Load existing data for selected date
+  // Load existing data for selected period
   useEffect(() => {
     if (!funnelId) return;
     const load = async () => {
       setLoading(true);
-      const dateStr = format(date, "yyyy-MM-dd");
+      const startStr = format(range.start, "yyyy-MM-dd");
+      const endStr = format(range.end, "yyyy-MM-dd");
       const { data: entry } = await supabase
         .from("funnel_analytics_entries")
         .select("id")
         .eq("funnel_id", funnelId)
-        .eq("date", dateStr)
+        .eq("date", startStr)
+        .eq("period_end", endStr)
+        .eq("period_type", periodType)
         .maybeSingle();
 
       if (entry) {
@@ -106,13 +133,12 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
       setLoading(false);
     };
     load();
-  }, [funnelId, date]);
+  }, [funnelId, range.start, range.end, periodType]);
 
   const updateMetric = (nodeId: string, key: string, value: string) => {
     const num = value === "" ? 0 : parseFloat(value);
     setMetricsData((prev) => {
       const nodeMetrics = { ...prev[nodeId], [key]: isNaN(num) ? 0 : num };
-      // Compute calculated fields
       const fields = nodeMetricFields[nodeId] || [];
       fields.forEach((f) => {
         if (f.computed) {
@@ -129,18 +155,27 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
     try {
       if (!user) throw new Error("Not authenticated");
 
-      const dateStr = format(date, "yyyy-MM-dd");
+      const startStr = format(range.start, "yyyy-MM-dd");
+      const endStr = format(range.end, "yyyy-MM-dd");
 
-      // Upsert entry
       const { data: entry, error: entryErr } = await supabase
         .from("funnel_analytics_entries")
-        .upsert({ funnel_id: funnelId, user_id: user.id, date: dateStr, updated_at: new Date().toISOString() }, { onConflict: "funnel_id,date" })
+        .upsert(
+          {
+            funnel_id: funnelId,
+            user_id: user.id,
+            date: startStr,
+            period_end: endStr,
+            period_type: periodType,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "funnel_id,date,period_type" }
+        )
         .select("id")
         .single();
 
       if (entryErr) throw entryErr;
 
-      // Upsert step metrics
       const rows = orderedNodes.map((node) => ({
         entry_id: entry.id,
         node_id: node.id,
@@ -166,18 +201,71 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <CalendarIcon className="w-4 h-4" />
-              {format(date, "dd MMM yyyy")}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
-          </PopoverContent>
-        </Popover>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">{t("analytics.period") || "Period"}</label>
+          <Select value={periodType} onValueChange={(v) => setPeriodType(v as PeriodType)}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">{t("analytics.periodDay") || "Day"}</SelectItem>
+              <SelectItem value="week">{t("analytics.periodWeek") || "Week"}</SelectItem>
+              <SelectItem value="month">{t("analytics.periodMonth") || "Month"}</SelectItem>
+              <SelectItem value="custom">{t("analytics.periodCustom") || "Custom"}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">
+            {periodType === "custom" ? (t("analytics.startDate") || "Start") : (t("analytics.date") || "Date")}
+          </label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <CalendarIcon className="w-4 h-4" />
+                {formatRange(periodType, range.start, range.end)}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={startDate}
+                onSelect={(d) => {
+                  if (!d) return;
+                  setStartDate(d);
+                  if (periodType === "custom" && endDate < d) setEndDate(d);
+                }}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {periodType === "custom" && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground">{t("analytics.endDate") || "End"}</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <CalendarIcon className="w-4 h-4" />
+                  {format(endDate, "dd MMM yyyy")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={endDate}
+                  onSelect={(d) => d && setEndDate(d < startDate ? startDate : d)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -189,7 +277,6 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
               <TableRow>
                 <TableHead className="w-48">{t("analytics.step")}</TableHead>
                 <TableHead className="w-32">{t("analytics.type")}</TableHead>
-                {/* Dynamic metric headers per row - we'll use inline headers */}
                 <TableHead>{t("analytics.metrics")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -235,7 +322,7 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} className="gap-2">
           <Save className="w-4 h-4" />
-          {saving ? t("analytics.saving") : t("analytics.saveDay")}
+          {saving ? t("analytics.saving") : (t("analytics.savePeriod") || t("analytics.saveDay"))}
         </Button>
       </div>
     </div>
