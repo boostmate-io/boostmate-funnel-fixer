@@ -35,12 +35,26 @@ const AnalyticsFunnelNode = memo(({ data }: NodeProps) => {
       </div>
       {thumb && (
         <div className="px-3 pb-2">
-          <img
-            src={thumb}
-            alt={displayName}
-            className="w-full h-20 object-cover rounded border border-border"
-            loading="lazy"
-          />
+          <div
+            className="relative w-full group/img cursor-zoom-in"
+            onClick={(e) => {
+              e.stopPropagation();
+              const fullSrc = d.nodeImage || d.nodeImageThumb;
+              if (fullSrc) {
+                window.dispatchEvent(new CustomEvent("funnel-node-image-view", { detail: { src: fullSrc } }));
+              }
+            }}
+          >
+            <img
+              src={thumb}
+              alt={displayName}
+              className="w-full h-24 object-cover object-top rounded border border-border"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 rounded bg-black/0 group-hover/img:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover/img:opacity-100">
+              <Icons.Maximize2 className="w-5 h-5 text-white drop-shadow-md" />
+            </div>
+          </div>
         </div>
       )}
       {d.nodeUrl && (
