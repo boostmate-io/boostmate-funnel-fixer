@@ -1,58 +1,80 @@
-## Doel
 
-De AI Coach mag binnen dezelfde conversatie geen Blueprint-updates meer voorstellen voor velden die de gebruiker al **geaccepteerd** of **afgewezen** heeft. Nu weet noch de server, noch de UI dat een eerder voorstel al is afgehandeld — na een refresh of nieuwe vraag duiken dezelfde 37 items opnieuw op.
+# Plan: Assets Library vervangen door Copy Frameworks op funnel-nodes
+
+## Doelbeeld
+
+- Op elke funnel-node (bv. een sales page) kan een **Copy Framework** worden gekoppeld.
+- In een **(seed) template** wordt die koppeling meegenomen: bij het aanmaken van een nieuwe funnel vanuit een seed template krijgen de nodes automatisch dezelfde framework-koppeling.
+- Vanuit de node-details kun je met één klik een **Copy Document** aanmaken dat:
+  - het gekoppelde framework krijgt toegewezen (componenten automatisch toegevoegd);
+  - automatisch het **offer van de funnel** als context krijgt (`context_type = "offer"`, `context_offer_id = funnel.offer_id`);
+  - gelinkt is aan de node zodat je er later steeds terug naartoe kan navigeren.
+- **Assets Library** verdwijnt volledig (menu + component + tabellen + node-koppeling).
 
 ## Wat er verandert
 
-1. **Beslissingen worden persistent bewaard** per conversatie (accepted / dismissed per veld).
-2. **De Coach krijgt die lijst mee** bij elke turn en mag die paden niet opnieuw voorstellen.
-3. **De server filtert** als vangnet: elk voorstel met een pad dat al is afgehandeld wordt stilzwijgend verwijderd voor het naar de UI gaat.
-4. **De UI herstelt de status** van eerdere voorstellen na een refresh (Applied / Dismissed badges blijven zichtbaar in plaats van weer als "pending" te verschijnen).
+### 1. Datamodel (één migratie)
 
-## Gedragsregels
+**Nieuwe koppeling op de node zelf** — omdat nodes in `funnels.nodes` (jsonb) leven, gebeurt de koppeling per node via twee nieuwe velden binnen `node.data`:
+- `copyFrameworkId: uuid | null` — framework gekoppeld aan de node (ook in seed templates).
+- `copyDocumentId: uuid | null` — het aangemaakte document voor deze node (per gebruiker/funnel-instantie).
 
-- Filtering geldt **alleen binnen dezelfde conversatie**. Een nieuwe conversatie (of een andere tab / doel) is een schone lei.
-- Als de gebruiker expliciet vraagt "opnieuw voorstellen voor veld X" (herformuleerd), telt dat als een nieuwe intentie: dit lost zichzelf op omdat we sowieso alleen filteren bij overeenkomend pad; de coach kan gewoon een ander voorstel maken zolang de gebruiker duidelijk om een herziening vraagt. Voor v1 houden we het simpel: eenmaal afgehandeld = niet meer opnieuw voorstellen. Als dit knelt kunnen we later een "Voorstel opnieuw" knop toevoegen.
-- List-secties (Framework Pillars, Deliverables, Testimonials, …) en Offer Ecosystem gebruiken virtuele `new_<n>` paden die per turn nieuw zijn — daar filteren we **niet** op pad, want elke nieuwe suggestie is uniek. Deze worden gewoon als losse inserts behandeld.
+Geen aparte tabel nodig; seed_templates gebruikt dezelfde `nodes` jsonb, dus `copyFrameworkId` reist automatisch mee bij cloning in `handle_new_user_role()`. `copyDocumentId` wordt bewust NIET meegekopieerd (documenten zijn per funnel/gebruiker).
 
-## Technisch plan
+**`copy_documents` uitbreiden**:
+- `funnel_id uuid` (FK → funnels, nullable, on delete set null)
+- `funnel_node_id text` (nullable) — de node-id waar het document aan hangt
 
-### 1. Nieuwe tabel `ai_coach_proposal_decisions`
+**Verwijderen** (data staat momenteel los, niet in gebruik voor iets anders):
+- Tabel `asset_sections` (droppen).
+- Tabel `assets` (droppen).
+- Kolommen `linkedAssetId`/`copySections` in bestaande funnel `nodes` jsonb → één keer strippen via UPDATE (jsonb_set / node.data cleanup).
 
-```
-id uuid pk
-conversation_id uuid -> ai_coach_conversations(id) on delete cascade
-message_id uuid null       -- zodat we bij reload de knop-status per bericht herstellen
-sub_account_id uuid
-user_id uuid
-path text                   -- Blueprint dot-path
-decision text check (decision in ('applied','dismissed'))
-created_at timestamptz default now()
-unique (conversation_id, path)   -- één eindstatus per pad per conversatie
-```
+Grants + RLS voor de nieuwe kolommen op `copy_documents` volgen bestaande policies (sub_account scoped).
 
-Met RLS (`user_id = auth.uid()`) + GRANTs op `authenticated` en `service_role` (zoals de andere coach-tabellen).
+### 2. Backend / seed-template flow
 
-### 2. Client — `CoachPanel.tsx` + `useCoachChat.ts`
+- `handle_new_user_role()` hoeft niet aangepast te worden: nodes worden al gekloond, dus `copyFrameworkId` reist automatisch mee. We voegen wel een expliciete stap toe om `copyDocumentId` te strippen bij het clonen, zodat elke nieuwe funnel schone documenten heeft.
 
-- Bij Apply / Dismiss (per item én bulk) een row schrijven in `ai_coach_proposal_decisions`. Ecosystem- en list-section-paden (`…new_<n>…`) sláán we niet op — die kunnen niet botsen.
-- `useCoachChat` laadt bij openen de decisions van de huidige conversatie en geeft ze mee aan `BlueprintWritesCard` per `message_id`, zodat pending → applied/dismissed correct wordt gerenderd na refresh.
-- Bij `sendMessage` de lijst afgehandelde `path`s meesturen in de request body (of alleen op de server ophalen — zie punt 3).
+### 3. Frontend
 
-### 3. Edge function `coach-chat`
+**Verwijderen:**
+- `src/components/assets/` (hele map): `AssetsLibrary.tsx`, `AssetSectionsList.tsx`, `RichTextEditor.tsx`.
+- `src/components/funnel-designer/CopySections.tsx`.
+- Dashboard: menu-item "Assets Library", route/case in `Dashboard.tsx`, i18n keys `assets.*`.
+- In `NodeDetailsPanel.tsx`: alle asset-gerelateerde logica (asset-query, "Link Sales Copy asset", `onLinkAsset`, `copySections`-rendering).
 
-- Aan het begin van de handler: `select path, decision from ai_coach_proposal_decisions where conversation_id = :id` → `handledPaths: Set<string>`.
-- `buildSystemPrompt`: extra sectie **"# Already handled in this conversation"** met de paden die applied/dismissed zijn, met instructie: *"Do NOT include any of these paths in `propose_blueprint_writes` unless the user explicitly asks to redo them."*
-- `sanitizeBlueprintWrites`: filter elk voorstel waarvan `handledPaths.has(path)`, tenzij het een virtuele list/ecosystem-pad is (`…new_\d+…`).
+**Toevoegen aan `NodeDetailsPanel.tsx`** (nieuwe sectie "Copy Framework"):
+- Dropdown "Framework koppelen" → keuze uit `copy_frameworks` (filter op relevante types).
+- Preview van de componenten die dat framework bevat (read-only lijstje uit `copy_components` via `component_slugs`).
+- Knop **"Copy document aanmaken"** (alleen zichtbaar als framework gekozen én nog geen `copyDocumentId`):
+  - Maakt een `copy_documents`-row aan met `type = framework.type`, `funnel_id`, `funnel_node_id`, `context_type = "offer"`, `context_offer_id = funnel.offer_id` (of null fallback), `name = "{funnel.name} — {node.label}"`.
+  - Vult `copy_document_components` met de componenten van het framework in `component_slugs`-volgorde.
+  - Slaat `copyDocumentId` op de node op.
+- Knop **"Open document"** (als `copyDocumentId` bestaat) → opent de bestaande `CopyDocumentEditor` in een dialog of navigeert naar de Copy Documents-module met deze id.
+- Knop "Ontkoppelen" om `copyDocumentId` te verwijderen (document blijft bestaan in de Copy Documents-module).
 
-### 4. Samenspel met de vorige fix
+**Admin-templates UI** (indien aanwezig — Template Editing Mode): dezelfde framework-dropdown wordt getoond bij nodes zodat admins de koppeling op seed templates kunnen instellen.
 
-De vorige fix (writes-tool alleen aanbieden bij schrijf-intentie) blijft van kracht. Deze laag komt erbovenop en dekt het geval waarin de gebruiker wél een schrijf-intentie uit maar de coach anders opnieuw dezelfde velden zou voorstellen.
+**Copy Documents-module**: toont per document optioneel de gelinkte funnel/node als context-label.
 
-## Bestanden
+### 4. i18n
 
-- `supabase/migrations/<new>.sql` — tabel + RLS + grants
-- `supabase/functions/coach-chat/index.ts` — decisions laden, prompt-sectie, filter in `sanitizeBlueprintWrites`
-- `src/lib/coach/useCoachChat.ts` — decisions laden per conversatie, doorgeven
-- `src/components/coach/CoachPanel.tsx` — initial state uit gehydrateerde decisions, insert bij Apply/Dismiss
-- `src/integrations/supabase/types.ts` — regenereert automatisch na migratie
+- Verwijder `assets.*` keys uit `en.json` en `nl.json`.
+- Nieuwe keys onder `funnelDesigner.copyFramework.*` (label, choose, preview, createDocument, openDocument, unlink) — **geen `common.*` fallbacks**, altijd expliciete labels.
+
+## Volgorde van uitvoeren
+
+1. Migratie: kolommen toevoegen op `copy_documents`, oude asset-tabellen droppen, node.data cleanup.
+2. Nieuwe UI-sectie "Copy Framework" in `NodeDetailsPanel`.
+3. Aanmaak-flow copy_document + auto-koppelen offer.
+4. Assets Library en `CopySections` verwijderen (Dashboard menu, routes, imports, i18n).
+5. Template Editing Mode UI update (framework-dropdown zichtbaar).
+6. Handmatige verificatie: nieuwe funnel vanuit seed template → framework op node → document aanmaken → offer-context zit erin.
+
+## Technische details
+
+- **Node-updates** blijven via bestaande `onDataChange(key, value)`-flow in `NodeDetailsPanel`, dus geen nieuw persistentie-mechanisme nodig.
+- **Offer op funnel**: `funnels` heeft geen expliciete `offer_id`-kolom die ik nu heb bevestigd. In stap 3 checken en, indien afwezig, of (a) offer al ergens op de funnel bereikbaar is (bv. via brief/blueprint), of (b) een `offer_id` toevoegen aan `funnels` als aparte micro-migratie. Dit bevestig ik direct bij implementatie zodat de auto-koppeling écht werkt.
+- **Cascade delete**: `copy_documents.funnel_id` op `ON DELETE SET NULL` zodat een verwijderde funnel het document niet weggooit.
+- **Backwards compat**: eenmalige jsonb-cleanup in de migratie verwijdert `linkedAssetId` en `copySections` uit alle bestaande `funnels.nodes` en `seed_templates.nodes` zodat er geen dode referenties blijven.
