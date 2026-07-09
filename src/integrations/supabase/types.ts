@@ -445,6 +445,57 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_saved_views: {
+        Row: {
+          config: Json
+          created_at: string
+          funnel_id: string
+          id: string
+          is_default: boolean
+          name: string
+          sub_account_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          funnel_id: string
+          id?: string
+          is_default?: boolean
+          name: string
+          sub_account_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          funnel_id?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          sub_account_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_saved_views_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_saved_views_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_sections: {
         Row: {
           asset_id: string
