@@ -28,6 +28,7 @@ export const TRAFFIC_SOURCE_GROUPS = [
 
 export const TRAFFIC_SOURCES: TrafficSource[] = [
   // Paid Traffic
+  { type: "meta-ads", label: "Meta Ads", icon: "Facebook", color: "#0866FF", group: "Paid Traffic" },
   { type: "facebook-ads", label: "Facebook Ads", icon: "Facebook", color: "#1877F2", group: "Paid Traffic" },
   { type: "instagram-ads", label: "Instagram Ads", icon: "Instagram", color: "#E1306C", group: "Paid Traffic" },
   { type: "google-ads", label: "Google Ads", icon: "Search", color: "#FBBC05", group: "Paid Traffic" },
