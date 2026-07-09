@@ -46,62 +46,24 @@ export async function analyzeAudit(
   };
 }
 
-export async function createSalesCopyAsset(
-  userId: string,
-  subAccountId: string | null,
-  assetName: string,
-  sections: AnalysisSection[]
-): Promise<string | null> {
-  if (sections.length === 0) return null;
-
-  const { data: asset, error: assetError } = await supabase
-    .from("assets")
-    .insert({
-      user_id: userId,
-      type: "sales_copy",
-      name: assetName,
-      sub_account_id: subAccountId,
-    })
-    .select("id")
-    .single();
-
-  if (assetError || !asset) {
-    console.error("Error creating sales copy asset:", assetError);
-    return null;
-  }
-
-  const sectionRows = sections.map((s, i) => ({
-    asset_id: asset.id,
-    title: s.title,
-    content: s.content,
-    sort_order: i,
-  }));
-
-  const { error: sectionsError } = await supabase
-    .from("asset_sections")
-    .insert(sectionRows);
-
-  if (sectionsError) {
-    console.error("Error creating asset sections:", sectionsError);
-  }
-
-  return asset.id;
-}
-
 export async function createFunnelFromAnalysis(
   userId: string,
   subAccountId: string | null,
   funnelName: string,
   nodes: FunnelNode[],
   edges: FunnelEdge[],
-  salesCopyAssetId: string | null
+  sections: AnalysisSection[] = []
 ): Promise<string | null> {
   if (nodes.length === 0) return null;
 
-  if (salesCopyAssetId) {
+  if (sections.length > 0) {
     const firstPageNode = nodes.find((n) => n.type === "funnelPage");
     if (firstPageNode) {
-      firstPageNode.data.linkedAssetId = salesCopyAssetId;
+      firstPageNode.data.copySections = sections.map((s, i) => ({
+        id: `sec_${i}`,
+        title: s.title,
+        description: s.content,
+      }));
     }
   }
 
@@ -125,3 +87,4 @@ export async function createFunnelFromAnalysis(
 
   return funnel.id;
 }
+

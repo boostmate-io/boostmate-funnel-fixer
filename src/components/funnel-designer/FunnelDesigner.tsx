@@ -140,7 +140,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const selectedNodeRef = useRef<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
-  const [linkedAssetSections, setLinkedAssetSections] = useState<Record<string, Array<{ id: string; title: string; description: string }>>>({});
+  
 
   // Admin state
   const [isAdmin, setIsAdmin] = useState(false);
@@ -198,7 +198,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     const cleanedNodes = rawNodes.map((node: any) => {
       if (node.type === "funnelPage" && node.data) {
         const d = node.data;
-        return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+        return { ...node, data: { ...d, copyDocumentId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
       }
       return node;
     });
@@ -755,64 +755,11 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     return () => window.removeEventListener("funnel-node-image-view", handler);
   }, []);
 
-  const linkedAssetIds = useMemo(
-    () => Array.from(new Set(
-      nodes.flatMap((node) =>
-        node.type === "funnelPage" && (node.data as any)?.linkedAssetId
-          ? [String((node.data as any).linkedAssetId)]
-          : []
-      )
-    )).sort(),
-    [nodes]
-  );
-
-  useEffect(() => {
-    if (linkedAssetIds.length === 0) {
-      setLinkedAssetSections({});
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      const { data } = await supabase
-        .from("asset_sections")
-        .select("id, asset_id, title, description")
-        .in("asset_id", linkedAssetIds)
-        .order("sort_order", { ascending: true });
-
-      if (cancelled) return;
-
-      const nextSections: Record<string, Array<{ id: string; title: string; description: string }>> = Object.fromEntries(
-        linkedAssetIds.map((assetId) => [assetId, []])
-      );
-
-      for (const section of data ?? []) {
-        nextSections[section.asset_id]?.push({
-          id: section.id,
-          title: section.title,
-          description: section.description,
-        });
-      }
-
-      setLinkedAssetSections(nextSections);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [linkedAssetIds]);
-
   const resolveNodeCopySections = useCallback((node: Node) => {
     if (node.type !== "funnelPage") return [] as Array<{ id: string; title: string; description: string }>;
-
     const nodeData = node.data as any;
-    if (nodeData.linkedAssetId) {
-      return linkedAssetSections[String(nodeData.linkedAssetId)] ?? [];
-    }
-
     return nodeData.copySections ?? [];
-  }, [linkedAssetSections]);
+  }, []);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -892,7 +839,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       const cleanedNodes = rawNodes.map((node: any) => {
         if (node.type === "funnelPage" && node.data) {
           const d = node.data;
-          return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+          return { ...node, data: { ...d, copyDocumentId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
         }
         return node;
       });
@@ -914,7 +861,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       const cleanedNodes = rawNodes.map((node: any) => {
         if (node.type === "funnelPage" && node.data) {
           const d = node.data;
-          return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+          return { ...node, data: { ...d, copyDocumentId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
         }
         return node;
       });
@@ -961,29 +908,10 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeSubAccountId) return;
     const rawNodes = JSON.parse(JSON.stringify(nodes));
-    const linkedAssetIds = rawNodes
-      .filter((n: any) => n.type === "funnelPage" && n.data?.linkedAssetId)
-      .map((n: any) => n.data.linkedAssetId) as string[];
-    let assetSectionsMap: Record<string, Array<{ id: string; title: string; description: string }>> = {};
-    if (linkedAssetIds.length > 0) {
-      const { data: sections } = await supabase
-        .from("asset_sections")
-        .select("id, asset_id, title, description")
-        .in("asset_id", linkedAssetIds)
-        .order("sort_order", { ascending: true });
-      if (sections) {
-        for (const s of sections) {
-          if (!assetSectionsMap[s.asset_id]) assetSectionsMap[s.asset_id] = [];
-          assetSectionsMap[s.asset_id].push({ id: s.id, title: s.title, description: s.description });
-        }
-      }
-    }
     const cleanedNodes = rawNodes.map((node: any) => {
       if (node.type === "funnelPage" && node.data) {
         const d = node.data;
-        const localSections = d.linkedAssetId && assetSectionsMap[d.linkedAssetId]
-          ? assetSectionsMap[d.linkedAssetId] : (d.copySections || []);
-        return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, copySections: localSections } };
+        return { ...node, data: { ...d, copyDocumentId: undefined, nodeUrl: undefined, nodeImage: undefined } };
       }
       return node;
     });
@@ -1233,10 +1161,11 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     };
   }, [setNodes]);
 
-  const handleLinkAsset = useCallback((assetId: string | null) => {
-    if (!detailsNodeId) return;
-    setNodes((nds) => nds.map((n) => n.id === detailsNodeId ? { ...n, data: { ...n.data, linkedAssetId: assetId } } : n));
-  }, [detailsNodeId, setNodes]);
+  const handleOpenCopyDocument = useCallback((docId: string) => {
+    window.dispatchEvent(new CustomEvent("boostmate:navigate-module", { detail: "copy-documents" }));
+    window.dispatchEvent(new CustomEvent("boostmate:open-copy-document", { detail: docId }));
+  }, []);
+
 
   const handleRenameNode = useCallback((name: string) => {
     if (!detailsNodeId) return;
@@ -1711,7 +1640,10 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           nodeId={detailsNode.id}
           nodeLabel={t((detailsNode.data as any).label)}
           customLabel={(detailsNode.data as any).customLabel || ""}
-          linkedAssetId={(detailsNode.data as any).linkedAssetId || null}
+          copyFrameworkId={(detailsNode.data as any).copyFrameworkId || null}
+          copyDocumentId={(detailsNode.data as any).copyDocumentId || null}
+          funnelId={currentFunnel?.id || null}
+          linkedOfferId={linkedOfferId}
           noteContent={(detailsNode.data as any).noteContent || ""}
           renderStyle={(detailsNode.data as any).renderStyle || "page"}
           pageType={(detailsNode.data as any).pageType || ""}
@@ -1735,7 +1667,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           shapeWidth={(detailsNode.data as any).shapeWidth}
           shapeHeight={(detailsNode.data as any).shapeHeight}
           shapeColor={(detailsNode.data as any).color}
-          onLinkAsset={handleLinkAsset}
+          onOpenCopyDocument={handleOpenCopyDocument}
           onRename={handleRenameNode}
           onNoteContentChange={handleNoteContentChange}
           onDataChange={handleDataChange}
