@@ -49,7 +49,6 @@ interface NodeDetailsPanelProps {
   nodeId: string;
   nodeLabel: string;
   customLabel?: string;
-  linkedAssetId: string | null;
   noteContent?: string;
   renderStyle?: "page" | "icon" | "note" | "text" | "shape";
   pageType?: string;
@@ -60,6 +59,10 @@ interface NodeDetailsPanelProps {
   waitDuration?: number;
   copySections?: Array<{ id: string; title: string; description: string }>;
   funnelName?: string;
+  funnelId?: string | null;
+  linkedOfferId?: string | null;
+  copyFrameworkId?: string | null;
+  copyDocumentId?: string | null;
   readOnly?: boolean;
   emailSubject?: string;
   // Text styling
@@ -77,49 +80,115 @@ interface NodeDetailsPanelProps {
   shapeWidth?: number;
   shapeHeight?: number;
   shapeColor?: string;
-  onLinkAsset: (assetId: string | null) => void;
   onRename: (name: string) => void;
   onNoteContentChange?: (content: string) => void;
   onDataChange?: (key: string, value: any) => void;
   onNodeDataChange?: (nodeId: string, key: string, value: any) => void;
+  onOpenCopyDocument?: (documentId: string) => void;
   onClose: () => void;
 }
 
 const NodeDetailsPanel = ({
-  nodeId, nodeLabel, customLabel, linkedAssetId, noteContent, renderStyle, pageType,
+  nodeId, nodeLabel, customLabel, noteContent, renderStyle, pageType,
   nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copySections, funnelName,
+  funnelId, linkedOfferId, copyFrameworkId, copyDocumentId,
   readOnly, textSize, textBold, textItalic, textUnderline, textColor, themeColor,
   shapeType, shapeBorderStyle, shapeTransparent, shapeWidth, shapeHeight, shapeColor,
   emailSubject,
-  onLinkAsset, onRename, onNoteContentChange, onDataChange, onNodeDataChange, onClose,
+  onRename, onNoteContentChange, onDataChange, onNodeDataChange, onOpenCopyDocument, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { activeSubAccountId } = useWorkspace();
   const userId = user?.id ?? null;
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [selectedAssetId, setSelectedAssetId] = useState<string>(linkedAssetId || "");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [frameworks, setFrameworks] = useState<CopyFramework[]>([]);
+  const [componentDefs, setComponentDefs] = useState<CopyComponentDef[]>([]);
+  const [creatingDoc, setCreatingDoc] = useState(false);
+  const [linkedDocName, setLinkedDocName] = useState<string | null>(null);
 
+  // Determine framework type from node context
+  const frameworkType = pageType === "email" ? "email_sequence" : "sales_copy";
+
+  const loadFrameworks = useCallback(async () => {
+    const [{ data: fw }, { data: cd }] = await Promise.all([
+      supabase.from("copy_frameworks").select("id, name, type, component_slugs").eq("is_active", true).eq("type", frameworkType).order("name"),
+      supabase.from("copy_components").select("slug, name, icon").eq("is_active", true),
+    ]);
+    if (fw) setFrameworks(fw as any);
+    if (cd) setComponentDefs(cd as any);
+  }, [frameworkType]);
+
+  useEffect(() => { loadFrameworks(); }, [loadFrameworks]);
+
+  // Load linked doc name
   useEffect(() => {
-    setSelectedAssetId(linkedAssetId || "");
-  }, [linkedAssetId]);
+    if (!copyDocumentId) { setLinkedDocName(null); return; }
+    let cancelled = false;
+    supabase.from("copy_documents").select("name").eq("id", copyDocumentId).maybeSingle().then(({ data }) => {
+      if (!cancelled) setLinkedDocName((data as any)?.name ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [copyDocumentId]);
 
-  const loadAssets = useCallback(async () => {
-    if (!userId) return;
-    const { data } = await supabase
-      .from("assets")
-      .select("id, name, type")
-      .eq("user_id", userId)
-      .eq("type", "sales_copy")
-      .order("name");
-    if (data) setAssets(data as Asset[]);
-  }, [userId]);
+  const setNodeData = (key: string, value: any) => {
+    if (onNodeDataChange) onNodeDataChange(nodeId, key, value);
+    else onDataChange?.(key, value);
+  };
 
-  useEffect(() => { loadAssets(); }, [loadAssets]);
+  const createCopyDocument = async () => {
+    if (!copyFrameworkId || !userId || !activeSubAccountId) return;
+    const framework = frameworks.find((f) => f.id === copyFrameworkId);
+    if (!framework) return;
+    setCreatingDoc(true);
+    try {
+      const docName = `${funnelName || "Funnel"} — ${customLabel || nodeLabel}`;
+      const { data: doc, error: docErr } = await supabase
+        .from("copy_documents")
+        .insert({
+          user_id: userId,
+          sub_account_id: activeSubAccountId,
+          name: docName,
+          type: framework.type,
+          funnel_id: funnelId ?? null,
+          funnel_node_id: nodeId,
+          context_type: linkedOfferId ? "offer" : "custom",
+          context_offer_id: linkedOfferId ?? null,
+        })
+        .select("id")
+        .single();
+      if (docErr || !doc) throw docErr;
 
-  const handleLink = () => { onLinkAsset(selectedAssetId || null); };
-  const handleUnlink = () => { setSelectedAssetId(""); onLinkAsset(null); };
+      const slugs: string[] = Array.isArray(framework.component_slugs)
+        ? framework.component_slugs
+        : (framework.component_slugs?.slugs || []);
+      if (slugs.length > 0) {
+        const rows = slugs.map((slug, i) => ({
+          document_id: doc.id,
+          component_slug: slug,
+          sort_order: i,
+          inputs: {},
+          outputs: {},
+          is_generated: false,
+        }));
+        await supabase.from("copy_document_components").insert(rows as any);
+      }
+
+      setNodeData("copyDocumentId", doc.id);
+      toast.success(t("funnelDesigner.copyFramework.documentCreated"));
+    } catch {
+      toast.error(t("funnelDesigner.copyFramework.createError"));
+    } finally {
+      setCreatingDoc(false);
+    }
+  };
+
+  const activeFramework = frameworks.find((f) => f.id === copyFrameworkId);
+  const activeSlugs: string[] = Array.isArray(activeFramework?.component_slugs)
+    ? (activeFramework?.component_slugs as string[])
+    : ((activeFramework?.component_slugs as any)?.slugs || []);
+
 
   const isNote = renderStyle === "note";
   const isText = renderStyle === "text";
