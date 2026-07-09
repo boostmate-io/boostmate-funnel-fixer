@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Trash2, Settings2, Eye, PenTool, Sparkles, Loader2,
+  ArrowLeft, Settings2, Eye, PenTool, Sparkles, Loader2,
   icons, Gem, AlertTriangle, Copy, Check, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
