@@ -231,7 +231,7 @@ const AnalyticsCharts = ({
               {t("analytics.charts.customize") || "Metrics"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 max-h-96 overflow-y-auto" align="end">
+          <PopoverContent className="w-96 max-h-[28rem] overflow-y-auto" align="end">
             <div className="space-y-4">
               {nodeCatalogue.map((c) => (
                 <div key={c.id} className="space-y-1.5">
@@ -239,12 +239,55 @@ const AnalyticsCharts = ({
                   <div className="space-y-1 pl-1">
                     {c.fields.map((f: MetricField) => {
                       const key = `${c.id}::${f.key}`;
+                      const overrideKey = `chart:${key}`;
                       const checked = activeSelected.has(key);
+                      const isEditing = editingKey === overrideKey;
+                      const currentLabel = labelOverrides?.[overrideKey] || f.label;
+                      const hasOverride = !!labelOverrides?.[overrideKey];
                       return (
-                        <label key={key} className="flex items-center gap-2 text-xs cursor-pointer">
+                        <div key={key} className="flex items-center gap-2 text-xs">
                           <Checkbox checked={checked} onCheckedChange={() => toggleMetric(key)} />
-                          <span className={checked ? "text-foreground" : "text-muted-foreground"}>{f.label}</span>
-                        </label>
+                          {isEditing ? (
+                            <Input
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") { setEditingKey(null); setEditValue(""); } }}
+                              onBlur={commitEdit}
+                              autoFocus
+                              className="h-7 text-xs flex-1"
+                            />
+                          ) : (
+                            <>
+                              <span
+                                onClick={() => toggleMetric(key)}
+                                className={`flex-1 cursor-pointer truncate ${checked ? "text-foreground" : "text-muted-foreground"}`}
+                                title={currentLabel}
+                              >
+                                {currentLabel}
+                              </span>
+                              {onLabelOverride && (
+                                <>
+                                  <button
+                                    className="p-1 hover:bg-muted rounded"
+                                    title={t("analytics.renameMetric")}
+                                    onClick={() => { setEditingKey(overrideKey); setEditValue(currentLabel); }}
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                  {hasOverride && (
+                                    <button
+                                      className="p-1 hover:bg-muted rounded"
+                                      title={t("analytics.resetLabel")}
+                                      onClick={() => onLabelOverride(overrideKey, null)}
+                                    >
+                                      <RotateCcw className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
