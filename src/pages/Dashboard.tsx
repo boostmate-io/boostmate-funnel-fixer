@@ -11,9 +11,8 @@ import AuditModule from "@/components/audit/AuditModule";
 
 import ClientManagement from "@/components/agency/ClientManagement";
 import AgencySettings from "@/components/agency/AgencySettings";
-import { BarChart3, GitBranch, Library, TrendingUp, Sparkles } from "lucide-react";
+import { BarChart3, GitBranch, FileText, TrendingUp, Sparkles } from "lucide-react";
 import FunnelModule from "@/components/funnel-designer/FunnelModule";
-import AssetsLibrary from "@/components/assets/AssetsLibrary";
 import CopyDocumentsModule from "@/components/copy/CopyDocumentsModule";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
 import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
@@ -51,7 +50,7 @@ const Dashboard = () => {
     return () => window.removeEventListener("boostmate:navigate-module", handler);
   }, []);
 
-  const fullHeightModules = ["funnels", "assets-library", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
+  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
 
   if (loading) {
     return (
@@ -108,12 +107,12 @@ const Dashboard = () => {
                   <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.analytics.title")}</h3>
                   <p className="text-sm text-muted-foreground">{t("dashboard.analytics.description")}</p>
                 </button>
-                <button onClick={() => setActiveModule("assets-library")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
+                <button onClick={() => setActiveModule("copy-documents")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
                   <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                    <Library className="w-6 h-6 text-primary-foreground" />
+                    <FileText className="w-6 h-6 text-primary-foreground" />
                   </div>
-                  <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.assetsLibrary.title")}</h3>
-                  <p className="text-sm text-muted-foreground">{t("dashboard.assetsLibrary.description")}</p>
+                  <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.copyDocuments.title")}</h3>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.copyDocuments.description")}</p>
                 </button>
               </div>
             </>
@@ -139,11 +138,6 @@ const Dashboard = () => {
           {activeModule === "analytics" && (
             <div className="h-full">
               <AnalyticsModule />
-            </div>
-          )}
-          {activeModule === "assets-library" && (
-            <div className="h-full">
-              <AssetsLibrary />
             </div>
           )}
           {activeModule === "copy-documents" && (
