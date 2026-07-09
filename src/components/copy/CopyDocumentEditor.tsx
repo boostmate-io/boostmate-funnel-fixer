@@ -365,11 +365,11 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                               : "hover:bg-muted/50 text-foreground"
                           }`}
                         >
-                          <LucideIcon name={iconName} className="w-4 h-4 shrink-0" />
+                          <LucideIcon name={iconName} className="w-4 h-4 shrink-0 mt-0.5" />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">{def?.name || dc.component_slug}</p>
                             {def?.description && (
-                              <p className="text-[10px] text-muted-foreground truncate mt-0.5">{def.description}</p>
+                              <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5 break-words">{def.description}</p>
                             )}
                           </div>
                           {dc.is_generated && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
@@ -400,14 +400,14 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
             <div className="flex-1 overflow-y-auto p-6">
               {activeComp && activeDef ? (
                 <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                       <LucideIcon name={getIconForComponent(activeComp.component_slug)} className="w-5 h-5 text-primary" />
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-display font-bold text-foreground">{activeDef.name}</h3>
                       {activeDef.description && (
-                        <p className="text-xs text-muted-foreground">{activeDef.description}</p>
+                        <p className="text-xs text-muted-foreground break-words whitespace-normal">{activeDef.description}</p>
                       )}
                     </div>
                   </div>
