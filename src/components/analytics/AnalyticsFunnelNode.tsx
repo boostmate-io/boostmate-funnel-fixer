@@ -36,7 +36,8 @@ const AnalyticsFunnelNode = memo(({ data }: NodeProps) => {
       {thumb && (
         <div className="px-3 pb-2">
           <div
-            className="relative w-full group/img cursor-zoom-in"
+            className="relative w-full group/img cursor-zoom-in pointer-events-auto nodrag nopan"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               const fullSrc = d.nodeImage || d.nodeImageThumb;
@@ -48,10 +49,10 @@ const AnalyticsFunnelNode = memo(({ data }: NodeProps) => {
             <img
               src={thumb}
               alt={displayName}
-              className="w-full h-24 object-cover object-top rounded border border-border"
+              className="w-full h-24 object-cover object-top rounded border border-border pointer-events-none"
               loading="lazy"
             />
-            <div className="absolute inset-0 rounded bg-black/0 group-hover/img:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover/img:opacity-100">
+            <div className="absolute inset-0 rounded bg-black/0 group-hover/img:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover/img:opacity-100 pointer-events-none">
               <Icons.Maximize2 className="w-5 h-5 text-white drop-shadow-md" />
             </div>
           </div>
@@ -63,8 +64,9 @@ const AnalyticsFunnelNode = memo(({ data }: NodeProps) => {
             href={d.nodeUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1 text-[10px] text-primary hover:underline truncate"
+            className="flex items-center gap-1 text-[10px] text-primary hover:underline truncate pointer-events-auto nodrag nopan"
             title={d.nodeUrl}
           >
             <ExternalLink className="w-3 h-3 shrink-0" />
