@@ -26,6 +26,9 @@ export function encodeAnalyticsConfig(config: AnalyticsViewConfig): string {
   if (config.selectedMetrics && config.selectedMetrics.length) {
     params.set("m", config.selectedMetrics.join(","));
   }
+  if (config.selectedKPIs && config.selectedKPIs.length) {
+    params.set("k", config.selectedKPIs.join(","));
+  }
   return params.toString();
 }
 
@@ -45,6 +48,8 @@ export function decodeAnalyticsConfig(search: string): Partial<AnalyticsViewConf
   if (g === "day" || g === "week" || g === "month" || g === "quarter") out.granularity = g;
   const m = params.get("m");
   if (m !== null) out.selectedMetrics = m ? m.split(",").filter(Boolean) : [];
+  const k = params.get("k");
+  if (k !== null) out.selectedKPIs = k ? k.split(",").filter(Boolean) : [];
   return out;
 }
 
