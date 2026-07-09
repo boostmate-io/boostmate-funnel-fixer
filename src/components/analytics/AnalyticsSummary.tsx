@@ -7,6 +7,7 @@ import "@xyflow/react/dist/style.css";
 import { format } from "date-fns";
 import { getMetricsForNodeType } from "./metricDefinitions";
 import { isTrackableNode, filterAndRewireEdges } from "./nodeFilters";
+import { sortNodesByFlow } from "./flowOrder";
 import { prettyTypeLabel } from "./typeLabels";
 import AnalyticsFunnelNode from "./AnalyticsFunnelNode";
 import AnalyticsTrafficNode from "./AnalyticsTrafficNode";
