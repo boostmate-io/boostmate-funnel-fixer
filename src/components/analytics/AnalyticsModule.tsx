@@ -224,7 +224,7 @@ const AnalyticsModule = ({
             selectedKPIs={selectedKPIs}
             onSelectedKPIsChange={setSelectedKPIs}
             labelOverrides={labelOverrides}
-            onLabelOverride={setLabelOverride}
+            onLabelOverride={readOnly ? undefined : setLabelOverride}
             readOnly={readOnly}
             title={t("analytics.summary.title")}
           />
@@ -243,7 +243,7 @@ const AnalyticsModule = ({
               selectedMetrics={selectedMetrics}
               onSelectedMetricsChange={setSelectedMetrics}
               labelOverrides={labelOverrides}
-              onLabelOverride={setLabelOverride}
+              onLabelOverride={readOnly ? undefined : setLabelOverride}
             />
           </div>
 
