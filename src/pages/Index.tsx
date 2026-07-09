@@ -10,7 +10,7 @@ import AuthModal from "@/components/auth/AuthModal";
 import { AuditFormData } from "@/types/audit";
 import { mockResult } from "@/components/audit/mockAuditData";
 import { scrapeLandingPage } from "@/lib/api/firecrawl";
-import { analyzeAudit, createSalesCopyAsset, createFunnelFromAnalysis } from "@/lib/api/auditAnalysis";
+import { analyzeAudit, createFunnelFromAnalysis } from "@/lib/api/auditAnalysis";
 import { AuditResult } from "@/types/audit";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -82,20 +82,13 @@ const Index = () => {
     const domain = formData.landingPageUrl.replace(/^https?:\/\//, "").split("/")[0];
 
     if (analysisResult) {
-      const assetId = await createSalesCopyAsset(
-        user.id,
-        projectId,
-        `Sales Copy - ${domain}`,
-        analysisResult.sections
-      );
-
       await createFunnelFromAnalysis(
         user.id,
         projectId,
         `Funnel - ${domain}`,
         analysisResult.nodes,
         analysisResult.edges,
-        assetId
+        analysisResult.sections
       );
     }
 
