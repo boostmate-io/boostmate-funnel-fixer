@@ -673,91 +673,79 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                 />
               </div>
 
-              {/* ── Component Management ── */}
-              <div className="border-t border-border pt-6 space-y-4">
+              {/* ── Framework ── */}
+              <div className="border-t border-border pt-6 space-y-3">
                 <div>
-                  <h3 className="text-sm font-display font-bold text-foreground">Components</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Add, remove, and reorder document components.</p>
+                  <h3 className="text-sm font-display font-bold text-foreground">Framework</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    This document is based on a Copy Framework. Its components are managed centrally in Admin → Copy Frameworks.
+                  </p>
                 </div>
-
-                {/* Apply framework */}
-                {frameworks.length > 0 && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Apply Framework</Label>
-                    <Select onValueChange={applyFramework}>
-                      <SelectTrigger className="text-sm"><SelectValue placeholder="Replace components with framework..." /></SelectTrigger>
-                      <SelectContent>
-                        {frameworks.map(fw => (
-                          <SelectItem key={fw.id} value={fw.id} className="text-sm">{fw.name} ({fw.component_slugs.length} components)</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Add component */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Add Component</Label>
-                  <Select onValueChange={addComponent}>
-                    <SelectTrigger className="text-sm"><SelectValue placeholder="Select a component to add..." /></SelectTrigger>
-                    <SelectContent>
-                      {componentDefs.map(cd => (
-                        <SelectItem key={cd.slug} value={cd.slug} className="text-sm">
-                          {cd.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Component list */}
-                <div className="space-y-1">
-                  {docComponents.map((dc, idx) => {
-                    const def = componentDefs.find(d => d.slug === dc.component_slug);
-                    const iconName = getIconForComponent(dc.component_slug);
-                    return (
-                      <div
-                        key={dc.id}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <LucideIcon name={iconName} className="w-4 h-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{def?.name || dc.component_slug}</p>
-                          {def?.description && (
-                            <p className="text-[10px] text-muted-foreground truncate">{def.description}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-0.5">
-                          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === 0} onClick={() => moveComponent(idx, "up")}>
-                            <ChevronUp className="w-3 h-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === docComponents.length - 1} onClick={() => moveComponent(idx, "down")}>
-                            <ChevronDown className="w-3 h-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeComponent(dc.id)}>
-                            <Trash2 className="w-3 h-3 text-destructive" />
-                          </Button>
-                        </div>
+                {(() => {
+                  const currentFw = frameworks.find(f => f.id === frameworkId);
+                  return (
+                    <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-card">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">
+                          {currentFw?.name || (frameworkId ? "Unknown framework" : "No framework linked")}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {docComponents.length} component{docComponents.length === 1 ? "" : "s"}
+                        </p>
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* Save as framework */}
-                {docComponents.length > 0 && (
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={saveAsFramework}>
-                    <LayoutList className="w-3.5 h-3.5" />
-                    Save as Framework
-                  </Button>
-                )}
+                      {frameworks.length > 0 && (
+                        <Select
+                          value=""
+                          onValueChange={(v) => {
+                            if (!v || v === frameworkId) return;
+                            setPendingFrameworkId(v);
+                            setConfirmFrameworkOpen(true);
+                          }}
+                        >
+                          <SelectTrigger className="text-xs h-8 w-40">
+                            <SelectValue placeholder="Change framework..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {frameworks.filter(f => f.id !== frameworkId).map(fw => (
+                              <SelectItem key={fw.id} value={fw.id} className="text-sm">
+                                {fw.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Save button at the bottom */}
               <div className="border-t border-border pt-6">
                 <Button onClick={saveSettings}>Save Settings</Button>
               </div>
+
+              <AlertDialog open={confirmFrameworkOpen} onOpenChange={setConfirmFrameworkOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Change framework?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will replace all current components and their generated content with the components of the selected framework. This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setPendingFrameworkId(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        if (pendingFrameworkId) await applyFramework(pendingFrameworkId);
+                        setPendingFrameworkId(null);
+                        setConfirmFrameworkOpen(false);
+                      }}
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Change framework
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </ScrollArea>
         )}
