@@ -30,7 +30,7 @@ const getNodeType = (n: any): string =>
 
 const AnalyticsKPIs = ({
   funnelId, nodes, edges, periodStart, periodEnd, refreshKey, client,
-  selectedKPIs, onSelectedKPIsChange, readOnly,
+  selectedKPIs, onSelectedKPIsChange, readOnly, title,
 }: Props) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
