@@ -140,7 +140,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const selectedNodeRef = useRef<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
-  const [linkedAssetSections, setLinkedAssetSections] = useState<Record<string, Array<{ id: string; title: string; description: string }>>>({});
+  
 
   // Admin state
   const [isAdmin, setIsAdmin] = useState(false);
@@ -198,7 +198,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     const cleanedNodes = rawNodes.map((node: any) => {
       if (node.type === "funnelPage" && node.data) {
         const d = node.data;
-        return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+        return { ...node, data: { ...d, copyDocumentId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
       }
       return node;
     });
@@ -755,64 +755,11 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     return () => window.removeEventListener("funnel-node-image-view", handler);
   }, []);
 
-  const linkedAssetIds = useMemo(
-    () => Array.from(new Set(
-      nodes.flatMap((node) =>
-        node.type === "funnelPage" && (node.data as any)?.linkedAssetId
-          ? [String((node.data as any).linkedAssetId)]
-          : []
-      )
-    )).sort(),
-    [nodes]
-  );
-
-  useEffect(() => {
-    if (linkedAssetIds.length === 0) {
-      setLinkedAssetSections({});
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      const { data } = await supabase
-        .from("asset_sections")
-        .select("id, asset_id, title, description")
-        .in("asset_id", linkedAssetIds)
-        .order("sort_order", { ascending: true });
-
-      if (cancelled) return;
-
-      const nextSections: Record<string, Array<{ id: string; title: string; description: string }>> = Object.fromEntries(
-        linkedAssetIds.map((assetId) => [assetId, []])
-      );
-
-      for (const section of data ?? []) {
-        nextSections[section.asset_id]?.push({
-          id: section.id,
-          title: section.title,
-          description: section.description,
-        });
-      }
-
-      setLinkedAssetSections(nextSections);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [linkedAssetIds]);
-
   const resolveNodeCopySections = useCallback((node: Node) => {
     if (node.type !== "funnelPage") return [] as Array<{ id: string; title: string; description: string }>;
-
     const nodeData = node.data as any;
-    if (nodeData.linkedAssetId) {
-      return linkedAssetSections[String(nodeData.linkedAssetId)] ?? [];
-    }
-
     return nodeData.copySections ?? [];
-  }, [linkedAssetSections]);
+  }, []);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
