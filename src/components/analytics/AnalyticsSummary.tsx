@@ -103,7 +103,7 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
       .map(([, v]) => v);
 
     return { stepAggregates, stepAggregateMap: stepMap };
-  }, [stepMetrics, nodes]);
+  }, [stepMetrics, nodes, edges]);
 
   const filtered = useMemo(() => filterAndRewireEdges(nodes, edges), [nodes, edges]);
 
