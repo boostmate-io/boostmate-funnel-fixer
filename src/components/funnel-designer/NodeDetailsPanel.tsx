@@ -3,8 +3,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { toast } from "sonner";
-import { X, Upload, ExternalLink, Trash2, Bold, Italic, Underline, Minus, Plus, FileText, Sparkles, Unlink } from "lucide-react";
+import { X, Upload, ExternalLink, Trash2, Bold, Italic, Underline, Minus, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Toggle } from "@/components/ui/toggle";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
+import NodeLinkedDocuments from "@/components/copy/linked/NodeLinkedDocuments";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface CopyFramework {
   id: string;
@@ -62,9 +63,10 @@ interface NodeDetailsPanelProps {
   funnelId?: string | null;
   linkedOfferId?: string | null;
   copyFrameworkId?: string | null;
-  copyDocumentId?: string | null;
   readOnly?: boolean;
   emailSubject?: string;
+  /** Alternative Supabase client (used on shared / read-only pages). */
+  supabaseClient?: SupabaseClient<any, any, any>;
   // Text styling
   textSize?: number;
   textBold?: boolean;
@@ -91,10 +93,10 @@ interface NodeDetailsPanelProps {
 const NodeDetailsPanel = ({
   nodeId, nodeLabel, customLabel, noteContent, renderStyle, pageType,
   nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copyComponentNames, funnelName,
-  funnelId, linkedOfferId, copyFrameworkId, copyDocumentId,
+  funnelId, linkedOfferId, copyFrameworkId,
   readOnly, textSize, textBold, textItalic, textUnderline, textColor, themeColor,
   shapeType, shapeBorderStyle, shapeTransparent, shapeWidth, shapeHeight, shapeColor,
-  emailSubject,
+  emailSubject, supabaseClient,
   onRename, onNoteContentChange, onDataChange, onNodeDataChange, onOpenCopyDocument, onClose,
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();

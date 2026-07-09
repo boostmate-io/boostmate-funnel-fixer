@@ -799,6 +799,7 @@ export type Database = {
           global_instructions: string
           id: string
           name: string
+          status: string | null
           sub_account_id: string | null
           type: string
           updated_at: string
@@ -814,6 +815,7 @@ export type Database = {
           global_instructions?: string
           id?: string
           name?: string
+          status?: string | null
           sub_account_id?: string | null
           type?: string
           updated_at?: string
@@ -829,6 +831,7 @@ export type Database = {
           global_instructions?: string
           id?: string
           name?: string
+          status?: string | null
           sub_account_id?: string | null
           type?: string
           updated_at?: string
@@ -1820,6 +1823,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      copy_document_is_public: { Args: { _doc_id: string }; Returns: boolean }
       get_all_users_admin: {
         Args: never
         Returns: {

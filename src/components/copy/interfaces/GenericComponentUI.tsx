@@ -7,6 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Sparkles, RotateCw, Loader2 } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
 import { toast } from "sonner";
+import ImageOutputField from "./ImageOutputField";
+
+interface OutputFieldDef {
+  key: string;
+  label: string;
+  type: string;
+  item_schema?: any[];
+  is_primary?: boolean;
+}
 
 interface GenericComponentUIProps {
   componentSlug: string;
@@ -15,7 +24,9 @@ interface GenericComponentUIProps {
   context: string;
   inputs: Record<string, any>;
   outputs: Record<string, any>;
-  outputStructure?: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
+  outputStructure?: OutputFieldDef[];
+  documentId?: string | null;
+  subAccountId?: string | null;
   onInputsChange: (inputs: Record<string, any>) => void;
   onOutputsChange: (outputs: Record<string, any>) => void;
   onGenerated: () => void;
@@ -26,19 +37,24 @@ interface GenericComponentUIProps {
  * This is the fallback for any component that doesn't have a dedicated UI.
  */
 const GenericComponentUI = ({
-  componentSlug,
   aiActionSlug,
   componentInstructions,
   context,
   inputs,
   outputs,
   outputStructure,
+  documentId,
+  subAccountId,
   onInputsChange,
   onOutputsChange,
   onGenerated,
 }: GenericComponentUIProps) => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [generating, setGenerating] = useState(false);
+
+  const structure: OutputFieldDef[] = outputStructure || [];
+  const imageFields = structure.filter((f) => f.type === "image");
+  const nonImageStructure = structure.filter((f) => f.type !== "image");
 
   const handleGenerate = async () => {
     if (!aiActionSlug) {
@@ -49,14 +65,13 @@ const GenericComponentUI = ({
     try {
       const result = await executeAIAction({
         slug: aiActionSlug,
-        inputs: {
-          ...inputs,
-          context,
-        },
+        inputs: { ...inputs, context },
         extraInstructions: componentInstructions || undefined,
-        outputStructure,
+        // Strip image fields from what the LLM sees — they are user-uploaded.
+        outputStructure: nonImageStructure,
       });
-      onOutputsChange(result.output);
+      // Merge with existing outputs so user-uploaded image fields survive regeneration.
+      onOutputsChange({ ...outputs, ...result.output });
       onGenerated();
       toast.success("Content generated");
     } catch (e: any) {
@@ -66,8 +81,9 @@ const GenericComponentUI = ({
     }
   };
 
-  const outputKeys = Object.keys(outputs);
-  const hasOutput = outputKeys.length > 0 && outputKeys.some(k => outputs[k]);
+  // Determine which non-image keys exist in outputs (for display fallback when no structure defined).
+  const outputKeys = Object.keys(outputs).filter((k) => !imageFields.some((f) => f.key === k));
+  const hasTextOutput = outputKeys.length > 0 && outputKeys.some((k) => outputs[k]);
 
   return (
     <div className="space-y-6">
@@ -105,22 +121,18 @@ const GenericComponentUI = ({
         </div>
       </div>
 
-      {/* Generate buttons */}
-      <div className="flex gap-2">
-        <Button onClick={handleGenerate} disabled={generating} className="gap-2">
-          {generating ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : hasOutput ? (
-            <RotateCw className="w-4 h-4" />
-          ) : (
-            <Sparkles className="w-4 h-4" />
-          )}
-          {generating ? "Generating..." : hasOutput ? "Regenerate" : "Generate"}
-        </Button>
-      </div>
+      {/* Generate button */}
+      {nonImageStructure.length > 0 && (
+        <div className="flex gap-2">
+          <Button onClick={handleGenerate} disabled={generating} className="gap-2">
+            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : hasTextOutput ? <RotateCw className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+            {generating ? "Generating..." : hasTextOutput ? "Regenerate" : "Generate"}
+          </Button>
+        </div>
+      )}
 
-      {/* Output section */}
-      {hasOutput && (
+      {/* Text output section */}
+      {hasTextOutput && (
         <div className="space-y-4">
           <h4 className="text-sm font-display font-bold text-foreground">Output</h4>
           {outputKeys.map(key => (
@@ -131,7 +143,7 @@ const GenericComponentUI = ({
                   {(outputs[key] as string[]).map((item, i) => (
                     <Textarea
                       key={i}
-                      value={item}
+                      value={typeof item === "string" ? item : JSON.stringify(item)}
                       onChange={e => {
                         const updated = [...outputs[key]];
                         updated[i] = e.target.value;
@@ -143,12 +155,29 @@ const GenericComponentUI = ({
                 </div>
               ) : (
                 <Textarea
-                  value={outputs[key] || ""}
+                  value={typeof outputs[key] === "string" ? outputs[key] : ""}
                   onChange={e => onOutputsChange({ ...outputs, [key]: e.target.value })}
                   className="min-h-[80px] text-sm"
                 />
               )}
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* Image fields (never LLM-generated) */}
+      {imageFields.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="text-sm font-display font-bold text-foreground">Images</h4>
+          {imageFields.map((f) => (
+            <ImageOutputField
+              key={f.key}
+              label={f.label || f.key}
+              value={outputs[f.key]}
+              documentId={documentId ?? null}
+              subAccountId={subAccountId ?? null}
+              onChange={(v) => onOutputsChange({ ...outputs, [f.key]: v })}
+            />
           ))}
         </div>
       )}

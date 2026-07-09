@@ -1,80 +1,83 @@
+## Scope
 
-# Plan: Assets Library vervangen door Copy Frameworks op funnel-nodes
+Ship the generic infrastructure only. Meta Ad framework/component/AI action will be configured by the user in the admin UI afterward.
 
-## Doelbeeld
+## 1. Storage: `copy-assets` bucket
 
-- Op elke funnel-node (bv. een sales page) kan een **Copy Framework** worden gekoppeld.
-- In een **(seed) template** wordt die koppeling meegenomen: bij het aanmaken van een nieuwe funnel vanuit een seed template krijgen de nodes automatisch dezelfde framework-koppeling.
-- Vanuit de node-details kun je met één klik een **Copy Document** aanmaken dat:
-  - het gekoppelde framework krijgt toegewezen (componenten automatisch toegevoegd);
-  - automatisch het **offer van de funnel** als context krijgt (`context_type = "offer"`, `context_offer_id = funnel.offer_id`);
-  - gelinkt is aan de node zodat je er later steeds terug naartoe kan navigeren.
-- **Assets Library** verdwijnt volledig (menu + component + tabellen + node-koppeling).
+- New private bucket `copy-assets` via `supabase--storage_create_bucket`.
+- RLS on `storage.objects` (migration):
+  - Path convention: `{sub_account_id}/{copy_document_id}/{uuid}-{filename}`.
+  - `SELECT` / `INSERT` / `UPDATE` / `DELETE` for authenticated when the first path segment is a sub_account the user is a member of (`is_sub_account_member(auth.uid(), (storage.foldername(name))[1]::uuid)`).
+  - `SELECT` for `anon` when the parent `copy_documents.funnel_id` belongs to a funnel with `is_public = true` and a matching share_token — implemented via a security-definer helper `public.copy_document_is_public(_doc_id uuid)` to keep the policy simple. Needed so shared funnel/analytics views can render thumbnails.
 
-## Wat er verandert
+## 2. Generic `image` output field type
 
-### 1. Datamodel (één migratie)
+- `copy_components.output_structure` already stores an untyped `{key,label,type,...}` array — no schema change. Add `"image"` as a supported `type` value.
+- `AdminCopyComponents` output-structure editor: add `image` to the type dropdown, with an optional `is_primary: boolean` flag (used later by thumbnail logic; only one field per component should be marked primary — validated client-side).
+- `ComponentUIRenderer` / `GenericComponentUI`: render `type: "image"` fields as an upload widget:
+  - Upload button → `supabase.storage.from("copy-assets").upload(path, file)`.
+  - Store `{ path, url }` in `copy_document_components.outputs[key]` (path is the storage key; url is a signed URL refreshed on load).
+  - Show thumbnail preview + "Replace" / "Remove" actions.
+  - Non-generative: no LLM call for these fields.
+- Edge function `execute-ai-action`: when building the tool schema from `output_structure`, filter out any field whose `type === "image"`. The LLM never sees or produces them.
 
-**Nieuwe koppeling op de node zelf** — omdat nodes in `funnels.nodes` (jsonb) leven, gebeurt de koppeling per node via twee nieuwe velden binnen `node.data`:
-- `copyFrameworkId: uuid | null` — framework gekoppeld aan de node (ook in seed templates).
-- `copyDocumentId: uuid | null` — het aangemaakte document voor deze node (per gebruiker/funnel-instantie).
+## 3. Funnel node: 1:N linked documents
 
-Geen aparte tabel nodig; seed_templates gebruikt dezelfde `nodes` jsonb, dus `copyFrameworkId` reist automatisch mee bij cloning in `handle_new_user_role()`. `copyDocumentId` wordt bewust NIET meegekopieerd (documenten zijn per funnel/gebruiker).
+- **Node data**: keep `copyFrameworkId` as the *default* framework for new documents on that node. Remove reads of `copyDocumentId` (already unused by save flow after previous cleanup; strip on next save).
+- **`NodeDetailsPanel`** replaces current single-doc block with a **grid** of `LinkedDocumentCard`s (see §4) plus a "New document" button:
+  - Query: `copy_documents.select("*").eq("funnel_node_id", node.id)` scoped to sub_account.
+  - "New document" uses the node's `copyFrameworkId` as default; user can change framework in the dialog before creation.
+  - Card menu: Open, Change framework link, Detach (`funnel_node_id = null`), Delete.
+- **`FunnelNode` thumbnail**: keep framework component-name list; append small badge with linked doc count when > 0.
 
-**`copy_documents` uitbreiden**:
-- `funnel_id uuid` (FK → funnels, nullable, on delete set null)
-- `funnel_node_id text` (nullable) — de node-id waar het document aan hangt
+## 4. `LinkedDocumentCard` + `LinkedDocumentsGrid` (shared component)
 
-**Verwijderen** (data staat momenteel los, niet in gebruik voor iets anders):
-- Tabel `asset_sections` (droppen).
-- Tabel `assets` (droppen).
-- Kolommen `linkedAssetId`/`copySections` in bestaande funnel `nodes` jsonb → één keer strippen via UPDATE (jsonb_set / node.data cleanup).
+New reusable components under `src/components/copy/linked/`:
 
-Grants + RLS voor de nieuwe kolommen op `copy_documents` volgen bestaande policies (sub_account scoped).
+- `LinkedDocumentsGrid` — props: `documents`, `frameworkById`, `readOnly`, `onOpen`, `onCreate?`, `onDetach?`, `onDelete?`. Renders responsive grid (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3`).
+- `LinkedDocumentCard` — Notion/Docs-style card:
+  - Thumbnail area (aspect-video): resolved via generic `resolveDocumentThumbnail(doc, componentDefs)` helper.
+  - Below: title, framework/type label, status pill (if `copy_documents.status` exists — add nullable column in migration), last-updated relative time.
+  - Read-only mode hides mutation actions.
 
-### 2. Backend / seed-template flow
+**Generic thumbnail resolver** (`src/lib/copy/documentThumbnail.ts`):
 
-- `handle_new_user_role()` hoeft niet aangepast te worden: nodes worden al gekloond, dus `copyFrameworkId` reist automatisch mee. We voegen wel een expliciete stap toe om `copyDocumentId` te strippen bij het clonen, zodat elke nieuwe funnel schone documenten heeft.
+1. Load the doc's `copy_document_components` rows + their component defs.
+2. For each component (in `sort_order`), scan `output_structure` for `type: "image"` fields.
+3. Prefer a field with `is_primary: true`; otherwise take the first image field with a non-empty stored path.
+4. Return a signed URL (cached in a `useSignedUrls` hook to batch).
+5. Fallback: framework icon + gradient placeholder (framework `name` initials).
 
-### 3. Frontend
+Used in:
+- Funnel Designer `NodeDetailsPanel`
+- `SharedFunnel` node inspector (read-only, `publicSupabase`, signed URLs from anon-accessible storage policy)
+- Analytics node panel (same read-only grid, wired in `AnalyticsFunnelNode` / analytics detail)
 
-**Verwijderen:**
-- `src/components/assets/` (hele map): `AssetsLibrary.tsx`, `AssetSectionsList.tsx`, `RichTextEditor.tsx`.
-- `src/components/funnel-designer/CopySections.tsx`.
-- Dashboard: menu-item "Assets Library", route/case in `Dashboard.tsx`, i18n keys `assets.*`.
-- In `NodeDetailsPanel.tsx`: alle asset-gerelateerde logica (asset-query, "Link Sales Copy asset", `onLinkAsset`, `copySections`-rendering).
+## 5. Data model tweaks (single migration)
 
-**Toevoegen aan `NodeDetailsPanel.tsx`** (nieuwe sectie "Copy Framework"):
-- Dropdown "Framework koppelen" → keuze uit `copy_frameworks` (filter op relevante types).
-- Preview van de componenten die dat framework bevat (read-only lijstje uit `copy_components` via `component_slugs`).
-- Knop **"Copy document aanmaken"** (alleen zichtbaar als framework gekozen én nog geen `copyDocumentId`):
-  - Maakt een `copy_documents`-row aan met `type = framework.type`, `funnel_id`, `funnel_node_id`, `context_type = "offer"`, `context_offer_id = funnel.offer_id` (of null fallback), `name = "{funnel.name} — {node.label}"`.
-  - Vult `copy_document_components` met de componenten van het framework in `component_slugs`-volgorde.
-  - Slaat `copyDocumentId` op de node op.
-- Knop **"Open document"** (als `copyDocumentId` bestaat) → opent de bestaande `CopyDocumentEditor` in een dialog of navigeert naar de Copy Documents-module met deze id.
-- Knop "Ontkoppelen" om `copyDocumentId` te verwijderen (document blijft bestaan in de Copy Documents-module).
+- `ALTER TABLE public.copy_documents ADD COLUMN status text` (nullable; freeform for now — "draft", "ready", "shipped" used by UI, not enforced).
+- Security-definer helper `public.copy_document_is_public(_doc_id uuid)`.
+- Storage RLS policies as in §1.
+- No changes to `copy_document_components`, `copy_frameworks`, or node schema.
 
-**Admin-templates UI** (indien aanwezig — Template Editing Mode): dezelfde framework-dropdown wordt getoond bij nodes zodat admins de koppeling op seed templates kunnen instellen.
+## 6. Deferred to admin UI (user does after ship)
 
-**Copy Documents-module**: toont per document optioneel de gelinkte funnel/node als context-label.
+- AI Action `generate_meta_ad`
+- Copy Component `meta_ad` with output_structure including one `image` field marked `is_primary: true` (`creative`)
+- Copy Framework "Meta Ad Copy" (type `meta_ad`) referencing `meta_ad` slug
+- Add `meta_ad` to `DOCUMENT_TYPES` in `CopyDocumentsModule.tsx` — *this one line* will be the only follow-up code change after admin config, and can ship in the same PR as a placeholder tab.
 
-### 4. i18n
+## Implementation order
 
-- Verwijder `assets.*` keys uit `en.json` en `nl.json`.
-- Nieuwe keys onder `funnelDesigner.copyFramework.*` (label, choose, preview, createDocument, openDocument, unlink) — **geen `common.*` fallbacks**, altijd expliciete labels.
+1. Migration + storage bucket + policies.
+2. Generic `image` field type: admin editor, renderer, edge function filter.
+3. `LinkedDocumentsGrid` + `LinkedDocumentCard` + thumbnail resolver.
+4. Wire grid into `NodeDetailsPanel` (replace list) + strip legacy `copyDocumentId` reads.
+5. Wire grid into `SharedFunnel` and Analytics node panel (read-only).
+6. Verify with typecheck + a manual flow: create framework in admin, add image field, upload creative, confirm thumbnail renders in all three surfaces.
 
-## Volgorde van uitvoeren
+## Out of scope
 
-1. Migratie: kolommen toevoegen op `copy_documents`, oude asset-tabellen droppen, node.data cleanup.
-2. Nieuwe UI-sectie "Copy Framework" in `NodeDetailsPanel`.
-3. Aanmaak-flow copy_document + auto-koppelen offer.
-4. Assets Library en `CopySections` verwijderen (Dashboard menu, routes, imports, i18n).
-5. Template Editing Mode UI update (framework-dropdown zichtbaar).
-6. Handmatige verificatie: nieuwe funnel vanuit seed template → framework op node → document aanmaken → offer-context zit erin.
-
-## Technische details
-
-- **Node-updates** blijven via bestaande `onDataChange(key, value)`-flow in `NodeDetailsPanel`, dus geen nieuw persistentie-mechanisme nodig.
-- **Offer op funnel**: `funnels` heeft geen expliciete `offer_id`-kolom die ik nu heb bevestigd. In stap 3 checken en, indien afwezig, of (a) offer al ergens op de funnel bereikbaar is (bv. via brief/blueprint), of (b) een `offer_id` toevoegen aan `funnels` als aparte micro-migratie. Dit bevestig ik direct bij implementatie zodat de auto-koppeling écht werkt.
-- **Cascade delete**: `copy_documents.funnel_id` op `ON DELETE SET NULL` zodat een verwijderde funnel het document niet weggooit.
-- **Backwards compat**: eenmalige jsonb-cleanup in de migratie verwijdert `linkedAssetId` en `copySections` uit alle bestaande `funnels.nodes` en `seed_templates.nodes` zodat er geen dode referenties blijven.
+- Meta Ads framework/component/AI action content.
+- Repeatable-component-instance model (not needed under 1-doc-per-ad approach).
+- Migrating any existing user data — the previous cleanup already removed `copySections`/`linkedAssetId`.

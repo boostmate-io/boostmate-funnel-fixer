@@ -466,6 +466,8 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     inputs={activeComp.inputs as Record<string, any>}
                     outputs={activeComp.outputs as Record<string, any>}
                     outputStructure={activeDef.output_structure}
+                    documentId={documentId}
+                    subAccountId={activeSubAccountId}
                     onInputsChange={inputs => updateComponentData(activeComp.id, inputs, activeComp.outputs as Record<string, any>, activeComp.is_generated)}
                     onOutputsChange={outputs => updateComponentData(activeComp.id, activeComp.inputs as Record<string, any>, outputs, true)}
                     onGenerated={() => {}}

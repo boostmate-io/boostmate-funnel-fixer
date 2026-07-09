@@ -25,7 +25,9 @@ interface ComponentUIRendererProps {
   context: string;
   inputs: Record<string, any>;
   outputs: Record<string, any>;
-  outputStructure?: Array<{ key: string; label: string; type: string; role?: string; item_schema?: any[] }>;
+  outputStructure?: Array<{ key: string; label: string; type: string; role?: string; item_schema?: any[]; is_primary?: boolean }>;
+  documentId?: string | null;
+  subAccountId?: string | null;
   onInputsChange: (inputs: Record<string, any>) => void;
   onOutputsChange: (outputs: Record<string, any>) => void;
   onGenerated: () => void;
