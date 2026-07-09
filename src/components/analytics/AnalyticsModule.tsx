@@ -7,6 +7,7 @@ import AnalyticsCharts from "./AnalyticsCharts";
 import DailyDataEntry from "./DailyDataEntry";
 import AnalyticsHistory from "./AnalyticsHistory";
 import AnalyticsPeriodFilter, { type AnalyticsPeriod } from "./AnalyticsPeriodFilter";
+import AnalyticsKPIs from "./AnalyticsKPIs";
 
 interface SelectedFunnel {
   id: string;
