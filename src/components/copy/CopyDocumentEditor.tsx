@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Plus, Trash2, Settings2, Eye, PenTool, Sparkles, Loader2,
-  ChevronUp, ChevronDown, LayoutList, icons, Gem, AlertTriangle, Copy, Check,
+  ArrowLeft, Settings2, Eye, PenTool, Sparkles, Loader2,
+  icons, Gem, AlertTriangle, Copy, Check, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import ComponentUIRenderer from "./ComponentUIRenderer";
 import { executeAIAction } from "@/lib/api/aiActions";
 import { buildScopedBlueprintContext, getMissingBlueprintFields } from "@/lib/blueprintFields";
@@ -87,6 +91,10 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
   const [blueprint, setBlueprint] = useState<any>(null);
   const [headlineBlocks, setHeadlineBlocks] = useState<Record<string, string>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [frameworkId, setFrameworkId] = useState<string | null>(null);
+  const [pendingFrameworkId, setPendingFrameworkId] = useState<string | null>(null);
+  const [confirmFrameworkOpen, setConfirmFrameworkOpen] = useState(false);
+
 
 
   const load = useCallback(async () => {
@@ -103,7 +111,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
       supabase.from("copy_components").select("slug, name, description, ai_action_slug, instructions, ui_interface_slug, icon, output_structure, required_blueprint_fields, headline_purpose, headline_instruction_block_id").eq("is_active", true).order("sort_order"),
       supabase.from("copy_frameworks").select("id, name, component_slugs, type").eq("is_active", true).eq("type", documentType),
       offersQuery,
-      supabase.from("copy_documents").select("context_type, context_offer_id, context_custom_text, global_instructions, name").eq("id", documentId).single(),
+      supabase.from("copy_documents").select("context_type, context_offer_id, context_custom_text, global_instructions, name, framework_id").eq("id", documentId).single(),
       blueprintQuery,
     ]);
     if (dc) setDocComponents(dc as unknown as DocumentComponent[]);
@@ -137,6 +145,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
       setContextCustomText((doc as any).context_custom_text || "");
       setGlobalInstructions((doc as any).global_instructions || "");
       setDocName((doc as any).name || documentName);
+      setFrameworkId((doc as any).framework_id || null);
     }
     setBlueprint(bp || null);
   }, [documentId, documentType, documentName, activeSubAccountId]);
@@ -196,41 +205,8 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
     [getContext, blueprint],
   );
 
-  const addComponent = async (slug: string) => {
-    const sortOrder = docComponents.length;
-    const { data, error } = await supabase
-      .from("copy_document_components")
-      .insert({ document_id: documentId, component_slug: slug, sort_order: sortOrder } as any)
-      .select("*")
-      .single();
-    if (error) toast.error("Failed to add component");
-    else if (data) setDocComponents(prev => [...prev, data as unknown as DocumentComponent]);
-  };
-
-  const removeComponent = async (id: string) => {
-    await supabase.from("copy_document_components").delete().eq("id", id);
-    setDocComponents(prev => prev.filter(c => c.id !== id));
-    if (activeComponentIdx >= docComponents.length - 1) setActiveComponentIdx(Math.max(0, docComponents.length - 2));
-  };
-
-  const moveComponent = async (idx: number, direction: "up" | "down") => {
-    const newIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (newIdx < 0 || newIdx >= docComponents.length) return;
-    const updated = [...docComponents];
-    [updated[idx], updated[newIdx]] = [updated[newIdx], updated[idx]];
-    updated.forEach((c, i) => c.sort_order = i);
-    setDocComponents(updated);
-    await Promise.all(updated.map(c =>
-      supabase.from("copy_document_components").update({ sort_order: c.sort_order }).eq("id", c.id)
-    ));
-  };
-
   const updateComponentData = (id: string, inputs: Record<string, any>, outputs: Record<string, any>, isGenerated: boolean) => {
-    // Update local state immediately so controlled inputs stay in sync while typing.
     setDocComponents(prev => prev.map(c => c.id === id ? { ...c, inputs, outputs, is_generated: isGenerated } : c));
-    // Persist to DB. The Supabase query builder is a PromiseLike — it only
-    // executes when .then()/await is called, so we MUST attach .then() here
-    // (a bare `void supabase...update()` never sends the request).
     supabase
       .from("copy_document_components")
       .update({
@@ -247,36 +223,33 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
       });
   };
 
-  const applyFramework = async (frameworkId: string) => {
-    const fw = frameworks.find(f => f.id === frameworkId);
+  /**
+   * Replace the document's framework: wipes all existing components and
+   * re-inserts the new framework's component_slugs in order. Destructive —
+   * always confirm before calling.
+   */
+  const applyFramework = async (newFrameworkId: string) => {
+    const fw = frameworks.find(f => f.id === newFrameworkId);
     if (!fw) return;
     await supabase.from("copy_document_components").delete().eq("document_id", documentId);
-    const rows = (fw.component_slugs as string[]).map((slug, i) => ({
+    const slugs: string[] = Array.isArray(fw.component_slugs)
+      ? (fw.component_slugs as any as string[])
+      : ((fw.component_slugs as any)?.slugs || []);
+    const rows = slugs.map((slug, i) => ({
       document_id: documentId,
       component_slug: slug,
       sort_order: i,
     }));
-    const { data } = await supabase.from("copy_document_components").insert(rows as any).select("*");
-    if (data) {
-      setDocComponents(data as unknown as DocumentComponent[]);
-      setActiveComponentIdx(0);
-      toast.success(`Framework "${fw.name}" applied`);
-    }
+    const { data } = rows.length > 0
+      ? await supabase.from("copy_document_components").insert(rows as any).select("*")
+      : { data: [] as any };
+    await supabase.from("copy_documents").update({ framework_id: fw.id } as any).eq("id", documentId);
+    setFrameworkId(fw.id);
+    setDocComponents((data || []) as unknown as DocumentComponent[]);
+    setActiveComponentIdx(0);
+    toast.success(`Framework "${fw.name}" applied`);
   };
 
-  const saveAsFramework = async () => {
-    if (docComponents.length === 0) { toast.error("No components to save"); return; }
-    const name = prompt("Framework name:");
-    if (!name) return;
-    const { error } = await supabase.from("copy_frameworks").insert({
-      name,
-      type: documentType,
-      component_slugs: docComponents.map(c => c.component_slug) as any,
-      is_active: true,
-    });
-    if (error) toast.error("Save failed");
-    else { toast.success("Framework saved"); load(); }
-  };
 
   const saveSettings = async () => {
     await supabase.from("copy_documents").update({
@@ -375,7 +348,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     <div className="px-3 py-8 text-center">
                       <PenTool className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
                       <p className="text-xs text-muted-foreground mb-2">No components yet</p>
-                      <p className="text-[10px] text-muted-foreground">Go to Settings to add components or apply a framework.</p>
+                      <p className="text-[10px] text-muted-foreground">Choose a framework in Settings to load its components.</p>
                     </div>
                   ) : (
                     docComponents.map((dc, idx) => {
@@ -479,7 +452,7 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                     <PenTool className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-display font-bold text-foreground mb-2">No components yet</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Go to Settings to add components or apply a framework.
+                      Choose a framework in Settings to load its components.
                     </p>
                     <Button variant="outline" size="sm" onClick={() => setActiveView("settings")}>
                       <Settings2 className="w-4 h-4 mr-1.5" /> Open Settings
@@ -700,91 +673,79 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
                 />
               </div>
 
-              {/* ── Component Management ── */}
-              <div className="border-t border-border pt-6 space-y-4">
+              {/* ── Framework ── */}
+              <div className="border-t border-border pt-6 space-y-3">
                 <div>
-                  <h3 className="text-sm font-display font-bold text-foreground">Components</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Add, remove, and reorder document components.</p>
+                  <h3 className="text-sm font-display font-bold text-foreground">Framework</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    This document is based on a Copy Framework. Its components are managed centrally in Admin → Copy Frameworks.
+                  </p>
                 </div>
-
-                {/* Apply framework */}
-                {frameworks.length > 0 && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Apply Framework</Label>
-                    <Select onValueChange={applyFramework}>
-                      <SelectTrigger className="text-sm"><SelectValue placeholder="Replace components with framework..." /></SelectTrigger>
-                      <SelectContent>
-                        {frameworks.map(fw => (
-                          <SelectItem key={fw.id} value={fw.id} className="text-sm">{fw.name} ({fw.component_slugs.length} components)</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Add component */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Add Component</Label>
-                  <Select onValueChange={addComponent}>
-                    <SelectTrigger className="text-sm"><SelectValue placeholder="Select a component to add..." /></SelectTrigger>
-                    <SelectContent>
-                      {componentDefs.map(cd => (
-                        <SelectItem key={cd.slug} value={cd.slug} className="text-sm">
-                          {cd.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Component list */}
-                <div className="space-y-1">
-                  {docComponents.map((dc, idx) => {
-                    const def = componentDefs.find(d => d.slug === dc.component_slug);
-                    const iconName = getIconForComponent(dc.component_slug);
-                    return (
-                      <div
-                        key={dc.id}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <LucideIcon name={iconName} className="w-4 h-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{def?.name || dc.component_slug}</p>
-                          {def?.description && (
-                            <p className="text-[10px] text-muted-foreground truncate">{def.description}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-0.5">
-                          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === 0} onClick={() => moveComponent(idx, "up")}>
-                            <ChevronUp className="w-3 h-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === docComponents.length - 1} onClick={() => moveComponent(idx, "down")}>
-                            <ChevronDown className="w-3 h-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeComponent(dc.id)}>
-                            <Trash2 className="w-3 h-3 text-destructive" />
-                          </Button>
-                        </div>
+                {(() => {
+                  const currentFw = frameworks.find(f => f.id === frameworkId);
+                  return (
+                    <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-card">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">
+                          {currentFw?.name || (frameworkId ? "Unknown framework" : "No framework linked")}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {docComponents.length} component{docComponents.length === 1 ? "" : "s"}
+                        </p>
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* Save as framework */}
-                {docComponents.length > 0 && (
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={saveAsFramework}>
-                    <LayoutList className="w-3.5 h-3.5" />
-                    Save as Framework
-                  </Button>
-                )}
+                      {frameworks.length > 0 && (
+                        <Select
+                          value=""
+                          onValueChange={(v) => {
+                            if (!v || v === frameworkId) return;
+                            setPendingFrameworkId(v);
+                            setConfirmFrameworkOpen(true);
+                          }}
+                        >
+                          <SelectTrigger className="text-xs h-8 w-40">
+                            <SelectValue placeholder="Change framework..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {frameworks.filter(f => f.id !== frameworkId).map(fw => (
+                              <SelectItem key={fw.id} value={fw.id} className="text-sm">
+                                {fw.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Save button at the bottom */}
               <div className="border-t border-border pt-6">
                 <Button onClick={saveSettings}>Save Settings</Button>
               </div>
+
+              <AlertDialog open={confirmFrameworkOpen} onOpenChange={setConfirmFrameworkOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Change framework?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will replace all current components and their generated content with the components of the selected framework. This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setPendingFrameworkId(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        if (pendingFrameworkId) await applyFramework(pendingFrameworkId);
+                        setPendingFrameworkId(null);
+                        setConfirmFrameworkOpen(false);
+                      }}
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Change framework
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </ScrollArea>
         )}

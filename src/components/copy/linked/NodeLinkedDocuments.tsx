@@ -98,6 +98,7 @@ const NodeLinkedDocuments = ({
           sub_account_id: subAccountId,
           name: docName,
           type: framework?.type || "sales_copy",
+          framework_id: framework?.id ?? null,
           funnel_id: funnelId ?? null,
           funnel_node_id: funnelNodeId,
           context_type: linkedOfferId ? "offer" : "custom",

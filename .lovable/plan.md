@@ -1,83 +1,77 @@
-## Scope
+# Plan: Framework-driven Copy Documents + Meta Ads + Grid view
 
-Ship the generic infrastructure only. Meta Ad framework/component/AI action will be configured by the user in the admin UI afterward.
+## 1. Document = framework (data + UX)
 
-## 1. Storage: `copy-assets` bucket
+### Schema
+- `copy_documents.framework_id uuid references copy_frameworks(id)` — nullable, gezet op alle nieuwe documenten.
 
-- New private bucket `copy-assets` via `supabase--storage_create_bucket`.
-- RLS on `storage.objects` (migration):
-  - Path convention: `{sub_account_id}/{copy_document_id}/{uuid}-{filename}`.
-  - `SELECT` / `INSERT` / `UPDATE` / `DELETE` for authenticated when the first path segment is a sub_account the user is a member of (`is_sub_account_member(auth.uid(), (storage.foldername(name))[1]::uuid)`).
-  - `SELECT` for `anon` when the parent `copy_documents.funnel_id` belongs to a funnel with `is_public = true` and a matching share_token — implemented via a security-definer helper `public.copy_document_is_public(_doc_id uuid)` to keep the policy simple. Needed so shared funnel/analytics views can render thumbnails.
+### Editor (`CopyDocumentEditor.tsx`)
+- Settings tab: **weg** → "Add Component"-dropdown, per-component up/down/delete, "Save as Framework".
+- Settings tab: **blijft** → naam, context source, global instructions.
+- Settings tab: **nieuw** → read-only regel "Framework: {naam}" + knop "Change framework". Bij wisselen: bevestigen, dan alle huidige `copy_document_components` vervangen door de componenten van het nieuwe framework.
+- Builder tab: componentlijst komt uit het framework in vaste volgorde. Geen manuele add/remove/reorder.
+- Empty state: als document geen framework heeft (legacy), toon "Kies een framework in Settings".
 
-## 2. Generic `image` output field type
+### Copy Documents module (`CopyDocumentsModule.tsx`)
+- "New Document" opent klein dialog: framework kiezen binnen het actieve type. Als er maar één framework in dat type bestaat → direct aanmaken.
+- Bij aanmaak: `type` + `framework_id` invullen en meteen `copy_document_components`-rijen invoegen op basis van `framework.component_slugs`.
 
-- `copy_components.output_structure` already stores an untyped `{key,label,type,...}` array — no schema change. Add `"image"` as a supported `type` value.
-- `AdminCopyComponents` output-structure editor: add `image` to the type dropdown, with an optional `is_primary: boolean` flag (used later by thumbnail logic; only one field per component should be marked primary — validated client-side).
-- `ComponentUIRenderer` / `GenericComponentUI`: render `type: "image"` fields as an upload widget:
-  - Upload button → `supabase.storage.from("copy-assets").upload(path, file)`.
-  - Store `{ path, url }` in `copy_document_components.outputs[key]` (path is the storage key; url is a signed URL refreshed on load).
-  - Show thumbnail preview + "Replace" / "Remove" actions.
-  - Non-generative: no LLM call for these fields.
-- Edge function `execute-ai-action`: when building the tool schema from `output_structure`, filter out any field whose `type === "image"`. The LLM never sees or produces them.
+### Funnel-node aanmaak (`NodeLinkedDocuments.tsx`)
+- `framework_id` mee opslaan (component-slugs worden al ingevoegd — enkel `framework_id`-veld toevoegen).
 
-## 3. Funnel node: 1:N linked documents
+## 2. Meta Ads: framework + component + AI action seeden
 
-- **Node data**: keep `copyFrameworkId` as the *default* framework for new documents on that node. Remove reads of `copyDocumentId` (already unused by save flow after previous cleanup; strip on next save).
-- **`NodeDetailsPanel`** replaces current single-doc block with a **grid** of `LinkedDocumentCard`s (see §4) plus a "New document" button:
-  - Query: `copy_documents.select("*").eq("funnel_node_id", node.id)` scoped to sub_account.
-  - "New document" uses the node's `copyFrameworkId` as default; user can change framework in the dialog before creation.
-  - Card menu: Open, Change framework link, Detach (`funnel_node_id = null`), Delete.
-- **`FunnelNode` thumbnail**: keep framework component-name list; append small badge with linked doc count when > 0.
+Dit doen we via een migratie zodat je niets manueel hoeft te configureren.
 
-## 4. `LinkedDocumentCard` + `LinkedDocumentsGrid` (shared component)
+### AI action `generate_meta_ad`
+- `type`: `generation`
+- Genereert een volledige Meta Ad in één call.
+- `output_structure` (voor tool schema, image wordt gefilterd door edge function):
+  - `ad_angle` (text) — hoek/kern-idee
+  - `primary_texts` (array van text) — 3 varianten
+  - `headlines` (array van text) — 5 varianten (Meta max 40 tekens per stuk)
+  - `description` (text)
+  - `cta_label` (text) — bv. "Learn More", "Sign Up"
+  - `image_brief` (text) — beschrijving van gewenste visual voor de designer
+- `input_structure`: context (offer/custom), `campaign_goal`, `target_audience`, `key_promise`, `must_include` (optioneel).
+- Instructies: directe DR-copy, benefits over features, houd headlines onder 40 chars, primary_text 90-125 chars sweet spot, geen clickbait, native tone.
 
-New reusable components under `src/components/copy/linked/`:
+### Copy component `meta_ad`
+- `slug: meta_ad`, `ai_action_slug: generate_meta_ad`, `ui_interface_slug: generic`.
+- `icon: Megaphone`.
+- `output_structure`: bovenstaande velden **+** `creative` (type `image`, `is_primary: true`) — image wordt niet door AI ingevuld, wordt door user geüpload.
+- `required_blueprint_fields`: `["offer_design", "customer_clarity"]` (voor context als er geen offer gekoppeld is).
 
-- `LinkedDocumentsGrid` — props: `documents`, `frameworkById`, `readOnly`, `onOpen`, `onCreate?`, `onDetach?`, `onDelete?`. Renders responsive grid (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3`).
-- `LinkedDocumentCard` — Notion/Docs-style card:
-  - Thumbnail area (aspect-video): resolved via generic `resolveDocumentThumbnail(doc, componentDefs)` helper.
-  - Below: title, framework/type label, status pill (if `copy_documents.status` exists — add nullable column in migration), last-updated relative time.
-  - Read-only mode hides mutation actions.
+### Copy framework "Meta Ad Copy"
+- `type: meta_ad`
+- `component_slugs: ["meta_ad"]`
+- `is_active: true`
 
-**Generic thumbnail resolver** (`src/lib/copy/documentThumbnail.ts`):
+### `DOCUMENT_TYPES` in `CopyDocumentsModule.tsx`
+- Regel toevoegen: `{ type: "meta_ad", icon: Megaphone, label: "Meta Ads" }`.
 
-1. Load the doc's `copy_document_components` rows + their component defs.
-2. For each component (in `sort_order`), scan `output_structure` for `type: "image"` fields.
-3. Prefer a field with `is_primary: true`; otherwise take the first image field with a non-empty stored path.
-4. Return a signed URL (cached in a `useSignedUrls` hook to batch).
-5. Fallback: framework icon + gradient placeholder (framework `name` initials).
+## 3. Grid view in Copy Documents module
 
-Used in:
-- Funnel Designer `NodeDetailsPanel`
-- `SharedFunnel` node inspector (read-only, `publicSupabase`, signed URLs from anon-accessible storage policy)
-- Analytics node panel (same read-only grid, wired in `AnalyticsFunnelNode` / analytics detail)
+De bestaande verticale lijst (`CopyDocumentsModule.tsx`) vervangen door een **card-grid** met dezelfde look-and-feel als `LinkedDocumentsGrid`:
 
-## 5. Data model tweaks (single migration)
+- Responsive grid: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`.
+- Elke kaart: thumbnail (aspect-video) via `resolveDocumentThumbnail` (dezelfde helper als op funnel-nodes — pakt automatisch het eerste `image`-veld uit het document, valt terug op framework-icon + gradient).
+- Onder de thumbnail: titel, framework-label, status pill (draft/ready/shipped), laatst-bijgewerkt tijd.
+- Kaart-menu (⋯): Open, Delete. Klik op de kaart zelf = openen.
+- "New Document"-knop rechtsboven, opent framework-picker (zie §1).
 
-- `ALTER TABLE public.copy_documents ADD COLUMN status text` (nullable; freeform for now — "draft", "ready", "shipped" used by UI, not enforced).
-- Security-definer helper `public.copy_document_is_public(_doc_id uuid)`.
-- Storage RLS policies as in §1.
-- No changes to `copy_document_components`, `copy_frameworks`, or node schema.
+Om code-duplicatie te vermijden: `LinkedDocumentsGrid` blijft gebruikt worden, maar met een lichte uitbreiding zodat hij ook zonder `funnel_node_id`-context bruikbaar is (props `onCreate` optioneel maken en `readOnly=false` toestaan zonder detach-actie). Copy Documents module gebruikt dezelfde grid-component met eigen fetch (op `sub_account_id + type`).
 
-## 6. Deferred to admin UI (user does after ship)
+## 4. Bestanden
 
-- AI Action `generate_meta_ad`
-- Copy Component `meta_ad` with output_structure including one `image` field marked `is_primary: true` (`creative`)
-- Copy Framework "Meta Ad Copy" (type `meta_ad`) referencing `meta_ad` slug
-- Add `meta_ad` to `DOCUMENT_TYPES` in `CopyDocumentsModule.tsx` — *this one line* will be the only follow-up code change after admin config, and can ship in the same PR as a placeholder tab.
+- `supabase/migrations/…` — kolom `framework_id` op `copy_documents` + seed rows voor `ai_actions`, `copy_components`, `copy_frameworks` (Meta Ads).
+- `src/components/copy/CopyDocumentsModule.tsx` — grid + framework-picker + `meta_ad` tab.
+- `src/components/copy/CopyDocumentEditor.tsx` — Settings component-management weg, "Change framework" toevoegen, `framework_id` opslaan.
+- `src/components/copy/linked/LinkedDocumentsGrid.tsx` — kleine props-aanpassing zodat generiek herbruikbaar (zonder detach).
+- `src/components/copy/linked/NodeLinkedDocuments.tsx` — `framework_id` mee opslaan bij insert.
+- `src/i18n/en.json` + `nl.json` — Meta Ads label + nieuwe strings.
 
-## Implementation order
+## Buiten scope
 
-1. Migration + storage bucket + policies.
-2. Generic `image` field type: admin editor, renderer, edge function filter.
-3. `LinkedDocumentsGrid` + `LinkedDocumentCard` + thumbnail resolver.
-4. Wire grid into `NodeDetailsPanel` (replace list) + strip legacy `copyDocumentId` reads.
-5. Wire grid into `SharedFunnel` and Analytics node panel (read-only).
-6. Verify with typecheck + a manual flow: create framework in admin, add image field, upload creative, confirm thumbnail renders in all three surfaces.
-
-## Out of scope
-
-- Meta Ads framework/component/AI action content.
-- Repeatable-component-instance model (not needed under 1-doc-per-ad approach).
-- Migrating any existing user data — the previous cleanup already removed `copySections`/`linkedAssetId`.
+- Bestaande documenten migreren (blijven werken; `framework_id` blijft null tot je ze opent en een framework kiest via "Change framework").
+- Andere content types (LinkedIn ads, email, VSL) — dezelfde methode werkt, maar wordt later apart geseed.

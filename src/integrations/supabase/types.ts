@@ -794,6 +794,7 @@ export type Database = {
           context_offer_id: string | null
           context_type: string
           created_at: string
+          framework_id: string | null
           funnel_id: string | null
           funnel_node_id: string | null
           global_instructions: string
@@ -810,6 +811,7 @@ export type Database = {
           context_offer_id?: string | null
           context_type?: string
           created_at?: string
+          framework_id?: string | null
           funnel_id?: string | null
           funnel_node_id?: string | null
           global_instructions?: string
@@ -826,6 +828,7 @@ export type Database = {
           context_offer_id?: string | null
           context_type?: string
           created_at?: string
+          framework_id?: string | null
           funnel_id?: string | null
           funnel_node_id?: string | null
           global_instructions?: string
@@ -843,6 +846,13 @@ export type Database = {
             columns: ["context_offer_id"]
             isOneToOne: false
             referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "copy_documents_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "copy_frameworks"
             referencedColumns: ["id"]
           },
           {

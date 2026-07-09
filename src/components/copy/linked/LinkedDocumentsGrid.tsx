@@ -35,6 +35,8 @@ interface LinkedDocumentsGridProps {
   onDelete?: (id: string) => void;
   createLabel?: string;
   emptyLabel?: string;
+  /** Tailwind grid-cols classes. Default: `grid-cols-1 sm:grid-cols-2`. */
+  gridClassName?: string;
 }
 
 function formatRelative(date: string): string {
@@ -64,6 +66,7 @@ const LinkedDocumentsGrid = ({
   onDelete,
   createLabel = "New document",
   emptyLabel = "No linked documents yet.",
+  gridClassName = "grid-cols-1 sm:grid-cols-2",
 }: LinkedDocumentsGridProps) => {
   if (documents.length === 0) {
     return (
@@ -83,7 +86,7 @@ const LinkedDocumentsGrid = ({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className={`grid gap-3 ${gridClassName}`}>
         {documents.map((doc) => {
           const framework = frameworkByType?.[doc.type];
           const thumb = thumbnails[doc.id];
