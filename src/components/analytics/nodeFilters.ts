@@ -8,6 +8,7 @@ const NON_TRACKABLE_TYPES = new Set<string>([
   "text",
   "shape",
   "wait",
+  "sequenceGroup",
 ]);
 
 // Render styles used for decorative-only nodes.
@@ -30,3 +31,55 @@ export function filterTrackableNodes<T extends { data?: any }>(nodes: T[]): T[] 
   return (nodes || []).filter(isTrackableNode);
 }
 
+// Rewire edges so that when a non-trackable node is removed, its predecessors
+// are connected directly to its successors. Keeps the analytics funnel view
+// visually consistent with the designer flow.
+export function filterAndRewireEdges(nodes: any[], edges: any[]): { nodes: any[]; edges: any[] } {
+  const keep = new Set(nodes.filter(isTrackableNode).map((n) => n.id));
+  const filteredNodes = nodes.filter((n) => keep.has(n.id));
+
+  // Build adjacency
+  const outgoing = new Map<string, string[]>();
+  const incoming = new Map<string, string[]>();
+  edges.forEach((e: any) => {
+    if (!outgoing.has(e.source)) outgoing.set(e.source, []);
+    outgoing.get(e.source)!.push(e.target);
+    if (!incoming.has(e.target)) incoming.set(e.target, []);
+    incoming.get(e.target)!.push(e.source);
+  });
+
+  // For each kept edge, walk through removed nodes if either end is removed
+  const resultEdges: any[] = [];
+  const seen = new Set<string>();
+
+  const resolveDown = (nodeId: string, visited: Set<string>): string[] => {
+    if (keep.has(nodeId)) return [nodeId];
+    if (visited.has(nodeId)) return [];
+    visited.add(nodeId);
+    const outs = outgoing.get(nodeId) || [];
+    return outs.flatMap((n) => resolveDown(n, visited));
+  };
+  const resolveUp = (nodeId: string, visited: Set<string>): string[] => {
+    if (keep.has(nodeId)) return [nodeId];
+    if (visited.has(nodeId)) return [];
+    visited.add(nodeId);
+    const ins = incoming.get(nodeId) || [];
+    return ins.flatMap((n) => resolveUp(n, visited));
+  };
+
+  edges.forEach((e: any) => {
+    const sources = keep.has(e.source) ? [e.source] : resolveUp(e.source, new Set());
+    const targets = keep.has(e.target) ? [e.target] : resolveDown(e.target, new Set());
+    sources.forEach((s) => {
+      targets.forEach((t) => {
+        if (s === t) return;
+        const key = `${s}->${t}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        resultEdges.push({ id: `${e.id || key}-rw`, source: s, target: t });
+      });
+    });
+  });
+
+  return { nodes: filteredNodes, edges: resultEdges };
+}

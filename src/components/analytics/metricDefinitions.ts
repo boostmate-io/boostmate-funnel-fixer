@@ -5,6 +5,15 @@ export interface MetricField {
   computed?: (metrics: Record<string, number>) => number | null;
 }
 
+// Primary metric to show as a summary column in the history table for a given node type.
+// Falls back to the second (raw) metric field to skip generic "visitors" for CTA-like pages.
+export const getPrimaryMetric = (nodeType: string): MetricField | null => {
+  const fields = getMetricsForNodeType(nodeType).filter((f) => !f.computed);
+  if (!fields.length) return null;
+  // Prefer the most meaningful "result" metric (2nd raw), otherwise first.
+  return fields[1] || fields[0];
+};
+
 export const getMetricsForNodeType = (nodeType: string): MetricField[] => {
   // Traffic sources
   if (nodeType === "trafficSource") {
