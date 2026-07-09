@@ -100,13 +100,13 @@ const LinkedDocumentsGrid = ({
               onClick={() => onOpen?.(doc.id)}
             >
               {/* Thumbnail */}
-              <div className="aspect-video bg-gradient-to-br from-muted/40 to-muted/10 flex items-center justify-center relative">
+              <div className="h-32 bg-gradient-to-br from-muted/40 to-muted/10 flex items-center justify-center relative overflow-hidden">
                 {thumb ? (
-                  <img src={thumb} alt={doc.name} className="w-full h-full object-cover" loading="lazy" />
+                  <img src={thumb} alt={doc.name} className="w-full h-full object-cover object-center" loading="lazy" />
                 ) : (
                   <LucideIcon name={framework?.icon || "FileText"} className="w-8 h-8 text-muted-foreground/60" />
                 )}
-                {!readOnly && (onDetach || onDelete) && (
+                {!readOnly && (onDetach || onDelete || onDuplicate) && (
                   <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -123,6 +123,11 @@ const LinkedDocumentsGrid = ({
                         {onOpen && (
                           <DropdownMenuItem onClick={() => onOpen(doc.id)}>
                             <ExternalLink className="w-3.5 h-3.5 mr-2" /> Open
+                          </DropdownMenuItem>
+                        )}
+                        {onDuplicate && (
+                          <DropdownMenuItem onClick={() => onDuplicate(doc.id)}>
+                            <Copy className="w-3.5 h-3.5 mr-2" /> Duplicate
                           </DropdownMenuItem>
                         )}
                         {onDetach && (
