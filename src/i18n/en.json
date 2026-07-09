@@ -89,7 +89,7 @@
       "dashboard": "Dashboard",
       "funnelAudit": "Funnel Audit",
       "funnelDesigner": "Funnel Designer",
-      "assetsLibrary": "Assets Library",
+      "copyDocuments": "Copy Documents",
       "analytics": "Analytics",
       "settings": "Settings",
       "logout": "Log out",
@@ -107,9 +107,9 @@
       "title": "Funnel Designer",
       "description": "Visually design and build your sales funnels."
     },
-    "assetsLibrary": {
-      "title": "Assets Library",
-      "description": "Create and manage all content for your customer journey."
+    "copyDocuments": {
+      "title": "Copy Documents",
+      "description": "Write structured sales copy, emails and ads with AI-powered frameworks."
     },
     "analytics": {
       "title": "Analytics",
@@ -180,17 +180,23 @@
     "nodeAdded": "Element added!",
     "renameFunnel": "Click to rename",
     "customName": "Custom Name",
-    "linkAsset": "Link Sales Copy",
-    "selectAsset": "Select an asset...",
-    "noAssetLinked": "No asset linked. Select a sales copy asset to see its sections here.",
     "copySections": "Copy Sections",
     "addCopySection": "Add Section",
     "copySectionTitle": "Section title...",
     "copySectionDescription": "Section description...",
-    "convertToAsset": "Convert to Sales Copy Asset",
-    "convertedToAsset": "Sales copy asset created and linked!",
-    "convertError": "Error creating asset",
-    "assetNamePlaceholder": "Asset name...",
+    "copyFramework": {
+      "label": "Copy Framework",
+      "choose": "Choose a framework...",
+      "none": "No framework",
+      "componentsPreview": "Components in this framework",
+      "createDocument": "Create copy document",
+      "creating": "Creating...",
+      "documentCreated": "Copy document created and linked",
+      "createError": "Could not create copy document",
+      "documentLinked": "Copy document linked",
+      "openDocument": "Open document",
+      "unlink": "Unlink document"
+    },
     "cancel": "Cancel",
     "noteContent": "Note Content",
     "textContent": "Text Content",
