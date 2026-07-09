@@ -269,12 +269,18 @@ const CopyDocumentsModule = () => {
                     {fw.name}
                   </SelectItem>
                 ))}
+                {genericFramework && activeType !== GENERIC_TYPE &&
+                  !frameworksForActiveType.some((f) => f.id === genericFramework.id) && (
+                  <SelectItem value={genericFramework.id} className="text-sm">
+                    Generic (blank)
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setPickerOpen(false)}>Cancel</Button>
-            <Button onClick={() => createDocument(pickerFrameworkId)} disabled={!pickerFrameworkId || creating}>
+            <Button onClick={() => createDocument(pickerFrameworkId, activeType)} disabled={!pickerFrameworkId || creating}>
               {creating ? "Creating..." : "Create Document"}
             </Button>
           </DialogFooter>
