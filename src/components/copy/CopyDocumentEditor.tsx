@@ -205,41 +205,8 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
     [getContext, blueprint],
   );
 
-  const addComponent = async (slug: string) => {
-    const sortOrder = docComponents.length;
-    const { data, error } = await supabase
-      .from("copy_document_components")
-      .insert({ document_id: documentId, component_slug: slug, sort_order: sortOrder } as any)
-      .select("*")
-      .single();
-    if (error) toast.error("Failed to add component");
-    else if (data) setDocComponents(prev => [...prev, data as unknown as DocumentComponent]);
-  };
-
-  const removeComponent = async (id: string) => {
-    await supabase.from("copy_document_components").delete().eq("id", id);
-    setDocComponents(prev => prev.filter(c => c.id !== id));
-    if (activeComponentIdx >= docComponents.length - 1) setActiveComponentIdx(Math.max(0, docComponents.length - 2));
-  };
-
-  const moveComponent = async (idx: number, direction: "up" | "down") => {
-    const newIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (newIdx < 0 || newIdx >= docComponents.length) return;
-    const updated = [...docComponents];
-    [updated[idx], updated[newIdx]] = [updated[newIdx], updated[idx]];
-    updated.forEach((c, i) => c.sort_order = i);
-    setDocComponents(updated);
-    await Promise.all(updated.map(c =>
-      supabase.from("copy_document_components").update({ sort_order: c.sort_order }).eq("id", c.id)
-    ));
-  };
-
   const updateComponentData = (id: string, inputs: Record<string, any>, outputs: Record<string, any>, isGenerated: boolean) => {
-    // Update local state immediately so controlled inputs stay in sync while typing.
     setDocComponents(prev => prev.map(c => c.id === id ? { ...c, inputs, outputs, is_generated: isGenerated } : c));
-    // Persist to DB. The Supabase query builder is a PromiseLike — it only
-    // executes when .then()/await is called, so we MUST attach .then() here
-    // (a bare `void supabase...update()` never sends the request).
     supabase
       .from("copy_document_components")
       .update({
@@ -256,36 +223,33 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
       });
   };
 
-  const applyFramework = async (frameworkId: string) => {
-    const fw = frameworks.find(f => f.id === frameworkId);
+  /**
+   * Replace the document's framework: wipes all existing components and
+   * re-inserts the new framework's component_slugs in order. Destructive —
+   * always confirm before calling.
+   */
+  const applyFramework = async (newFrameworkId: string) => {
+    const fw = frameworks.find(f => f.id === newFrameworkId);
     if (!fw) return;
     await supabase.from("copy_document_components").delete().eq("document_id", documentId);
-    const rows = (fw.component_slugs as string[]).map((slug, i) => ({
+    const slugs: string[] = Array.isArray(fw.component_slugs)
+      ? (fw.component_slugs as any as string[])
+      : ((fw.component_slugs as any)?.slugs || []);
+    const rows = slugs.map((slug, i) => ({
       document_id: documentId,
       component_slug: slug,
       sort_order: i,
     }));
-    const { data } = await supabase.from("copy_document_components").insert(rows as any).select("*");
-    if (data) {
-      setDocComponents(data as unknown as DocumentComponent[]);
-      setActiveComponentIdx(0);
-      toast.success(`Framework "${fw.name}" applied`);
-    }
+    const { data } = rows.length > 0
+      ? await supabase.from("copy_document_components").insert(rows as any).select("*")
+      : { data: [] as any };
+    await supabase.from("copy_documents").update({ framework_id: fw.id } as any).eq("id", documentId);
+    setFrameworkId(fw.id);
+    setDocComponents((data || []) as unknown as DocumentComponent[]);
+    setActiveComponentIdx(0);
+    toast.success(`Framework "${fw.name}" applied`);
   };
 
-  const saveAsFramework = async () => {
-    if (docComponents.length === 0) { toast.error("No components to save"); return; }
-    const name = prompt("Framework name:");
-    if (!name) return;
-    const { error } = await supabase.from("copy_frameworks").insert({
-      name,
-      type: documentType,
-      component_slugs: docComponents.map(c => c.component_slug) as any,
-      is_active: true,
-    });
-    if (error) toast.error("Save failed");
-    else { toast.success("Framework saved"); load(); }
-  };
 
   const saveSettings = async () => {
     await supabase.from("copy_documents").update({
