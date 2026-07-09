@@ -31,7 +31,10 @@ const DOCUMENT_TYPES = [
   { type: "email_sequence", icon: Mail, label: "Email Sequences" },
   { type: "vsl_script", icon: Video, label: "VSL Scripts" },
   { type: "meta_ad", icon: Megaphone, label: "Meta Ads" },
+  { type: "generic", icon: FileText, label: "Generic" },
 ];
+
+const GENERIC_TYPE = "generic";
 
 const CopyDocumentsModule = () => {
   const { activeSubAccountId } = useWorkspace();
