@@ -92,9 +92,10 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
     entries.forEach((e) => dateById.set(e.id, e.date));
 
     // Collect relevant metrics
-    const relevantMetrics = selectedNode === "__all__"
+    const relevantMetrics = (selectedNode === "__all__"
       ? stepMetrics
-      : stepMetrics.filter((sm) => sm.node_id === selectedNode);
+      : stepMetrics.filter((sm) => sm.node_id === selectedNode)
+    ).filter((sm) => trackableIds.has(sm.node_id));
 
     // For "__all__", aggregate totals per date; for single node, show that node's metrics
     const allMetricKeys = new Set<string>();
