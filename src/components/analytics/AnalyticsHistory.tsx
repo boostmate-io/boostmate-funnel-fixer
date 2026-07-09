@@ -190,6 +190,30 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnl
           })}
         </TableBody>
       </Table>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground flex-wrap">
+        <div className="flex items-center gap-2">
+          <span>{t("analytics.rowsPerPage") || "Rows per page"}</span>
+          <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+            <SelectTrigger className="h-8 w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>{t("analytics.page", { current: currentPage, total: totalPages })}</span>
+          <Button variant="outline" size="sm" className="h-8" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            {t("analytics.prev") || "Previous"}
+          </Button>
+          <Button variant="outline" size="sm" className="h-8" disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+            {t("analytics.next") || "Next"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
