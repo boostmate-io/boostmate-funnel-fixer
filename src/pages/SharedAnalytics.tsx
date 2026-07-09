@@ -47,10 +47,7 @@ const SharedAnalytics = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card shrink-0">
-        <div className="flex items-center gap-3">
-          <img src={logo} alt="Boostmate" className="h-5" />
-          <span className="text-sm font-display font-bold text-foreground">{funnel.name}</span>
-        </div>
+        <img src={logo} alt="Boostmate" className="h-5" />
         <span className="text-xs text-muted-foreground">Read-only analytics view</span>
       </div>
       <div className="flex-1 min-h-0">
@@ -66,6 +63,7 @@ const SharedAnalytics = () => {
           readOnly
           hideFunnelSelector
           initialConfig={initialConfig}
+          titleOverride={`Analytics: ${funnel.name}`}
         />
       </div>
     </div>

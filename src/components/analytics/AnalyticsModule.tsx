@@ -34,6 +34,7 @@ export interface AnalyticsViewConfig {
   period: AnalyticsPeriod;
   granularity: Granularity;
   selectedMetrics: string[] | null;
+  selectedKPIs: string[] | null;
 }
 
 interface AnalyticsModuleProps {
@@ -43,6 +44,8 @@ interface AnalyticsModuleProps {
   readOnly?: boolean;
   initialConfig?: Partial<AnalyticsViewConfig>;
   hideFunnelSelector?: boolean;
+  titleOverride?: string;
+  subtitleOverride?: string;
 }
 
 const AnalyticsModule = ({
@@ -51,6 +54,8 @@ const AnalyticsModule = ({
   readOnly = false,
   initialConfig,
   hideFunnelSelector = false,
+  titleOverride,
+  subtitleOverride,
 }: AnalyticsModuleProps = {}) => {
   const { t } = useTranslation();
   const activeClient = client || supabase;
@@ -67,6 +72,7 @@ const AnalyticsModule = ({
   );
   const [granularity, setGranularity] = useState<Granularity>(initialConfig?.granularity ?? "day");
   const [selectedMetrics, setSelectedMetrics] = useState<string[] | null>(initialConfig?.selectedMetrics ?? null);
+  const [selectedKPIs, setSelectedKPIs] = useState<string[] | null>(initialConfig?.selectedKPIs ?? null);
 
   // Load share_token for currently-selected funnel (private mode)
   useEffect(() => {
@@ -89,16 +95,16 @@ const AnalyticsModule = ({
   };
 
   const currentConfig: AnalyticsViewConfig = useMemo(() => ({
-    period, granularity, selectedMetrics,
-  }), [period, granularity, selectedMetrics]);
+    period, granularity, selectedMetrics, selectedKPIs,
+  }), [period, granularity, selectedMetrics, selectedKPIs]);
 
   return (
     <div className="h-full flex flex-col">
       <div className="p-6 border-b border-border">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-display font-bold text-foreground">{t("analytics.title")}</h1>
-            <p className="text-muted-foreground text-sm mt-1">{t("analytics.subtitle")}</p>
+            <h1 className="text-2xl font-display font-bold text-foreground">{titleOverride ?? t("analytics.title")}</h1>
+            <p className="text-muted-foreground text-sm mt-1">{subtitleOverride ?? t("analytics.subtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
             {!hideFunnelSelector && (
@@ -140,6 +146,9 @@ const AnalyticsModule = ({
             periodEnd={period.end}
             refreshKey={refreshKey}
             client={activeClient}
+            selectedKPIs={selectedKPIs}
+            onSelectedKPIsChange={setSelectedKPIs}
+            readOnly={readOnly}
           />
 
           <div>

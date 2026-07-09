@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { getPrimaryMetric } from "./metricDefinitions";
@@ -36,6 +37,10 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnl
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [page, setPage] = useState<number>(1);
+
+  useEffect(() => { setPage(1); }, [pageSize, funnelId, refreshKey]);
 
   useEffect(() => {
     if (!funnelId) return;
@@ -46,7 +51,7 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnl
         .select("id, date, period_end, period_type")
         .eq("funnel_id", funnelId)
         .order("date", { ascending: false })
-        .limit(50);
+        .limit(500);
 
       if (!data?.length) { setEntries([]); setLoading(false); return; }
 
@@ -105,8 +110,14 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnl
   if (loading) return <div className="text-muted-foreground text-sm py-4">{t("analytics.loading")}</div>;
   if (!entries.length) return <div className="text-muted-foreground text-sm py-4">{t("analytics.noHistory")}</div>;
 
+  const totalPages = Math.max(1, Math.ceil(entries.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pagedEntries = entries.slice(pageStart, pageStart + pageSize);
+
   return (
-    <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
+    <div className="space-y-3">
+      <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -124,7 +135,7 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnl
           </TableRow>
         </TableHeader>
         <TableBody>
-          {entries.map((row) => {
+          {pagedEntries.map((row) => {
             const isOpen = expanded.has(row.id);
             const isRange = row.date !== row.period_end;
             const label = row.period_type === "month"
@@ -179,6 +190,30 @@ const AnalyticsHistory = ({ funnelId, nodes, refreshKey, onEdit, client, readOnl
           })}
         </TableBody>
       </Table>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground flex-wrap">
+        <div className="flex items-center gap-2">
+          <span>{t("analytics.rowsPerPage") || "Rows per page"}</span>
+          <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+            <SelectTrigger className="h-8 w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>{t("analytics.page", { current: currentPage, total: totalPages })}</span>
+          <Button variant="outline" size="sm" className="h-8" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            {t("analytics.prev") || "Previous"}
+          </Button>
+          <Button variant="outline" size="sm" className="h-8" disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+            {t("analytics.next") || "Next"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
