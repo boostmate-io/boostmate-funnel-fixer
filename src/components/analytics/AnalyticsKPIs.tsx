@@ -22,6 +22,7 @@ interface Props {
   selectedKPIs?: string[] | null;
   onSelectedKPIsChange?: (keys: string[]) => void;
   readOnly?: boolean;
+  title?: string;
 }
 
 const getNodeType = (n: any): string =>
