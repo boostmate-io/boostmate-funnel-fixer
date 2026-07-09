@@ -925,6 +925,8 @@ export type Database = {
           date: string
           funnel_id: string
           id: string
+          period_end: string
+          period_type: string
           sub_account_id: string | null
           updated_at: string
           user_id: string
@@ -934,6 +936,8 @@ export type Database = {
           date: string
           funnel_id: string
           id?: string
+          period_end: string
+          period_type?: string
           sub_account_id?: string | null
           updated_at?: string
           user_id: string
@@ -943,6 +947,8 @@ export type Database = {
           date?: string
           funnel_id?: string
           id?: string
+          period_end?: string
+          period_type?: string
           sub_account_id?: string | null
           updated_at?: string
           user_id?: string

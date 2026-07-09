@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 import { format } from "date-fns";
 import { getMetricsForNodeType } from "./metricDefinitions";
+import { isTrackableNode } from "./nodeFilters";
 
 interface AnalyticsChartsProps {
   funnelId: string;
@@ -64,16 +65,19 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
     load();
   }, [funnelId]);
 
+  const trackableIds = useMemo(() => new Set(nodes.filter(isTrackableNode).map((n: any) => n.id)), [nodes]);
+
   // Build node options for the filter
   const nodeOptions = useMemo(() => {
     const seen = new Map<string, string>();
     stepMetrics.forEach((sm) => {
+      if (!trackableIds.has(sm.node_id)) return;
       if (!seen.has(sm.node_id)) {
         seen.set(sm.node_id, sm.node_label || sm.node_type);
       }
     });
     return Array.from(seen.entries()).map(([id, label]) => ({ id, label }));
-  }, [stepMetrics]);
+  }, [stepMetrics, trackableIds]);
 
   // Build available metric keys for selected node(s)
   const { chartData, metricKeys, chartConfig } = useMemo(() => {
@@ -88,9 +92,10 @@ const AnalyticsCharts = ({ funnelId, nodes }: AnalyticsChartsProps) => {
     entries.forEach((e) => dateById.set(e.id, e.date));
 
     // Collect relevant metrics
-    const relevantMetrics = selectedNode === "__all__"
+    const relevantMetrics = (selectedNode === "__all__"
       ? stepMetrics
-      : stepMetrics.filter((sm) => sm.node_id === selectedNode);
+      : stepMetrics.filter((sm) => sm.node_id === selectedNode)
+    ).filter((sm) => trackableIds.has(sm.node_id));
 
     // For "__all__", aggregate totals per date; for single node, show that node's metrics
     const allMetricKeys = new Set<string>();

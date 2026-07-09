@@ -7,6 +7,7 @@ import { TrendingUp, TrendingDown, DollarSign, Eye } from "lucide-react";
 import { ReactFlow, Background, ReactFlowProvider, type Node, type Edge } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { getMetricsForNodeType } from "./metricDefinitions";
+import { filterTrackableNodes, isTrackableNode } from "./nodeFilters";
 import AnalyticsFunnelNode from "./AnalyticsFunnelNode";
 import AnalyticsTrafficNode from "./AnalyticsTrafficNode";
 
@@ -71,9 +72,11 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges }: AnalyticsSummaryProps
     let totalRevenue = 0;
     const totalDays = entries.length;
 
+    const trackableIds = new Set(nodes.filter(isTrackableNode).map((n: any) => n.id));
     const stepMap = new Map<string, StepAggregate>();
 
     stepMetrics.forEach((sm) => {
+      if (!trackableIds.has(sm.node_id)) return;
       const m = (sm.metrics as Record<string, number>) || {};
       totalSpend += m.spend || 0;
       totalRevenue += m.revenue || 0;

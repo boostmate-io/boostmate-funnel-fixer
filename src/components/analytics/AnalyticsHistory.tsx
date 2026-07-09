@@ -12,6 +12,8 @@ interface AnalyticsHistoryProps {
 interface EntryRow {
   id: string;
   date: string;
+  period_end: string;
+  period_type: string;
   stepMetrics: { node_label: string; node_type: string; metrics: Record<string, number> }[];
 }
 
@@ -27,7 +29,7 @@ const AnalyticsHistory = ({ funnelId }: AnalyticsHistoryProps) => {
       setLoading(true);
       const { data } = await supabase
         .from("funnel_analytics_entries")
-        .select("id, date")
+        .select("id, date, period_end, period_type")
         .eq("funnel_id", funnelId)
         .order("date", { ascending: false })
         .limit(30);
@@ -44,9 +46,11 @@ const AnalyticsHistory = ({ funnelId }: AnalyticsHistoryProps) => {
         .select("entry_id, node_label, node_type, metrics")
         .in("entry_id", entryIds);
 
-      const rows: EntryRow[] = data.map((e) => ({
+      const rows: EntryRow[] = data.map((e: any) => ({
         id: e.id,
         date: e.date,
+        period_end: e.period_end || e.date,
+        period_type: e.period_type || "day",
         stepMetrics: (metrics || [])
           .filter((m) => m.entry_id === e.id)
           .map((m) => ({ node_label: m.node_label, node_type: m.node_type, metrics: (m.metrics as Record<string, number>) || {} })),
@@ -85,7 +89,7 @@ const AnalyticsHistory = ({ funnelId }: AnalyticsHistoryProps) => {
         <TableHeader>
           <TableRow>
             <TableHead className="w-10"></TableHead>
-            <TableHead>{t("analytics.date")}</TableHead>
+            <TableHead>{t("analytics.period") || "Period"}</TableHead>
             <TableHead>{t("analytics.totalSpend")}</TableHead>
             <TableHead>{t("analytics.totalRevenue")}</TableHead>
           </TableRow>
@@ -94,11 +98,20 @@ const AnalyticsHistory = ({ funnelId }: AnalyticsHistoryProps) => {
           {entries.map((row) => {
             const isOpen = expanded.has(row.id);
             const summary = getSummary(row);
+            const isRange = row.date !== row.period_end;
+            const label = row.period_type === "month"
+              ? format(new Date(row.date), "MMMM yyyy")
+              : isRange
+                ? `${format(new Date(row.date), "dd MMM")} – ${format(new Date(row.period_end), "dd MMM yyyy")}`
+                : format(new Date(row.date), "dd MMM yyyy");
             return (
               <>
                 <TableRow key={row.id} className="cursor-pointer hover:bg-muted/50" onClick={() => toggle(row.id)}>
                   <TableCell>{isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</TableCell>
-                  <TableCell className="font-medium">{format(new Date(row.date), "dd MMM yyyy")}</TableCell>
+                  <TableCell className="font-medium">
+                    {label}
+                    <span className="ml-2 text-xs text-muted-foreground capitalize">({row.period_type})</span>
+                  </TableCell>
                   <TableCell>€{summary.spend.toFixed(2)}</TableCell>
                   <TableCell>€{summary.revenue.toFixed(2)}</TableCell>
                 </TableRow>
