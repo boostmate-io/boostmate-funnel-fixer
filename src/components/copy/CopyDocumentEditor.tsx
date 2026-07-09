@@ -91,6 +91,10 @@ const CopyDocumentEditor = ({ documentId, documentName, documentType, onBack }: 
   const [blueprint, setBlueprint] = useState<any>(null);
   const [headlineBlocks, setHeadlineBlocks] = useState<Record<string, string>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [frameworkId, setFrameworkId] = useState<string | null>(null);
+  const [pendingFrameworkId, setPendingFrameworkId] = useState<string | null>(null);
+  const [confirmFrameworkOpen, setConfirmFrameworkOpen] = useState(false);
+
 
 
   const load = useCallback(async () => {
