@@ -1,0 +1,2 @@
+ALTER TABLE public.copy_documents ADD COLUMN IF NOT EXISTS framework_id uuid REFERENCES public.copy_frameworks(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_copy_documents_framework_id ON public.copy_documents(framework_id);
