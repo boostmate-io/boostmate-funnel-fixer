@@ -195,7 +195,8 @@
       "createError": "Aanmaken copy document mislukt",
       "documentLinked": "Copy document gekoppeld",
       "openDocument": "Document openen",
-      "unlink": "Ontkoppelen"
+      "unlink": "Ontkoppelen",
+      "componentsLabel": "Copy Framework Componenten"
     },
     "cancel": "Annuleren",
     "noteContent": "Notitie Inhoud",

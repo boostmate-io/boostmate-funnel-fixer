@@ -195,7 +195,8 @@
       "createError": "Could not create copy document",
       "documentLinked": "Copy document linked",
       "openDocument": "Open document",
-      "unlink": "Unlink document"
+      "unlink": "Unlink document",
+      "componentsLabel": "Copy Framework Components"
     },
     "cancel": "Cancel",
     "noteContent": "Note Content",
