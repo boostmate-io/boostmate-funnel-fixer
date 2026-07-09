@@ -57,7 +57,7 @@ interface NodeDetailsPanelProps {
   nodeImage?: string;
   waitType?: "days" | "hours" | "minutes";
   waitDuration?: number;
-  copySections?: Array<{ id: string; title: string; description: string }>;
+  copyComponentNames?: string[];
   funnelName?: string;
   funnelId?: string | null;
   linkedOfferId?: string | null;
@@ -90,7 +90,7 @@ interface NodeDetailsPanelProps {
 
 const NodeDetailsPanel = ({
   nodeId, nodeLabel, customLabel, noteContent, renderStyle, pageType,
-  nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copySections, funnelName,
+  nodeNotes, nodeUrl, nodeImage, waitType, waitDuration, copyComponentNames, funnelName,
   funnelId, linkedOfferId, copyFrameworkId, copyDocumentId,
   readOnly, textSize, textBold, textItalic, textUnderline, textColor, themeColor,
   shapeType, shapeBorderStyle, shapeTransparent, shapeWidth, shapeHeight, shapeColor,
@@ -269,8 +269,8 @@ const NodeDetailsPanel = ({
     const hasNodeNotes = !isNoteOrText && !isShape && !!nodeNotes;
     const hasUrl = !isNoteOrText && !isShape && !!nodeUrl;
     const hasImage = !isNoteOrText && !isShape && !!nodeImage;
-    const hasCopySections = copySections && copySections.length > 0;
-    const hasAnyDetails = hasNotes || hasNodeNotes || hasUrl || hasImage || hasCopySections || (pageType === "email" && !!emailSubject);
+    const hasCopyComponents = copyComponentNames && copyComponentNames.length > 0;
+    const hasAnyDetails = hasNotes || hasNodeNotes || hasUrl || hasImage || hasCopyComponents || (pageType === "email" && !!emailSubject);
 
     return (
       <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
@@ -301,13 +301,12 @@ const NodeDetailsPanel = ({
               <p className="text-sm text-foreground whitespace-pre-wrap">{nodeNotes}</p>
             </div>
           )}
-          {hasCopySections && (
+          {hasCopyComponents && (
             <div className="p-4 border-b border-border space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.copySections")}</label>
-              {copySections!.map((s, i) => (
-                <div key={i} className="text-xs text-foreground border border-border rounded p-2">
-                  <p className="font-medium">{s.title}</p>
-                  {s.description && <p className="text-muted-foreground mt-0.5 whitespace-pre-wrap">{s.description}</p>}
+              <label className="text-xs font-medium text-muted-foreground">{t("funnelDesigner.copyFramework.componentsLabel")}</label>
+              {copyComponentNames!.map((name, i) => (
+                <div key={i} className="text-xs text-foreground border border-border rounded px-2 py-1">
+                  {name}
                 </div>
               ))}
             </div>
