@@ -35,6 +35,8 @@ interface LinkedDocumentsGridProps {
   onDelete?: (id: string) => void;
   createLabel?: string;
   emptyLabel?: string;
+  /** Tailwind grid-cols classes. Default: `grid-cols-1 sm:grid-cols-2`. */
+  gridClassName?: string;
 }
 
 function formatRelative(date: string): string {
