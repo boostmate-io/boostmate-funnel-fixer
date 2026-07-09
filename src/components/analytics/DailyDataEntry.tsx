@@ -25,6 +25,9 @@ interface DailyDataEntryProps {
   funnelId: string;
   nodes: FunnelNode[];
   edges: any[];
+  editingEntry?: { id: string; date: string; period_end: string; period_type: string } | null;
+  onSaved?: () => void;
+  onCancelEdit?: () => void;
 }
 
 type PeriodType = "day" | "week" | "month" | "custom";
@@ -75,7 +78,7 @@ function formatRange(type: PeriodType, start: Date, end: Date): string {
   return `${format(start, "dd MMM")} – ${format(end, "dd MMM yyyy")}`;
 }
 
-const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
+const DailyDataEntry = ({ funnelId, nodes, edges, editingEntry, onSaved, onCancelEdit }: DailyDataEntryProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [periodType, setPeriodType] = useState<PeriodType>("day");
@@ -84,6 +87,15 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
   const [metricsData, setMetricsData] = useState<Record<string, Record<string, number>>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // When an entry is chosen for editing, sync selectors to that period
+  useEffect(() => {
+    if (!editingEntry) return;
+    const pt = (editingEntry.period_type as PeriodType) || "day";
+    setPeriodType(pt);
+    setStartDate(new Date(editingEntry.date));
+    setEndDate(new Date(editingEntry.period_end || editingEntry.date));
+  }, [editingEntry]);
 
   const range = useMemo(() => computeRange(periodType, startDate, endDate), [periodType, startDate, endDate]);
 
@@ -191,6 +203,12 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
       if (metricsErr) throw metricsErr;
 
       toast.success(t("analytics.saved"));
+      // Reset form and trigger parent refresh
+      setMetricsData({});
+      setStartDate(new Date());
+      setEndDate(new Date());
+      setPeriodType("day");
+      onSaved?.();
     } catch (err: any) {
       toast.error(t("analytics.saveError"));
       console.error(err);
@@ -201,6 +219,14 @@ const DailyDataEntry = ({ funnelId, nodes, edges }: DailyDataEntryProps) => {
 
   return (
     <div className="space-y-4">
+      {editingEntry && (
+        <div className="flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm">
+          <span className="text-foreground">
+            {t("analytics.editingEntry") || "Editing historical entry"} — {format(new Date(editingEntry.date), "dd MMM yyyy")}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => onCancelEdit?.()}>{t("common.cancel") || "Cancel"}</Button>
+        </div>
+      )}
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">{t("analytics.period") || "Period"}</label>
