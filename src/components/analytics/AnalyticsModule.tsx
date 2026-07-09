@@ -58,10 +58,9 @@ const AnalyticsModule = () => {
             <AnalyticsPeriodFilter value={period} onChange={setPeriod} />
           </div>
 
-          <AnalyticsSummary
+          <AnalyticsKPIs
             funnelId={selectedFunnel.id}
             nodes={selectedFunnel.nodes}
-            edges={selectedFunnel.edges}
             periodStart={period.start}
             periodEnd={period.end}
             refreshKey={refreshKey}
@@ -77,6 +76,16 @@ const AnalyticsModule = () => {
               refreshKey={refreshKey}
             />
           </div>
+
+          <AnalyticsSummary
+            funnelId={selectedFunnel.id}
+            nodes={selectedFunnel.nodes}
+            edges={selectedFunnel.edges}
+            periodStart={period.start}
+            periodEnd={period.end}
+            refreshKey={refreshKey}
+          />
+
 
           <div>
             <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t("analytics.dailyEntry")}</h2>
