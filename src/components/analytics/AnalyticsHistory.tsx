@@ -9,9 +9,6 @@ import { getPrimaryMetric } from "./metricDefinitions";
 import { filterTrackableNodes } from "./nodeFilters";
 import type { EditingEntry } from "./AnalyticsModule";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { filterTrackableNodes } from "./nodeFilters";
-import type { EditingEntry } from "./AnalyticsModule";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface AnalyticsHistoryProps {
   funnelId: string;
