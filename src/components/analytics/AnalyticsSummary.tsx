@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { ReactFlow, Background, ReactFlowProvider, type Node, type Edge, MarkerType } from "@xyflow/react";
