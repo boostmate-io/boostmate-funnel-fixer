@@ -89,7 +89,7 @@
       "dashboard": "Dashboard",
       "funnelAudit": "Funnel Audit",
       "funnelDesigner": "Funnel Designer",
-      "assetsLibrary": "Assets Library",
+      "copyDocuments": "Copy Documents",
       "analytics": "Analytics",
       "settings": "Instellingen",
       "logout": "Uitloggen",
@@ -107,9 +107,9 @@
       "title": "Funnel Designer",
       "description": "Ontwerp en bouw visueel je sales funnels."
     },
-    "assetsLibrary": {
-      "title": "Assets Library",
-      "description": "Maak en beheer alle content voor je customer journey."
+    "copyDocuments": {
+      "title": "Copy Documents",
+      "description": "Schrijf gestructureerde sales copy, e-mails en ads met AI-frameworks."
     },
     "analytics": {
       "title": "Analytics",
@@ -180,17 +180,23 @@
     "nodeAdded": "Element toegevoegd!",
     "renameFunnel": "Klik om te hernoemen",
     "customName": "Eigen Naam",
-    "linkAsset": "Koppel Sales Copy",
-    "selectAsset": "Selecteer een asset...",
-    "noAssetLinked": "Geen asset gekoppeld. Selecteer een sales copy asset om de secties hier te zien.",
     "copySections": "Copy Secties",
     "addCopySection": "Sectie toevoegen",
     "copySectionTitle": "Sectietitel...",
     "copySectionDescription": "Beschrijving van de sectie...",
-    "convertToAsset": "Omzetten naar Sales Copy Asset",
-    "convertedToAsset": "Sales copy asset aangemaakt en gekoppeld!",
-    "convertError": "Fout bij aanmaken asset",
-    "assetNamePlaceholder": "Naam van het asset...",
+    "copyFramework": {
+      "label": "Copy Framework",
+      "choose": "Kies een framework...",
+      "none": "Geen framework",
+      "componentsPreview": "Componenten in dit framework",
+      "createDocument": "Copy document aanmaken",
+      "creating": "Bezig...",
+      "documentCreated": "Copy document aangemaakt en gekoppeld",
+      "createError": "Aanmaken copy document mislukt",
+      "documentLinked": "Copy document gekoppeld",
+      "openDocument": "Document openen",
+      "unlink": "Ontkoppelen"
+    },
     "cancel": "Annuleren",
     "noteContent": "Notitie Inhoud",
     "textContent": "Tekst Inhoud",
@@ -285,27 +291,6 @@
     "deleteError": "Fout bij verwijderen document",
     "uploadError": "Fout bij uploaden bestand",
     "downloadError": "Fout bij downloaden bestand"
-  },
-  "assets": {
-    "title": "Assets Library",
-    "create": "Nieuw Asset",
-    "untitled": "Naamloos",
-    "empty": "Nog geen assets",
-    "emptyDescription": "Maak je eerste asset aan om te beginnen.",
-    "saveError": "Fout bij opslaan",
-    "deleteError": "Fout bij verwijderen",
-    "deleted": "Verwijderd!",
-    "newSection": "Nieuwe Sectie",
-    "sectionTitle": "Sectietitel...",
-    "sectionContentPlaceholder": "Begin hier met schrijven...",
-    "sectionDescription": "Beschrijving van de sectie...",
-    "addSection": "Sectie toevoegen",
-    "types": {
-      "salesCopy": "Sales Copy",
-      "emailSequence": "E-mail Sequenties",
-      "adCreative": "Ad Creatives",
-      "socialMedia": "Social Media"
-    }
   },
   "auditModule": {
     "list": {
