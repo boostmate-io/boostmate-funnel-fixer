@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Link2, Unlink, Upload, ExternalLink, Trash2, Bold, Italic, Underline, Minus, Plus } from "lucide-react";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { toast } from "sonner";
+import { X, Upload, ExternalLink, Trash2, Bold, Italic, Underline, Minus, Plus, FileText, Sparkles, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,13 +12,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Toggle } from "@/components/ui/toggle";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import CopySections from "./CopySections";
 
-interface Asset {
+interface CopyFramework {
   id: string;
   name: string;
   type: string;
+  component_slugs: string[] | any;
 }
+
+interface CopyComponentDef {
+  slug: string;
+  name: string;
+  icon: string | null;
+}
+
 
 const COLOR_PALETTE = [
   "#1a1a1a", "#9CA3AF", "#22C55E", "#3B82F6", "#EF4444", "#FACC15", "#A855F7", "#F97316",
