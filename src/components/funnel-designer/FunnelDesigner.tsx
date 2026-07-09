@@ -839,7 +839,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       const cleanedNodes = rawNodes.map((node: any) => {
         if (node.type === "funnelPage" && node.data) {
           const d = node.data;
-          return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+          return { ...node, data: { ...d, copyDocumentId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
         }
         return node;
       });
@@ -861,7 +861,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       const cleanedNodes = rawNodes.map((node: any) => {
         if (node.type === "funnelPage" && node.data) {
           const d = node.data;
-          return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
+          return { ...node, data: { ...d, copyDocumentId: undefined, nodeUrl: undefined, nodeImage: undefined, nodeImageThumb: undefined } };
         }
         return node;
       });
@@ -908,29 +908,10 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const saveAsTemplate = useCallback(async () => {
     if (!userId || !activeSubAccountId) return;
     const rawNodes = JSON.parse(JSON.stringify(nodes));
-    const linkedAssetIds = rawNodes
-      .filter((n: any) => n.type === "funnelPage" && n.data?.linkedAssetId)
-      .map((n: any) => n.data.linkedAssetId) as string[];
-    let assetSectionsMap: Record<string, Array<{ id: string; title: string; description: string }>> = {};
-    if (linkedAssetIds.length > 0) {
-      const { data: sections } = await supabase
-        .from("asset_sections")
-        .select("id, asset_id, title, description")
-        .in("asset_id", linkedAssetIds)
-        .order("sort_order", { ascending: true });
-      if (sections) {
-        for (const s of sections) {
-          if (!assetSectionsMap[s.asset_id]) assetSectionsMap[s.asset_id] = [];
-          assetSectionsMap[s.asset_id].push({ id: s.id, title: s.title, description: s.description });
-        }
-      }
-    }
     const cleanedNodes = rawNodes.map((node: any) => {
       if (node.type === "funnelPage" && node.data) {
         const d = node.data;
-        const localSections = d.linkedAssetId && assetSectionsMap[d.linkedAssetId]
-          ? assetSectionsMap[d.linkedAssetId] : (d.copySections || []);
-        return { ...node, data: { ...d, linkedAssetId: undefined, nodeUrl: undefined, nodeImage: undefined, copySections: localSections } };
+        return { ...node, data: { ...d, copyDocumentId: undefined, nodeUrl: undefined, nodeImage: undefined } };
       }
       return node;
     });
