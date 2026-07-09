@@ -79,6 +79,27 @@ const SharedFunnelInner = () => {
   const [savingBrief, setSavingBrief] = useState(false);
   const [showOffer, setShowOffer] = useState(false);
   const [linkedOfferId, setLinkedOfferId] = useState<string | null>(null);
+  const [frameworkComponentNames, setFrameworkComponentNames] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [{ data: fw }, { data: comps }] = await Promise.all([
+        publicSupabase.from("copy_frameworks").select("id, component_slugs"),
+        publicSupabase.from("copy_components").select("slug, name"),
+      ]);
+      if (cancelled) return;
+      const nameBySlug: Record<string, string> = {};
+      (comps || []).forEach((c: any) => { nameBySlug[c.slug] = c.name; });
+      const map: Record<string, string[]> = {};
+      (fw || []).forEach((f: any) => {
+        const slugs: string[] = Array.isArray(f.component_slugs) ? f.component_slugs : (f.component_slugs?.slugs || []);
+        map[f.id] = slugs.map((s) => nameBySlug[s] || s);
+      });
+      setFrameworkComponentNames(map);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -240,7 +261,15 @@ const SharedFunnelInner = () => {
         selected: n.id === selectedNodeId,
         draggable: false,
         connectable: false,
-        data: { ...n.data, showImages, readOnly: true, connectedHandles: connectedHandlesMap[n.id] || [] },
+        data: {
+          ...n.data,
+          showImages,
+          readOnly: true,
+          connectedHandles: connectedHandlesMap[n.id] || [],
+          copyComponentNames: n.type === "funnelPage" && (n.data as any)?.copyFrameworkId
+            ? frameworkComponentNames[(n.data as any).copyFrameworkId] || []
+            : [],
+        },
       };
       if (isSeqGroup) {
         if (collapsed) {
@@ -260,7 +289,7 @@ const SharedFunnelInner = () => {
       }
       return base;
     }),
-    [localNodes, selectedNodeId, showImages, connectedHandlesMap]
+    [localNodes, selectedNodeId, showImages, connectedHandlesMap, frameworkComponentNames]
   );
 
 
