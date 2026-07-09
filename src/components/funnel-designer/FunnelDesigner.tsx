@@ -68,6 +68,7 @@ import ElementsPanel from "./ElementsPanel";
 import FunnelNode from "./FunnelNode";
 import TrafficSourceNode from "./TrafficSourceNode";
 import NodeDetailsPanel from "./NodeDetailsPanel";
+import TrafficSourceDetailsPanel from "./TrafficSourceDetailsPanel";
 import SequenceGroupNode from "./SequenceGroupNode";
 import { TRAFFIC_SOURCES, FUNNEL_ELEMENTS } from "./constants";
 import { toPng } from "html-to-image";
@@ -1786,6 +1787,18 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
           </div>
         </div>
       )}
+
+      {detailsNode && detailsNode.type === "trafficSource" && (
+        <TrafficSourceDetailsPanel
+          nodeId={detailsNode.id}
+          label={(detailsNode.data as any).label || "Traffic source"}
+          funnelId={currentFunnel?.id || null}
+          funnelName={currentFunnel?.name || ""}
+          onOpenCopyDocument={handleOpenCopyDocument}
+          onClose={() => setDetailsNodeId(null)}
+        />
+      )}
+
 
       {showBriefPanel && !detailsNode && !showOfferPanel && (
         <FunnelBriefPanel
