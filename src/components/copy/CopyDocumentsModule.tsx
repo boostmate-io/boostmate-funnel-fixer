@@ -43,6 +43,25 @@ const CopyDocumentsModule = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Allow deep-linking to a specific document (fired from funnel node "Open document").
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const id = (e as CustomEvent).detail;
+      if (typeof id !== "string" || !id) return;
+      const { data } = await supabase
+        .from("copy_documents")
+        .select("id, name, type, created_at, updated_at")
+        .eq("id", id)
+        .maybeSingle();
+      if (data) {
+        setActiveType((data as any).type);
+        setSelectedDoc(data as CopyDocument);
+      }
+    };
+    window.addEventListener("boostmate:open-copy-document", handler);
+    return () => window.removeEventListener("boostmate:open-copy-document", handler);
+  }, []);
+
   const createDocument = async () => {
     if (!user || !activeSubAccountId) return;
     const { data, error } = await supabase
