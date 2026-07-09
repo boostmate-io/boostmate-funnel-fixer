@@ -393,6 +393,18 @@
       "week": "Weekly",
       "month": "Monthly",
       "quarter": "Quarterly"
+    },
+    "dataEntries": "Data entries",
+    "savedViews": {
+      "title": "Views",
+      "saveCurrent": "Save current view...",
+      "saved": "Saved views",
+      "namePlaceholder": "View name",
+      "setDefault": "Set as default",
+      "unsetDefault": "Unset default",
+      "defaultSet": "Set as default",
+      "deleted": "View deleted",
+      "saveError": "Failed to save"
     }
   },
   "agency": {
