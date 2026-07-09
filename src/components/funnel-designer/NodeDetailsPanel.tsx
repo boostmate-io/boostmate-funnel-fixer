@@ -107,8 +107,6 @@ const NodeDetailsPanel = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [frameworks, setFrameworks] = useState<CopyFramework[]>([]);
   const [componentDefs, setComponentDefs] = useState<CopyComponentDef[]>([]);
-  const [creatingDoc, setCreatingDoc] = useState(false);
-  const [linkedDocName, setLinkedDocName] = useState<string | null>(null);
 
   // Determine framework type from node context
   const frameworkType = pageType === "email" ? "email_sequence" : "sales_copy";
@@ -124,72 +122,16 @@ const NodeDetailsPanel = ({
 
   useEffect(() => { loadFrameworks(); }, [loadFrameworks]);
 
-  // Load linked doc name
-  useEffect(() => {
-    if (!copyDocumentId) { setLinkedDocName(null); return; }
-    let cancelled = false;
-    supabase.from("copy_documents").select("name").eq("id", copyDocumentId).maybeSingle().then(({ data }) => {
-      if (!cancelled) setLinkedDocName((data as any)?.name ?? null);
-    });
-    return () => { cancelled = true; };
-  }, [copyDocumentId]);
-
   const setNodeData = (key: string, value: any) => {
     if (onNodeDataChange) onNodeDataChange(nodeId, key, value);
     else onDataChange?.(key, value);
-  };
-
-  const createCopyDocument = async () => {
-    if (!copyFrameworkId || !userId || !activeSubAccountId) return;
-    const framework = frameworks.find((f) => f.id === copyFrameworkId);
-    if (!framework) return;
-    setCreatingDoc(true);
-    try {
-      const docName = `${funnelName || "Funnel"} — ${customLabel || nodeLabel}`;
-      const { data: doc, error: docErr } = await supabase
-        .from("copy_documents")
-        .insert({
-          user_id: userId,
-          sub_account_id: activeSubAccountId,
-          name: docName,
-          type: framework.type,
-          funnel_id: funnelId ?? null,
-          funnel_node_id: nodeId,
-          context_type: linkedOfferId ? "offer" : "custom",
-          context_offer_id: linkedOfferId ?? null,
-        })
-        .select("id")
-        .single();
-      if (docErr || !doc) throw docErr;
-
-      const slugs: string[] = Array.isArray(framework.component_slugs)
-        ? framework.component_slugs
-        : (framework.component_slugs?.slugs || []);
-      if (slugs.length > 0) {
-        const rows = slugs.map((slug, i) => ({
-          document_id: doc.id,
-          component_slug: slug,
-          sort_order: i,
-          inputs: {},
-          outputs: {},
-          is_generated: false,
-        }));
-        await supabase.from("copy_document_components").insert(rows as any);
-      }
-
-      setNodeData("copyDocumentId", doc.id);
-      toast.success(t("funnelDesigner.copyFramework.documentCreated"));
-    } catch {
-      toast.error(t("funnelDesigner.copyFramework.createError"));
-    } finally {
-      setCreatingDoc(false);
-    }
   };
 
   const activeFramework = frameworks.find((f) => f.id === copyFrameworkId);
   const activeSlugs: string[] = Array.isArray(activeFramework?.component_slugs)
     ? (activeFramework?.component_slugs as string[])
     : ((activeFramework?.component_slugs as any)?.slugs || []);
+
 
 
   const isNote = renderStyle === "note";
