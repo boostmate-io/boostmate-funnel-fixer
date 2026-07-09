@@ -7,6 +7,7 @@ import { TrendingUp, TrendingDown, DollarSign, Eye } from "lucide-react";
 import { ReactFlow, Background, ReactFlowProvider, type Node, type Edge } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { getMetricsForNodeType } from "./metricDefinitions";
+import { filterTrackableNodes, isTrackableNode } from "./nodeFilters";
 import AnalyticsFunnelNode from "./AnalyticsFunnelNode";
 import AnalyticsTrafficNode from "./AnalyticsTrafficNode";
 
