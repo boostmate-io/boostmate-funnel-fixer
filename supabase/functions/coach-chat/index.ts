@@ -988,15 +988,20 @@ Deno.serve(async (req) => {
       { role: "system", content: systemPrompt },
       ...messages.map((m: any) => ({
         role: m.role === "assistant" ? "assistant" : "user",
-        content: typeof m.content === "string" ? m.content : "",
+        content:
+          m.role === "assistant"
+            ? serializeAssistantForModel(m)
+            : typeof m.content === "string"
+              ? m.content
+              : "",
       })),
     ];
 
-    const shouldForceBlueprintWrites = isBlueprintWriteIntent(context?.scope, messages, context);
-    const shouldForceFieldProposal = isFieldProposalIntent(context?.scope, messages);
-    const tools = toolsForScope(context?.scope, shouldForceBlueprintWrites);
+    const tools = toolsForScope(context?.scope);
 
-    // Call Lovable AI Gateway (OpenAI-compatible)
+    // Call Lovable AI Gateway (OpenAI-compatible). tool_choice stays "auto":
+    // the system prompt tells the model when to call which tool. Forcing a
+    // tool caused correction/modifier turns to fail with a fallback bubble.
     const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -1007,13 +1012,10 @@ Deno.serve(async (req) => {
         model: "google/gemini-3-flash-preview",
         messages: llmMessages,
         tools,
-        tool_choice: shouldForceBlueprintWrites
-          ? { type: "function", function: { name: "propose_blueprint_writes" } }
-          : shouldForceFieldProposal
-            ? { type: "function", function: { name: "propose_field_value" } }
-            : "auto",
+        tool_choice: "auto",
       }),
     });
+
 
     if (!gatewayRes.ok) {
       const errText = await gatewayRes.text();
