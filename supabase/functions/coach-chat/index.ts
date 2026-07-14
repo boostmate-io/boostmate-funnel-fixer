@@ -773,10 +773,27 @@ const NOT_FILLED_RE = /\b(not filled|isn['’]?t filled|nothing happened|niet in
 const BLUEPRINT_AREA_RE =
   /\b(customer clarity|dream client|avatar|icp|pain|problem|desire|goal|transformation|offer|pricing|proof|authority|growth system|blueprint|sectie|section|veld|field)\b/i;
 
+const CORRECTION_RE =
+  /\b(no|nope|nee|niet die|verkeerd|wrong|bedoelde|bedoel|instead|in plaats|rather|actually|eigenlijk)\b/i;
+
+function priorAssistantHadWrites(messages: any[]): boolean {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m?.role !== "assistant") continue;
+    const parts = Array.isArray(m?.parts) ? m.parts : [];
+    if (parts.some((p: any) => p?.type === "blueprint_writes")) return true;
+    // Fallback: some clients only send content strings; check for our fallback
+    // text vs. the phrase "Blueprint updates" isn't reliable, so use parts.
+    return false;
+  }
+  return false;
+}
+
 function isBlueprintWriteIntent(scope: string | undefined, messages: any[], context?: any) {
   if (scope !== "blueprint.section" && scope !== "global") return false;
   const userMessages = messages.filter((m: any) => m?.role !== "assistant");
   const latest = String(userMessages.at(-1)?.content ?? "");
+  const latestInstruction = latestInstructionText(messages);
   const recent = userMessages
     .slice(-4)
     .map((m: any) => String(m?.content ?? ""))
@@ -787,8 +804,25 @@ function isBlueprintWriteIntent(scope: string | undefined, messages: any[], cont
     return true;
   }
 
+  // Primary path: write verb + blueprint area, using only the instruction tail
+  // so pasted context doesn't decide intent on its own.
+  if (WRITE_INTENT_RE.test(latestInstruction) && BLUEPRINT_AREA_RE.test(latestInstruction)) return true;
+  // Fallback to the raw latest message for cases where our tail extractor
+  // trimmed too aggressively.
   if (WRITE_INTENT_RE.test(latest) && BLUEPRINT_AREA_RE.test(latest)) return true;
   if (NOT_FILLED_RE.test(latest) && (WRITE_INTENT_RE.test(recent) || BLUEPRINT_AREA_RE.test(recent))) return true;
+
+  // Correction turn: previous assistant proposed writes, and the user is
+  // steering to a different tab/section/field. Even without a write verb,
+  // this should re-trigger propose_blueprint_writes for the new scope.
+  if (
+    priorAssistantHadWrites(messages) &&
+    (CORRECTION_RE.test(latest) || TAB_OR_SECTION_RE.test(latest) || BLUEPRINT_AREA_RE.test(latest)) &&
+    (requestedBlueprintSubBlock(messages) || requestedSingleBlueprintPath(messages))
+  ) {
+    return true;
+  }
+
   return false;
 }
 
