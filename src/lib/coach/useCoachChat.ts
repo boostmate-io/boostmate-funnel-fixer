@@ -12,8 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { CoachContext, CoachMessage, CoachMessagePart } from "./types";
 
-import { useAuth } from "@/contexts/AuthContext";
-import type { CoachContext, CoachMessage, CoachMessagePart } from "./types";
+
 
 type Status = "idle" | "loading" | "sending" | "error";
 export type ProposalDecision = "applied" | "dismissed";
