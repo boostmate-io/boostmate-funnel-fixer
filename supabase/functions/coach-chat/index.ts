@@ -166,11 +166,15 @@ async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
       .in("id", ids);
 
     const byName = new Map<string, string>((blocks ?? []).map((b: any) => [b.name, b.content]));
+    const knowledgeBlocks: KnowledgeBlock[] = (blocks ?? [])
+      .filter((b: any) => b?.name && !RESERVED_PROMPT_NAMES.has(b.name) && typeof b.content === "string" && b.content.trim().length > 0)
+      .map((b: any) => ({ name: b.name as string, content: b.content as string }));
     const prompts: PromptSet = {
       base: byName.get("coach:base") || PROMPT_FALLBACK.base,
       field: byName.get("coach:blueprint-field") || PROMPT_FALLBACK.field,
       section: byName.get("coach:blueprint-section") || PROMPT_FALLBACK.section,
       global: byName.get("coach:global") || PROMPT_FALLBACK.global,
+      knowledgeBlocks,
     };
     promptCache = { at: Date.now(), prompts };
     return prompts;
