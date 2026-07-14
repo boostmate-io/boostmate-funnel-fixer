@@ -178,10 +178,15 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
       setError(null);
 
       try {
+        const currentLocale = (i18n.language ?? "en").split("-")[0];
+        const ctxWithLocale = {
+          ...context,
+          businessContext: { ...context.businessContext, locale: currentLocale },
+        };
         const { data, error: fnErr } = await supabase.functions.invoke("coach-chat", {
           body: {
             conversationId,
-            context,
+            context: ctxWithLocale,
             messages: nextMessages.map((m) => ({
               role: m.role,
               content: m.content,
