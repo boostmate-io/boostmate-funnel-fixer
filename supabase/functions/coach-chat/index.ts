@@ -812,17 +812,47 @@ const proposeBlueprintWritesTool = {
   },
 };
 
-function toolsForScope(scope: string | undefined, includeWrites: boolean) {
+function toolsForScope(scope: string | undefined) {
   const base = [suggestQuickRepliesTool, rememberFactTool];
   if (scope === "blueprint.field") return [proposeFieldValueTool, ...base];
   if (scope === "blueprint.section" || scope === "global") {
-    // Only expose the writes tool when the current turn shows write intent.
-    // Prevents the model from re-emitting previously-applied proposals when
-    // the user is just asking a question (e.g. "what's a good core price?").
-    return includeWrites ? [proposeBlueprintWritesTool, ...base] : base;
+    // Always expose the writes tool; the model decides when to use it based on
+    // the system prompt's follow-up rules. This makes correction/language/tone
+    // modifiers ("in English", "shorter", "again") work like they would with a
+    // plain LLM instead of being blocked by regex intent gating.
+    return [proposeBlueprintWritesTool, ...base];
   }
   return base;
 }
+
+// Serialize the client's assistant `parts` into readable text so the model
+// can see what IT proposed on prior turns. Without this, tool-only turns come
+// through as empty content and the model can't reference its own drafts when
+// the user follows up with "in English", "shorter", "why?", etc.
+function serializeAssistantForModel(m: any): string {
+  const text = typeof m?.content === "string" ? m.content : "";
+  const parts = Array.isArray(m?.parts) ? m.parts : [];
+  const chunks: string[] = [];
+  if (text.trim()) chunks.push(text.trim());
+  for (const p of parts) {
+    if (!p || typeof p !== "object") continue;
+    if (p.type === "text") continue; // already in content
+    if (p.type === "proposal") {
+      chunks.push(`[proposed field value] ${String(p.value ?? "")}`);
+    } else if (p.type === "blueprint_writes") {
+      const writes = Array.isArray(p.writes) ? p.writes : [];
+      const lines = writes.map((w: any) => `  - ${w?.path}: ${String(w?.value ?? "").replace(/\s+/g, " ").slice(0, 400)}`);
+      chunks.push(`[proposed blueprint writes]\n${lines.join("\n")}`);
+    } else if (p.type === "quick_replies") {
+      const replies = Array.isArray(p.replies) ? p.replies : [];
+      if (replies.length) chunks.push(`[suggested quick replies] ${replies.join(" | ")}`);
+    } else if (p.type === "memory_saved") {
+      chunks.push(`[remembered fact] ${p.key}: ${p.value}`);
+    }
+  }
+  return chunks.join("\n\n");
+}
+
 
 const WRITE_INTENT_RE =
   /(?:\b(fill|draft|generate|write|update|complete|create|make|set|apply|invullen|vullen|uitwerken|schrijf|maak|bijwerk|aanvullen)\b|\binvul|\bvul|\buitwerk|werk uit)/i;
