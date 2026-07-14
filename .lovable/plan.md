@@ -1,96 +1,55 @@
-## Kernprobleem
+# Extra kennis toevoegen aan de AI Coach
 
-De AI Coach voelt "dommer" dan een gewone LLM omdat er een **deterministische routinglaag** vóór het model zit die met regex beslist:
-- Is dit een schrijf-intent? (werkwoord-regex)
-- Welke tab/veld bedoelt de user? (alias-matching op substrings)
-- Welke tool mag het model gebruiken? (geforceerd op basis van bovenstaande)
+## Doel
+Jij (als admin) wilt losse kennisdocumenten (bv. "High Ticket Offer creatie") kunnen toevoegen die de AI Coach altijd meekrijgt als context — zonder elke keer de code te wijzigen.
 
-Zodra jouw bericht niet exact in dat patroon past, krijg je fallback-tekst of het verkeerde antwoord. Dat gebeurt bij:
-- Taalcorrecties ("in het engels", "in English")
-- Toon-/lengtecorrecties ("korter", "minder hype", "meer concreet")
-- Referenties naar vorige turn ("doe dit opnieuw", "hetzelfde maar voor de andere tab", "dat 2de item bevalt me niet")
-- Tab-correcties zonder werkwoord ("nee die andere tab")
-- Vragen ná een voorstel ("waarom stelde je dat voor?")
-- Mengsels ("maak het korter én in Engels")
+## Hoe het nu werkt
+De coach laadt uit `ai_instruction_blocks` maar **alleen 4 vaste blokken op naam**: `coach:base`, `coach:blueprint-field`, `coach:blueprint-section`, `coach:global`. Extra blokken die je in Admin koppelt aan de `coach-chat` AI Action worden **genegeerd**.
 
-## Oplossing: van regex-router naar LLM-first coach
+## Oplossing (2 kleine wijzigingen)
 
-De regex-laag verdwijnt niet — hij blijft als **hint**, niet als **gate**. Het model krijgt meer autonomie, betere context over wat het net zelf voorstelde, en duidelijker gedragsregels in de system prompt.
+### 1. `supabase/functions/coach-chat/index.ts` — `loadCoachPrompts` uitbreiden
+- Alle instructieblokken die aan de `coach-chat` AI Action zijn gekoppeld worden opgehaald.
+- De 4 vaste namen blijven werken zoals nu.
+- **Elk extra blok** (elke naam die niet één van de 4 vaste namen is) wordt verzameld als `knowledgeBlocks: { name, content }[]`.
+- `PromptSet` krijgt een extra veld `knowledgeBlocks`.
 
-### 1. Volledige gespreksgeschiedenis is zichtbaar voor het model
+### 2. `buildSystemPrompt` — kennis injecteren
+Na de scope-specifieke prompt en vóór de Blueprint JSON wordt een nieuwe sectie toegevoegd:
 
-Nu: assistant `parts` (Blueprint proposals, field proposals, quick replies) worden niet omgezet naar model-messages, dus tool-only turns komen als leeg bericht bij het model aan.
+```text
+# Knowledge base (reference material)
+Use the material below as expert reference when the user's question relates to its topic. Do not quote verbatim; apply it as strategic guidance.
 
-Fix: elk assistant-bericht wordt gerenderd naar een leesbare tekstvorm voor de LLM:
-- Blueprint writes → "Ik heb net voorgesteld: `<path>` = "…", `<path>` = "…""
-- Field proposal → "Ik heb net voorgesteld: "…""
-- Quick replies → "Ik heb deze suggesties gegeven: …"
+## <block name>
+<block content>
 
-Daardoor begrijpt het model vervolgberichten als "in het engels", "korter", "wijzig dat 2de", "hetzelfde maar…" gewoon zoals ChatGPT dat zou doen.
+## <block name>
+<block content>
+```
 
-### 2. Tools zijn altijd beschikbaar, nooit meer geforceerd
+Als er geen extra blokken zijn, wordt de sectie weggelaten.
 
-Nu: `tool_choice` wordt hard geforceerd op `propose_blueprint_writes` of `propose_field_value` op basis van regex. Als de regex faalt → geen tool aangeboden → lege bubbel.
+## Hoe jij daarna kennis toevoegt (geen code meer nodig)
 
-Fix:
-- `tool_choice: "auto"` als default.
-- Tools worden altijd meegegeven binnen de huidige scope.
-- De system prompt vertelt het model duidelijk wanneer welke tool te gebruiken (in plaats van dat de backend beslist).
-- De regex-detectie blijft, maar alleen als **hint** in de system prompt: "De vorige beurt bevatte waarschijnlijk een schrijf-intent voor <sub-block>". Geen forceren meer.
+1. Ga naar **Admin Panel → Instruction Blocks**.
+2. Klik **New block**, geef bv. naam `coach:knowledge:high-ticket-offer` en plak jouw materiaal in `content` (Markdown mag).
+3. Ga naar **Admin Panel → AI Actions**, open de actie met slug `coach-chat`.
+4. Link het nieuwe instructieblok aan deze actie.
+5. Klaar — binnen 60s (prompt-cache TTL) gebruikt de coach het blok voor elk gesprek.
 
-### 3. Scope-detectie wordt suggestief, niet dwingend
+Voor elk nieuw thema (webinar funnels, VSL scripting, …) herhaal je stap 1–4 met een nieuwe naam.
 
-Nu: `allowedBlueprintWritePaths` bouwt een harde whitelist. Alles buiten die whitelist wordt gedropt in `sanitizeBlueprintWrites`.
+## Waarom deze aanpak
+- **Geen code-wijzigingen meer** om kennis toe te voegen/aan te passen.
+- Werkt met bestaande Admin UI (`AdminInstructionBlocks`, `AdminAIActions`).
+- Blijft compatibel met bestaande 4 vaste blokken.
+- Klein token-budget: alleen jouw eigen, bewust gekoppelde blokken worden meegestuurd.
 
-Fix:
-- De whitelist wordt vervangen door een **voorkeurslijst** in de system prompt: "Waarschijnlijk bedoelt de user paden binnen X. Als je zeker weet dat de user iets anders bedoelt, mag je afwijken."
-- `sanitizeBlueprintWrites` behoudt alleen de **harde regels**: onbekende paden droppen, non-writable velden droppen, tab-prefix guard (`tabPrefix` blijft hard om cross-tab leaks te voorkomen). Sub-block scoping wordt zacht.
-- Reeds afgehandelde paden blijven wél hard uitgesloten (dat is een echte constraint).
-
-### 4. Taalinstructie: user wint van UI-taal
-
-- Nieuwe detector `explicitLanguageInstruction(messages)` scant alleen de laatste user message op expliciete taal-opdrachten ("in het engels", "in English", "Nederlands graag", "NEE IN HET ENGELS", "translate to English", "not Dutch").
-- Effectieve outputtaal = expliciete instructie ∥ UI-locale.
-- `useCoachChat` stuurt bij elke send de actuele `i18n.language` mee, zodat een openstaand coachvenster niet vastzit op de oude taal na wijzigen in settings.
-
-### 5. Correctie- en follow-up herkenning verruimen
-
-`isBlueprintWriteIntent` en `isFieldProposalIntent` worden minder afhankelijk van regex-werkwoorden:
-- Als de vorige assistant een `blueprint_writes` of `proposal` part had EN de user reageert met een korte modifier ("in het engels", "korter", "minder hype", "meer concreet", "opnieuw", "andere tab", "nee die"), telt dat als voortzetting.
-- Bij zo'n follow-up worden de paden van de vorige proposal hergebruikt tenzij de user expliciet nieuwe noemt.
-- Werkt ook voor `propose_field_value` (single-field coach): "in Engels" na Nederlandse draft → nieuwe Engelse draft, geen fallback-tekst.
-
-### 6. System prompt maakt het model verantwoordelijk
-
-De coach-prompts worden herschreven zodat het model zelf beslist wanneer wat te doen, met deze principes expliciet:
-- "Als de user je vorige voorstel wil bijstellen (taal, toon, lengte, focus), regenereer het via dezelfde tool met dezelfde paden."
-- "Als de user een correctie geeft zonder werkwoord ('nee die andere tab'), interpreteer het als continuering van je vorige actie."
-- "Als de user vraagt waarom je iets voorstelde, antwoord in tekst — roep geen tool aan."
-- "Als de user een expliciete taalinstructie geeft, respecteer die boven de UI-taal."
-
-### 7. Fallback-tekst wordt behulpzamer
-
-De generieke "Kan je iets specifieker zijn?" verdwijnt. Als het model niks teruggeeft ná deze wijzigingen (zeldzaam), wordt de fallback contextueel: verwijzen naar de laatst-voorgestelde paden of de actieve tab, in de correcte taal.
-
-## Wat blijft hard (bewuste constraints)
-
-- Cross-tab guard: wanneer een specifieke Blueprint-tab in focus is, blijven writes buiten die tab geblokkeerd (voorkomt UI-verwarring).
-- Reeds afgehandelde paden worden niet opnieuw voorgesteld tenzij de user het expliciet vraagt.
-- Non-writable schemavelden blijven geblokkeerd.
-- List-section mode (Framework Pillars etc.) blijft haar strikte `new_<n>.<fieldKey>` shape.
+## Alternatief (niet in dit plan)
+Aparte "Knowledge Center" documenten (PDF/DOCX uit `knowledge_documents`) aan de coach koppelen. Krachtiger maar zwaarder (parsen, tokens, mogelijk vector search). Laat me weten of je dit later ook wilt.
 
 ## Bestanden
+- `supabase/functions/coach-chat/index.ts` (loader + prompt-builder)
 
-- `supabase/functions/coach-chat/index.ts` — grootste wijziging (prompts, tool-choice, geschiedenis-serializatie, taaldetector, versoepelde scope-guard, follow-up detectie)
-- `src/lib/coach/useCoachChat.ts` — actuele locale meesturen bij elke send
-
-## Verificatie
-
-Handmatig testen na deploy:
-1. Nederlandse Blueprint-proposals → user: "in het engels" → nieuwe Engelse proposals op dezelfde paden.
-2. Blueprint-proposals → user: "korter" → herwerkte kortere versies, zelfde paden.
-3. Blueprint-proposals → user: "nee, de Pain & Friction tab" → nieuwe proposals voor pain-velden.
-4. Field coach in Nederlands → user: "in English" → Engelse herformulering.
-5. Blueprint-proposals → user: "waarom stelde je dit voor?" → tekstantwoord, geen nieuwe tool call.
-6. UI wisselt naar Engels midden in coachgesprek → volgende opdracht komt in het Engels.
-7. Pure vraag ("wat is een goede prijs?") → geen ongewenste Blueprint-writes.
+Geen DB-migratie nodig — de tabellen (`ai_instruction_blocks`, `ai_action_instruction_blocks`, `ai_actions`) bestaan al.
