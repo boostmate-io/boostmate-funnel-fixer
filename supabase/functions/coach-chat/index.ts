@@ -639,12 +639,9 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
     return out;
   }
 
-  const allowedPaths = allowedBlueprintWritePaths(context, messages);
   const emptyOnly = latestUserAsksForEmptyOnly(messages);
   const tabPrefix = context?.scope === "global" ? null : targetRootPrefix(context);
   const byPath = new Map<string, { path: string; label: string; value: string }>();
-
-  if (allowedPaths && allowedPaths.size === 0) return [];
 
   // Ecosystem writes use a virtual path shape:
   //   offer_ecosystem.<tier>.new_<n>.<name|description|core_outcome>
@@ -673,7 +670,6 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
 
     if (isEcosystemWrite(rawPath)) {
       if (tabPrefix && tabPrefix !== "offer_ecosystem") continue;
-      if (allowedPaths && !allowedPaths.has(rawPath)) continue;
       const value = String(raw.value ?? "").trim();
       if (!value) continue;
       const [, tier, itemKey, fieldKey] = rawPath.split(".");
@@ -687,22 +683,13 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
 
     const path = canonicalBlueprintPath(rawPath);
     const meta = BLUEPRINT_FIELD_META[path];
-    // Reject unknown paths and paths flagged non-writable in the shared schema.
+    // Hard rules only: unknown paths, non-writable fields, already-handled paths.
     if (!meta || !meta.aiWritable) continue;
-    // Never re-propose a Blueprint path the user already accepted or dismissed
-    // in this conversation. Virtual list/ecosystem `new_<n>` paths are handled
-    // earlier and skipped here anyway.
     if (handledPaths.has(path)) continue;
-    if (allowedPaths && !allowedPaths.has(path)) {
-      console.warn("[coach-chat] dropped out-of-scope write", { path, allowed: [...allowedPaths] });
-      continue;
-    }
-    // Hard tab-scope guard: when a Blueprint tab/section is in focus, never
-    // accept writes outside that tab — regardless of whether the request
-    // matched a specific field or sub-block. Prevents "fill the whole X tab"
-    // from leaking proposals into other tabs.
+    // Hard tab-scope guard stays: when a Blueprint tab is in focus, never
+    // accept writes leaking into other tabs (prevents cross-tab UI confusion).
     if (tabPrefix && path !== tabPrefix && !path.startsWith(`${tabPrefix}.`)) continue;
-    if (!allowedPaths && emptyOnly && !isEmptyBlueprintValue(getDeepValue(context?.businessContext?.blueprintSnapshot, path))) continue;
+    if (emptyOnly && !isEmptyBlueprintValue(getDeepValue(context?.businessContext?.blueprintSnapshot, path))) continue;
 
     const value = normalizeFieldValue(path, raw.value);
     if (!value) continue;
