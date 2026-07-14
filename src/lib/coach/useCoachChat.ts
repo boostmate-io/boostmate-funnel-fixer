@@ -7,9 +7,12 @@
 // =============================================================================
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import i18n from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { CoachContext, CoachMessage, CoachMessagePart } from "./types";
+
+
 
 type Status = "idle" | "loading" | "sending" | "error";
 export type ProposalDecision = "applied" | "dismissed";
@@ -175,10 +178,15 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
       setError(null);
 
       try {
+        const currentLocale = (i18n.language ?? "en").split("-")[0];
+        const ctxWithLocale = {
+          ...context,
+          businessContext: { ...context.businessContext, locale: currentLocale },
+        };
         const { data, error: fnErr } = await supabase.functions.invoke("coach-chat", {
           body: {
             conversationId,
-            context,
+            context: ctxWithLocale,
             messages: nextMessages.map((m) => ({
               role: m.role,
               content: m.content,

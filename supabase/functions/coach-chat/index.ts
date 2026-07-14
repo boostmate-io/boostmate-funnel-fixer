@@ -174,10 +174,25 @@ function buildSystemPrompt(
 ): string {
   const parts: string[] = [prompts.base];
 
-  const locale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
-  const langName = locale === "nl" ? "Dutch (Nederlands)" : "English";
+  const uiLocale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
+  const explicit = explicitLanguageInstruction(messages);
+  const effectiveLang = explicit ?? (uiLocale === "nl" ? "nl" : "en");
+  const langName = effectiveLang === "nl" ? "Dutch (Nederlands)" : "English";
+  const explicitNote = explicit
+    ? `\n\nThe user just gave an EXPLICIT language instruction in their latest message. This overrides the UI language. Reply — and regenerate any prior drafts/proposals — in ${langName}.`
+    : "";
   parts.push(
-    `# Language\nAlways reply in ${langName}. All prose, quick replies, remembered fact values and proposed field drafts MUST be in ${langName}, regardless of the language the user writes in. The only exception: keep JSON keys and path strings (e.g. remember_fact "key", propose_blueprint_writes "path") in English snake_case.`,
+    `# Language\nReply in ${langName}. All prose, quick replies, remembered fact values and proposed field drafts MUST be in ${langName}, regardless of the language the user writes in. The only exception: keep JSON keys and path strings (e.g. remember_fact "key", propose_blueprint_writes "path") in English snake_case.${explicitNote}`,
+  );
+
+  // General LLM-like behaviour rules for follow-ups.
+  parts.push(
+    `# Follow-up behaviour — behave like a normal assistant
+- If the user reacts to your previous proposal with a short modifier ("in English", "korter", "less hype", "more concrete", "again", "opnieuw", "shorter", "translate to X"), REGENERATE that proposal using the SAME tool and the SAME field paths, applying the requested change. Do NOT ask them to be more specific.
+- If the user corrects the target without a verb ("no, the other tab", "nee die andere", "Pain & Friction tab") after you proposed writes, treat it as continuing the previous action for the newly-named scope.
+- If the user asks a question about your prior proposal ("why?", "waarom?"), answer in text — do NOT call a tool.
+- If the user gives an explicit language instruction, respect it above the UI language and regenerate prior drafts in that language.
+- Never respond with only quick replies when the user gave a direct instruction — either call the appropriate tool or answer in text.`,
   );
 
   if (context?.scope === "blueprint.field") {
@@ -223,23 +238,36 @@ When the user asks you to suggest / generate / propose / fill / draft items for 
   ...
 Every proposed item MUST include a value for every listed field. Suggested item count: ${suggested} unless the user specifies otherwise. If the user asks for inspiration or examples, still propose concrete list items as Blueprint writes — do not answer with only quick replies. Label each write "Item <n> — <field label>". Do NOT write to any other Blueprint path in this turn.`,
     );
-  } else {
-    const allowedPaths = allowedBlueprintWritePaths(context, messages);
-    if (allowedPaths && allowedPaths.size > 0) {
+  } else if (context?.scope === "blueprint.section" || context?.scope === "global") {
+    // Soft preferred-paths hint (not a hard filter). The sanitizer still enforces
+    // the tab-prefix guard and the "already handled" guard, but no longer drops
+    // writes just because they fall outside the regex-detected preference.
+    const preferredPaths = preferredBlueprintWritePaths(context, messages);
+    const priorPaths = priorAssistantWritePaths(messages);
+    if (preferredPaths && preferredPaths.size > 0) {
       parts.push(
-        `# Current write target — hard constraint\nFor the user's latest request, propose Blueprint writes ONLY for these path(s):\n${[
-          ...allowedPaths,
+        `# Likely write target (hint, not a hard rule)\nBased on the user's latest instruction, they most likely want Blueprint writes for these path(s):\n${[
+          ...preferredPaths,
         ]
           .map((path) => `- ${path} — ${BLUEPRINT_FIELD_META[path]?.kind ?? "textarea"} — ${BLUEPRINT_FIELD_META[path]?.label ?? path}`)
-          .join("\n")}\nDo not write to any other Blueprint path.`,
+          .join(
+            "\n",
+          )}\nUse these unless the user clearly asked for something else. Do not silently add unrelated fields.`,
       );
-    } else if (context?.scope !== "global") {
-      const tabPrefix = targetRootPrefix(context);
-      if (tabPrefix) {
-        parts.push(
-          `# Active Blueprint tab — hard scope\nThe user is currently working inside "${tabPrefix}". EVERY path in propose_blueprint_writes MUST start with "${tabPrefix}.". Writes to any other tab (customer_clarity, offer_stack.angle, offer_stack.stack, offer_stack.pricing, offer_ecosystem, growth_system, proof_authority) will be discarded. If the user asks to fill the current tab, only propose writes for fields that live inside "${tabPrefix}".`,
-        );
-      }
+    } else if (priorPaths.length > 0) {
+      parts.push(
+        `# Prior proposed paths\nYour previous turn proposed writes for these paths:\n${priorPaths
+          .map((p) => `- ${p}`)
+          .join(
+            "\n",
+          )}\nIf the user's latest message is a modifier ("in English", "shorter", "less hype", "again", etc.), regenerate proposals for these SAME paths with the requested change.`,
+      );
+    }
+    const tabPrefix = context?.scope === "global" ? null : targetRootPrefix(context);
+    if (tabPrefix) {
+      parts.push(
+        `# Active Blueprint tab — hard scope\nThe user is currently working inside "${tabPrefix}". EVERY path in propose_blueprint_writes MUST start with "${tabPrefix}.". Writes to any other tab will be discarded.`,
+      );
     }
   }
 
@@ -261,6 +289,45 @@ Every proposed item MUST include a value for every listed field. Suggested item 
 
   return parts.join("\n\n---\n\n");
 }
+
+// -----------------------------------------------------------------------------
+// Explicit language detection — a user instruction to reply in a specific
+// language overrides the UI locale for this turn.
+// -----------------------------------------------------------------------------
+
+function explicitLanguageInstruction(messages: any[]): "en" | "nl" | null {
+  const latest = latestUserText(messages);
+  if (!latest) return null;
+  const t = latest.toLowerCase();
+  const wantsEnglish =
+    /\b(in\s+(het\s+)?english|in\s+het\s+engels|in\s+engels|english\s+please|please\s+in\s+english|switch\s+to\s+english|translate\s+to\s+english|not\s+dutch|geen\s+nederlands)\b/i.test(
+      latest,
+    ) || /nee\s+in\s+het\s+engels/i.test(t);
+  if (wantsEnglish) return "en";
+  const wantsDutch =
+    /\b(in\s+(the\s+)?dutch|in\s+het\s+nederlands|in\s+nederlands|nederlands\s+(graag|please)|switch\s+to\s+dutch|translate\s+to\s+dutch|not\s+english|geen\s+engels)\b/i.test(
+      latest,
+    );
+  if (wantsDutch) return "nl";
+  return null;
+}
+
+// Paths the previous assistant turn proposed writes for (used to regenerate
+// on short follow-ups like "in English" / "korter").
+function priorAssistantWritePaths(messages: any[]): string[] {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m?.role !== "assistant") continue;
+    const parts = Array.isArray(m?.parts) ? m.parts : [];
+    const bp = parts.find((p: any) => p?.type === "blueprint_writes");
+    if (bp && Array.isArray(bp.writes)) {
+      return bp.writes.map((w: any) => String(w?.path ?? "")).filter(Boolean);
+    }
+    return [];
+  }
+  return [];
+}
+
 
 function latestUserText(messages: any[]): string {
   return String([...messages].reverse().find((m: any) => m?.role !== "assistant")?.content ?? "");
@@ -430,7 +497,7 @@ function filterPathsToCurrentTarget(paths: Set<string> | null, context: any): Se
   return new Set([...paths].filter((path) => path === prefix || path.startsWith(`${prefix}.`)));
 }
 
-function allowedBlueprintWritePaths(context: any, messages: any[]): Set<string> | null {
+function preferredBlueprintWritePaths(context: any, messages: any[]): Set<string> | null {
   const instruction = latestInstructionText(messages);
   const mentionsTabWord = TAB_OR_SECTION_RE.test(instruction);
 
@@ -572,12 +639,9 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
     return out;
   }
 
-  const allowedPaths = allowedBlueprintWritePaths(context, messages);
   const emptyOnly = latestUserAsksForEmptyOnly(messages);
   const tabPrefix = context?.scope === "global" ? null : targetRootPrefix(context);
   const byPath = new Map<string, { path: string; label: string; value: string }>();
-
-  if (allowedPaths && allowedPaths.size === 0) return [];
 
   // Ecosystem writes use a virtual path shape:
   //   offer_ecosystem.<tier>.new_<n>.<name|description|core_outcome>
@@ -606,7 +670,6 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
 
     if (isEcosystemWrite(rawPath)) {
       if (tabPrefix && tabPrefix !== "offer_ecosystem") continue;
-      if (allowedPaths && !allowedPaths.has(rawPath)) continue;
       const value = String(raw.value ?? "").trim();
       if (!value) continue;
       const [, tier, itemKey, fieldKey] = rawPath.split(".");
@@ -620,22 +683,13 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
 
     const path = canonicalBlueprintPath(rawPath);
     const meta = BLUEPRINT_FIELD_META[path];
-    // Reject unknown paths and paths flagged non-writable in the shared schema.
+    // Hard rules only: unknown paths, non-writable fields, already-handled paths.
     if (!meta || !meta.aiWritable) continue;
-    // Never re-propose a Blueprint path the user already accepted or dismissed
-    // in this conversation. Virtual list/ecosystem `new_<n>` paths are handled
-    // earlier and skipped here anyway.
     if (handledPaths.has(path)) continue;
-    if (allowedPaths && !allowedPaths.has(path)) {
-      console.warn("[coach-chat] dropped out-of-scope write", { path, allowed: [...allowedPaths] });
-      continue;
-    }
-    // Hard tab-scope guard: when a Blueprint tab/section is in focus, never
-    // accept writes outside that tab — regardless of whether the request
-    // matched a specific field or sub-block. Prevents "fill the whole X tab"
-    // from leaking proposals into other tabs.
+    // Hard tab-scope guard stays: when a Blueprint tab is in focus, never
+    // accept writes leaking into other tabs (prevents cross-tab UI confusion).
     if (tabPrefix && path !== tabPrefix && !path.startsWith(`${tabPrefix}.`)) continue;
-    if (!allowedPaths && emptyOnly && !isEmptyBlueprintValue(getDeepValue(context?.businessContext?.blueprintSnapshot, path))) continue;
+    if (emptyOnly && !isEmptyBlueprintValue(getDeepValue(context?.businessContext?.blueprintSnapshot, path))) continue;
 
     const value = normalizeFieldValue(path, raw.value);
     if (!value) continue;
@@ -758,17 +812,47 @@ const proposeBlueprintWritesTool = {
   },
 };
 
-function toolsForScope(scope: string | undefined, includeWrites: boolean) {
+function toolsForScope(scope: string | undefined) {
   const base = [suggestQuickRepliesTool, rememberFactTool];
   if (scope === "blueprint.field") return [proposeFieldValueTool, ...base];
   if (scope === "blueprint.section" || scope === "global") {
-    // Only expose the writes tool when the current turn shows write intent.
-    // Prevents the model from re-emitting previously-applied proposals when
-    // the user is just asking a question (e.g. "what's a good core price?").
-    return includeWrites ? [proposeBlueprintWritesTool, ...base] : base;
+    // Always expose the writes tool; the model decides when to use it based on
+    // the system prompt's follow-up rules. This makes correction/language/tone
+    // modifiers ("in English", "shorter", "again") work like they would with a
+    // plain LLM instead of being blocked by regex intent gating.
+    return [proposeBlueprintWritesTool, ...base];
   }
   return base;
 }
+
+// Serialize the client's assistant `parts` into readable text so the model
+// can see what IT proposed on prior turns. Without this, tool-only turns come
+// through as empty content and the model can't reference its own drafts when
+// the user follows up with "in English", "shorter", "why?", etc.
+function serializeAssistantForModel(m: any): string {
+  const text = typeof m?.content === "string" ? m.content : "";
+  const parts = Array.isArray(m?.parts) ? m.parts : [];
+  const chunks: string[] = [];
+  if (text.trim()) chunks.push(text.trim());
+  for (const p of parts) {
+    if (!p || typeof p !== "object") continue;
+    if (p.type === "text") continue; // already in content
+    if (p.type === "proposal") {
+      chunks.push(`[proposed field value] ${String(p.value ?? "")}`);
+    } else if (p.type === "blueprint_writes") {
+      const writes = Array.isArray(p.writes) ? p.writes : [];
+      const lines = writes.map((w: any) => `  - ${w?.path}: ${String(w?.value ?? "").replace(/\s+/g, " ").slice(0, 400)}`);
+      chunks.push(`[proposed blueprint writes]\n${lines.join("\n")}`);
+    } else if (p.type === "quick_replies") {
+      const replies = Array.isArray(p.replies) ? p.replies : [];
+      if (replies.length) chunks.push(`[suggested quick replies] ${replies.join(" | ")}`);
+    } else if (p.type === "memory_saved") {
+      chunks.push(`[remembered fact] ${p.key}: ${p.value}`);
+    }
+  }
+  return chunks.join("\n\n");
+}
+
 
 const WRITE_INTENT_RE =
   /(?:\b(fill|draft|generate|write|update|complete|create|make|set|apply|invullen|vullen|uitwerken|schrijf|maak|bijwerk|aanvullen)\b|\binvul|\bvul|\buitwerk|werk uit)/i;
@@ -904,15 +988,20 @@ Deno.serve(async (req) => {
       { role: "system", content: systemPrompt },
       ...messages.map((m: any) => ({
         role: m.role === "assistant" ? "assistant" : "user",
-        content: typeof m.content === "string" ? m.content : "",
+        content:
+          m.role === "assistant"
+            ? serializeAssistantForModel(m)
+            : typeof m.content === "string"
+              ? m.content
+              : "",
       })),
     ];
 
-    const shouldForceBlueprintWrites = isBlueprintWriteIntent(context?.scope, messages, context);
-    const shouldForceFieldProposal = isFieldProposalIntent(context?.scope, messages);
-    const tools = toolsForScope(context?.scope, shouldForceBlueprintWrites);
+    const tools = toolsForScope(context?.scope);
 
-    // Call Lovable AI Gateway (OpenAI-compatible)
+    // Call Lovable AI Gateway (OpenAI-compatible). tool_choice stays "auto":
+    // the system prompt tells the model when to call which tool. Forcing a
+    // tool caused correction/modifier turns to fail with a fallback bubble.
     const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -923,13 +1012,10 @@ Deno.serve(async (req) => {
         model: "google/gemini-3-flash-preview",
         messages: llmMessages,
         tools,
-        tool_choice: shouldForceBlueprintWrites
-          ? { type: "function", function: { name: "propose_blueprint_writes" } }
-          : shouldForceFieldProposal
-            ? { type: "function", function: { name: "propose_field_value" } }
-            : "auto",
+        tool_choice: "auto",
       }),
     });
+
 
     if (!gatewayRes.ok) {
       const errText = await gatewayRes.text();
@@ -1000,18 +1086,21 @@ Deno.serve(async (req) => {
     }
 
     if (parts.length === 0) {
-      const locale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
-      const nl = locale === "nl";
-      parts.push({
-        type: "text",
-        text: shouldForceBlueprintWrites
-          ? nl
-            ? "Ik weet niet zeker welke Blueprint-sectie of welk veld je bedoelt. Noem bijvoorbeeld: \"Ideal Client Avatar tab\", \"Pain & Friction\", \"Desire & Goals\", \"Transformation\", \"Offer Angle\" of \"Proof & Authority\"."
-            : "I'm not sure which Blueprint section or field you mean. Try naming one, e.g. \"Ideal Client Avatar tab\", \"Pain & Friction\", \"Desire & Goals\", \"Transformation\", \"Offer Angle\" or \"Proof & Authority\"."
-          : nl
-            ? "Kan je iets specifieker zijn? Ik help je graag verder."
-            : "Could you be a bit more specific? Happy to help.",
-      });
+      const explicit = explicitLanguageInstruction(messages);
+      const uiLocale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
+      const nl = (explicit ?? (uiLocale === "nl" ? "nl" : "en")) === "nl";
+      const priorPaths = priorAssistantWritePaths(messages);
+      let text: string;
+      if (priorPaths.length > 0) {
+        text = nl
+          ? "Ik heb je vorige voorstel niet kunnen herzien. Kan je aangeven wat er anders moet (bv. taal, toon, lengte)?"
+          : "I couldn't revise my previous proposal. Can you say what should change (e.g. language, tone, length)?";
+      } else {
+        text = nl
+          ? "Kan je iets specifieker zijn? Ik help je graag verder."
+          : "Could you be a bit more specific? Happy to help.";
+      }
+      parts.push({ type: "text", text });
     }
 
 

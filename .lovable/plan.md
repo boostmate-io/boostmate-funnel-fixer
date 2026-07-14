@@ -1,60 +1,96 @@
-## Root cause
+## Kernprobleem
 
-De AI Coach scope-detectie in `supabase/functions/coach-chat/index.ts` kijkt naar de **hele** laatste user message om te bepalen welk Blueprint-veld/sub-block de gebruiker bedoelt. Dat gaat mis in twee situaties:
+De AI Coach voelt "dommer" dan een gewone LLM omdat er een **deterministische routinglaag** vóór het model zit die met regex beslist:
+- Is dit een schrijf-intent? (werkwoord-regex)
+- Welke tab/veld bedoelt de user? (alias-matching op substrings)
+- Welke tool mag het model gebruiken? (geforceerd op basis van bovenstaande)
 
-**1. Lange context-paste "steelt" de scope**
-De user plakte eerst een grote offer-briefing en eindigde met *"help me fill in the blueprint. start with ideal client avatar tab. fill this in completely."*
+Zodra jouw bericht niet exact in dat patroon past, krijg je fallback-tekst of het verkeerde antwoord. Dat gebeurt bij:
+- Taalcorrecties ("in het engels", "in English")
+- Toon-/lengtecorrecties ("korter", "minder hype", "meer concreet")
+- Referenties naar vorige turn ("doe dit opnieuw", "hetzelfde maar voor de andere tab", "dat 2de item bevalt me niet")
+- Tab-correcties zonder werkwoord ("nee die andere tab")
+- Vragen ná een voorstel ("waarom stelde je dat voor?")
+- Mengsels ("maak het korter én in Engels")
 
-- `requestedSingleBlueprintPath` scoort elk veld op substring-match. De pasted briefing bevat letterlijk de tekst **"Desired Outcome"**, wat de leaf-key is van `offer_stack.angle.core_promise.desired_outcome` → score 115 (index 1, key-match).
-- `customer_clarity.avatar_who` matcht enkel via de alias `"ideal client"` → score 32.
-- `desired_outcome` wint dus, en wordt als enige toegestane write-path aan het model doorgegeven. De "ideal client avatar tab"-instructie op het eind wordt genegeerd.
-- Bovendien wordt `requestedBlueprintSubBlock` (die de tekst *"ideal client avatar"* → sub-block `avatar` wél correct herkent, score 39) alleen aangeroepen als single-field-detectie leeg is.
+## Oplossing: van regex-router naar LLM-first coach
 
-**2. Correctie-turn zonder werkwoord = geen reactie**
-Vervolgens typt de user *"nee, de 'Ideal Client Avatar' tab in het Customer Clarity sectie van de blueprint."*
+De regex-laag verdwijnt niet — hij blijft als **hint**, niet als **gate**. Het model krijgt meer autonomie, betere context over wat het net zelf voorstelde, en duidelijker gedragsregels in de system prompt.
 
-- `WRITE_INTENT_RE` matcht op werkwoorden (fill/draft/vullen/…). "nee, de … tab …" bevat er geen.
-- `isBlueprintWriteIntent` → false → propose_blueprint_writes-tool wordt NIET geforceerd én zelfs niet aangeboden.
-- Het model heeft niets te zeggen (geen tool, geen tekst), fallback wordt `"…"`. Vandaar de lege bubbel.
+### 1. Volledige gespreksgeschiedenis is zichtbaar voor het model
 
-## Fix
+Nu: assistant `parts` (Blueprint proposals, field proposals, quick replies) worden niet omgezet naar model-messages, dus tool-only turns komen als leeg bericht bij het model aan.
 
-Aanpassingen enkel in `supabase/functions/coach-chat/index.ts` (en eventueel een kleine helper). Geen UI-wijzigingen.
+Fix: elk assistant-bericht wordt gerenderd naar een leesbare tekstvorm voor de LLM:
+- Blueprint writes → "Ik heb net voorgesteld: `<path>` = "…", `<path>` = "…""
+- Field proposal → "Ik heb net voorgesteld: "…""
+- Quick replies → "Ik heb deze suggesties gegeven: …"
 
-### A. Scope-detectie: gebruik alleen de "instructie-staart", niet de hele paste
+Daardoor begrijpt het model vervolgberichten als "in het engels", "korter", "wijzig dat 2de", "hetzelfde maar…" gewoon zoals ChatGPT dat zou doen.
 
-Nieuwe helper `latestInstructionText(messages)`:
-- Neem de laatste non-assistant message.
-- Splits op regel-einden en zinnen.
-- Behoud alleen de **laatste ~2 zinnen** OF, indien aanwezig, de laatste zin met een write-verb (fill/draft/vullen/…), plus zijn buur-zin.
-- Dat resultaat wordt gebruikt door `requestedSingleBlueprintPath`, `requestedBlueprintSubBlock`, `latestUserAsksForEmptyOnly` en `isBlueprintWriteIntent`.
-- Gevolg: pasted briefing beïnvloedt scope-detectie niet meer.
+### 2. Tools zijn altijd beschikbaar, nooit meer geforceerd
 
-### B. Sub-block wint van single-field bij tab/section-taal
+Nu: `tool_choice` wordt hard geforceerd op `propose_blueprint_writes` of `propose_field_value` op basis van regex. Als de regex faalt → geen tool aangeboden → lege bubbel.
 
-In `allowedBlueprintWritePaths`:
-- Detecteer sub-block **eerst** en single-field daarna.
-- Als de instructie-tekst het woord `tab`, `section`, `sectie`, `blok`, `sub-block` bevat OF de sub-block-alias langer is dan de single-field-alias die matchte → gebruik sub-block.
-- Bij gelijkspel: sub-block wint.
+Fix:
+- `tool_choice: "auto"` als default.
+- Tools worden altijd meegegeven binnen de huidige scope.
+- De system prompt vertelt het model duidelijk wanneer welke tool te gebruiken (in plaats van dat de backend beslist).
+- De regex-detectie blijft, maar alleen als **hint** in de system prompt: "De vorige beurt bevatte waarschijnlijk een schrijf-intent voor <sub-block>". Geen forceren meer.
 
-### C. Correctie-turns behouden write-intent
+### 3. Scope-detectie wordt suggestief, niet dwingend
 
-In `isBlueprintWriteIntent`:
-- Als de vorige assistant-turn een `blueprint_writes`-part had (of `WRITE_INTENT_RE` triggerde) EN de huidige user-turn een sub-block/veld-naam noemt of correctie-taal ("nee", "niet die", "wrong tab", "bedoelde", "andere sectie") gebruikt → nog steeds write-intent, en gebruik de nieuw genoemde scope.
-- Voor dit check moeten we het laatste `assistant`-bericht kunnen inspecteren; via `messages` in de payload of via een extra lookup op `ai_coach_messages`. `messages` bevat het al (client stuurt volledige history), dus we scannen `messages` van achteren en kijken of het laatste assistant-part-type een write-voorstel bevatte. Als dat via de plain content niet zichtbaar is, doen we één query op `ai_coach_messages` voor deze conversatie (laatste assistant row).
+Nu: `allowedBlueprintWritePaths` bouwt een harde whitelist. Alles buiten die whitelist wordt gedropt in `sanitizeBlueprintWrites`.
 
-### D. Kleine hardening
+Fix:
+- De whitelist wordt vervangen door een **voorkeurslijst** in de system prompt: "Waarschijnlijk bedoelt de user paden binnen X. Als je zeker weet dat de user iets anders bedoelt, mag je afwijken."
+- `sanitizeBlueprintWrites` behoudt alleen de **harde regels**: onbekende paden droppen, non-writable velden droppen, tab-prefix guard (`tabPrefix` blijft hard om cross-tab leaks te voorkomen). Sub-block scoping wordt zacht.
+- Reeds afgehandelde paden blijven wél hard uitgesloten (dat is een echte constraint).
 
-- In `sanitizeBlueprintWrites`: als `allowedPaths` niet leeg is en het model tóch andere paden voorstelt, log dat (console.warn) — dat maakt toekomstige regressies zichtbaar in de edge-logs.
-- Fallback-tekst voor "geen writes" vervangen: als write-intent geforceerd was en na sanitize niks over is, vraag de user gericht welk sub-block bedoeld werd (i.p.v. de huidige generieke "couldn't create matching Blueprint updates" of `"…"`).
+### 4. Taalinstructie: user wint van UI-taal
+
+- Nieuwe detector `explicitLanguageInstruction(messages)` scant alleen de laatste user message op expliciete taal-opdrachten ("in het engels", "in English", "Nederlands graag", "NEE IN HET ENGELS", "translate to English", "not Dutch").
+- Effectieve outputtaal = expliciete instructie ∥ UI-locale.
+- `useCoachChat` stuurt bij elke send de actuele `i18n.language` mee, zodat een openstaand coachvenster niet vastzit op de oude taal na wijzigen in settings.
+
+### 5. Correctie- en follow-up herkenning verruimen
+
+`isBlueprintWriteIntent` en `isFieldProposalIntent` worden minder afhankelijk van regex-werkwoorden:
+- Als de vorige assistant een `blueprint_writes` of `proposal` part had EN de user reageert met een korte modifier ("in het engels", "korter", "minder hype", "meer concreet", "opnieuw", "andere tab", "nee die"), telt dat als voortzetting.
+- Bij zo'n follow-up worden de paden van de vorige proposal hergebruikt tenzij de user expliciet nieuwe noemt.
+- Werkt ook voor `propose_field_value` (single-field coach): "in Engels" na Nederlandse draft → nieuwe Engelse draft, geen fallback-tekst.
+
+### 6. System prompt maakt het model verantwoordelijk
+
+De coach-prompts worden herschreven zodat het model zelf beslist wanneer wat te doen, met deze principes expliciet:
+- "Als de user je vorige voorstel wil bijstellen (taal, toon, lengte, focus), regenereer het via dezelfde tool met dezelfde paden."
+- "Als de user een correctie geeft zonder werkwoord ('nee die andere tab'), interpreteer het als continuering van je vorige actie."
+- "Als de user vraagt waarom je iets voorstelde, antwoord in tekst — roep geen tool aan."
+- "Als de user een expliciete taalinstructie geeft, respecteer die boven de UI-taal."
+
+### 7. Fallback-tekst wordt behulpzamer
+
+De generieke "Kan je iets specifieker zijn?" verdwijnt. Als het model niks teruggeeft ná deze wijzigingen (zeldzaam), wordt de fallback contextueel: verwijzen naar de laatst-voorgestelde paden of de actieve tab, in de correcte taal.
+
+## Wat blijft hard (bewuste constraints)
+
+- Cross-tab guard: wanneer een specifieke Blueprint-tab in focus is, blijven writes buiten die tab geblokkeerd (voorkomt UI-verwarring).
+- Reeds afgehandelde paden worden niet opnieuw voorgesteld tenzij de user het expliciet vraagt.
+- Non-writable schemavelden blijven geblokkeerd.
+- List-section mode (Framework Pillars etc.) blijft haar strikte `new_<n>.<fieldKey>` shape.
+
+## Bestanden
+
+- `supabase/functions/coach-chat/index.ts` — grootste wijziging (prompts, tool-choice, geschiedenis-serializatie, taaldetector, versoepelde scope-guard, follow-up detectie)
+- `src/lib/coach/useCoachChat.ts` — actuele locale meesturen bij elke send
 
 ## Verificatie
 
-Na deploy handmatig:
-1. Open Growth Strategist bubble in workspace *Leyla Finnegan* (blueprint leeg).
-2. Plak dezelfde offer-briefing + "start with ideal client avatar tab. fill this in completely." → verwacht 4 write-proposals voor `avatar_who / avatar_stage / avatar_traits / avatar_not_fit`.
-3. Type "nee, de Pain & Friction tab" → verwacht 4 write-proposals voor de `pain_*` velden, geen lege bubbel.
-4. Type een pure vraag ("wat is een goede prijs?") → verwacht géén write-proposal, gewoon tekst.
-
-Files aangeraakt:
-- `supabase/functions/coach-chat/index.ts`
+Handmatig testen na deploy:
+1. Nederlandse Blueprint-proposals → user: "in het engels" → nieuwe Engelse proposals op dezelfde paden.
+2. Blueprint-proposals → user: "korter" → herwerkte kortere versies, zelfde paden.
+3. Blueprint-proposals → user: "nee, de Pain & Friction tab" → nieuwe proposals voor pain-velden.
+4. Field coach in Nederlands → user: "in English" → Engelse herformulering.
+5. Blueprint-proposals → user: "waarom stelde je dit voor?" → tekstantwoord, geen nieuwe tool call.
+6. UI wisselt naar Engels midden in coachgesprek → volgende opdracht komt in het Engels.
+7. Pure vraag ("wat is een goede prijs?") → geen ongewenste Blueprint-writes.
