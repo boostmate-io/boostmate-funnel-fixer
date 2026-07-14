@@ -343,6 +343,41 @@ function getDeepValue(source: any, path: string): unknown {
   return path.split(".").reduce((cursor, key) => cursor?.[key], source);
 }
 
+function requestedSingleBlueprintPath(messages: any[]): { path: string; needleLen: number } | null {
+  const latest = latestInstructionText(messages);
+  if (!WRITE_INTENT_RE.test(latest)) return null;
+
+  const normalized = normalizeForMatch(latest);
+  const matches = Object.entries(BLUEPRINT_FIELD_META)
+    .map(([path, meta]) => {
+      const normalizedPath = normalizeForMatch(path);
+      const normalizedKey = normalizeForMatch(path.split(".").at(-1) ?? path);
+      const aliases = [meta.label, ...meta.aliases].map(normalizeForMatch);
+      const candidates = [normalizedPath, normalizedKey, ...aliases].filter((needle) => needle.length > 2);
+      let bestScore = 0;
+      let bestLen = 0;
+      candidates.forEach((needle, index) => {
+        if (!normalized.includes(needle)) return;
+        const score = index <= 1 ? 100 + needle.length : 20 + needle.length;
+        if (score > bestScore) {
+          bestScore = score;
+          bestLen = needle.length;
+        }
+      });
+      return { path, score: bestScore, needleLen: bestLen };
+    })
+    .filter((match) => match.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (matches.length === 0) return null;
+  if (matches.length > 1 && matches[0].score === matches[1].score) return null;
+  return { path: matches[0].path, needleLen: matches[0].needleLen };
+}
+
+function getDeepValue(source: any, path: string): unknown {
+  return path.split(".").reduce((cursor, key) => cursor?.[key], source);
+}
+
 function isEmptyBlueprintValue(value: unknown): boolean {
   if (value === null || value === undefined) return true;
   if (typeof value === "string") return value.trim().length === 0;
@@ -352,29 +387,43 @@ function isEmptyBlueprintValue(value: unknown): boolean {
 
 function latestUserAsksForEmptyOnly(messages: any[]): boolean {
   return /\b(empty|blank|unfilled|missing|remaining|leeg|leegstaande|lege|ontbrekend|resterend|nog niet ingevuld)\b/i.test(
-    latestUserText(messages),
+    latestInstructionText(messages),
   );
 }
 
-function requestedBlueprintSubBlock(messages: any[]): string | null {
-  const latest = latestUserText(messages);
-  if (!WRITE_INTENT_RE.test(latest)) return null;
+const TAB_OR_SECTION_RE = /\b(tab|tabs|section|sectie|secties|blok|sub[-\s]?block|sub[-\s]?blok)\b/i;
+
+function requestedBlueprintSubBlock(messages: any[]): { block: string; needleLen: number } | null {
+  const latest = latestInstructionText(messages);
+  // Sub-block detection accepts either a real write verb OR the presence of
+  // "tab"/"section" language, so correction turns like
+  // "nee, de Ideal Client Avatar tab" still work.
+  if (!WRITE_INTENT_RE.test(latest) && !TAB_OR_SECTION_RE.test(latest)) return null;
 
   const normalized = normalizeForMatch(latest);
   const matches = Object.entries(BLUEPRINT_SUB_BLOCK_ALIASES)
     .map(([block, aliases]) => {
-      const score = aliases
+      let bestScore = 0;
+      let bestLen = 0;
+      aliases
         .map(normalizeForMatch)
         .filter((needle) => needle.length > 2)
-        .reduce((best, needle) => (normalized.includes(needle) ? Math.max(best, 20 + needle.length) : best), 0);
-      return { block, score };
+        .forEach((needle) => {
+          if (!normalized.includes(needle)) return;
+          const score = 20 + needle.length;
+          if (score > bestScore) {
+            bestScore = score;
+            bestLen = needle.length;
+          }
+        });
+      return { block, score: bestScore, needleLen: bestLen };
     })
     .filter((match) => match.score > 0)
     .sort((a, b) => b.score - a.score);
 
   if (matches.length === 0) return null;
   if (matches.length > 1 && matches[0].score === matches[1].score) return null;
-  return matches[0].block;
+  return { block: matches[0].block, needleLen: matches[0].needleLen };
 }
 
 function targetRootPrefix(context: any): string | null {
@@ -411,17 +460,41 @@ function filterPathsToCurrentTarget(paths: Set<string> | null, context: any): Se
 }
 
 function allowedBlueprintWritePaths(context: any, messages: any[]): Set<string> | null {
-  const requestedPath = requestedSingleBlueprintPath(messages);
-  if (requestedPath) return filterPathsToCurrentTarget(new Set([requestedPath]), context);
+  const instruction = latestInstructionText(messages);
+  const mentionsTabWord = TAB_OR_SECTION_RE.test(instruction);
 
-  const requestedBlock = requestedBlueprintSubBlock(messages);
-  if (!requestedBlock) return null;
+  const subBlock = requestedBlueprintSubBlock(messages);
+  const singleField = requestedSingleBlueprintPath(messages);
 
-  const snapshot = context?.businessContext?.blueprintSnapshot;
-  const paths = BLUEPRINT_SUB_BLOCK_PATHS[requestedBlock] ?? [];
-  const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
-  return filterPathsToCurrentTarget(new Set(emptyPaths), context);
+  // Sub-block wins if the user literally said "tab"/"section", or if its
+  // matched alias is at least as specific as any matched single-field alias.
+  const preferSubBlock =
+    subBlock &&
+    (mentionsTabWord || !singleField || subBlock.needleLen >= singleField.needleLen);
+
+  if (preferSubBlock && subBlock) {
+    const snapshot = context?.businessContext?.blueprintSnapshot;
+    const paths = BLUEPRINT_SUB_BLOCK_PATHS[subBlock.block] ?? [];
+    const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
+    // If every path already has a value, still allow overwrite for those the
+    // user asked to (re)fill by falling back to the full path set.
+    const scoped = emptyPaths.length > 0 ? emptyPaths : paths;
+    return filterPathsToCurrentTarget(new Set(scoped), context);
+  }
+
+  if (singleField) return filterPathsToCurrentTarget(new Set([singleField.path]), context);
+
+  if (subBlock) {
+    const snapshot = context?.businessContext?.blueprintSnapshot;
+    const paths = BLUEPRINT_SUB_BLOCK_PATHS[subBlock.block] ?? [];
+    const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
+    const scoped = emptyPaths.length > 0 ? emptyPaths : paths;
+    return filterPathsToCurrentTarget(new Set(scoped), context);
+  }
+
+  return null;
 }
+
 
 function cleanTagCandidate(value: string): string {
   return value
