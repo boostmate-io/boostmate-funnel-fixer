@@ -81,15 +81,30 @@ const COACH_GLOBAL = `You are the user's on-demand Growth Strategist. No specifi
 const BLUEPRINT_FIELD_PATHS = renderBlueprintFieldPathsPrompt();
 
 // In-memory cache for admin-editable prompts (per edge instance, 60s TTL).
-type PromptSet = { base: string; field: string; section: string; global: string };
+type KnowledgeBlock = { name: string; content: string };
+type PromptSet = {
+  base: string;
+  field: string;
+  section: string;
+  global: string;
+  knowledgeBlocks: KnowledgeBlock[];
+};
 const PROMPT_FALLBACK: PromptSet = {
   base: COACH_BASE,
   field: COACH_BLUEPRINT_FIELD,
   section: COACH_BLUEPRINT_SECTION,
   global: COACH_GLOBAL,
+  knowledgeBlocks: [],
 };
 let promptCache: { at: number; prompts: PromptSet } | null = null;
 const PROMPT_TTL_MS = 60_000;
+
+const RESERVED_PROMPT_NAMES = new Set([
+  "coach:base",
+  "coach:blueprint-field",
+  "coach:blueprint-section",
+  "coach:global",
+]);
 
 // -----------------------------------------------------------------------------
 // Blueprint field/sub-block lookups derived from the shared schema
