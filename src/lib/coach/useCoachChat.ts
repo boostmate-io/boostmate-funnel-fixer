@@ -182,6 +182,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
             messages: nextMessages.map((m) => ({
               role: m.role,
               content: m.content,
+              parts: m.parts,
             })),
           },
         });
