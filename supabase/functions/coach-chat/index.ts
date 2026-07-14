@@ -266,6 +266,36 @@ function latestUserText(messages: any[]): string {
   return String([...messages].reverse().find((m: any) => m?.role !== "assistant")?.content ?? "");
 }
 
+// The last user message may include a large pasted context block followed by
+// a short instruction ("... fill in the ideal client avatar tab."). Scope
+// detection must key off the INSTRUCTION, not the pasted context, otherwise
+// alias substrings inside the paste can steal the scope. This helper returns
+// only the trailing instruction segment of the latest user message.
+function latestInstructionText(messages: any[]): string {
+  const raw = latestUserText(messages);
+  if (!raw) return "";
+  // Split into sentence-ish chunks on line breaks and terminal punctuation,
+  // preserving the sentence content.
+  const chunks = raw
+    .split(/(?:\r?\n|(?<=[.!?])\s+)/g)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  if (chunks.length === 0) return raw;
+  // Prefer the last chunk containing a write-intent verb (+ its neighbour),
+  // otherwise fall back to the last ~2 chunks.
+  const lastWriteIdx = (() => {
+    for (let i = chunks.length - 1; i >= 0; i--) {
+      if (WRITE_INTENT_RE.test(chunks[i])) return i;
+    }
+    return -1;
+  })();
+  if (lastWriteIdx >= 0) {
+    const start = Math.max(0, lastWriteIdx - 1);
+    return chunks.slice(start, lastWriteIdx + 1).join(" ");
+  }
+  return chunks.slice(-2).join(" ");
+}
+
 function normalizeForMatch(value: string): string {
   return value
     .toLowerCase()
