@@ -1,55 +1,36 @@
-# Extra kennis toevoegen aan de AI Coach
+# Business Blueprint — volledig structuurdocument (PDF)
 
 ## Doel
-Jij (als admin) wilt losse kennisdocumenten (bv. "High Ticket Offer creatie") kunnen toevoegen die de AI Coach altijd meekrijgt als context — zonder elke keer de code te wijzigen.
+Genereer één PDF met de volledige opbouw van de Business Blueprint zoals in de app, met per veld: label, helper-tekst en veldtype.
 
-## Hoe het nu werkt
-De coach laadt uit `ai_instruction_blocks` maar **alleen 4 vaste blokken op naam**: `coach:base`, `coach:blueprint-field`, `coach:blueprint-section`, `coach:global`. Extra blokken die je in Admin koppelt aan de `coach-chat` AI Action worden **genegeerd**.
+## Bron
+Single source of truth: `supabase/functions/_shared/blueprintSchema.ts` (gebruikt door zowel UI als AI Coach). Aanvullende tab-/subblok-structuur uit:
+- `src/components/business-blueprint/clarityConfig.ts` — Customer Clarity sub-blokken
+- `src/components/business-blueprint/offerDesignTypes.ts` — Offer Design tabs
+- `src/components/business-blueprint/growthSystemTypes.ts` — Growth System tabs
+- `src/components/business-blueprint/proofAuthorityTypes.ts` — Proof & Authority
 
-## Oplossing (2 kleine wijzigingen)
+## Opbouw van het document
+1. **Cover** — Titel, korte inleiding (wat is de Business Blueprint, hoe lezen).
+2. **Inhoudsopgave** — Één regel per sectie.
+3. **Per sectie** (Customer Clarity, Offer Design, Growth System, Proof & Authority):
+   - Sectie-intro
+   - Per tab / sub-blok een subsectie
+   - Per veld:
+     - **Label** (bold)
+     - Veldtype als tag (bv. `textarea`, `tags`, `chips-multi`)
+     - Helper-tekst (grijze italic)
+     - Placeholder (indien aanwezig)
 
-### 1. `supabase/functions/coach-chat/index.ts` — `loadCoachPrompts` uitbreiden
-- Alle instructieblokken die aan de `coach-chat` AI Action zijn gekoppeld worden opgehaald.
-- De 4 vaste namen blijven werken zoals nu.
-- **Elk extra blok** (elke naam die niet één van de 4 vaste namen is) wordt verzameld als `knowledgeBlocks: { name, content }[]`.
-- `PromptSet` krijgt een extra veld `knowledgeBlocks`.
+## Uitvoering
+- Script: `/tmp/build_blueprint_doc.py`
+- Parse `blueprintSchema.ts` (regex/AST-lite) om `BLUEPRINT_FIELDS` en `BLUEPRINT_SUB_BLOCKS` te lezen; fallback: `node -e` om de module in te laden en JSON te printen.
+- Bouw PDF met **ReportLab** (Platypus), DejaVu Sans font voor accenten, huisstijl: primary `#6246FF`, Manrope-lookalike vet voor kopjes, Inter-lookalike body → in PDF gebruiken we DejaVu Sans/Bold als praktische equivalenten.
+- Output: `/mnt/documents/business-blueprint-structuur.pdf`.
 
-### 2. `buildSystemPrompt` — kennis injecteren
-Na de scope-specifieke prompt en vóór de Blueprint JSON wordt een nieuwe sectie toegevoegd:
+## QA
+- Convert naar images met `pdftoppm`, elke pagina inspecteren op overlap, cut-off, spacing.
+- Fix + re-render tot alle pagina's clean zijn.
 
-```text
-# Knowledge base (reference material)
-Use the material below as expert reference when the user's question relates to its topic. Do not quote verbatim; apply it as strategic guidance.
-
-## <block name>
-<block content>
-
-## <block name>
-<block content>
-```
-
-Als er geen extra blokken zijn, wordt de sectie weggelaten.
-
-## Hoe jij daarna kennis toevoegt (geen code meer nodig)
-
-1. Ga naar **Admin Panel → Instruction Blocks**.
-2. Klik **New block**, geef bv. naam `coach:knowledge:high-ticket-offer` en plak jouw materiaal in `content` (Markdown mag).
-3. Ga naar **Admin Panel → AI Actions**, open de actie met slug `coach-chat`.
-4. Link het nieuwe instructieblok aan deze actie.
-5. Klaar — binnen 60s (prompt-cache TTL) gebruikt de coach het blok voor elk gesprek.
-
-Voor elk nieuw thema (webinar funnels, VSL scripting, …) herhaal je stap 1–4 met een nieuwe naam.
-
-## Waarom deze aanpak
-- **Geen code-wijzigingen meer** om kennis toe te voegen/aan te passen.
-- Werkt met bestaande Admin UI (`AdminInstructionBlocks`, `AdminAIActions`).
-- Blijft compatibel met bestaande 4 vaste blokken.
-- Klein token-budget: alleen jouw eigen, bewust gekoppelde blokken worden meegestuurd.
-
-## Alternatief (niet in dit plan)
-Aparte "Knowledge Center" documenten (PDF/DOCX uit `knowledge_documents`) aan de coach koppelen. Krachtiger maar zwaarder (parsen, tokens, mogelijk vector search). Laat me weten of je dit later ook wilt.
-
-## Bestanden
-- `supabase/functions/coach-chat/index.ts` (loader + prompt-builder)
-
-Geen DB-migratie nodig — de tabellen (`ai_instruction_blocks`, `ai_action_instruction_blocks`, `ai_actions`) bestaan al.
+## Aflevering
+`<presentation-artifact path="business-blueprint-structuur.pdf" mime_type="application/pdf"></presentation-artifact>`
