@@ -1086,18 +1086,21 @@ Deno.serve(async (req) => {
     }
 
     if (parts.length === 0) {
-      const locale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
-      const nl = locale === "nl";
-      parts.push({
-        type: "text",
-        text: shouldForceBlueprintWrites
-          ? nl
-            ? "Ik weet niet zeker welke Blueprint-sectie of welk veld je bedoelt. Noem bijvoorbeeld: \"Ideal Client Avatar tab\", \"Pain & Friction\", \"Desire & Goals\", \"Transformation\", \"Offer Angle\" of \"Proof & Authority\"."
-            : "I'm not sure which Blueprint section or field you mean. Try naming one, e.g. \"Ideal Client Avatar tab\", \"Pain & Friction\", \"Desire & Goals\", \"Transformation\", \"Offer Angle\" or \"Proof & Authority\"."
-          : nl
-            ? "Kan je iets specifieker zijn? Ik help je graag verder."
-            : "Could you be a bit more specific? Happy to help.",
-      });
+      const explicit = explicitLanguageInstruction(messages);
+      const uiLocale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
+      const nl = (explicit ?? (uiLocale === "nl" ? "nl" : "en")) === "nl";
+      const priorPaths = priorAssistantWritePaths(messages);
+      let text: string;
+      if (priorPaths.length > 0) {
+        text = nl
+          ? "Ik heb je vorige voorstel niet kunnen herzien. Kan je aangeven wat er anders moet (bv. taal, toon, lengte)?"
+          : "I couldn't revise my previous proposal. Can you say what should change (e.g. language, tone, length)?";
+      } else {
+        text = nl
+          ? "Kan je iets specifieker zijn? Ik help je graag verder."
+          : "Could you be a bit more specific? Happy to help.";
+      }
+      parts.push({ type: "text", text });
     }
 
 
