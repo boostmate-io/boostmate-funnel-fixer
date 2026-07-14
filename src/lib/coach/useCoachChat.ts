@@ -7,7 +7,11 @@
 // =============================================================================
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import i18n from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import type { CoachContext, CoachMessage, CoachMessagePart } from "./types";
+
 import { useAuth } from "@/contexts/AuthContext";
 import type { CoachContext, CoachMessage, CoachMessagePart } from "./types";
 
