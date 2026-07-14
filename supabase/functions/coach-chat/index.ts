@@ -313,35 +313,6 @@ function canonicalBlueprintPath(rawPath: string): string {
   return BLUEPRINT_KEY_TO_PATH.get(key) ?? path;
 }
 
-function requestedSingleBlueprintPath(messages: any[]): string | null {
-  const latest = latestUserText(messages);
-  if (!WRITE_INTENT_RE.test(latest)) return null;
-
-  const normalized = normalizeForMatch(latest);
-  const matches = Object.entries(BLUEPRINT_FIELD_META)
-    .map(([path, meta]) => {
-    const normalizedPath = normalizeForMatch(path);
-    const normalizedKey = normalizeForMatch(path.split(".").at(-1) ?? path);
-    const aliases = [meta.label, ...meta.aliases].map(normalizeForMatch);
-      const candidates = [normalizedPath, normalizedKey, ...aliases].filter((needle) => needle.length > 2);
-      const bestScore = candidates.reduce((best, needle, index) => {
-        if (!normalized.includes(needle)) return best;
-        const score = index <= 1 ? 100 + needle.length : 20 + needle.length;
-        return Math.max(best, score);
-      }, 0);
-      return { path, score: bestScore };
-    })
-    .filter((match) => match.score > 0)
-    .sort((a, b) => b.score - a.score);
-
-  if (matches.length === 0) return null;
-  if (matches.length > 1 && matches[0].score === matches[1].score) return null;
-  return matches[0].path;
-}
-
-function getDeepValue(source: any, path: string): unknown {
-  return path.split(".").reduce((cursor, key) => cursor?.[key], source);
-}
 
 function requestedSingleBlueprintPath(messages: any[]): { path: string; needleLen: number } | null {
   const latest = latestInstructionText(messages);
