@@ -497,7 +497,7 @@ function filterPathsToCurrentTarget(paths: Set<string> | null, context: any): Se
   return new Set([...paths].filter((path) => path === prefix || path.startsWith(`${prefix}.`)));
 }
 
-function allowedBlueprintWritePaths(context: any, messages: any[]): Set<string> | null {
+function preferredBlueprintWritePaths(context: any, messages: any[]): Set<string> | null {
   const instruction = latestInstructionText(messages);
   const mentionsTabWord = TAB_OR_SECTION_RE.test(instruction);
 
