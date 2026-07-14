@@ -626,7 +626,10 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
     // in this conversation. Virtual list/ecosystem `new_<n>` paths are handled
     // earlier and skipped here anyway.
     if (handledPaths.has(path)) continue;
-    if (allowedPaths && !allowedPaths.has(path)) continue;
+    if (allowedPaths && !allowedPaths.has(path)) {
+      console.warn("[coach-chat] dropped out-of-scope write", { path, allowed: [...allowedPaths] });
+      continue;
+    }
     // Hard tab-scope guard: when a Blueprint tab/section is in focus, never
     // accept writes outside that tab — regardless of whether the request
     // matched a specific field or sub-block. Prevents "fill the whole X tab"
