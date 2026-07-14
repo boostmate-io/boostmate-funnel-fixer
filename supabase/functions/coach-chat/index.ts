@@ -81,15 +81,30 @@ const COACH_GLOBAL = `You are the user's on-demand Growth Strategist. No specifi
 const BLUEPRINT_FIELD_PATHS = renderBlueprintFieldPathsPrompt();
 
 // In-memory cache for admin-editable prompts (per edge instance, 60s TTL).
-type PromptSet = { base: string; field: string; section: string; global: string };
+type KnowledgeBlock = { name: string; content: string };
+type PromptSet = {
+  base: string;
+  field: string;
+  section: string;
+  global: string;
+  knowledgeBlocks: KnowledgeBlock[];
+};
 const PROMPT_FALLBACK: PromptSet = {
   base: COACH_BASE,
   field: COACH_BLUEPRINT_FIELD,
   section: COACH_BLUEPRINT_SECTION,
   global: COACH_GLOBAL,
+  knowledgeBlocks: [],
 };
 let promptCache: { at: number; prompts: PromptSet } | null = null;
 const PROMPT_TTL_MS = 60_000;
+
+const RESERVED_PROMPT_NAMES = new Set([
+  "coach:base",
+  "coach:blueprint-field",
+  "coach:blueprint-section",
+  "coach:global",
+]);
 
 // -----------------------------------------------------------------------------
 // Blueprint field/sub-block lookups derived from the shared schema
@@ -151,11 +166,15 @@ async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
       .in("id", ids);
 
     const byName = new Map<string, string>((blocks ?? []).map((b: any) => [b.name, b.content]));
+    const knowledgeBlocks: KnowledgeBlock[] = (blocks ?? [])
+      .filter((b: any) => b?.name && !RESERVED_PROMPT_NAMES.has(b.name) && typeof b.content === "string" && b.content.trim().length > 0)
+      .map((b: any) => ({ name: b.name as string, content: b.content as string }));
     const prompts: PromptSet = {
       base: byName.get("coach:base") || PROMPT_FALLBACK.base,
       field: byName.get("coach:blueprint-field") || PROMPT_FALLBACK.field,
       section: byName.get("coach:blueprint-section") || PROMPT_FALLBACK.section,
       global: byName.get("coach:global") || PROMPT_FALLBACK.global,
+      knowledgeBlocks,
     };
     promptCache = { at: Date.now(), prompts };
     return prompts;
@@ -204,6 +223,20 @@ function buildSystemPrompt(
     parts.push(prompts.global);
     parts.push(BLUEPRINT_FIELD_PATHS);
   }
+
+  // Admin-curated knowledge blocks (any instruction block linked to the
+  // coach-chat AI action whose name is NOT one of the four reserved prompt
+  // slots). Use these as expert reference material — e.g. how to build a
+  // high-ticket offer, webinar funnel playbook, VSL scripting, etc.
+  if (prompts.knowledgeBlocks && prompts.knowledgeBlocks.length > 0) {
+    const kb = prompts.knowledgeBlocks
+      .map((b) => `## ${b.name}\n${b.content}`)
+      .join("\n\n");
+    parts.push(
+      `# Knowledge base (reference material)\nUse the material below as expert reference whenever the user's question relates to its topic. Apply it as strategic guidance — do not quote it verbatim, do not mention that you are consulting a knowledge base.\n\n${kb}`,
+    );
+  }
+
 
   if (context?.target) {
     parts.push(`# Current target\n${JSON.stringify(context.target, null, 2)}`);
