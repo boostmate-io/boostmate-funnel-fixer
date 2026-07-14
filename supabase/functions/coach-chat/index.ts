@@ -1001,15 +1001,19 @@ Deno.serve(async (req) => {
 
     if (parts.length === 0) {
       const locale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
+      const nl = locale === "nl";
       parts.push({
         type: "text",
         text: shouldForceBlueprintWrites
-          ? locale === "nl"
-            ? "Ik kon hiervoor geen passende Blueprint-updates maken. Probeer het nog één keer met de naam van de sectie of het veld."
-            : "I couldn't create matching Blueprint updates for that. Please try once more with the section or field name."
-          : "…",
+          ? nl
+            ? "Ik weet niet zeker welke Blueprint-sectie of welk veld je bedoelt. Noem bijvoorbeeld: \"Ideal Client Avatar tab\", \"Pain & Friction\", \"Desire & Goals\", \"Transformation\", \"Offer Angle\" of \"Proof & Authority\"."
+            : "I'm not sure which Blueprint section or field you mean. Try naming one, e.g. \"Ideal Client Avatar tab\", \"Pain & Friction\", \"Desire & Goals\", \"Transformation\", \"Offer Angle\" or \"Proof & Authority\"."
+          : nl
+            ? "Kan je iets specifieker zijn? Ik help je graag verder."
+            : "Could you be a bit more specific? Happy to help.",
       });
     }
+
 
     // Persist the last user message + assistant message
     const lastUser = [...messages].reverse().find((m: any) => m.role === "user");
