@@ -266,6 +266,36 @@ function latestUserText(messages: any[]): string {
   return String([...messages].reverse().find((m: any) => m?.role !== "assistant")?.content ?? "");
 }
 
+// The last user message may include a large pasted context block followed by
+// a short instruction ("... fill in the ideal client avatar tab."). Scope
+// detection must key off the INSTRUCTION, not the pasted context, otherwise
+// alias substrings inside the paste can steal the scope. This helper returns
+// only the trailing instruction segment of the latest user message.
+function latestInstructionText(messages: any[]): string {
+  const raw = latestUserText(messages);
+  if (!raw) return "";
+  // Split into sentence-ish chunks on line breaks and terminal punctuation,
+  // preserving the sentence content.
+  const chunks = raw
+    .split(/(?:\r?\n|(?<=[.!?])\s+)/g)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  if (chunks.length === 0) return raw;
+  // Prefer the last chunk containing a write-intent verb (+ its neighbour),
+  // otherwise fall back to the last ~2 chunks.
+  const lastWriteIdx = (() => {
+    for (let i = chunks.length - 1; i >= 0; i--) {
+      if (WRITE_INTENT_RE.test(chunks[i])) return i;
+    }
+    return -1;
+  })();
+  if (lastWriteIdx >= 0) {
+    const start = Math.max(0, lastWriteIdx - 1);
+    return chunks.slice(start, lastWriteIdx + 1).join(" ");
+  }
+  return chunks.slice(-2).join(" ");
+}
+
 function normalizeForMatch(value: string): string {
   return value
     .toLowerCase()
@@ -283,30 +313,36 @@ function canonicalBlueprintPath(rawPath: string): string {
   return BLUEPRINT_KEY_TO_PATH.get(key) ?? path;
 }
 
-function requestedSingleBlueprintPath(messages: any[]): string | null {
-  const latest = latestUserText(messages);
+
+function requestedSingleBlueprintPath(messages: any[]): { path: string; needleLen: number } | null {
+  const latest = latestInstructionText(messages);
   if (!WRITE_INTENT_RE.test(latest)) return null;
 
   const normalized = normalizeForMatch(latest);
   const matches = Object.entries(BLUEPRINT_FIELD_META)
     .map(([path, meta]) => {
-    const normalizedPath = normalizeForMatch(path);
-    const normalizedKey = normalizeForMatch(path.split(".").at(-1) ?? path);
-    const aliases = [meta.label, ...meta.aliases].map(normalizeForMatch);
+      const normalizedPath = normalizeForMatch(path);
+      const normalizedKey = normalizeForMatch(path.split(".").at(-1) ?? path);
+      const aliases = [meta.label, ...meta.aliases].map(normalizeForMatch);
       const candidates = [normalizedPath, normalizedKey, ...aliases].filter((needle) => needle.length > 2);
-      const bestScore = candidates.reduce((best, needle, index) => {
-        if (!normalized.includes(needle)) return best;
+      let bestScore = 0;
+      let bestLen = 0;
+      candidates.forEach((needle, index) => {
+        if (!normalized.includes(needle)) return;
         const score = index <= 1 ? 100 + needle.length : 20 + needle.length;
-        return Math.max(best, score);
-      }, 0);
-      return { path, score: bestScore };
+        if (score > bestScore) {
+          bestScore = score;
+          bestLen = needle.length;
+        }
+      });
+      return { path, score: bestScore, needleLen: bestLen };
     })
     .filter((match) => match.score > 0)
     .sort((a, b) => b.score - a.score);
 
   if (matches.length === 0) return null;
   if (matches.length > 1 && matches[0].score === matches[1].score) return null;
-  return matches[0].path;
+  return { path: matches[0].path, needleLen: matches[0].needleLen };
 }
 
 function getDeepValue(source: any, path: string): unknown {
@@ -322,29 +358,43 @@ function isEmptyBlueprintValue(value: unknown): boolean {
 
 function latestUserAsksForEmptyOnly(messages: any[]): boolean {
   return /\b(empty|blank|unfilled|missing|remaining|leeg|leegstaande|lege|ontbrekend|resterend|nog niet ingevuld)\b/i.test(
-    latestUserText(messages),
+    latestInstructionText(messages),
   );
 }
 
-function requestedBlueprintSubBlock(messages: any[]): string | null {
-  const latest = latestUserText(messages);
-  if (!WRITE_INTENT_RE.test(latest)) return null;
+const TAB_OR_SECTION_RE = /\b(tab|tabs|section|sectie|secties|blok|sub[-\s]?block|sub[-\s]?blok)\b/i;
+
+function requestedBlueprintSubBlock(messages: any[]): { block: string; needleLen: number } | null {
+  const latest = latestInstructionText(messages);
+  // Sub-block detection accepts either a real write verb OR the presence of
+  // "tab"/"section" language, so correction turns like
+  // "nee, de Ideal Client Avatar tab" still work.
+  if (!WRITE_INTENT_RE.test(latest) && !TAB_OR_SECTION_RE.test(latest)) return null;
 
   const normalized = normalizeForMatch(latest);
   const matches = Object.entries(BLUEPRINT_SUB_BLOCK_ALIASES)
     .map(([block, aliases]) => {
-      const score = aliases
+      let bestScore = 0;
+      let bestLen = 0;
+      aliases
         .map(normalizeForMatch)
         .filter((needle) => needle.length > 2)
-        .reduce((best, needle) => (normalized.includes(needle) ? Math.max(best, 20 + needle.length) : best), 0);
-      return { block, score };
+        .forEach((needle) => {
+          if (!normalized.includes(needle)) return;
+          const score = 20 + needle.length;
+          if (score > bestScore) {
+            bestScore = score;
+            bestLen = needle.length;
+          }
+        });
+      return { block, score: bestScore, needleLen: bestLen };
     })
     .filter((match) => match.score > 0)
     .sort((a, b) => b.score - a.score);
 
   if (matches.length === 0) return null;
   if (matches.length > 1 && matches[0].score === matches[1].score) return null;
-  return matches[0].block;
+  return { block: matches[0].block, needleLen: matches[0].needleLen };
 }
 
 function targetRootPrefix(context: any): string | null {
@@ -381,17 +431,41 @@ function filterPathsToCurrentTarget(paths: Set<string> | null, context: any): Se
 }
 
 function allowedBlueprintWritePaths(context: any, messages: any[]): Set<string> | null {
-  const requestedPath = requestedSingleBlueprintPath(messages);
-  if (requestedPath) return filterPathsToCurrentTarget(new Set([requestedPath]), context);
+  const instruction = latestInstructionText(messages);
+  const mentionsTabWord = TAB_OR_SECTION_RE.test(instruction);
 
-  const requestedBlock = requestedBlueprintSubBlock(messages);
-  if (!requestedBlock) return null;
+  const subBlock = requestedBlueprintSubBlock(messages);
+  const singleField = requestedSingleBlueprintPath(messages);
 
-  const snapshot = context?.businessContext?.blueprintSnapshot;
-  const paths = BLUEPRINT_SUB_BLOCK_PATHS[requestedBlock] ?? [];
-  const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
-  return filterPathsToCurrentTarget(new Set(emptyPaths), context);
+  // Sub-block wins if the user literally said "tab"/"section", or if its
+  // matched alias is at least as specific as any matched single-field alias.
+  const preferSubBlock =
+    subBlock &&
+    (mentionsTabWord || !singleField || subBlock.needleLen >= singleField.needleLen);
+
+  if (preferSubBlock && subBlock) {
+    const snapshot = context?.businessContext?.blueprintSnapshot;
+    const paths = BLUEPRINT_SUB_BLOCK_PATHS[subBlock.block] ?? [];
+    const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
+    // If every path already has a value, still allow overwrite for those the
+    // user asked to (re)fill by falling back to the full path set.
+    const scoped = emptyPaths.length > 0 ? emptyPaths : paths;
+    return filterPathsToCurrentTarget(new Set(scoped), context);
+  }
+
+  if (singleField) return filterPathsToCurrentTarget(new Set([singleField.path]), context);
+
+  if (subBlock) {
+    const snapshot = context?.businessContext?.blueprintSnapshot;
+    const paths = BLUEPRINT_SUB_BLOCK_PATHS[subBlock.block] ?? [];
+    const emptyPaths = paths.filter((path) => isEmptyBlueprintValue(getDeepValue(snapshot, path)));
+    const scoped = emptyPaths.length > 0 ? emptyPaths : paths;
+    return filterPathsToCurrentTarget(new Set(scoped), context);
+  }
+
+  return null;
 }
+
 
 function cleanTagCandidate(value: string): string {
   return value
@@ -552,7 +626,10 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
     // in this conversation. Virtual list/ecosystem `new_<n>` paths are handled
     // earlier and skipped here anyway.
     if (handledPaths.has(path)) continue;
-    if (allowedPaths && !allowedPaths.has(path)) continue;
+    if (allowedPaths && !allowedPaths.has(path)) {
+      console.warn("[coach-chat] dropped out-of-scope write", { path, allowed: [...allowedPaths] });
+      continue;
+    }
     // Hard tab-scope guard: when a Blueprint tab/section is in focus, never
     // accept writes outside that tab — regardless of whether the request
     // matched a specific field or sub-block. Prevents "fill the whole X tab"
@@ -699,10 +776,27 @@ const NOT_FILLED_RE = /\b(not filled|isn['’]?t filled|nothing happened|niet in
 const BLUEPRINT_AREA_RE =
   /\b(customer clarity|dream client|avatar|icp|pain|problem|desire|goal|transformation|offer|pricing|proof|authority|growth system|blueprint|sectie|section|veld|field)\b/i;
 
+const CORRECTION_RE =
+  /\b(no|nope|nee|niet die|verkeerd|wrong|bedoelde|bedoel|instead|in plaats|rather|actually|eigenlijk)\b/i;
+
+function priorAssistantHadWrites(messages: any[]): boolean {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m?.role !== "assistant") continue;
+    const parts = Array.isArray(m?.parts) ? m.parts : [];
+    if (parts.some((p: any) => p?.type === "blueprint_writes")) return true;
+    // Fallback: some clients only send content strings; check for our fallback
+    // text vs. the phrase "Blueprint updates" isn't reliable, so use parts.
+    return false;
+  }
+  return false;
+}
+
 function isBlueprintWriteIntent(scope: string | undefined, messages: any[], context?: any) {
   if (scope !== "blueprint.section" && scope !== "global") return false;
   const userMessages = messages.filter((m: any) => m?.role !== "assistant");
   const latest = String(userMessages.at(-1)?.content ?? "");
+  const latestInstruction = latestInstructionText(messages);
   const recent = userMessages
     .slice(-4)
     .map((m: any) => String(m?.content ?? ""))
@@ -713,8 +807,25 @@ function isBlueprintWriteIntent(scope: string | undefined, messages: any[], cont
     return true;
   }
 
+  // Primary path: write verb + blueprint area, using only the instruction tail
+  // so pasted context doesn't decide intent on its own.
+  if (WRITE_INTENT_RE.test(latestInstruction) && BLUEPRINT_AREA_RE.test(latestInstruction)) return true;
+  // Fallback to the raw latest message for cases where our tail extractor
+  // trimmed too aggressively.
   if (WRITE_INTENT_RE.test(latest) && BLUEPRINT_AREA_RE.test(latest)) return true;
   if (NOT_FILLED_RE.test(latest) && (WRITE_INTENT_RE.test(recent) || BLUEPRINT_AREA_RE.test(recent))) return true;
+
+  // Correction turn: previous assistant proposed writes, and the user is
+  // steering to a different tab/section/field. Even without a write verb,
+  // this should re-trigger propose_blueprint_writes for the new scope.
+  if (
+    priorAssistantHadWrites(messages) &&
+    (CORRECTION_RE.test(latest) || TAB_OR_SECTION_RE.test(latest) || BLUEPRINT_AREA_RE.test(latest)) &&
+    (requestedBlueprintSubBlock(messages) || requestedSingleBlueprintPath(messages))
+  ) {
+    return true;
+  }
+
   return false;
 }
 
@@ -890,15 +1001,19 @@ Deno.serve(async (req) => {
 
     if (parts.length === 0) {
       const locale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
+      const nl = locale === "nl";
       parts.push({
         type: "text",
         text: shouldForceBlueprintWrites
-          ? locale === "nl"
-            ? "Ik kon hiervoor geen passende Blueprint-updates maken. Probeer het nog één keer met de naam van de sectie of het veld."
-            : "I couldn't create matching Blueprint updates for that. Please try once more with the section or field name."
-          : "…",
+          ? nl
+            ? "Ik weet niet zeker welke Blueprint-sectie of welk veld je bedoelt. Noem bijvoorbeeld: \"Ideal Client Avatar tab\", \"Pain & Friction\", \"Desire & Goals\", \"Transformation\", \"Offer Angle\" of \"Proof & Authority\"."
+            : "I'm not sure which Blueprint section or field you mean. Try naming one, e.g. \"Ideal Client Avatar tab\", \"Pain & Friction\", \"Desire & Goals\", \"Transformation\", \"Offer Angle\" or \"Proof & Authority\"."
+          : nl
+            ? "Kan je iets specifieker zijn? Ik help je graag verder."
+            : "Could you be a bit more specific? Happy to help.",
       });
     }
+
 
     // Persist the last user message + assistant message
     const lastUser = [...messages].reverse().find((m: any) => m.role === "user");
