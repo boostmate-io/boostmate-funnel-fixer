@@ -224,6 +224,20 @@ function buildSystemPrompt(
     parts.push(BLUEPRINT_FIELD_PATHS);
   }
 
+  // Admin-curated knowledge blocks (any instruction block linked to the
+  // coach-chat AI action whose name is NOT one of the four reserved prompt
+  // slots). Use these as expert reference material — e.g. how to build a
+  // high-ticket offer, webinar funnel playbook, VSL scripting, etc.
+  if (prompts.knowledgeBlocks && prompts.knowledgeBlocks.length > 0) {
+    const kb = prompts.knowledgeBlocks
+      .map((b) => `## ${b.name}\n${b.content}`)
+      .join("\n\n");
+    parts.push(
+      `# Knowledge base (reference material)\nUse the material below as expert reference whenever the user's question relates to its topic. Apply it as strategic guidance — do not quote it verbatim, do not mention that you are consulting a knowledge base.\n\n${kb}`,
+    );
+  }
+
+
   if (context?.target) {
     parts.push(`# Current target\n${JSON.stringify(context.target, null, 2)}`);
   }
