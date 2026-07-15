@@ -453,66 +453,135 @@ function recentConversationText(messages: any[], limit = 10): string {
 }
 
 
-function assistantRecentlyDiscussedMainOfferStep1(messages: any[]): boolean {
+function assistantRecentlyDiscussedMainOfferStep(messages: any[], step: MainOfferWalkthroughStep): boolean {
   return messages
-    .slice(-8)
+    .slice(-10)
     .some((m: any) => {
       if (m?.role !== "assistant") return false;
       const text = `${String(m?.content ?? "")}\n${serializeAssistantForModel(m)}`;
-      return /\bstep\s*1\b/i.test(text) && /(core\s+outcome|target\s+client|core\s+promise|main\s+offer)/i.test(text);
+      if (!new RegExp(`\\bstep\\s*${step.number}\\b`, "i").test(text)) return false;
+      const focusNeedle = step.number === 1
+        ? /(core\s+outcome|target\s+client|core\s+promise|main\s+offer)/i
+        : step.number === 2
+          ? /(angle|new\s+vehicle|better|faster|easier|all-or-nothing|motivation|system)/i
+          : /(signature|framework|method|pillar|pijler)/i;
+      return focusNeedle.test(text);
     });
 }
 
-
-function isMainOfferStep1BlueprintUpdateRequest(scope: string | undefined, messages: any[]): boolean {
-  if (scope !== "blueprint.section" && scope !== "global") return false;
-  const latest = latestUserText(messages);
-  if (!latest.trim()) return false;
-  const recent = recentConversationText(messages, 12);
-
-  const asksForBlueprintUpdates =
-    /\bblueprint\s+(updates?|writes?|proposals?)\b/i.test(latest) ||
-    /\bpropos(?:e|ed|ing)\s+blueprint\b/i.test(latest) ||
-    /\b(update|updates|writes|proposals?)\s+(?:for|as\s+discussed\s+in|from)\s+(?:step\s*)?1\b/i.test(latest) ||
-    /\bshouldn['’]?t\s+you\s+(?:need\s+to\s+)?propos(?:e|ed|ing)\b/i.test(latest) ||
-    /\bgeef\s+(?:me\s+)?(?:de\s+)?blueprint\s+updates\b/i.test(latest);
-
-  const mentionsStep1 =
-    /\bstep\s*1\b/i.test(latest) ||
-    /(core\s+outcome|target\s+client|core\s+promise)/i.test(latest) ||
-    (/\b(this|current|deze|huidige)\s+step\b/i.test(latest) && assistantRecentlyDiscussedMainOfferStep1(messages));
-
-  const mainOfferContext = /(main\s+offer|offer|core\s+outcome|target\s+client|core\s+promise|\bstep\s*1\b)/i.test(recent);
-
-  const confirmationAfterStep1 =
-    /^(ok(?:e|ay)?|cool|looks\s+good|good|yes|ja|prima|top|next(?:\s+step)?|go\s+ahead)[.!\s]*$/i.test(latest.trim()) &&
-    assistantRecentlyDiscussedMainOfferStep1(messages) &&
-    !priorAssistantHadWrites(messages);
-
-  return mainOfferContext && ((asksForBlueprintUpdates && mentionsStep1) || confirmationAfterStep1);
+function latestDiscussedMainOfferStep(messages: any[]): MainOfferWalkthroughStep | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m?.role !== "assistant") continue;
+    const text = `${String(m?.content ?? "")}\n${serializeAssistantForModel(m)}`;
+    for (const step of [...MAIN_OFFER_WALKTHROUGH_STEPS].reverse()) {
+      if (assistantTextMentionsMainOfferStep(text, step)) return step;
+    }
+  }
+  return null;
 }
 
+function assistantTextMentionsMainOfferStep(text: string, step: MainOfferWalkthroughStep): boolean {
+  if (!new RegExp(`\\bstep\\s*${step.number}\\b`, "i").test(text)) return false;
+  if (step.number === 1) return /(core\s+outcome|target\s+client|core\s+promise|main\s+offer)/i.test(text);
+  if (step.number === 2) return /(angle|new\s+vehicle|better|faster|easier|all-or-nothing|motivation|system)/i.test(text);
+  return /(signature|framework|method|pillar|pijler)/i.test(text);
+}
 
-function renderForcedStep1BlueprintWritesPrompt() {
-  return `# Mandatory current action — Main Offer Step 1 Blueprint updates
-The latest user message is asking for the Blueprint updates for Step 1 of the guided Main Offer walkthrough.
+function explicitMainOfferStepFromText(text: string): MainOfferWalkthroughStep | null {
+  const match = text.match(/\bstep\s*([123])\b/i);
+  if (match) return MAIN_OFFER_STEP_BY_NUMBER.get(Number(match[1]) as 1 | 2 | 3) ?? null;
+  if (/\b(core\s+outcome|target\s+client|core\s+promise)\b/i.test(text)) return MAIN_OFFER_STEP_BY_NUMBER.get(1) ?? null;
+  if (/\b(angle|new\s+vehicle|better\s+results|faster\s+outcome|easier\s+process)\b/i.test(text)) return MAIN_OFFER_STEP_BY_NUMBER.get(2) ?? null;
+  if (/\b(signature\s+(framework|method|mechanism)|framework|pillars?|pijlers?)\b/i.test(text)) return MAIN_OFFER_STEP_BY_NUMBER.get(3) ?? null;
+  return null;
+}
 
-You MUST call propose_blueprint_writes in this turn. Do not answer with prose only. Do not ask "can you be more specific?". Use the prior conversation, remembered facts, and Blueprint snapshot to draft the best Step 1 values.
+function priorAssistantHadWritesForStep(messages: any[], step: MainOfferWalkthroughStep): boolean {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m?.role !== "assistant") continue;
+    const parts = Array.isArray(m?.parts) ? m.parts : [];
+    const bp = parts.find((p: any) => p?.type === "blueprint_writes" && Array.isArray(p.writes));
+    if (!bp) return false;
+    return bp.writes.some((w: any) => step.writePaths.has(canonicalBlueprintPath(String(w?.path ?? ""))));
+  }
+  return false;
+}
+
+function stepHasHandledDecision(step: MainOfferWalkthroughStep, handledDecisions: Array<{ path: string; decision: string }>): boolean {
+  return handledDecisions.some((d) => step.writePaths.has(canonicalBlueprintPath(d.path)));
+}
+
+function isMainOfferContext(messages: any[]): boolean {
+  return /(main\s+offer|offer\s+angle|core\s+outcome|core\s+promise|new\s+vehicle|all-or-nothing|signature\s+(framework|method)|\bstep\s*[123]\b)/i.test(
+    recentConversationText(messages, 14),
+  );
+}
+
+function userRequestsBlueprintUpdates(text: string): boolean {
+  return (
+    /\bblueprint\s+(updates?|writes?|proposals?)\b/i.test(text) ||
+    /\bpropos(?:e|ed|ing)\s+blueprint\b/i.test(text) ||
+    /\b(update|updates|writes|proposals?)\s+(?:for|as\s+discussed\s+in|from)\s+(?:step\s*)?[123]\b/i.test(text) ||
+    /\bshouldn['’]?t\s+you\s+(?:need\s+to\s+)?propos(?:e|ed|ing)\b/i.test(text) ||
+    /\byou\s+didn['’]?t\s+give\s+me\s+the\s+blueprint\s+updates\b/i.test(text) ||
+    /\bgeef\s+(?:me\s+)?(?:de\s+)?blueprint\s+updates\b/i.test(text)
+  );
+}
+
+function userConfirmsOrAsksCoachToFill(text: string): boolean {
+  const trimmed = text.trim();
+  return (
+    /^(ok(?:e|ay)?|cool|looks\s+good|good|yes|ja|prima|top|go\s+ahead|next(?:\s+step)?|volgende\s+stap)[.!\s]*$/i.test(trimmed) ||
+    /\b(looks\s+good|next\s+step|volgende\s+stap)\b/i.test(text) ||
+    /\b(just\s+fill|fill\s+this|fill\s+it|fill\s+in|you\s+think\s+is\s+best|doe\s+maar|vul\s+(dit|het)\s+maar|vul\s+maar\s+in|zoals\s+jij\s+denkt)\b/i.test(text)
+  );
+}
+
+function detectMainOfferForcedWriteStep(
+  scope: string | undefined,
+  messages: any[],
+  handledDecisions: Array<{ path: string; decision: string }> = [],
+): MainOfferWalkthroughStep | null {
+  if (scope !== "blueprint.section" && scope !== "global") return null;
+  const latest = latestUserText(messages);
+  if (!latest.trim() || !isMainOfferContext(messages)) return null;
+
+  const explicitStep = explicitMainOfferStepFromText(latest);
+  const currentStep = explicitStep ?? latestDiscussedMainOfferStep(messages);
+  if (!currentStep) return null;
+
+  if (userRequestsBlueprintUpdates(latest)) return currentStep;
+
+  const confirmsCurrentStep =
+    userConfirmsOrAsksCoachToFill(latest) &&
+    assistantRecentlyDiscussedMainOfferStep(messages, currentStep) &&
+    !priorAssistantHadWritesForStep(messages, currentStep) &&
+    !stepHasHandledDecision(currentStep, handledDecisions);
+
+  return confirmsCurrentStep ? currentStep : null;
+}
+
+function renderForcedMainOfferBlueprintWritesPrompt(step: MainOfferWalkthroughStep) {
+  const paths = [...step.writePaths]
+    .map((path) => `- ${path} — ${BLUEPRINT_FIELD_META[path]?.label ?? path}`)
+    .join("\n");
+  return `# Mandatory current action — Main Offer Step ${step.number} Blueprint updates
+The latest user message requires Blueprint updates for Step ${step.number}: ${step.title}.
+
+You MUST call propose_blueprint_writes in this turn. Do not answer with prose only. Do not ask "can you be more specific?". Do not move to the next step until these writes have been proposed. Use the prior conversation, remembered facts, and Blueprint snapshot to draft the best values for this step.
 
 Use ONLY these Blueprint paths:
-- offer_stack.angle.core_outcome — Core Outcome
-- offer_stack.angle.core_promise.desired_outcome — Desired Outcome (Core Promise)
-- offer_stack.angle.main_offer_name — Main Offer Name
-- offer_stack.angle.short_description — Short Offer Description
+${paths}
 
-Prefer 2-4 writes. If the conversation contains enough context for only one or two fields, still propose those concrete writes. Keep values polished, specific, and in the user's language/voice.`;
+Prefer concrete writes for every field in this step when there is enough context. If the conversation contains enough context for only part of the step, still propose those concrete writes. Keep values polished, specific, and in the user's language/voice.`;
 }
 
-
-function renderForcedStep1RetryPrompt() {
-  return `Your previous attempt did not produce accepted Blueprint writes. Retry now and call propose_blueprint_writes with valid writes only. Use exactly these allowed paths and no others: ${[
-    ...MAIN_OFFER_STEP1_WRITE_PATHS,
-  ].join(", ")}. Do not ask a clarifying question.`;
+function renderForcedMainOfferRetryPrompt(step: MainOfferWalkthroughStep) {
+  return `Your previous attempt did not produce accepted Blueprint writes for Main Offer Step ${step.number}: ${step.title}. Retry now and call propose_blueprint_writes with valid writes only. Use exactly these allowed paths and no others: ${[
+    ...step.writePaths,
+  ].join(", ")}. Do not ask a clarifying question and do not output pseudo-tool text like [proposed blueprint writes].`;
 }
 
 
