@@ -851,7 +851,97 @@ function normalizeFieldValue(path: string, value: string): string {
   const meta = BLUEPRINT_FIELD_META[path];
   if (meta?.kind === "tags" || meta?.kind === "chips") return normalizeTagOrChipValue(value);
   if (path === "offer_stack.angle.core_promise.timeframe" || path === "offer_stack.stack.delivery_timeline") return normalizeTimeframeValue(value);
+  if (isPricingNumberPath(path)) return normalizeNumberValue(value);
+  if (path === "offer_stack.pricing.guarantee_type") return normalizeGuaranteeType(value);
+  if (path === "offer_stack.pricing.recurring_offer.interval") return normalizeRecurringInterval(value);
+  if (/^offer_stack\.pricing\.payment_plans\.\d+\.type$/.test(path)) return normalizePaymentPlanType(value);
+  if (/^offer_stack\.stack\.deliverables\.\d+\.frequency$/.test(path)) return normalizeDeliveryFrequency(value);
+  if (path === "offer_stack.pricing.recurring_enabled" || path === "offer_stack.pricing.premium_enabled") return normalizeBooleanValue(value);
   return String(value ?? "").trim();
+}
+
+function isPricingNumberPath(path: string): boolean {
+  return (
+    path === "offer_stack.pricing.core_price" ||
+    path === "offer_stack.pricing.premium_upgrade.price" ||
+    path === "offer_stack.pricing.recurring_offer.monthly_price" ||
+    /^offer_stack\.pricing\.payment_plans\.\d+\.amount$/.test(path)
+  );
+}
+
+function normalizeNumberValue(value: string): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  // Strip currency symbols, thousands separators, /month suffixes, keep first number.
+  const match = raw.replace(/[^\d,.\-]/g, " ").match(/-?\d[\d.,]*/);
+  if (!match) return "";
+  let s = match[0];
+  // If both . and , present, assume . is thousands and , is decimal (EU) or vice versa; drop thousands.
+  if (s.includes(".") && s.includes(",")) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (s.includes(",")) {
+    // Comma-only: treat as decimal if 1-2 trailing digits, else thousands.
+    s = /\,\d{1,2}$/.test(s) ? s.replace(",", ".") : s.replace(/,/g, "");
+  } else if (s.includes(".")) {
+    // If multiple dots or 3-digit groups after dot => thousands.
+    if ((s.match(/\./g) ?? []).length > 1 || /\.\d{3}(\D|$)/.test(s + " ")) {
+      s = s.replace(/\./g, "");
+    }
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? String(n) : "";
+}
+
+function normalizeBooleanValue(value: string): string {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (["true", "yes", "1", "on", "enabled", "ja", "aan", "waar"].includes(raw)) return "true";
+  if (["false", "no", "0", "off", "disabled", "nee", "uit", "onwaar"].includes(raw)) return "false";
+  return "";
+}
+
+function normalizeGuaranteeType(value: string): string {
+  const raw = String(value ?? "").trim().toLowerCase().replace(/\s+/g, "_");
+  const allowed = new Set(["none", "refund", "performance", "milestone", "custom"]);
+  if (allowed.has(raw)) return raw;
+  if (/geld[-_ ]?terug|refund|money[-_ ]?back/.test(raw)) return "refund";
+  if (/performance|resultaat/.test(raw)) return "performance";
+  if (/milestone|mijlpaal/.test(raw)) return "milestone";
+  if (/none|geen/.test(raw)) return "none";
+  return raw ? "custom" : "";
+}
+
+function normalizeRecurringInterval(value: string): string {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (/quarter|kwartaal/.test(raw)) return "quarterly";
+  if (/year|annual|jaar/.test(raw)) return "yearly";
+  if (/month|maand/.test(raw) || raw === "") return raw ? "monthly" : "";
+  return "monthly";
+}
+
+function normalizePaymentPlanType(value: string): string {
+  const raw = String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const allowed = new Set(["full_pay", "split_2", "split_3", "split_6", "monthly", "custom"]);
+  if (allowed.has(raw)) return raw;
+  if (/full|pay[_ ]?in[_ ]?full|ineens/.test(raw)) return "full_pay";
+  if (/2[_ ]?pay|split[_ ]?2|two[_ ]?pay/.test(raw)) return "split_2";
+  if (/3[_ ]?pay|split[_ ]?3|three[_ ]?pay/.test(raw)) return "split_3";
+  if (/6[_ ]?pay|split[_ ]?6|six[_ ]?pay/.test(raw)) return "split_6";
+  if (/month|maand/.test(raw)) return "monthly";
+  return raw ? "custom" : "";
+}
+
+function normalizeDeliveryFrequency(value: string): string {
+  const raw = String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const allowed = new Set(["one_time", "daily", "weekly", "biweekly", "monthly", "quarterly", "ongoing"]);
+  if (allowed.has(raw)) return raw;
+  if (/one|eenmalig|once/.test(raw)) return "one_time";
+  if (/dag|day/.test(raw)) return "daily";
+  if (/biweek|tweewekelijk|bi_?weekly/.test(raw)) return "biweekly";
+  if (/week/.test(raw)) return "weekly";
+  if (/quarter|kwartaal/.test(raw)) return "quarterly";
+  if (/month|maand/.test(raw)) return "monthly";
+  if (/ongoing|doorlopend|continu/.test(raw)) return "ongoing";
+  return raw ? "ongoing" : "";
 }
 
 function normalizeTimeframeValue(value: string): string {
