@@ -160,7 +160,12 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
     <div
       role="dialog"
       aria-label="AI Coach"
-      className="fixed bottom-6 right-6 z-50 w-[400px] max-w-[calc(100vw-2rem)] h-[640px] max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200"
+      className={cn(
+        "fixed z-50 flex flex-col border border-border bg-card shadow-2xl overflow-hidden animate-in fade-in duration-200",
+        fullscreen
+          ? "inset-4 md:inset-8 rounded-2xl slide-in-from-top-2"
+          : "bottom-6 right-6 w-[400px] max-w-[calc(100vw-2rem)] h-[640px] max-h-[calc(100vh-6rem)] rounded-2xl slide-in-from-bottom-4",
+      )}
     >
       {/* Header */}
       <div className="p-4 border-b bg-card flex items-center gap-2">
@@ -175,6 +180,14 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
         </div>
         <button
           type="button"
+          aria-label={fullscreen ? t.collapse : t.expand}
+          onClick={() => setFullscreen((v) => !v)}
+          className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+        </button>
+        <button
+          type="button"
           aria-label={t.close}
           onClick={() => onOpenChange(false)}
           className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
@@ -185,6 +198,8 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-muted/20">
+        <div className={cn(fullscreen && "max-w-3xl mx-auto w-full space-y-3")}>
+
         {displayMessages.map((m) => (
           <MessageBubble
             key={m.id}
