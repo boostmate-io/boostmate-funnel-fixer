@@ -121,7 +121,15 @@ const OFFER_STACK_FIELDS: BlueprintFieldDef[] = [
       aliases: ["core deliverable description", "deliverable description"],
       helper: "1-2 sentences describing what the client receives and how it works",
     },
+    {
+      key: "frequency",
+      label: "Frequency",
+      kind: "text",
+      aliases: ["deliverable frequency", "delivery frequency", "cadence"],
+      helper: "One of: one_time | daily | weekly | biweekly | monthly | quarterly | ongoing",
+    },
   ]),
+
   ...indexedFields("offer_stack.stack.resources", "Resource", 3, [
     {
       key: "name",
