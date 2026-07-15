@@ -1,82 +1,67 @@
-## Doel
+## Waarom dit misgaat
 
-Wanneer een gebruiker in de AI Coach een **brede** vraag stelt zoals *"help me create my main offer"* of *"vul mijn offer design in"*, moet de Coach niet ineens alle velden voorstellen. In plaats daarvan:
+Je hebt gelijk: **“give me the blueprint updates as discussed in step 1”** is duidelijk genoeg. De Coach had moeten begrijpen: “pak de besproken Step 1-context en toon nu de Blueprint updates-card.”
 
-1. Kort uitleggen wat we gaan bouwen en in welke volgorde (mini-roadmap).
-2. **Deel 1** aankondigen → korte best-practice uitleg → 1-2 gerichte vragen.
-3. Wachten op input van de gebruiker → eventueel kort overleg.
-4. Zodra de gebruiker akkoord is: **alleen voor dát deel** een `propose_blueprint_writes` doen (1-3 gerelateerde velden).
-5. Na Apply/Dismiss automatisch doorgaan naar **Deel 2**, enzovoort tot alle offer velden zijn behandeld.
+De waarschijnlijke oorzaak zit niet in jouw formulering, maar in de implementatie:
 
-Dit is een gedrag-verandering, geen architectuur-verandering. De 4 knowledge blocks die je al hebt aangemaakt blijven de brein-laag; deze plan-wijziging bepaalt hoe de Coach die kennis uitserveert.
+- De Coach vertrouwt nu te veel op het model om zelf te beslissen wanneer hij `propose_blueprint_writes` moet aanroepen.
+- Als het model geen geldige tool-call teruggeeft, toont de backend een generieke fallback: **“Could you be a bit more specific?”**
+- De bestaande intent-detectie voor Blueprint writes bestaat wel in de backend, maar wordt niet hard gebruikt om deze tool-call af te dwingen.
+- Na refresh kan de Coach bovendien in een conversatie terechtkomen waar de eerdere Step 1-context niet goed genoeg wordt gebruikt of niet correct wordt herkend als “pending blueprint updates”.
 
-## Waarom het nu misgaat
+## Plan
 
-In `supabase/functions/coach-chat/index.ts` staan in `COACH_GLOBAL` en `COACH_BLUEPRINT_SECTION` regels als:
+### 1. Generieke fallback vervangen voor Blueprint-update verzoeken
+Als de gebruiker iets zegt als:
+- “give me the blueprint updates as discussed in step 1”
+- “we discussed step 1 but you haven’t given the blueprint updates”
+- “shouldn’t you propose blueprint updates?”
+- “give me the proposed blueprint updates for this step”
 
-> "you MUST call the propose_blueprint_writes tool with concrete drafts … in the SAME turn"
-> "If the user names a whole section or sub-block, propose writes for EVERY field in it — never a partial subset."
+mag de backend nooit meer terugvallen op **“Could you be more specific?”**.
 
-Deze regels dwingen de Coach tot bulk-dump bij een brede vraag. Ze zijn nodig om **specifieke** verzoeken ("fill in the pain field") direct af te handelen, maar ze bijten met **brede** coaching-verzoeken.
+In plaats daarvan moet hij ofwel:
+- direct een **Blueprint updates** card voorstellen, of
+- heel specifiek zeggen welk Step 1-onderdeel nog ontbreekt.
 
-## Wijzigingen
+### 2. Step 1-update intent deterministisch detecteren
+Ik voeg server-side herkenning toe voor Main Offer guided walkthroughs, specifiek voor Step 1:
 
-### 1. Nieuwe modus: "Guided walkthrough" onderscheiden van "Direct fill"
+**Step 1 = Core Outcome & Target Client / Core Promise / Angle basis.**
 
-In het system prompt (zowel `coach:global` als `coach:blueprint-section` instruction blocks in de admin — met fallback in code) een expliciete tweedeling toevoegen:
+Bij herkenning van “step 1” + “blueprint updates” wordt dit niet meer als normale chat behandeld, maar als verplichte Blueprint-write actie.
 
-- **Direct fill request** — gebruiker noemt concrete velden/sectie mét een schrijf-werkwoord ("vul in", "draft", "fill in", "generate", "schrijf"). → huidige gedrag: meteen `propose_blueprint_writes` in dezelfde turn.
-- **Guided walkthrough request** — gebruiker vraagt om **hulp / begeleiding / samen bouwen** ("help me create", "help me build", "walk me through", "help me met opstellen", "begeleid me", "laten we samen…"). → NIET meteen writes voorstellen. In plaats daarvan:
-  1. Turn 1: korte roadmap (bv. "We doen dit in 5 stappen: Angle → Framework → Deliverables → Pricing → Guarantee") + start Stap 1 met uitleg en 1-2 vragen.
-  2. Turn N: pas `propose_blueprint_writes` aanroepen wanneer de gebruiker akkoord is met wat besproken is, en dan alleen voor de velden van díe stap.
-  3. Na een Apply/Dismiss decision op stap N: turn N+1 opent stap N+1 met uitleg + vragen.
+### 3. Tool-call hard forceren
+Wanneer Step 1 Blueprint updates gevraagd worden:
 
-### 2. Offer-specifieke walkthrough-volgorde
+- `tool_choice` wordt geforceerd naar `propose_blueprint_writes`.
+- De prompt krijgt een tijdelijke harde instructie: geen extra uitleg, geen nieuwe vraag, maar Blueprint writes voorstellen voor Step 1.
+- De toegestane paths worden beperkt tot relevante Step 1-velden, zoals:
+  - `offer_stack.angle.core_outcome`
+  - `offer_stack.angle.core_promise.desired_outcome`
+  - `offer_stack.angle.main_offer_name`
+  - `offer_stack.angle.short_description`
 
-In `coach:offer-strategy` (bestaand knowledge block) een expliciete sectie toevoegen: *"Guided walkthrough sequence"* met de logische volgorde waarin de Coach een Main Offer stap-voor-stap opbouwt:
+### 4. Als de tool-call leeg of ongeldig is: repair retry
+Als het model wel een tool-call probeert maar de writes worden weggefilterd, voert de backend één herstelpoging uit met expliciete toegestane paths.
 
-```
-Stap 1 — Core outcome & target client (wat, voor wie)
-Stap 2 — Angle: new vehicle / better-faster-easier
-Stap 3 — Framework / method naam + pillars
-Stap 4 — Deliverables & bonuses
-Stap 5 — Pricing model & anchor
-Stap 6 — Guarantee / risk reversal
-Stap 7 — Naam & short description (samengesteld uit stap 1-6)
-```
+Daarna mag er nog steeds geen vage fallback komen. De reactie moet concreet blijven binnen Step 1.
 
-Per stap: welke best practice-uitleg vooraf hoort (2-4 zinnen), welke vragen te stellen, welke Blueprint velden bij die stap horen.
+### 5. Refresh/context robuuster maken
+Ik controleer en verbeter de conversatie-load na refresh:
 
-### 3. Handled-decisions als voortgangs-signaal gebruiken
+- bestaande global Coach-conversaties moeten correct teruggevonden worden;
+- berichten uit de bestaande conversatie moeten altijd meegestuurd worden;
+- oudere global conversations met lege/afwijkende `target_id` moeten niet leiden tot contextverlies;
+- verzenden moet wachten tot de bestaande berichten geladen zijn.
 
-De function stuurt al `handledDecisions` (regel 315-321) mee. In de guided-walkthrough instructies expliciet maken: *"Gebruik de 'Already handled' lijst om te weten welke stap net is afgerond. Ga automatisch door naar de volgende stap uit de sequence."* Zo krijg je de auto-doorschakel-flow zonder een front-end wizard te bouwen.
+### 6. Verificatie
+Ik test dit scenario:
 
-### 4. Geen front-end wijzigingen
-
-De bestaande `CoachPanel` + `useCoachChat` + de "Apply all" kaart handelen al alle rendering af. Elke turn levert óf tekst+vragen (Stap N uitleg) óf een kleine Blueprint-writes kaart (Stap N voorstel). Geen nieuwe UI, geen nieuwe knoppen.
-
-## Waar de wijzigingen landen
-
-Alles gebeurt in **admin instruction blocks** (via Admin Panel → Instruction Blocks), met code-fallback in `supabase/functions/coach-chat/index.ts`:
-
-- `coach:global` — sectie "Guided walkthrough vs direct fill" toevoegen.
-- `coach:blueprint-section` — idem.
-- `coach:offer-strategy` — "Guided walkthrough sequence" (7 stappen) toevoegen.
-- `supabase/functions/coach-chat/index.ts` — de `COACH_GLOBAL` en `COACH_BLUEPRINT_SECTION` fallback-strings in lijn brengen met de instruction blocks, zodat de fallback ook guided gedrag geeft mocht de DB-load falen.
-
-## Verificatie
-
-Na deployment testen met exact dezelfde prompt: *"help me create my main offer"*. Verwacht resultaat:
-
-- Turn 1: Coach reageert met roadmap + start Stap 1 (core outcome & target client) met uitleg en 1-2 vragen. **Geen** Blueprint updates kaart.
-- Na gebruikers-antwoord: Coach stelt writes voor voor de 1-2 velden van Stap 1.
-- Na Apply: Coach opent Stap 2 (Angle) met uitleg en vragen. **Geen** writes.
-- Enzovoort.
-
-En tegen-test: *"vul mijn offer design volledig in"* moet nog steeds direct alle velden dumpen (direct fill blijft werken).
-
-## Niet in scope
-
-- Geen aparte "Guide me" knop op de Offer Design tabs (die overwoog je vorige turn al niet nodig te vinden).
-- Geen sequentiële state die op de client wordt opgeslagen; de LLM leidt zichzelf via `handledDecisions` + de sequence in het knowledge block.
-- Geen wijziging aan `blueprint.field` scope — daar werkt de per-veld coaching al zoals gewenst.
+1. Main Offer-flow starten.
+2. Step 1 bespreken.
+3. Vragen: **“give me the blueprint updates as discussed in step 1”**.
+4. Verwacht: **Blueprint updates** card.
+5. Refresh.
+6. Opnieuw vragen naar Step 1 Blueprint updates.
+7. Verwacht: nog steeds contextueel antwoord of Blueprint updates, geen “Could you be more specific?”.

@@ -17,6 +17,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const MAIN_OFFER_STEP1_WRITE_PATHS = new Set([
+  "offer_stack.angle.core_outcome",
+  "offer_stack.angle.core_promise.desired_outcome",
+  "offer_stack.angle.main_offer_name",
+  "offer_stack.angle.short_description",
+]);
+
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -379,6 +386,81 @@ function priorAssistantWritePaths(messages: any[]): string[] {
     return [];
   }
   return [];
+}
+
+
+function recentConversationText(messages: any[], limit = 10): string {
+  return messages
+    .slice(-limit)
+    .map((m: any) => {
+      const role = m?.role === "assistant" ? "assistant" : "user";
+      const content = typeof m?.content === "string" ? m.content : serializeAssistantForModel(m);
+      return `${role}: ${content}`;
+    })
+    .join("\n");
+}
+
+
+function assistantRecentlyDiscussedMainOfferStep1(messages: any[]): boolean {
+  return messages
+    .slice(-8)
+    .some((m: any) => {
+      if (m?.role !== "assistant") return false;
+      const text = `${String(m?.content ?? "")}\n${serializeAssistantForModel(m)}`;
+      return /\bstep\s*1\b/i.test(text) && /(core\s+outcome|target\s+client|core\s+promise|main\s+offer)/i.test(text);
+    });
+}
+
+
+function isMainOfferStep1BlueprintUpdateRequest(scope: string | undefined, messages: any[]): boolean {
+  if (scope !== "blueprint.section" && scope !== "global") return false;
+  const latest = latestUserText(messages);
+  if (!latest.trim()) return false;
+  const recent = recentConversationText(messages, 12);
+
+  const asksForBlueprintUpdates =
+    /\bblueprint\s+(updates?|writes?|proposals?)\b/i.test(latest) ||
+    /\bpropos(?:e|ed|ing)\s+blueprint\b/i.test(latest) ||
+    /\b(update|updates|writes|proposals?)\s+(?:for|as\s+discussed\s+in|from)\s+(?:step\s*)?1\b/i.test(latest) ||
+    /\bshouldn['’]?t\s+you\s+(?:need\s+to\s+)?propos(?:e|ed|ing)\b/i.test(latest) ||
+    /\bgeef\s+(?:me\s+)?(?:de\s+)?blueprint\s+updates\b/i.test(latest);
+
+  const mentionsStep1 =
+    /\bstep\s*1\b/i.test(latest) ||
+    /(core\s+outcome|target\s+client|core\s+promise)/i.test(latest) ||
+    (/\b(this|current|deze|huidige)\s+step\b/i.test(latest) && assistantRecentlyDiscussedMainOfferStep1(messages));
+
+  const mainOfferContext = /(main\s+offer|offer|core\s+outcome|target\s+client|core\s+promise|\bstep\s*1\b)/i.test(recent);
+
+  const confirmationAfterStep1 =
+    /^(ok(?:e|ay)?|cool|looks\s+good|good|yes|ja|prima|top|next(?:\s+step)?|go\s+ahead)[.!\s]*$/i.test(latest.trim()) &&
+    assistantRecentlyDiscussedMainOfferStep1(messages) &&
+    !priorAssistantHadWrites(messages);
+
+  return mainOfferContext && ((asksForBlueprintUpdates && mentionsStep1) || confirmationAfterStep1);
+}
+
+
+function renderForcedStep1BlueprintWritesPrompt() {
+  return `# Mandatory current action — Main Offer Step 1 Blueprint updates
+The latest user message is asking for the Blueprint updates for Step 1 of the guided Main Offer walkthrough.
+
+You MUST call propose_blueprint_writes in this turn. Do not answer with prose only. Do not ask "can you be more specific?". Use the prior conversation, remembered facts, and Blueprint snapshot to draft the best Step 1 values.
+
+Use ONLY these Blueprint paths:
+- offer_stack.angle.core_outcome — Core Outcome
+- offer_stack.angle.core_promise.desired_outcome — Desired Outcome (Core Promise)
+- offer_stack.angle.main_offer_name — Main Offer Name
+- offer_stack.angle.short_description — Short Offer Description
+
+Prefer 2-4 writes. If the conversation contains enough context for only one or two fields, still propose those concrete writes. Keep values polished, specific, and in the user's language/voice.`;
+}
+
+
+function renderForcedStep1RetryPrompt() {
+  return `Your previous attempt did not produce accepted Blueprint writes. Retry now and call propose_blueprint_writes with valid writes only. Use exactly these allowed paths and no others: ${[
+    ...MAIN_OFFER_STEP1_WRITE_PATHS,
+  ].join(", ")}. Do not ask a clarifying question.`;
 }
 
 
