@@ -134,6 +134,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
     expand: nl ? "Volledig scherm" : "Fullscreen",
     collapse: nl ? "Verkleinen" : "Exit fullscreen",
   };
+  const isBusy = status === "sending" || status === "loading";
 
 
   useEffect(() => {
@@ -146,7 +147,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
 
   const handleSend = async (text?: string) => {
     const value = (text ?? input).trim();
-    if (!value || status === "sending") return;
+    if (!value || isBusy) return;
     setInput("");
     await sendMessage(value);
   };
@@ -214,7 +215,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
               onDecision={(writes, decision) => recordDecision(m.id, writes, decision)}
             />
           ))}
-          {status === "sending" && (
+          {isBusy && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground pl-1">
               <Loader2 className="w-3 h-3 animate-spin" />
               {t.thinking}
@@ -241,14 +242,14 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
             placeholder={t.placeholder}
             rows={fullscreen ? 3 : 2}
             className="resize-none text-sm"
-            disabled={status === "sending"}
+            disabled={isBusy}
           />
           <Button
             size="icon"
             onClick={() => handleSend()}
-            disabled={!input.trim() || status === "sending"}
+            disabled={!input.trim() || isBusy}
           >
-            {status === "sending" ? (
+            {isBusy ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Send className="w-4 h-4" />
