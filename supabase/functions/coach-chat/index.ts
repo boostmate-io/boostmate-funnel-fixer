@@ -17,6 +17,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const MAIN_OFFER_STEP1_WRITE_PATHS = new Set([
+  "offer_stack.angle.core_outcome",
+  "offer_stack.angle.core_promise.desired_outcome",
+  "offer_stack.angle.main_offer_name",
+  "offer_stack.angle.short_description",
+]);
+
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -382,6 +389,81 @@ function priorAssistantWritePaths(messages: any[]): string[] {
 }
 
 
+function recentConversationText(messages: any[], limit = 10): string {
+  return messages
+    .slice(-limit)
+    .map((m: any) => {
+      const role = m?.role === "assistant" ? "assistant" : "user";
+      const content = typeof m?.content === "string" ? m.content : serializeAssistantForModel(m);
+      return `${role}: ${content}`;
+    })
+    .join("\n");
+}
+
+
+function assistantRecentlyDiscussedMainOfferStep1(messages: any[]): boolean {
+  return messages
+    .slice(-8)
+    .some((m: any) => {
+      if (m?.role !== "assistant") return false;
+      const text = `${String(m?.content ?? "")}\n${serializeAssistantForModel(m)}`;
+      return /\bstep\s*1\b/i.test(text) && /(core\s+outcome|target\s+client|core\s+promise|main\s+offer)/i.test(text);
+    });
+}
+
+
+function isMainOfferStep1BlueprintUpdateRequest(scope: string | undefined, messages: any[]): boolean {
+  if (scope !== "blueprint.section" && scope !== "global") return false;
+  const latest = latestUserText(messages);
+  if (!latest.trim()) return false;
+  const recent = recentConversationText(messages, 12);
+
+  const asksForBlueprintUpdates =
+    /\bblueprint\s+(updates?|writes?|proposals?)\b/i.test(latest) ||
+    /\bpropos(?:e|ed|ing)\s+blueprint\b/i.test(latest) ||
+    /\b(update|updates|writes|proposals?)\s+(?:for|as\s+discussed\s+in|from)\s+(?:step\s*)?1\b/i.test(latest) ||
+    /\bshouldn['’]?t\s+you\s+(?:need\s+to\s+)?propos(?:e|ed|ing)\b/i.test(latest) ||
+    /\bgeef\s+(?:me\s+)?(?:de\s+)?blueprint\s+updates\b/i.test(latest);
+
+  const mentionsStep1 =
+    /\bstep\s*1\b/i.test(latest) ||
+    /(core\s+outcome|target\s+client|core\s+promise)/i.test(latest) ||
+    (/\b(this|current|deze|huidige)\s+step\b/i.test(latest) && assistantRecentlyDiscussedMainOfferStep1(messages));
+
+  const mainOfferContext = /(main\s+offer|offer|core\s+outcome|target\s+client|core\s+promise|\bstep\s*1\b)/i.test(recent);
+
+  const confirmationAfterStep1 =
+    /^(ok(?:e|ay)?|cool|looks\s+good|good|yes|ja|prima|top|next(?:\s+step)?|go\s+ahead)[.!\s]*$/i.test(latest.trim()) &&
+    assistantRecentlyDiscussedMainOfferStep1(messages) &&
+    !priorAssistantHadWrites(messages);
+
+  return mainOfferContext && ((asksForBlueprintUpdates && mentionsStep1) || confirmationAfterStep1);
+}
+
+
+function renderForcedStep1BlueprintWritesPrompt() {
+  return `# Mandatory current action — Main Offer Step 1 Blueprint updates
+The latest user message is asking for the Blueprint updates for Step 1 of the guided Main Offer walkthrough.
+
+You MUST call propose_blueprint_writes in this turn. Do not answer with prose only. Do not ask "can you be more specific?". Use the prior conversation, remembered facts, and Blueprint snapshot to draft the best Step 1 values.
+
+Use ONLY these Blueprint paths:
+- offer_stack.angle.core_outcome — Core Outcome
+- offer_stack.angle.core_promise.desired_outcome — Desired Outcome (Core Promise)
+- offer_stack.angle.main_offer_name — Main Offer Name
+- offer_stack.angle.short_description — Short Offer Description
+
+Prefer 2-4 writes. If the conversation contains enough context for only one or two fields, still propose those concrete writes. Keep values polished, specific, and in the user's language/voice.`;
+}
+
+
+function renderForcedStep1RetryPrompt() {
+  return `Your previous attempt did not produce accepted Blueprint writes. Retry now and call propose_blueprint_writes with valid writes only. Use exactly these allowed paths and no others: ${[
+    ...MAIN_OFFER_STEP1_WRITE_PATHS,
+  ].join(", ")}. Do not ask a clarifying question.`;
+}
+
+
 function latestUserText(messages: any[]): string {
   return String([...messages].reverse().find((m: any) => m?.role !== "assistant")?.content ?? "");
 }
@@ -658,7 +740,13 @@ function normalizeCurrentFieldProposal(context: any, value: string): string {
   return normalizeFieldValue(path, value);
 }
 
-function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, handledPaths: Set<string> = new Set()) {
+function sanitizeBlueprintWrites(
+  writesArg: any,
+  messages: any[],
+  context: any,
+  handledPaths: Set<string> = new Set(),
+  allowedPaths: Set<string> | null = null,
+) {
   if (!Array.isArray(writesArg)) return [];
 
   const listSection = context?.target?.listSection;
@@ -738,6 +826,7 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
     const meta = BLUEPRINT_FIELD_META[path];
     // Hard rules only: unknown paths, non-writable fields, already-handled paths.
     if (!meta || !meta.aiWritable) continue;
+    if (allowedPaths && !allowedPaths.has(path)) continue;
     if (handledPaths.has(path)) continue;
     // Hard tab-scope guard stays: when a Blueprint tab is in focus, never
     // accept writes leaking into other tabs (prevents cross-tab UI confusion).
@@ -975,6 +1064,39 @@ function isFieldProposalIntent(scope: string | undefined, messages: any[]) {
   );
 }
 
+
+async function fetchCoachCompletion(
+  lovableKey: string,
+  messages: any[],
+  tools: any[],
+  toolChoice: any,
+) {
+  const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Lovable-API-Key": lovableKey,
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages,
+      tools,
+      tool_choice: toolChoice,
+    }),
+  });
+
+  if (!gatewayRes.ok) {
+    const errText = await gatewayRes.text();
+    const status = gatewayRes.status;
+    if (status === 429) throw new Error("AI_RATE_LIMIT");
+    if (status === 402) throw new Error("AI_CREDITS_EXHAUSTED");
+    throw new Error(`AI gateway error: ${errText}`);
+  }
+
+  const gatewayJson = await gatewayRes.json();
+  return gatewayJson?.choices?.[0]?.message ?? {};
+}
+
 // -----------------------------------------------------------------------------
 // Handler
 // -----------------------------------------------------------------------------
@@ -1036,7 +1158,13 @@ Deno.serve(async (req) => {
 
     // Build LLM messages
     const prompts = await loadCoachPrompts(supabase);
-    const systemPrompt = buildSystemPrompt(context, memoryFacts, prompts, messages, handledDecisions);
+    const forceStep1BlueprintWrites = isMainOfferStep1BlueprintUpdateRequest(context?.scope, messages);
+    const systemPrompt = [
+      buildSystemPrompt(context, memoryFacts, prompts, messages, handledDecisions),
+      forceStep1BlueprintWrites ? renderForcedStep1BlueprintWritesPrompt() : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n---\n\n");
     const llmMessages: any[] = [
       { role: "system", content: systemPrompt },
       ...messages.map((m: any) => ({
@@ -1051,43 +1179,35 @@ Deno.serve(async (req) => {
     ];
 
     const tools = toolsForScope(context?.scope);
+    const forcedBlueprintToolChoice = {
+      type: "function",
+      function: { name: "propose_blueprint_writes" },
+    };
 
     // Call Lovable AI Gateway (OpenAI-compatible). tool_choice stays "auto":
     // the system prompt tells the model when to call which tool. Forcing a
     // tool caused correction/modifier turns to fail with a fallback bubble.
-    const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": lovableKey,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: llmMessages,
+    let assistantMsg: any;
+    try {
+      assistantMsg = await fetchCoachCompletion(
+        lovableKey,
+        llmMessages,
         tools,
-        tool_choice: "auto",
-      }),
-    });
-
-
-    if (!gatewayRes.ok) {
-      const errText = await gatewayRes.text();
-      const status = gatewayRes.status;
-      if (status === 429) return jsonResponse({ error: "AI rate limit reached. Please retry shortly." }, 429);
-      if (status === 402) return jsonResponse({ error: "AI credits exhausted. Please top up in Settings." }, 402);
-      return jsonResponse({ error: `AI gateway error: ${errText}` }, 502);
+        forceStep1BlueprintWrites ? forcedBlueprintToolChoice : "auto",
+      );
+    } catch (err: any) {
+      if (err?.message === "AI_RATE_LIMIT") return jsonResponse({ error: "AI rate limit reached. Please retry shortly." }, 429);
+      if (err?.message === "AI_CREDITS_EXHAUSTED") return jsonResponse({ error: "AI credits exhausted. Please top up in Settings." }, 402);
+      return jsonResponse({ error: err?.message ?? "AI gateway error" }, 502);
     }
-
-    const gatewayJson = await gatewayRes.json();
-    const assistantMsg = gatewayJson?.choices?.[0]?.message ?? {};
-    const assistantText: string = assistantMsg.content ?? "";
-    const toolCalls: any[] = assistantMsg.tool_calls ?? [];
+    let assistantText: string = assistantMsg.content ?? "";
+    let toolCalls: any[] = assistantMsg.tool_calls ?? [];
 
     // Build UI parts + persist memory
     const parts: any[] = [];
-    if (assistantText.trim()) parts.push({ type: "text", text: assistantText });
-
-    for (const tc of toolCalls) {
+    const processToolCalls = async () => {
+      if (assistantText.trim()) parts.push({ type: "text", text: assistantText });
+      for (const tc of toolCalls) {
       const name = tc.function?.name;
       let args: any = {};
       try {
@@ -1102,7 +1222,13 @@ Deno.serve(async (req) => {
         name === "propose_blueprint_writes" &&
         (context?.scope === "blueprint.section" || context?.scope === "global")
       ) {
-        const writes = sanitizeBlueprintWrites(args.writes, messages, context, handledPaths);
+        const writes = sanitizeBlueprintWrites(
+          args.writes,
+          messages,
+          context,
+          forceStep1BlueprintWrites ? new Set() : handledPaths,
+          forceStep1BlueprintWrites ? MAIN_OFFER_STEP1_WRITE_PATHS : null,
+        );
         if (writes.length > 0) {
           parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
         }
@@ -1137,6 +1263,32 @@ Deno.serve(async (req) => {
         }
       }
     }
+    };
+
+    await processToolCalls();
+
+    if (forceStep1BlueprintWrites && !parts.some((p: any) => p?.type === "blueprint_writes")) {
+      try {
+        assistantMsg = await fetchCoachCompletion(
+          lovableKey,
+          [...llmMessages, { role: "user", content: renderForcedStep1RetryPrompt() }],
+          tools,
+          forcedBlueprintToolChoice,
+        );
+        assistantText = assistantMsg.content ?? "";
+        toolCalls = assistantMsg.tool_calls ?? [];
+        parts.length = 0;
+        await processToolCalls();
+      } catch (err: any) {
+        if (err?.message === "AI_RATE_LIMIT") return jsonResponse({ error: "AI rate limit reached. Please retry shortly." }, 429);
+        if (err?.message === "AI_CREDITS_EXHAUSTED") return jsonResponse({ error: "AI credits exhausted. Please top up in Settings." }, 402);
+        // Keep falling through to the targeted fallback below.
+      }
+    }
+
+    if (forceStep1BlueprintWrites && !parts.some((p: any) => p?.type === "blueprint_writes")) {
+      parts.length = 0;
+    }
 
     if (parts.length === 0) {
       const explicit = explicitLanguageInstruction(messages);
@@ -1144,7 +1296,11 @@ Deno.serve(async (req) => {
       const nl = (explicit ?? (uiLocale === "nl" ? "nl" : "en")) === "nl";
       const priorPaths = priorAssistantWritePaths(messages);
       let text: string;
-      if (priorPaths.length > 0) {
+      if (forceStep1BlueprintWrites) {
+        text = nl
+          ? "Ik had hier Step 1 Blueprint updates moeten voorstellen, maar kon net geen geldige update-card maken. Geef me nog één keer de kernbelofte of het concrete resultaat uit Step 1, dan zet ik die direct om naar Blueprint updates."
+          : "I should have proposed Step 1 Blueprint updates here, but I couldn't create a valid update card. Give me the core promise or concrete outcome from Step 1 once more and I'll turn it directly into Blueprint updates.";
+      } else if (priorPaths.length > 0) {
         text = nl
           ? "Ik heb je vorige voorstel niet kunnen herzien. Kan je aangeven wat er anders moet (bv. taal, toon, lengte)?"
           : "I couldn't revise my previous proposal. Can you say what should change (e.g. language, tone, length)?";

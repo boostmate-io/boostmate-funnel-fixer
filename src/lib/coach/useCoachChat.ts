@@ -69,6 +69,23 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
 
       let convId = existing?.id as string | undefined;
 
+      // Global Coach used to have slightly different target_id shapes in older
+      // builds. After a refresh, prefer the latest existing global conversation
+      // over creating a fresh empty one, otherwise the Coach loses the prior
+      // walkthrough context and asks vague follow-up questions.
+      if (!convId && scope === "global" && targetKey === "__global__") {
+        const { data: latestGlobal } = await supabase
+          .from("ai_coach_conversations")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("sub_account_id", subAccountId)
+          .eq("scope", "global")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        convId = latestGlobal?.id as string | undefined;
+      }
+
       // 2) Create if missing
       if (!convId) {
         const { data: created, error: insErr } = await supabase
@@ -164,7 +181,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!conversationId || !context || !text.trim()) return;
+      if (!conversationId || !context || !text.trim() || status === "loading" || status === "sending") return;
 
       const userMsg: CoachMessage = {
         id: `local-${Date.now()}`,
@@ -219,7 +236,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
         setStatus("error");
       }
     },
-    [conversationId, context, messages],
+    [conversationId, context, messages, status],
   );
 
   return {
