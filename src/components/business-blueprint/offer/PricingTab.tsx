@@ -196,10 +196,12 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
             openListCoach({
               id: "pricing_payment_plans",
               label: "Payment Plans",
-              helper: "Flexible payment options that lower the upfront barrier. Coach suggests plan structures — you set the amounts.",
+              helper: `Flexible payment options that lower the upfront barrier. Propose concrete plans WITH a numeric amount in ${cur} for every plan — never leave the amount blank.`,
               basePath: "offer_stack.pricing.payment_plans",
               itemFields: [
+                { key: "type", label: "Plan Type", kind: "text", helper: "One of: full_pay | split_2 | split_3 | split_6 | monthly | custom." },
                 { key: "custom_label", label: "Plan Label", kind: "text", helper: "Short plan name (e.g. 'Pay in Full', '3-Pay')." },
+                { key: "amount", label: "Amount", kind: "text", helper: `Numeric amount in ${cur}, e.g. 997. Numbers only, no currency symbol.` },
                 { key: "duration", label: "Duration", kind: "text", helper: "How long the plan runs (e.g. '3 months', '12 weeks')." },
               ],
               currentCount: data.payment_plans.length,
