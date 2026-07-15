@@ -1422,7 +1422,9 @@ Deno.serve(async (req) => {
     // Build UI parts + persist memory
     const parts: any[] = [];
     const processToolCalls = async () => {
-      if (assistantText.trim()) parts.push({ type: "text", text: assistantText });
+      const { cleanText, recovered } = sanitizeLeakedToolCallText(assistantText);
+      if (cleanText.trim()) parts.push({ type: "text", text: cleanText });
+      for (const rec of recovered) parts.push(rec);
       for (const tc of toolCalls) {
       const name = tc.function?.name;
       let args: any = {};
