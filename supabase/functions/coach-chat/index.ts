@@ -1226,7 +1226,7 @@ Deno.serve(async (req) => {
           args.writes,
           messages,
           context,
-          handledPaths,
+          forceStep1BlueprintWrites ? new Set() : handledPaths,
           forceStep1BlueprintWrites ? MAIN_OFFER_STEP1_WRITE_PATHS : null,
         );
         if (writes.length > 0) {
