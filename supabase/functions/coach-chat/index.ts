@@ -1117,16 +1117,20 @@ function serializeAssistantForModel(m: any): string {
     if (!p || typeof p !== "object") continue;
     if (p.type === "text") continue; // already in content
     if (p.type === "proposal") {
-      chunks.push(`[proposed field value] ${String(p.value ?? "")}`);
+      // Neutral summary: no value, no bracketed pseudo-syntax the model could imitate.
+      chunks.push("(You previously proposed a field value via the propose_field_value tool.)");
     } else if (p.type === "blueprint_writes") {
       const writes = Array.isArray(p.writes) ? p.writes : [];
-      const lines = writes.map((w: any) => `  - ${w?.path}: ${String(w?.value ?? "").replace(/\s+/g, " ").slice(0, 400)}`);
-      chunks.push(`[proposed blueprint writes]\n${lines.join("\n")}`);
+      const pathList = writes.map((w: any) => w?.path).filter(Boolean).join(", ");
+      if (pathList) {
+        chunks.push(`(You previously proposed Blueprint updates for: ${pathList}. Do not repeat them as text — use the tool if you want to propose new ones.)`);
+      }
     } else if (p.type === "quick_replies") {
-      const replies = Array.isArray(p.replies) ? p.replies : [];
-      if (replies.length) chunks.push(`[suggested quick replies] ${replies.join(" | ")}`);
+      // Drop entirely — model does not need to see its own past suggestions,
+      // and any representation invites text imitation.
+      continue;
     } else if (p.type === "memory_saved") {
-      chunks.push(`[remembered fact] ${p.key}: ${p.value}`);
+      chunks.push(`(Remembered fact: ${p.key}.)`);
     }
   }
   return chunks.join("\n\n");
