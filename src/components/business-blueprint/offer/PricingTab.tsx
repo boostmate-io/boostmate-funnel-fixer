@@ -81,15 +81,27 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
   const removePlan = (id: string) =>
     onChange({ payment_plans: data.payment_plans.filter((p) => p.id !== id) });
 
+  const parseAmount = (raw: string): number | "" => {
+    const s = String(raw ?? "").trim();
+    if (!s) return "";
+    const n = Number(s);
+    return Number.isFinite(n) ? n : "";
+  };
+  const normalizePlanType = (raw: string): PaymentPlanType => {
+    const allowed: PaymentPlanType[] = ["full_pay", "split_2", "split_3", "split_6", "monthly", "custom"];
+    const t = String(raw ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_") as PaymentPlanType;
+    return (allowed as string[]).includes(t) ? t : "custom";
+  };
+
   const appendPlan = (item: Record<string, string>) =>
     onChangeRef.current({
       payment_plans: [
         ...dataRef.current.payment_plans,
         {
           id: newId(),
-          type: "custom",
+          type: normalizePlanType(item.type ?? "custom"),
           custom_label: (item.custom_label ?? "").trim(),
-          amount: "",
+          amount: parseAmount(item.amount ?? ""),
           duration: (item.duration ?? "").trim(),
         },
       ],
@@ -100,13 +112,14 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
         ...dataRef.current.payment_plans,
         ...items.map((item) => ({
           id: newId(),
-          type: "custom" as const,
+          type: normalizePlanType(item.type ?? "custom"),
           custom_label: (item.custom_label ?? "").trim(),
-          amount: "" as const,
+          amount: parseAmount(item.amount ?? ""),
           duration: (item.duration ?? "").trim(),
         })),
       ],
     });
+
 
   // Premium upgrade
   const updatePremium = (patch: Partial<PremiumUpgrade>) =>
