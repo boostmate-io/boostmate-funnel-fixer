@@ -720,6 +720,14 @@ export const BLUEPRINT_FIELDS: BlueprintFieldDef[] = [
     { helper: "Use one of: 7_days, 30_days, 60_days, 90_days, 6_months, 12_months, custom" },
   ),
   field(
+    "offer_stack.angle.core_promise.timeframe_custom",
+    "Timeframe — Custom Label",
+    "text",
+    ["timeframe custom", "custom timeframe", "custom termijn"],
+    { helper: "Short custom label when timeframe = custom" },
+  ),
+
+  field(
     "offer_stack.angle.core_promise.guarantee",
     "Guarantee / Risk Reversal",
     "text",
