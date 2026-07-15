@@ -325,16 +325,17 @@ function PartRenderer({
     return (
       <div
         className={cn(
-          "rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
+          "rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
           isUser
             ? "bg-primary text-primary-foreground rounded-br-sm"
             : "bg-card border border-border text-foreground rounded-bl-sm",
         )}
       >
-        {renderInlineBold(part.text)}
+        <MarkdownContent text={part.text} />
       </div>
     );
   }
+
 
   if (part.type === "quick_replies") {
     return (
