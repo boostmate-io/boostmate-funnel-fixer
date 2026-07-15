@@ -121,7 +121,15 @@ const OFFER_STACK_FIELDS: BlueprintFieldDef[] = [
       aliases: ["core deliverable description", "deliverable description"],
       helper: "1-2 sentences describing what the client receives and how it works",
     },
+    {
+      key: "frequency",
+      label: "Frequency",
+      kind: "text",
+      aliases: ["deliverable frequency", "delivery frequency", "cadence"],
+      helper: "One of: one_time | daily | weekly | biweekly | monthly | quarterly | ongoing",
+    },
   ]),
+
   ...indexedFields("offer_stack.stack.resources", "Resource", 3, [
     {
       key: "name",
@@ -198,6 +206,14 @@ const OFFER_STACK_FIELDS: BlueprintFieldDef[] = [
     ["delivery timeline", "program timeline", "delivery timeframe", "doorlooptijd"],
     { helper: "Use one of: 7_days, 30_days, 60_days, 90_days, 6_months, 12_months, custom" },
   ),
+  field(
+    "offer_stack.stack.delivery_timeline_custom",
+    "Delivery Timeline — Custom Label",
+    "text",
+    ["delivery timeline custom", "custom delivery timeline", "custom timeline"],
+    { helper: "Short custom label when delivery_timeline = custom" },
+  ),
+
   ...indexedFields("offer_stack.stack.milestones", "Milestone", 3, [
     {
       key: "phase_name",
@@ -225,13 +241,42 @@ const OFFER_STACK_FIELDS: BlueprintFieldDef[] = [
 
 // ---------- Pricing ---------------------------------------------------------
 const PRICING_FIELDS: BlueprintFieldDef[] = [
+  field(
+    "offer_stack.pricing.core_price",
+    "Core Price",
+    "text",
+    ["core price", "headline price", "main price", "kernprijs", "hoofdprijs"],
+    { helper: "Numeric headline price for the main offer, e.g. 2500. Numbers only." },
+  ),
   ...indexedFields("offer_stack.pricing.payment_plans", "Payment Plan", 3, [
+    {
+      key: "type",
+      label: "Type",
+      kind: "text",
+      aliases: ["payment plan type", "plan type"],
+      helper: "One of: full_pay | split_2 | split_3 | split_6 | monthly | custom",
+    },
     {
       key: "custom_label",
       label: "Label",
       kind: "text",
       aliases: ["payment plan label", "plan label", "plan name"],
       helper: "Short plan name, e.g. 'Pay in Full', '3-Pay'",
+    },
+    {
+      key: "amount",
+      label: "Amount",
+      kind: "text",
+      aliases: [
+        "payment plan amount",
+        "plan amount",
+        "plan price",
+        "payment amount",
+        "monetary value",
+        "prijs",
+        "bedrag",
+      ],
+      helper: "Numeric amount for this plan in workspace currency, e.g. 997. Numbers only.",
     },
     {
       key: "duration",
@@ -242,11 +287,25 @@ const PRICING_FIELDS: BlueprintFieldDef[] = [
     },
   ]),
   field(
+    "offer_stack.pricing.premium_enabled",
+    "Premium Upgrade — Enabled",
+    "text",
+    ["premium enabled", "premium upgrade enabled", "premium aan"],
+    { helper: "Boolean: true when a premium upgrade tier exists. Use 'true' or 'false'." },
+  ),
+  field(
     "offer_stack.pricing.premium_upgrade.name",
     "Premium Upgrade — Name",
     "text",
     ["premium upgrade name", "premium tier name", "vip name"],
     { helper: "Short, aspirational name for the premium tier" },
+  ),
+  field(
+    "offer_stack.pricing.premium_upgrade.price",
+    "Premium Upgrade — Price",
+    "text",
+    ["premium upgrade price", "premium price", "vip price"],
+    { helper: "Numeric price for the premium tier, e.g. 7500. Numbers only." },
   ),
   field(
     "offer_stack.pricing.premium_upgrade.description",
@@ -263,11 +322,32 @@ const PRICING_FIELDS: BlueprintFieldDef[] = [
     { helper: "What additional outcome this unlocks beyond the core offer" },
   ),
   field(
+    "offer_stack.pricing.recurring_enabled",
+    "Recurring Offer — Enabled",
+    "text",
+    ["recurring enabled", "recurring aan", "membership enabled"],
+    { helper: "Boolean: true when the offer has a recurring/continuity tier. Use 'true' or 'false'." },
+  ),
+  field(
     "offer_stack.pricing.recurring_offer.name",
     "Recurring Offer — Name",
     "text",
     ["recurring offer name", "recurring name", "membership name"],
     { helper: "Short, memorable name for the recurring offer" },
+  ),
+  field(
+    "offer_stack.pricing.recurring_offer.monthly_price",
+    "Recurring Offer — Monthly Price",
+    "text",
+    ["recurring monthly price", "membership price", "monthly price", "maandprijs"],
+    { helper: "Numeric price per interval, e.g. 97. Numbers only." },
+  ),
+  field(
+    "offer_stack.pricing.recurring_offer.interval",
+    "Recurring Offer — Interval",
+    "text",
+    ["recurring interval", "billing interval", "membership interval"],
+    { helper: "One of: monthly | quarterly | yearly" },
   ),
   field(
     "offer_stack.pricing.recurring_offer.description",
@@ -284,6 +364,20 @@ const PRICING_FIELDS: BlueprintFieldDef[] = [
     { helper: "What value is delivered every month" },
   ),
   field(
+    "offer_stack.pricing.guarantee_type",
+    "Guarantee Type",
+    "text",
+    ["guarantee type", "type garantie", "risk reversal type"],
+    { helper: "One of: none | refund | performance | milestone | custom" },
+  ),
+  field(
+    "offer_stack.pricing.guarantee_custom",
+    "Guarantee — Custom Label",
+    "text",
+    ["guarantee custom label", "custom guarantee label"],
+    { helper: "Short label when guarantee_type = custom" },
+  ),
+  field(
     "offer_stack.pricing.guarantee_details",
     "Guarantee Details / Terms",
     "textarea",
@@ -291,6 +385,7 @@ const PRICING_FIELDS: BlueprintFieldDef[] = [
     { helper: "Concrete, buyer-friendly terms of the guarantee" },
   ),
 ];
+
 
 // ---------- Growth System ---------------------------------------------------
 const GROWTH_SYSTEM_FIELDS: BlueprintFieldDef[] = [
@@ -625,6 +720,14 @@ export const BLUEPRINT_FIELDS: BlueprintFieldDef[] = [
     { helper: "Use one of: 7_days, 30_days, 60_days, 90_days, 6_months, 12_months, custom" },
   ),
   field(
+    "offer_stack.angle.core_promise.timeframe_custom",
+    "Timeframe — Custom Label",
+    "text",
+    ["timeframe custom", "custom timeframe", "custom termijn"],
+    { helper: "Short custom label when timeframe = custom" },
+  ),
+
+  field(
     "offer_stack.angle.core_promise.guarantee",
     "Guarantee / Risk Reversal",
     "text",
@@ -741,6 +844,7 @@ export const BLUEPRINT_SUB_BLOCKS: BlueprintSubBlockDef[] = [
       "offer_stack.angle.framework.pillars.2.description",
       "offer_stack.angle.core_promise.desired_outcome",
       "offer_stack.angle.core_promise.timeframe",
+      "offer_stack.angle.core_promise.timeframe_custom",
       "offer_stack.angle.core_promise.guarantee",
     ],
   },
@@ -804,6 +908,7 @@ export const BLUEPRINT_SUB_BLOCKS: BlueprintSubBlockDef[] = [
     fieldPaths: [
       "offer_stack.angle.core_promise.desired_outcome",
       "offer_stack.angle.core_promise.timeframe",
+      "offer_stack.angle.core_promise.timeframe_custom",
       "offer_stack.angle.core_promise.guarantee",
     ],
   },

@@ -81,15 +81,27 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
   const removePlan = (id: string) =>
     onChange({ payment_plans: data.payment_plans.filter((p) => p.id !== id) });
 
+  const parseAmount = (raw: string): number | "" => {
+    const s = String(raw ?? "").trim();
+    if (!s) return "";
+    const n = Number(s);
+    return Number.isFinite(n) ? n : "";
+  };
+  const normalizePlanType = (raw: string): PaymentPlanType => {
+    const allowed: PaymentPlanType[] = ["full_pay", "split_2", "split_3", "split_6", "monthly", "custom"];
+    const t = String(raw ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_") as PaymentPlanType;
+    return (allowed as string[]).includes(t) ? t : "custom";
+  };
+
   const appendPlan = (item: Record<string, string>) =>
     onChangeRef.current({
       payment_plans: [
         ...dataRef.current.payment_plans,
         {
           id: newId(),
-          type: "custom",
+          type: normalizePlanType(item.type ?? "custom"),
           custom_label: (item.custom_label ?? "").trim(),
-          amount: "",
+          amount: parseAmount(item.amount ?? ""),
           duration: (item.duration ?? "").trim(),
         },
       ],
@@ -100,13 +112,14 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
         ...dataRef.current.payment_plans,
         ...items.map((item) => ({
           id: newId(),
-          type: "custom" as const,
+          type: normalizePlanType(item.type ?? "custom"),
           custom_label: (item.custom_label ?? "").trim(),
-          amount: "" as const,
+          amount: parseAmount(item.amount ?? ""),
           duration: (item.duration ?? "").trim(),
         })),
       ],
     });
+
 
   // Premium upgrade
   const updatePremium = (patch: Partial<PremiumUpgrade>) =>
@@ -183,10 +196,12 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
             openListCoach({
               id: "pricing_payment_plans",
               label: "Payment Plans",
-              helper: "Flexible payment options that lower the upfront barrier. Coach suggests plan structures — you set the amounts.",
+              helper: `Flexible payment options that lower the upfront barrier. Propose concrete plans WITH a numeric amount in ${cur} for every plan — never leave the amount blank.`,
               basePath: "offer_stack.pricing.payment_plans",
               itemFields: [
+                { key: "type", label: "Plan Type", kind: "text", helper: "One of: full_pay | split_2 | split_3 | split_6 | monthly | custom." },
                 { key: "custom_label", label: "Plan Label", kind: "text", helper: "Short plan name (e.g. 'Pay in Full', '3-Pay')." },
+                { key: "amount", label: "Amount", kind: "text", helper: `Numeric amount in ${cur}, e.g. 997. Numbers only, no currency symbol.` },
                 { key: "duration", label: "Duration", kind: "text", helper: "How long the plan runs (e.g. '3 months', '12 weeks')." },
               ],
               currentCount: data.payment_plans.length,
