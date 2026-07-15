@@ -907,6 +907,7 @@ export const BLUEPRINT_SUB_BLOCKS: BlueprintSubBlockDef[] = [
     fieldPaths: [
       "offer_stack.angle.core_promise.desired_outcome",
       "offer_stack.angle.core_promise.timeframe",
+      "offer_stack.angle.core_promise.timeframe_custom",
       "offer_stack.angle.core_promise.guarantee",
     ],
   },
