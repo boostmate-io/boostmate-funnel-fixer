@@ -1279,10 +1279,10 @@ Deno.serve(async (req) => {
 
     // Build LLM messages
     const prompts = await loadCoachPrompts(supabase);
-    const forceStep1BlueprintWrites = isMainOfferStep1BlueprintUpdateRequest(context?.scope, messages);
+    const forcedMainOfferStep = detectMainOfferForcedWriteStep(context?.scope, messages, handledDecisions);
     const systemPrompt = [
       buildSystemPrompt(context, memoryFacts, prompts, messages, handledDecisions),
-      forceStep1BlueprintWrites ? renderForcedStep1BlueprintWritesPrompt() : "",
+      forcedMainOfferStep ? renderForcedMainOfferBlueprintWritesPrompt(forcedMainOfferStep) : "",
     ]
       .filter(Boolean)
       .join("\n\n---\n\n");
@@ -1314,7 +1314,7 @@ Deno.serve(async (req) => {
         lovableKey,
         llmMessages,
         tools,
-        forceStep1BlueprintWrites ? forcedBlueprintToolChoice : "auto",
+        forcedMainOfferStep ? forcedBlueprintToolChoice : "auto",
       );
     } catch (err: any) {
       if (err?.message === "AI_RATE_LIMIT") return jsonResponse({ error: "AI rate limit reached. Please retry shortly." }, 429);
@@ -1347,8 +1347,8 @@ Deno.serve(async (req) => {
           args.writes,
           messages,
           context,
-          forceStep1BlueprintWrites ? new Set() : handledPaths,
-          forceStep1BlueprintWrites ? MAIN_OFFER_STEP1_WRITE_PATHS : null,
+          forcedMainOfferStep ? new Set() : handledPaths,
+          forcedMainOfferStep ? forcedMainOfferStep.writePaths : null,
         );
         if (writes.length > 0) {
           parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
@@ -1388,11 +1388,11 @@ Deno.serve(async (req) => {
 
     await processToolCalls();
 
-    if (forceStep1BlueprintWrites && !parts.some((p: any) => p?.type === "blueprint_writes")) {
+    if (forcedMainOfferStep && !parts.some((p: any) => p?.type === "blueprint_writes")) {
       try {
         assistantMsg = await fetchCoachCompletion(
           lovableKey,
-          [...llmMessages, { role: "user", content: renderForcedStep1RetryPrompt() }],
+          [...llmMessages, { role: "user", content: renderForcedMainOfferRetryPrompt(forcedMainOfferStep) }],
           tools,
           forcedBlueprintToolChoice,
         );
@@ -1407,7 +1407,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (forceStep1BlueprintWrites && !parts.some((p: any) => p?.type === "blueprint_writes")) {
+    if (forcedMainOfferStep && !parts.some((p: any) => p?.type === "blueprint_writes")) {
       parts.length = 0;
     }
 
@@ -1417,10 +1417,10 @@ Deno.serve(async (req) => {
       const nl = (explicit ?? (uiLocale === "nl" ? "nl" : "en")) === "nl";
       const priorPaths = priorAssistantWritePaths(messages);
       let text: string;
-      if (forceStep1BlueprintWrites) {
+      if (forcedMainOfferStep) {
         text = nl
-          ? "Ik had hier Step 1 Blueprint updates moeten voorstellen, maar kon net geen geldige update-card maken. Geef me nog één keer de kernbelofte of het concrete resultaat uit Step 1, dan zet ik die direct om naar Blueprint updates."
-          : "I should have proposed Step 1 Blueprint updates here, but I couldn't create a valid update card. Give me the core promise or concrete outcome from Step 1 once more and I'll turn it directly into Blueprint updates.";
+          ? `Ik had hier Step ${forcedMainOfferStep.number} Blueprint updates moeten voorstellen, maar kon net geen geldige update-card maken. Geef me nog één keer ${forcedMainOfferStep.missingHintNl}, dan zet ik die direct om naar Blueprint updates.`
+          : `I should have proposed Step ${forcedMainOfferStep.number} Blueprint updates here, but I couldn't create a valid update card. Give me ${forcedMainOfferStep.missingHintEn} once more and I'll turn it directly into Blueprint updates.`;
       } else if (priorPaths.length > 0) {
         text = nl
           ? "Ik heb je vorige voorstel niet kunnen herzien. Kan je aangeven wat er anders moet (bv. taal, toon, lengte)?"
