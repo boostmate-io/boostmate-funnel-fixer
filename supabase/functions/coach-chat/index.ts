@@ -1057,6 +1057,39 @@ function isFieldProposalIntent(scope: string | undefined, messages: any[]) {
   );
 }
 
+
+async function fetchCoachCompletion(
+  lovableKey: string,
+  messages: any[],
+  tools: any[],
+  toolChoice: any,
+) {
+  const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Lovable-API-Key": lovableKey,
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages,
+      tools,
+      tool_choice: toolChoice,
+    }),
+  });
+
+  if (!gatewayRes.ok) {
+    const errText = await gatewayRes.text();
+    const status = gatewayRes.status;
+    if (status === 429) throw new Error("AI_RATE_LIMIT");
+    if (status === 402) throw new Error("AI_CREDITS_EXHAUSTED");
+    throw new Error(`AI gateway error: ${errText}`);
+  }
+
+  const gatewayJson = await gatewayRes.json();
+  return gatewayJson?.choices?.[0]?.message ?? {};
+}
+
 // -----------------------------------------------------------------------------
 // Handler
 // -----------------------------------------------------------------------------
