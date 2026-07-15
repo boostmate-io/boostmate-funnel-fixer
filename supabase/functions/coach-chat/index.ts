@@ -17,12 +17,64 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const MAIN_OFFER_STEP1_WRITE_PATHS = new Set([
-  "offer_stack.angle.core_outcome",
-  "offer_stack.angle.core_promise.desired_outcome",
-  "offer_stack.angle.main_offer_name",
-  "offer_stack.angle.short_description",
-]);
+type MainOfferWalkthroughStep = {
+  number: 1 | 2 | 3;
+  title: string;
+  focus: string;
+  writePaths: Set<string>;
+  missingHintEn: string;
+  missingHintNl: string;
+};
+
+const MAIN_OFFER_WALKTHROUGH_STEPS: MainOfferWalkthroughStep[] = [
+  {
+    number: 1,
+    title: "Core Outcome & Core Promise",
+    focus: "core outcome, target client, core promise, offer name and short description",
+    writePaths: new Set([
+      "offer_stack.angle.core_outcome",
+      "offer_stack.angle.core_promise.desired_outcome",
+      "offer_stack.angle.main_offer_name",
+      "offer_stack.angle.short_description",
+    ]),
+    missingHintEn: "the core promise or concrete outcome from Step 1",
+    missingHintNl: "de kernbelofte of het concrete resultaat uit Step 1",
+  },
+  {
+    number: 2,
+    title: "The Angle",
+    focus: "new vehicle, better results, faster outcome and easier process",
+    writePaths: new Set([
+      "offer_stack.angle.angle_new_vehicle",
+      "offer_stack.angle.angle_better_results",
+      "offer_stack.angle.angle_faster_outcome",
+      "offer_stack.angle.angle_easier_process",
+    ]),
+    missingHintEn: "one sentence about why your approach is new, better, faster, or easier",
+    missingHintNl: "één zin over waarom je aanpak nieuw, beter, sneller of makkelijker is",
+  },
+  {
+    number: 3,
+    title: "Signature Framework",
+    focus: "method name, method description and the three signature pillars",
+    writePaths: new Set([
+      "offer_stack.angle.framework.name",
+      "offer_stack.angle.framework.description",
+      "offer_stack.angle.framework.pillars.0.name",
+      "offer_stack.angle.framework.pillars.0.description",
+      "offer_stack.angle.framework.pillars.1.name",
+      "offer_stack.angle.framework.pillars.1.description",
+      "offer_stack.angle.framework.pillars.2.name",
+      "offer_stack.angle.framework.pillars.2.description",
+    ]),
+    missingHintEn: "the framework name or the three pillar ideas from Step 3",
+    missingHintNl: "de frameworknaam of de drie pijler-ideeën uit Step 3",
+  },
+];
+
+const MAIN_OFFER_STEP_BY_NUMBER = new Map(
+  MAIN_OFFER_WALKTHROUGH_STEPS.map((step) => [step.number, step]),
+);
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
