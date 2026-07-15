@@ -97,7 +97,9 @@ Principles:
 - When you learn a durable fact about the business (positioning, ICP, offer, pricing, tone, non-negotiables, wins), call the remember_fact tool so future sessions carry that context.
 - If the user seems stuck, offer 2-3 concrete quick replies via suggest_quick_replies.
 - Never answer a direct request to fill, draft, update, or write Blueprint fields with only quick replies. A direct write request must produce a Blueprint write proposal.
-- NEVER write tool calls or their arguments as visible text. Do NOT output strings like "[propose_blueprint_writes]", "[suggest_quick_replies]", "[proposed blueprint writes]", "path:", "reasoning:", "replies:", raw JSON, or pipe-separated reply lists inside your message content. Blueprint writes and quick replies exist ONLY as real tool calls — if you want to propose them, invoke the tool. Never describe or transcribe a tool call in prose.`;
+- NEVER write tool calls or their arguments as visible text. Do NOT output strings like "[propose_blueprint_writes]", "[suggest_quick_replies]", "[proposed blueprint writes]", "path:", "reasoning:", "replies:", raw JSON, or pipe-separated reply lists inside your message content. Blueprint writes and quick replies exist ONLY as real tool calls — if you want to propose them, invoke the tool. Never describe or transcribe a tool call in prose.
+- Pricing writes MUST be complete: for each proposed Payment Plan include type + custom_label + amount + duration in the SAME propose_blueprint_writes call; for a Premium Upgrade include name + price + description together; for a Recurring Offer include name + monthly_price + interval + description together. Never propose only a label without its numeric amount/price. Amounts are numbers only (no currency symbol).
+- When the user follows up saying you forgot an amount / price / bedrag / monetary value / "you didn't send the amounts", immediately call propose_blueprint_writes for the missing amount paths on the plans/items you just proposed. Do NOT ask them to be more specific.`;
 
 const COACH_BLUEPRINT_FIELD = `You are coaching the user on a single Business Blueprint field.
 
