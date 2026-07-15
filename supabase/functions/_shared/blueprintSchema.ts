@@ -844,6 +844,7 @@ export const BLUEPRINT_SUB_BLOCKS: BlueprintSubBlockDef[] = [
       "offer_stack.angle.framework.pillars.2.description",
       "offer_stack.angle.core_promise.desired_outcome",
       "offer_stack.angle.core_promise.timeframe",
+      "offer_stack.angle.core_promise.timeframe_custom",
       "offer_stack.angle.core_promise.guarantee",
     ],
   },
