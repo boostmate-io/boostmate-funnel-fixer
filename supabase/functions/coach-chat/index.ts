@@ -449,7 +449,9 @@ function recentConversationText(messages: any[], limit = 10): string {
     .slice(-limit)
     .map((m: any) => {
       const role = m?.role === "assistant" ? "assistant" : "user";
-      const content = typeof m?.content === "string" ? m.content : serializeAssistantForModel(m);
+      const rawContent = typeof m?.content === "string" ? m.content : "";
+      const serialized = m?.role === "assistant" ? serializeAssistantForModel(m) : "";
+      const content = [rawContent, serialized].filter((part) => part.trim()).join("\n");
       return `${role}: ${content}`;
     })
     .join("\n");
@@ -488,7 +490,7 @@ function assistantTextMentionsMainOfferStep(text: string, step: MainOfferWalkthr
   if (!new RegExp(`\\bstep\\s*${step.number}\\b`, "i").test(text)) return false;
   if (step.number === 1) return /(core\s+outcome|target\s+client|core\s+promise|main\s+offer)/i.test(text);
   if (step.number === 2) return /(angle|new\s+vehicle|better|faster|easier|all-or-nothing|motivation|system)/i.test(text);
-  return /(signature|framework|method|pillar|pijler)/i.test(text);
+  return /(signature|framework|method|pillar|pijler|names?\s+and\s+descriptions?|framework\s+fields?)/i.test(text);
 }
 
 function explicitMainOfferStepFromText(text: string): MainOfferWalkthroughStep | null {
@@ -526,6 +528,9 @@ function userRequestsBlueprintUpdates(text: string): boolean {
   return (
     /\bblueprint\s+(updates?|writes?|proposals?)\b/i.test(text) ||
     /\bpropos(?:e|ed|ing)\s+blueprint\b/i.test(text) ||
+    /\bpropos(?:e|ed|ing)\s+(?:the\s+)?(?:writes?|updates?|proposals?)\b/i.test(text) ||
+    /\b(?:give|show|send|make|create|draft)\s+(?:me\s+)?(?:the\s+)?(?:writes?|updates?|proposals?)\b/i.test(text) ||
+    /\b(?:stel|geef|toon|maak)\s+(?:de\s+)?(?:writes?|updates?|voorstellen?)\s+(?:voor)?\b/i.test(text) ||
     /\b(update|updates|writes|proposals?)\s+(?:for|as\s+discussed\s+in|from)\s+(?:step\s*)?[123]\b/i.test(text) ||
     /\bshouldn['’]?t\s+you\s+(?:need\s+to\s+)?propos(?:e|ed|ing)\b/i.test(text) ||
     /\byou\s+didn['’]?t\s+give\s+me\s+the\s+blueprint\s+updates\b/i.test(text) ||
@@ -537,7 +542,7 @@ function userConfirmsOrAsksCoachToFill(text: string): boolean {
   const trimmed = text.trim();
   return (
     /^(ok(?:e|ay)?|cool|looks\s+good|good|yes|ja|prima|top|go\s+ahead|next(?:\s+step)?|volgende\s+stap)[.!\s]*$/i.test(trimmed) ||
-    /\b(looks\s+good|next\s+step|volgende\s+stap)\b/i.test(text) ||
+    /\b(looks\s+good|next\s+step|volgende\s+stap|propose\s+(?:the\s+)?writes?|propose\s+(?:the\s+)?updates?)\b/i.test(text) ||
     /\b(just\s+fill|fill\s+this|fill\s+it|fill\s+in|you\s+think\s+is\s+best|doe\s+maar|vul\s+(dit|het)\s+maar|vul\s+maar\s+in|zoals\s+jij\s+denkt)\b/i.test(text)
   );
 }
@@ -635,6 +640,13 @@ function normalizeForMatch(value: string): string {
 function canonicalBlueprintPath(rawPath: string): string {
   const path = String(rawPath ?? "").trim();
   if (BLUEPRINT_FIELD_META[path]) return path;
+  const virtualFrameworkPillar = path.match(/^offer_stack\.angle\.framework\.pillars\.new_(\d+)\.(name|description)$/);
+  if (virtualFrameworkPillar) {
+    const index = Number(virtualFrameworkPillar[1]);
+    const field = virtualFrameworkPillar[2];
+    const concrete = `offer_stack.angle.framework.pillars.${index}.${field}`;
+    if (BLUEPRINT_FIELD_META[concrete]) return concrete;
+  }
   const key = path.split(".").at(-1) ?? path;
   return BLUEPRINT_KEY_TO_PATH.get(key) ?? path;
 }

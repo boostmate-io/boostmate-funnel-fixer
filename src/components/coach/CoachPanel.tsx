@@ -605,6 +605,10 @@ function expandQuickReplyForContext(reply: string, context: CoachContext | null)
   const text = reply.trim();
   const lower = text.toLowerCase();
 
+  if (/\b(propose\s+(?:the\s+)?writes?|propose\s+(?:the\s+)?updates?|stel\s+(?:de\s+)?writes?\s+voor|geef\s+(?:de\s+)?writes?)\b/.test(lower)) {
+    return `${text}. Propose the Blueprint updates for the current Main Offer step so I can apply them.`;
+  }
+
   if (/\b(looks good|next step|volgende stap|ziet er goed uit)\b/.test(lower)) {
     return `${text}. First propose the Blueprint updates for this step so I can apply them; then we can move to the next step.`;
   }
