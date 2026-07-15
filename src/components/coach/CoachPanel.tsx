@@ -197,35 +197,35 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-muted/20">
-        <div className={cn(fullscreen && "max-w-3xl mx-auto w-full space-y-3")}>
-
-        {displayMessages.map((m) => (
-          <MessageBubble
-            key={m.id}
-            message={m}
-            onQuickReply={(r) => handleSend(expandQuickReplyForContext(r, context))}
-            onApply={handleApply}
-            onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
-            onApplyBlueprintWrites={onApplyBlueprintWrites}
-            initialDecisions={{ ...(decisions["__any__"] ?? {}), ...(decisions[m.id] ?? {}) }}
-            onDecision={(writes, decision) => recordDecision(m.id, writes, decision)}
-          />
-        ))}
-        {status === "sending" && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground pl-1">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            {t.thinking}
-          </div>
-        )}
-        {error && (
-          <div className="text-xs text-destructive bg-destructive/10 rounded-lg p-2">{error}</div>
-        )}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 bg-muted/20">
+        <div className={cn("space-y-3", fullscreen && "max-w-3xl mx-auto w-full")}>
+          {displayMessages.map((m) => (
+            <MessageBubble
+              key={m.id}
+              message={m}
+              onQuickReply={(r) => handleSend(expandQuickReplyForContext(r, context))}
+              onApply={handleApply}
+              onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
+              onApplyBlueprintWrites={onApplyBlueprintWrites}
+              initialDecisions={{ ...(decisions["__any__"] ?? {}), ...(decisions[m.id] ?? {}) }}
+              onDecision={(writes, decision) => recordDecision(m.id, writes, decision)}
+            />
+          ))}
+          {status === "sending" && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground pl-1">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {t.thinking}
+            </div>
+          )}
+          {error && (
+            <div className="text-xs text-destructive bg-destructive/10 rounded-lg p-2">{error}</div>
+          )}
+        </div>
       </div>
 
       {/* Composer */}
       <div className="border-t bg-card p-3">
-        <div className="flex items-end gap-2">
+        <div className={cn("flex items-end gap-2", fullscreen && "max-w-3xl mx-auto w-full")}>
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -236,7 +236,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
               }
             }}
             placeholder={t.placeholder}
-            rows={2}
+            rows={fullscreen ? 3 : 2}
             className="resize-none text-sm"
             disabled={status === "sending"}
           />
@@ -253,6 +253,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
           </Button>
         </div>
       </div>
+
     </div>
   );
 };
