@@ -353,7 +353,7 @@ export async function applyBlueprintWrites(
     if (segments.length < 2) continue;
     const [root, ...tail] = segments;
     if (!ROOT_COLUMNS.has(root)) continue;
-    setDeep((patch as any)[root], tail, w.value);
+    setDeep((patch as any)[root], tail, coerceForPath(w.path, w.value));
     applied++;
   }
 
