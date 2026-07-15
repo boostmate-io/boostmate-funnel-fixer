@@ -1,67 +1,69 @@
-## Waarom dit misgaat
+## Plan: AI Coach walkthrough betrouwbaar maken
 
-Je hebt gelijk: **“give me the blueprint updates as discussed in step 1”** is duidelijk genoeg. De Coach had moeten begrijpen: “pak de besproken Step 1-context en toon nu de Blueprint updates-card.”
+Ik ga dit niet opnieuw als een losse Step 1-fix aanpakken. Het probleem is structureel: de Coach heeft geen echte server-side walkthrough-state en vertrouwt te veel op het model om zelf te onthouden wanneer een stap eerst Blueprint updates moet opleveren.
 
-De waarschijnlijke oorzaak zit niet in jouw formulering, maar in de implementatie:
+### 1. Main Offer walkthrough-stappen expliciet modelleren
+Ik voeg server-side definities toe voor de Main Offer guided walkthrough:
 
-- De Coach vertrouwt nu te veel op het model om zelf te beslissen wanneer hij `propose_blueprint_writes` moet aanroepen.
-- Als het model geen geldige tool-call teruggeeft, toont de backend een generieke fallback: **“Could you be a bit more specific?”**
-- De bestaande intent-detectie voor Blueprint writes bestaat wel in de backend, maar wordt niet hard gebruikt om deze tool-call af te dwingen.
-- Na refresh kan de Coach bovendien in een conversatie terechtkomen waar de eerdere Step 1-context niet goed genoeg wordt gebruikt of niet correct wordt herkend als “pending blueprint updates”.
-
-## Plan
-
-### 1. Generieke fallback vervangen voor Blueprint-update verzoeken
-Als de gebruiker iets zegt als:
-- “give me the blueprint updates as discussed in step 1”
-- “we discussed step 1 but you haven’t given the blueprint updates”
-- “shouldn’t you propose blueprint updates?”
-- “give me the proposed blueprint updates for this step”
-
-mag de backend nooit meer terugvallen op **“Could you be more specific?”**.
-
-In plaats daarvan moet hij ofwel:
-- direct een **Blueprint updates** card voorstellen, of
-- heel specifiek zeggen welk Step 1-onderdeel nog ontbreekt.
-
-### 2. Step 1-update intent deterministisch detecteren
-Ik voeg server-side herkenning toe voor Main Offer guided walkthroughs, specifiek voor Step 1:
-
-**Step 1 = Core Outcome & Target Client / Core Promise / Angle basis.**
-
-Bij herkenning van “step 1” + “blueprint updates” wordt dit niet meer als normale chat behandeld, maar als verplichte Blueprint-write actie.
-
-### 3. Tool-call hard forceren
-Wanneer Step 1 Blueprint updates gevraagd worden:
-
-- `tool_choice` wordt geforceerd naar `propose_blueprint_writes`.
-- De prompt krijgt een tijdelijke harde instructie: geen extra uitleg, geen nieuwe vraag, maar Blueprint writes voorstellen voor Step 1.
-- De toegestane paths worden beperkt tot relevante Step 1-velden, zoals:
+- Step 1: Core Outcome & Core Promise
   - `offer_stack.angle.core_outcome`
   - `offer_stack.angle.core_promise.desired_outcome`
   - `offer_stack.angle.main_offer_name`
   - `offer_stack.angle.short_description`
+- Step 2: The Angle
+  - `offer_stack.angle.angle_new_vehicle`
+  - `offer_stack.angle.angle_better_results`
+  - `offer_stack.angle.angle_faster_outcome`
+  - `offer_stack.angle.angle_easier_process`
+- Step 3: Signature Framework
+  - `offer_stack.angle.framework.name`
+  - `offer_stack.angle.framework.description`
+  - `offer_stack.angle.framework.pillars.0.name`
+  - `offer_stack.angle.framework.pillars.0.description`
+  - `offer_stack.angle.framework.pillars.1.name`
+  - `offer_stack.angle.framework.pillars.1.description`
+  - `offer_stack.angle.framework.pillars.2.name`
+  - `offer_stack.angle.framework.pillars.2.description`
 
-### 4. Als de tool-call leeg of ongeldig is: repair retry
-Als het model wel een tool-call probeert maar de writes worden weggefilterd, voert de backend één herstelpoging uit met expliciete toegestane paths.
+### 2. “Fill this / looks good / next step” deterministisch afhandelen
+Voor guided walkthroughs forceer ik Blueprint-write cards wanneer de gebruiker bevestigt of zegt dat de Coach het mag invullen, zoals:
 
-Daarna mag er nog steeds geen vage fallback komen. De reactie moet concreet blijven binnen Step 1.
+- “okay just fill this how you think is best”
+- “looks good, next step”
+- “oke volgende stap”
+- “give me the blueprint updates for step 2”
+- “you didn’t give me the blueprint updates yet”
 
-### 5. Refresh/context robuuster maken
-Ik controleer en verbeter de conversatie-load na refresh:
+Belangrijk: als de huidige stap nog geen Blueprint updates heeft gekregen, mag de Coach niet naar de volgende stap gaan.
 
-- bestaande global Coach-conversaties moeten correct teruggevonden worden;
-- berichten uit de bestaande conversatie moeten altijd meegestuurd worden;
-- oudere global conversations met lege/afwijkende `target_id` moeten niet leiden tot contextverlies;
-- verzenden moet wachten tot de bestaande berichten geladen zijn.
+### 3. Quick replies veiliger maken
+Ik pas de voorgestelde quick replies aan zodat knoppen als “Looks good, next step” in een guided Blueprint-flow niet letterlijk alleen een chatbericht sturen dat het model kan misinterpreteren. Ze worden uitgebreid naar een expliciete instructie:
 
-### 6. Verificatie
-Ik test dit scenario:
+“Looks good. First propose the Blueprint updates for this step so I can apply them; then we can move to the next step.”
 
-1. Main Offer-flow starten.
-2. Step 1 bespreken.
-3. Vragen: **“give me the blueprint updates as discussed in step 1”**.
-4. Verwacht: **Blueprint updates** card.
-5. Refresh.
-6. Opnieuw vragen naar Step 1 Blueprint updates.
-7. Verwacht: nog steeds contextueel antwoord of Blueprint updates, geen “Could you be more specific?”.
+### 4. Geen nep-tool output meer in tekst
+Als het model tekst terugstuurt zoals `[proposed blueprint writes]` of raw paths zonder echte `blueprint_writes` tool-call, behandel ik dat als een mislukte tool-call en doe ik automatisch een repair retry met geforceerde `propose_blueprint_writes`.
+
+De UI mag dus geen pseudo-output tonen als gewone chat wanneer er eigenlijk een update-card verwacht wordt.
+
+### 5. Bestaande Step 1-fix generaliseren
+De huidige hardcoded Step 1-detectie wordt vervangen door een generieke `MainOfferStep` detector die:
+
+- de laatst besproken stap uit recente assistant-berichten haalt;
+- expliciete step-nummers herkent;
+- kijkt welke fields al accepted/dismissed zijn;
+- bij ontbrekende updates de juiste tool-call forceert voor die stap.
+
+### 6. Fallbacks concreet maken
+De generieke fallback “Could you be a bit more specific?” blijft niet actief voor deze walkthrough-situaties. Als een Blueprint-card niet gemaakt kan worden, krijgt de gebruiker een concrete melding voor de juiste stap, bijvoorbeeld:
+
+“Ik had hier Step 2 Blueprint updates moeten voorstellen. Ik kon de update-card net niet maken; geef me nog één zin over waarom jouw aanpak beter/sneller/makkelijker is, dan zet ik die direct om.”
+
+### 7. Validatie
+Ik verifieer deze scenario’s:
+
+1. Step 1 updates geaccepteerd → Coach opent Step 2.
+2. User zegt: “okay just fill this is how you think is best” → Blueprint updates card voor Step 2.
+3. User klikt “Looks good, next step” → eerst Blueprint updates card voor Step 2, niet Step 3.
+4. User zegt: “you didn't give me the blueprint updates for step 2 yet” → echte Blueprint updates card, geen `[proposed blueprint writes]` tekst.
+5. Refresh → recente context blijft bruikbaar en de Coach weet welke stap nog pending is.
