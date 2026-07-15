@@ -588,16 +588,14 @@ function BlueprintWritesCard({
   );
 }
 
-function renderInlineBold(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((p, i) =>
-    p.startsWith("**") && p.endsWith("**") ? (
-      <strong key={i}>{p.slice(2, -2)}</strong>
-    ) : (
-      <span key={i}>{p}</span>
-    ),
+function MarkdownContent({ text }: { text: string }) {
+  return (
+    <div className="coach-markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+    </div>
   );
 }
+
 
 function expandQuickReplyForContext(reply: string, context: CoachContext | null) {
   const text = reply.trim();
