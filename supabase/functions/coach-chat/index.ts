@@ -640,6 +640,13 @@ function normalizeForMatch(value: string): string {
 function canonicalBlueprintPath(rawPath: string): string {
   const path = String(rawPath ?? "").trim();
   if (BLUEPRINT_FIELD_META[path]) return path;
+  const virtualFrameworkPillar = path.match(/^offer_stack\.angle\.framework\.pillars\.new_(\d+)\.(name|description)$/);
+  if (virtualFrameworkPillar) {
+    const index = Number(virtualFrameworkPillar[1]);
+    const field = virtualFrameworkPillar[2];
+    const concrete = `offer_stack.angle.framework.pillars.${index}.${field}`;
+    if (BLUEPRINT_FIELD_META[concrete]) return concrete;
+  }
   const key = path.split(".").at(-1) ?? path;
   return BLUEPRINT_KEY_TO_PATH.get(key) ?? path;
 }
