@@ -5,6 +5,9 @@
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -325,16 +328,17 @@ function PartRenderer({
     return (
       <div
         className={cn(
-          "rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
+          "rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
           isUser
             ? "bg-primary text-primary-foreground rounded-br-sm"
             : "bg-card border border-border text-foreground rounded-bl-sm",
         )}
       >
-        {renderInlineBold(part.text)}
+        <MarkdownContent text={part.text} />
       </div>
     );
   }
+
 
   if (part.type === "quick_replies") {
     return (
@@ -587,16 +591,14 @@ function BlueprintWritesCard({
   );
 }
 
-function renderInlineBold(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((p, i) =>
-    p.startsWith("**") && p.endsWith("**") ? (
-      <strong key={i}>{p.slice(2, -2)}</strong>
-    ) : (
-      <span key={i}>{p}</span>
-    ),
+function MarkdownContent({ text }: { text: string }) {
+  return (
+    <div className="coach-markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+    </div>
   );
 }
+
 
 function expandQuickReplyForContext(reply: string, context: CoachContext | null) {
   const text = reply.trim();
