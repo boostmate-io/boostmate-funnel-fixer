@@ -1,78 +1,63 @@
+## Wat is er structureel mis
 
-## Probleem
+De Coach mag alleen naar velden schrijven die in het gedeelde Blueprint-schema staan (`supabase/functions/_shared/blueprintSchema.ts`). Alles wat daar ontbreekt, wordt stil weggefilterd — daarom bleef bij Payment Plans het amount leeg. Bij een controle tegen de daadwerkelijke UI-typen (`offerDesignTypes.ts` + `PricingTab.tsx` / `OfferStackTab.tsx`) blijkt dat er meer numerieke en gestructureerde velden op dezelfde manier ontbreken.
 
-Assistant-berichten bevatten ruwe tool-call syntax als zichtbare tekst:
+## Vermiste / genegeerde velden
 
-```
-[propose_blueprint_writes] reasoning: "..."
-  path: "offer_stack.pricing.payment_plans.0.amount"
-  label: "Payment Plan 1 — Amount"
-  value: "£149"
-  ...
-[suggest_quick_replies] replies: ["Looks good...", ...]
-```
+**Pricing tab — het meest kritisch**
+- `offer_stack.pricing.core_price` (headline prijs) — bestaat wel in UI, niet in schema.
+- `offer_stack.pricing.payment_plans.<n>.amount` (bedrag per plan).
+- `offer_stack.pricing.payment_plans.<n>.type` (Full Pay / 2-Pay / … / Custom) — nu impliciet altijd "custom".
+- `offer_stack.pricing.premium_upgrade.price`.
+- `offer_stack.pricing.recurring_offer.monthly_price`.
+- `offer_stack.pricing.recurring_offer.interval` (monthly / quarterly / yearly).
+- `offer_stack.pricing.guarantee_type` (none / refund / performance / milestone / custom).
+- `offer_stack.pricing.guarantee_custom` (label voor custom).
+- `offer_stack.pricing.recurring_enabled` en `premium_enabled` (schakelaars).
 
-De gebruiker ziet interne paths en tool-namen. De update-card wordt niet gerenderd omdat het geen echte tool-call is — het is tekst die eruitziet als een tool-call.
+**Offer Stack tab**
+- `offer_stack.stack.deliverables.<n>.frequency` (one_time / weekly / …).
+- `offer_stack.stack.deliverables.<n>.delivery_types` (multi-select uit delivery library).
+- `offer_stack.stack.delivery_timeline_custom` (label als timeline = custom).
 
-## Oorzaak
+**Offer Angle tab**
+- `offer_stack.angle.core_promise.timeframe_custom` (label als timeframe = custom).
+- Framework is hardcoded op 3 pijlers; als een user er 4-5 wil geeft het schema geen ruimte. Nu prima houden, maar noteren als grens.
 
-`supabase/functions/coach-chat/index.ts` regel 1110-1132 (`serializeAssistantForModel`) zet eerdere tool-outputs uit `parts` om naar tekst voor de model-context:
+## Plan
 
-- `blueprint_writes` → `[proposed blueprint writes]\n  - <path>: <value>`
-- `quick_replies` → `[suggested quick replies] A | B | C`
-- `proposal` → `[proposed field value] <value>`
-- `memory_saved` → `[remembered fact] <k>: <v>`
+1. **Schema uitbreiden**
+   - Voeg elk hierboven genoemd veld toe aan `blueprintSchema.ts` met passende `kind` (`text` voor getallen/enums, `textarea` waar prose passend is), duidelijke aliases (Engels + Nederlands), en `helper` die de toegestane waarden aangeeft (bv. `monthly | quarterly | yearly`, `none | refund | performance | milestone | custom`).
+   - Voeg ze toe aan de `pricing` sub-block zodat "vul de Pricing tab" ze meepakt.
 
-Deze bracketed pseudo-syntax is voor het model niet duidelijk onderscheidbaar van "een format dat ik zelf moet produceren". Zodra het model onder druk staat (lange context, veel writes tegelijk, tab-vraag) valt het terug op tekst-imitatie in plaats van échte tool-calls.
+2. **Numerieke normalisatie**
+   - Uitbreiden van `normalizeFieldValue` zodat prijs/amount-paths string-getallen als `€1.200`, `1,200`, `97/month` reduceren tot een numerieke string.
+   - Uitbreiden van `applyBlueprintWrites` (of `normalizePricingLists`) zodat die numerieke strings correct als `number | ""` in de UI-datastructuur landen (payment_plans.amount, core_price, premium_upgrade.price, recurring_offer.monthly_price).
 
-## Oplossing
+3. **Enum-normalisatie**
+   - Kleine helpers voor `guarantee_type`, `recurring_offer.interval`, `payment_plans.<n>.type` en `deliverables.<n>.frequency`: mapt vrije tekst als "monthly" / "3-pay" / "one time" naar de toegestane enum-waarden.
+   - Ongeldige waarden vallen terug op een veilig default in plaats van door te sluipen als vrije tekst.
 
-Drie lagen — samen, niet apart:
+4. **Booleans**
+   - `recurring_enabled` en `premium_enabled` behandelen als booleaanse writes: `"true"`/`"false"`/`"yes"` → boolean bij apply. Coach mag deze impliciet activeren zodra hij bijbehorende velden voorstelt.
 
-### 1. Serialisatie neutraliseren
-Vervang de tekst-representaties in `serializeAssistantForModel` door korte, niet-imiteerbare samenvattingen die géén syntactisch format bevatten:
+5. **PricingTab list-mode uitbreiden**
+   - `useOfferCoach.openListCoach` voor Payment Plans krijgt `amount` en `type` als items erbij, met helper dat de Coach een concrete waarde in workspace-valuta moet noemen.
+   - `appendPlan` / `appendPlans` accepteren die waarden en converteren `amount` naar `number`.
 
-- `blueprint_writes` → `(Previously proposed Blueprint updates for: <path1>, <path2>, ...)` — alleen padnamen, geen values, geen bullets, geen brackets die op tool-syntax lijken.
-- `quick_replies` → volledig weglaten. Het model heeft z'n eigen eerdere suggesties niet nodig voor context.
-- `proposal` → `(Previously proposed field value.)` zonder de value zelf (die zit al in de UI-state, model hoeft niet te herhalen).
-- `memory_saved` → `(Remembered: <key>)` zonder de value.
+6. **Prompt-hint**
+   - Eén regel in de Coach system prompt: bij Pricing-writes altijd amount + duration + label samen leveren; bij recurring altijd monthly_price + interval + name; bij premium altijd price + name + description. Voorkomt dat de Coach "de helft" voorstelt.
 
-### 2. Text sanitizer + recovery bij response-verwerking
-In de response handler (waar assistant parts worden opgebouwd, rond regel 1360-1380):
-
-- Detecteer in de assistant text-output regel-patronen die op onze eigen brackets lijken: `/^\s*\[(propose_blueprint_writes|suggest_quick_replies|proposed blueprint writes|suggested quick replies|proposed field value|remembered fact)\b/mi` en ook `/^\s*path:\s*"[^"]+"\s*$/mi`, `/^\s*(label|value|reasoning|replies):/mi`.
-- **Recovery**: probeer eerst het blok te parsen naar een echte part:
-  - `[propose_blueprint_writes]` blok → parse `path: "..."`, `label: "..."`, `value: "..."` triplets naar `{ type: "blueprint_writes", writes: [...] }`.
-  - `[suggest_quick_replies] replies: [...]` → parse JSON-array of pipe-lijst naar `{ type: "quick_replies", replies: [...] }`.
-- **Strip**: wat na parsing overblijft (of niet parsebaar is) uit de zichtbare text verwijderen. Als text daardoor leeg wordt, drop de text-part.
-
-Dat maakt bestaande foute output nog nuttig én onzichtbaar voor de user.
-
-### 3. System prompt regel toevoegen
-Eén expliciete regel in de system prompt (bij de andere anti-imitatie regels rond regel 96-108):
-
-> "NEVER write tool calls or their arguments as text. Do not output strings like `[propose_blueprint_writes]`, `[suggest_quick_replies]`, `path:`, `reasoning:`, or pipe-separated reply lists in your message content. Blueprint writes and quick replies exist ONLY as actual tool calls; if you want to propose them, invoke the tool — do not describe it."
-
-## Verificatie
-
-Playwright tegen preview:
-1. Open Blueprint → Offer Design → Pricing tab. Open Coach.
-2. Vraag: "the pricing tab seems pretty empty, fill it in"
-3. Verwacht:
-   - Geen `path:` / `[propose_blueprint_writes]` / `[suggest_quick_replies]` tekst in het bericht.
-   - Wel een echte update-card met de voorgestelde writes.
-   - Wel echte klikbare quick-reply knoppen (of geen quick replies — beide is oké, alleen niet als tekst).
-4. Herhaal met de Angle en Stack tab om te bevestigen dat de fix breed werkt, niet alleen voor Pricing.
-5. Reload de conversatie: oude berichten die de foute string al bevatten worden client-side niet gerenderd als tekst (zie stap 2 sanitizer, die draait server-side bij verzenden — voor reeds opgeslagen assistant text-parts is ook een lichte client-side strip in `CoachPanel.tsx` nodig zodat historische berichten schoon tonen).
-
-## Wat blijft ongewijzigd
-
-- `propose_blueprint_writes` en `suggest_quick_replies` tool signatures.
-- Frontend rendering van `blueprint_writes` / `quick_replies` parts in `CoachPanel.tsx` (behalve één light text-strip regex voor legacy content).
-- Walkthrough state-logica.
-- Alle Blueprint schema paths.
+7. **Sanitizer / leak-guards**
+   - De bestaande sanitizer die pseudo tool-syntaxis stript blijft ongewijzigd.
+   - Toevoegen: kort mandatory-retry stukje voor de "je vergat het bedrag / de amount / value / prijs"-follow-up zodat de Coach automatisch een write voorstelt voor de amount-paths van reeds voorgestelde payment plans (in plaats van "kun je specifieker zijn?").
 
 ## Bestanden
 
-- `supabase/functions/coach-chat/index.ts` — serialisatie neutraliseren (~10 regels), text sanitizer + recovery in response handler (~40 regels), system prompt regel (~3 regels).
-- `src/components/coach/CoachPanel.tsx` — client-side strip regex voor legacy assistant text (~5 regels), zodat al opgeslagen berichten ook schoon renderen.
+- `supabase/functions/_shared/blueprintSchema.ts` — nieuwe velden + pricing sub-block bijwerken.
+- `supabase/functions/coach-chat/index.ts` — normalisatie voor number/enum/boolean, prompt-hint, follow-up retry.
+- `src/lib/coach/applyBlueprintWrites.ts` — pricing/stack normalize functies uitbreiden zodat numeriek/enum/boolean correct wegvalt in de bestaande UI-structuur.
+- `src/components/business-blueprint/offer/PricingTab.tsx` en `useOfferCoach` call — `amount` en `type` mee laten schrijven vanuit list-mode, helper-tekst herschrijven ("Coach stelt ook bedragen voor" i.p.v. "you set the amounts").
+- Optioneel: `OfferStackTab.tsx` — deliverables list-mode meegeven van `frequency` en `delivery_types` zodra schema uitgebreid is.
+
+Niets aan het chat-UI-gedrag of aan andere modules; alleen deze scope.
