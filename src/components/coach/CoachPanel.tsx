@@ -114,6 +114,7 @@ const openerFor = (context: CoachContext | null): CoachMessage | null => {
 const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrites }: Props) => {
   const { messages, status, error, sendMessage, decisions, recordDecision } = useCoachChat(context, open);
   const [input, setInput] = useState("");
+  const [fullscreen, setFullscreen] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const opener = useMemo(() => openerFor(context), [context]);
@@ -127,7 +128,10 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
       ? "Scherp deze versie verder aan, houd de kern maar maak hem sterker:"
       : "Sharpen this version further — keep the core, make it stronger:",
     close: nl ? "Sluiten" : "Close",
+    expand: nl ? "Volledig scherm" : "Fullscreen",
+    collapse: nl ? "Verkleinen" : "Exit fullscreen",
   };
+
 
   useEffect(() => {
     if (open) {
