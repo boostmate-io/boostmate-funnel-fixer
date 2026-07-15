@@ -740,7 +740,13 @@ function normalizeCurrentFieldProposal(context: any, value: string): string {
   return normalizeFieldValue(path, value);
 }
 
-function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, handledPaths: Set<string> = new Set()) {
+function sanitizeBlueprintWrites(
+  writesArg: any,
+  messages: any[],
+  context: any,
+  handledPaths: Set<string> = new Set(),
+  allowedPaths: Set<string> | null = null,
+) {
   if (!Array.isArray(writesArg)) return [];
 
   const listSection = context?.target?.listSection;
@@ -820,6 +826,7 @@ function sanitizeBlueprintWrites(writesArg: any, messages: any[], context: any, 
     const meta = BLUEPRINT_FIELD_META[path];
     // Hard rules only: unknown paths, non-writable fields, already-handled paths.
     if (!meta || !meta.aiWritable) continue;
+    if (allowedPaths && !allowedPaths.has(path)) continue;
     if (handledPaths.has(path)) continue;
     // Hard tab-scope guard stays: when a Blueprint tab is in focus, never
     // accept writes leaking into other tabs (prevents cross-tab UI confusion).
@@ -1215,7 +1222,13 @@ Deno.serve(async (req) => {
         name === "propose_blueprint_writes" &&
         (context?.scope === "blueprint.section" || context?.scope === "global")
       ) {
-        const writes = sanitizeBlueprintWrites(args.writes, messages, context, handledPaths);
+        const writes = sanitizeBlueprintWrites(
+          args.writes,
+          messages,
+          context,
+          handledPaths,
+          forceStep1BlueprintWrites ? MAIN_OFFER_STEP1_WRITE_PATHS : null,
+        );
         if (writes.length > 0) {
           parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
         }
