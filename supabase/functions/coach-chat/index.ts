@@ -1286,6 +1286,10 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (forceStep1BlueprintWrites && !parts.some((p: any) => p?.type === "blueprint_writes")) {
+      parts.length = 0;
+    }
+
     if (parts.length === 0) {
       const explicit = explicitLanguageInstruction(messages);
       const uiLocale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
