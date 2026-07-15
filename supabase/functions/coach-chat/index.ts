@@ -1136,6 +1136,81 @@ function serializeAssistantForModel(m: any): string {
   return chunks.join("\n\n");
 }
 
+// -----------------------------------------------------------------------------
+// Sanitizer: strip leaked tool-call syntax from assistant text, and (best-effort)
+// recover it into real UI parts. Handles the failure mode where the model writes
+// "[propose_blueprint_writes] ... path: '...' value: '...'" as prose instead of
+// invoking the tool.
+// -----------------------------------------------------------------------------
+function sanitizeLeakedToolCallText(text: string): {
+  cleanText: string;
+  recovered: any[];
+} {
+  const recovered: any[] = [];
+  if (!text) return { cleanText: "", recovered };
+
+  let working = text;
+
+  // 1) Recover [propose_blueprint_writes] blocks — greedy grab until next bracket
+  //    marker or end of string; parse path/label/value triplets.
+  const writesBlockRe =
+    /\[\s*propose_blueprint_writes\s*\][\s\S]*?(?=\n\s*\[(?:suggest_quick_replies|propose_field_value|remember_fact|proposed |suggested |remembered )|\n\s*$|$)/gi;
+  working = working.replace(writesBlockRe, (block) => {
+    const tripletRe =
+      /path:\s*["']([^"'\n]+)["'][\s\S]*?(?:label:\s*["']([^"'\n]*)["'][\s\S]*?)?value:\s*["']([\s\S]*?)["']\s*(?=\n\s*(?:path:|label:|reasoning:|\[|$))/gi;
+    const writes: any[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = tripletRe.exec(block)) !== null) {
+      const path = m[1]?.trim();
+      const label = (m[2] ?? "").trim();
+      const value = (m[3] ?? "").trim();
+      if (path && value) writes.push({ path, label, value });
+    }
+    if (writes.length) {
+      const reasoningMatch = block.match(/reasoning:\s*["']([^"'\n]+)["']/i);
+      recovered.push({
+        type: "blueprint_writes",
+        writes,
+        reasoning: reasoningMatch?.[1] ?? "",
+      });
+    }
+    return ""; // strip block from visible text
+  });
+
+  // 2) Recover [suggest_quick_replies] — either JSON array or pipe list.
+  const qrRe =
+    /\[\s*suggest_quick_replies\s*\][^\n]*?(?:replies\s*:\s*)?(?:\[([^\]]+)\]|([^\n]+))/gi;
+  working = working.replace(qrRe, (_full, jsonList, pipeList) => {
+    let replies: string[] = [];
+    if (jsonList) {
+      replies = jsonList
+        .split(",")
+        .map((s: string) => s.trim().replace(/^["']|["']$/g, "").trim())
+        .filter(Boolean);
+    } else if (pipeList) {
+      replies = String(pipeList)
+        .split("|")
+        .map((s: string) => s.trim())
+        .filter(Boolean);
+    }
+    if (replies.length) recovered.push({ type: "quick_replies", replies });
+    return "";
+  });
+
+  // 3) Strip any leftover bracket markers and stray key: lines the model may
+  //    have written outside a full block.
+  working = working
+    .replace(
+      /^\s*\[(?:propose_blueprint_writes|suggest_quick_replies|propose_field_value|remember_fact|proposed blueprint writes|suggested quick replies|proposed field value|remembered fact)\b[^\n]*$/gim,
+      "",
+    )
+    .replace(/^\s*(?:path|label|value|reasoning|replies)\s*:\s*.*$/gim, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return { cleanText: working, recovered };
+}
+
 
 const WRITE_INTENT_RE =
   /(?:\b(fill|draft|generate|write|update|complete|create|make|set|apply|invullen|vullen|uitwerken|schrijf|maak|bijwerk|aanvullen)\b|\binvul|\bvul|\buitwerk|werk uit)/i;
