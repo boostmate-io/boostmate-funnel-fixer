@@ -33,6 +33,28 @@ const ROOT_COLUMNS = new Set([
 
 const isIndex = (segment: string) => /^\d+$/.test(segment);
 
+const NUMBER_PATH_RE = /^(offer_stack\.pricing\.core_price|offer_stack\.pricing\.premium_upgrade\.price|offer_stack\.pricing\.recurring_offer\.monthly_price|offer_stack\.pricing\.payment_plans\.\d+\.amount)$/;
+const BOOLEAN_PATHS = new Set([
+  "offer_stack.pricing.recurring_enabled",
+  "offer_stack.pricing.premium_enabled",
+]);
+
+function coerceForPath(path: string, value: any): any {
+  if (BOOLEAN_PATHS.has(path)) {
+    if (typeof value === "boolean") return value;
+    const s = String(value ?? "").trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes";
+  }
+  if (NUMBER_PATH_RE.test(path)) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : "";
+    const s = String(value ?? "").trim();
+    if (!s) return "";
+    const n = Number(s);
+    return Number.isFinite(n) ? n : "";
+  }
+  return value;
+}
+
 function setDeep(target: Record<string, any>, segments: string[], value: any) {
   let cursor = target;
   for (let i = 0; i < segments.length - 1; i++) {
@@ -45,6 +67,7 @@ function setDeep(target: Record<string, any>, segments: string[], value: any) {
   }
   cursor[segments[segments.length - 1]] = value;
 }
+
 
 function normalizeFrameworkPillars(patch: BlueprintPatch) {
   const pillars = (patch.offer_stack as any)?.angle?.framework?.pillars;
