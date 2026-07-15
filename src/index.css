@@ -268,3 +268,67 @@
   /* Links readable */
   .print-root a { color: #111 !important; text-decoration: underline; }
 }
+
+/* AI Coach message markdown rendering */
+.coach-markdown > *:first-child { margin-top: 0; }
+.coach-markdown > *:last-child { margin-bottom: 0; }
+.coach-markdown p { margin: 0.4em 0; }
+.coach-markdown p:first-child { margin-top: 0; }
+.coach-markdown p:last-child { margin-bottom: 0; }
+.coach-markdown h1,
+.coach-markdown h2,
+.coach-markdown h3,
+.coach-markdown h4,
+.coach-markdown h5,
+.coach-markdown h6 {
+  font-family: var(--font-display, inherit);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0.75em 0 0.35em;
+}
+.coach-markdown h1 { font-size: 1.05rem; }
+.coach-markdown h2 { font-size: 1rem; }
+.coach-markdown h3 { font-size: 0.95rem; }
+.coach-markdown h4,
+.coach-markdown h5,
+.coach-markdown h6 { font-size: 0.9rem; }
+.coach-markdown ul,
+.coach-markdown ol { margin: 0.4em 0; padding-left: 1.25rem; }
+.coach-markdown ul { list-style: disc; }
+.coach-markdown ol { list-style: decimal; }
+.coach-markdown li { margin: 0.15em 0; }
+.coach-markdown li > p { margin: 0.15em 0; }
+.coach-markdown strong { font-weight: 600; }
+.coach-markdown em { font-style: italic; }
+.coach-markdown a { color: hsl(var(--primary)); text-decoration: underline; }
+.coach-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  background: hsl(var(--muted));
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.coach-markdown pre {
+  background: hsl(var(--muted));
+  padding: 0.6em 0.75em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.coach-markdown pre code { background: transparent; padding: 0; }
+.coach-markdown blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 0.75em;
+  color: hsl(var(--muted-foreground));
+  margin: 0.5em 0;
+}
+.coach-markdown hr {
+  border: 0;
+  border-top: 1px solid hsl(var(--border));
+  margin: 0.75em 0;
+}
+
+/* User bubble tweaks (primary background) */
+.bg-primary .coach-markdown a { color: inherit; }
+.bg-primary .coach-markdown code { background: rgba(255,255,255,0.18); }
+.bg-primary .coach-markdown blockquote { border-color: rgba(255,255,255,0.4); color: inherit; }
