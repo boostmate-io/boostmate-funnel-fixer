@@ -96,7 +96,8 @@ Principles:
 - Be concise. One or two thoughts per turn.
 - When you learn a durable fact about the business (positioning, ICP, offer, pricing, tone, non-negotiables, wins), call the remember_fact tool so future sessions carry that context.
 - If the user seems stuck, offer 2-3 concrete quick replies via suggest_quick_replies.
-- Never answer a direct request to fill, draft, update, or write Blueprint fields with only quick replies. A direct write request must produce a Blueprint write proposal.`;
+- Never answer a direct request to fill, draft, update, or write Blueprint fields with only quick replies. A direct write request must produce a Blueprint write proposal.
+- NEVER write tool calls or their arguments as visible text. Do NOT output strings like "[propose_blueprint_writes]", "[suggest_quick_replies]", "[proposed blueprint writes]", "path:", "reasoning:", "replies:", raw JSON, or pipe-separated reply lists inside your message content. Blueprint writes and quick replies exist ONLY as real tool calls — if you want to propose them, invoke the tool. Never describe or transcribe a tool call in prose.`;
 
 const COACH_BLUEPRINT_FIELD = `You are coaching the user on a single Business Blueprint field.
 
@@ -1116,19 +1117,98 @@ function serializeAssistantForModel(m: any): string {
     if (!p || typeof p !== "object") continue;
     if (p.type === "text") continue; // already in content
     if (p.type === "proposal") {
-      chunks.push(`[proposed field value] ${String(p.value ?? "")}`);
+      // Neutral summary: no value, no bracketed pseudo-syntax the model could imitate.
+      chunks.push("(You previously proposed a field value via the propose_field_value tool.)");
     } else if (p.type === "blueprint_writes") {
       const writes = Array.isArray(p.writes) ? p.writes : [];
-      const lines = writes.map((w: any) => `  - ${w?.path}: ${String(w?.value ?? "").replace(/\s+/g, " ").slice(0, 400)}`);
-      chunks.push(`[proposed blueprint writes]\n${lines.join("\n")}`);
+      const pathList = writes.map((w: any) => w?.path).filter(Boolean).join(", ");
+      if (pathList) {
+        chunks.push(`(You previously proposed Blueprint updates for: ${pathList}. Do not repeat them as text — use the tool if you want to propose new ones.)`);
+      }
     } else if (p.type === "quick_replies") {
-      const replies = Array.isArray(p.replies) ? p.replies : [];
-      if (replies.length) chunks.push(`[suggested quick replies] ${replies.join(" | ")}`);
+      // Drop entirely — model does not need to see its own past suggestions,
+      // and any representation invites text imitation.
+      continue;
     } else if (p.type === "memory_saved") {
-      chunks.push(`[remembered fact] ${p.key}: ${p.value}`);
+      chunks.push(`(Remembered fact: ${p.key}.)`);
     }
   }
   return chunks.join("\n\n");
+}
+
+// -----------------------------------------------------------------------------
+// Sanitizer: strip leaked tool-call syntax from assistant text, and (best-effort)
+// recover it into real UI parts. Handles the failure mode where the model writes
+// "[propose_blueprint_writes] ... path: '...' value: '...'" as prose instead of
+// invoking the tool.
+// -----------------------------------------------------------------------------
+function sanitizeLeakedToolCallText(text: string): {
+  cleanText: string;
+  recovered: any[];
+} {
+  const recovered: any[] = [];
+  if (!text) return { cleanText: "", recovered };
+
+  let working = text;
+
+  // 1) Recover [propose_blueprint_writes] blocks — greedy grab until next bracket
+  //    marker or end of string; parse path/label/value triplets.
+  const writesBlockRe =
+    /\[\s*propose_blueprint_writes\s*\][\s\S]*?(?=\n\s*\[(?:suggest_quick_replies|propose_field_value|remember_fact|proposed |suggested |remembered )|\n\s*$|$)/gi;
+  working = working.replace(writesBlockRe, (block) => {
+    const tripletRe =
+      /path:\s*["']([^"'\n]+)["'][\s\S]*?(?:label:\s*["']([^"'\n]*)["'][\s\S]*?)?value:\s*["']([\s\S]*?)["']\s*(?=\n\s*(?:path:|label:|reasoning:|\[|$))/gi;
+    const writes: any[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = tripletRe.exec(block)) !== null) {
+      const path = m[1]?.trim();
+      const label = (m[2] ?? "").trim();
+      const value = (m[3] ?? "").trim();
+      if (path && value) writes.push({ path, label, value });
+    }
+    if (writes.length) {
+      const reasoningMatch = block.match(/reasoning:\s*["']([^"'\n]+)["']/i);
+      recovered.push({
+        type: "blueprint_writes",
+        writes,
+        reasoning: reasoningMatch?.[1] ?? "",
+      });
+    }
+    return ""; // strip block from visible text
+  });
+
+  // 2) Recover [suggest_quick_replies] — either JSON array or pipe list.
+  const qrRe =
+    /\[\s*suggest_quick_replies\s*\][^\n]*?(?:replies\s*:\s*)?(?:\[([^\]]+)\]|([^\n]+))/gi;
+  working = working.replace(qrRe, (_full, jsonList, pipeList) => {
+    let replies: string[] = [];
+    if (jsonList) {
+      replies = jsonList
+        .split(",")
+        .map((s: string) => s.trim().replace(/^["']|["']$/g, "").trim())
+        .filter(Boolean);
+    } else if (pipeList) {
+      replies = String(pipeList)
+        .split("|")
+        .map((s: string) => s.trim())
+        .filter(Boolean);
+    }
+    if (replies.length) recovered.push({ type: "quick_replies", replies });
+    return "";
+  });
+
+  // 3) Strip any leftover bracket markers and stray key: lines the model may
+  //    have written outside a full block.
+  working = working
+    .replace(
+      /^\s*\[(?:propose_blueprint_writes|suggest_quick_replies|propose_field_value|remember_fact|proposed blueprint writes|suggested quick replies|proposed field value|remembered fact)\b[^\n]*$/gim,
+      "",
+    )
+    .replace(/^\s*(?:path|label|value|reasoning|replies)\s*:\s*.*$/gim, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return { cleanText: working, recovered };
 }
 
 
@@ -1342,7 +1422,9 @@ Deno.serve(async (req) => {
     // Build UI parts + persist memory
     const parts: any[] = [];
     const processToolCalls = async () => {
-      if (assistantText.trim()) parts.push({ type: "text", text: assistantText });
+      const { cleanText, recovered } = sanitizeLeakedToolCallText(assistantText);
+      if (cleanText.trim()) parts.push({ type: "text", text: cleanText });
+      for (const rec of recovered) parts.push(rec);
       for (const tc of toolCalls) {
       const name = tc.function?.name;
       let args: any = {};

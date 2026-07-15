@@ -325,7 +325,17 @@ function PartRenderer({
   onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
 }) {
   if (part.type === "text") {
-    if (!part.text.trim()) return null;
+    // Strip legacy leaked tool-call syntax from historical assistant messages
+    // that were saved before the server-side sanitizer landed.
+    const cleaned = part.text
+      .replace(
+        /^\s*\[(?:propose_blueprint_writes|suggest_quick_replies|propose_field_value|remember_fact|proposed blueprint writes|suggested quick replies|proposed field value|remembered fact)\b[^\n]*$/gim,
+        "",
+      )
+      .replace(/^\s*(?:path|label|value|reasoning|replies)\s*:\s*.*$/gim, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    if (!cleaned) return null;
     return (
       <div
         className={cn(
@@ -335,7 +345,7 @@ function PartRenderer({
             : "bg-card border border-border text-foreground rounded-bl-sm",
         )}
       >
-        <MarkdownContent text={part.text} />
+        <MarkdownContent text={cleaned} />
       </div>
     );
   }
