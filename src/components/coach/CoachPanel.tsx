@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, Loader2, RefreshCw, Check, X } from "lucide-react";
+import { Send, Sparkles, Loader2, RefreshCw, Check, X, Maximize2, Minimize2 } from "lucide-react";
 import { useCoachChat } from "@/lib/coach/useCoachChat";
 import type { CoachContext, CoachMessage, CoachMessagePart, CoachBlueprintWrite } from "@/lib/coach/types";
 import { cn } from "@/lib/utils";
@@ -114,6 +114,7 @@ const openerFor = (context: CoachContext | null): CoachMessage | null => {
 const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrites }: Props) => {
   const { messages, status, error, sendMessage, decisions, recordDecision } = useCoachChat(context, open);
   const [input, setInput] = useState("");
+  const [fullscreen, setFullscreen] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const opener = useMemo(() => openerFor(context), [context]);
@@ -127,7 +128,10 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
       ? "Scherp deze versie verder aan, houd de kern maar maak hem sterker:"
       : "Sharpen this version further — keep the core, make it stronger:",
     close: nl ? "Sluiten" : "Close",
+    expand: nl ? "Volledig scherm" : "Fullscreen",
+    collapse: nl ? "Verkleinen" : "Exit fullscreen",
   };
+
 
   useEffect(() => {
     if (open) {
@@ -156,7 +160,12 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
     <div
       role="dialog"
       aria-label="AI Coach"
-      className="fixed bottom-6 right-6 z-50 w-[400px] max-w-[calc(100vw-2rem)] h-[640px] max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200"
+      className={cn(
+        "fixed z-50 flex flex-col border border-border bg-card shadow-2xl overflow-hidden animate-in fade-in duration-200",
+        fullscreen
+          ? "inset-4 md:inset-8 rounded-2xl slide-in-from-top-2"
+          : "bottom-6 right-6 w-[400px] max-w-[calc(100vw-2rem)] h-[640px] max-h-[calc(100vh-6rem)] rounded-2xl slide-in-from-bottom-4",
+      )}
     >
       {/* Header */}
       <div className="p-4 border-b bg-card flex items-center gap-2">
@@ -171,6 +180,14 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
         </div>
         <button
           type="button"
+          aria-label={fullscreen ? t.collapse : t.expand}
+          onClick={() => setFullscreen((v) => !v)}
+          className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+        </button>
+        <button
+          type="button"
           aria-label={t.close}
           onClick={() => onOpenChange(false)}
           className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
@@ -180,33 +197,35 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-muted/20">
-        {displayMessages.map((m) => (
-          <MessageBubble
-            key={m.id}
-            message={m}
-            onQuickReply={(r) => handleSend(expandQuickReplyForContext(r, context))}
-            onApply={handleApply}
-            onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
-            onApplyBlueprintWrites={onApplyBlueprintWrites}
-            initialDecisions={{ ...(decisions["__any__"] ?? {}), ...(decisions[m.id] ?? {}) }}
-            onDecision={(writes, decision) => recordDecision(m.id, writes, decision)}
-          />
-        ))}
-        {status === "sending" && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground pl-1">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            {t.thinking}
-          </div>
-        )}
-        {error && (
-          <div className="text-xs text-destructive bg-destructive/10 rounded-lg p-2">{error}</div>
-        )}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 bg-muted/20">
+        <div className={cn("space-y-3", fullscreen && "max-w-3xl mx-auto w-full")}>
+          {displayMessages.map((m) => (
+            <MessageBubble
+              key={m.id}
+              message={m}
+              onQuickReply={(r) => handleSend(expandQuickReplyForContext(r, context))}
+              onApply={handleApply}
+              onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
+              onApplyBlueprintWrites={onApplyBlueprintWrites}
+              initialDecisions={{ ...(decisions["__any__"] ?? {}), ...(decisions[m.id] ?? {}) }}
+              onDecision={(writes, decision) => recordDecision(m.id, writes, decision)}
+            />
+          ))}
+          {status === "sending" && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground pl-1">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {t.thinking}
+            </div>
+          )}
+          {error && (
+            <div className="text-xs text-destructive bg-destructive/10 rounded-lg p-2">{error}</div>
+          )}
+        </div>
       </div>
 
       {/* Composer */}
       <div className="border-t bg-card p-3">
-        <div className="flex items-end gap-2">
+        <div className={cn("flex items-end gap-2", fullscreen && "max-w-3xl mx-auto w-full")}>
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -217,7 +236,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
               }
             }}
             placeholder={t.placeholder}
-            rows={2}
+            rows={fullscreen ? 3 : 2}
             className="resize-none text-sm"
             disabled={status === "sending"}
           />
@@ -234,6 +253,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
           </Button>
         </div>
       </div>
+
     </div>
   );
 };
