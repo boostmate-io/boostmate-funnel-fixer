@@ -206,6 +206,14 @@ const OFFER_STACK_FIELDS: BlueprintFieldDef[] = [
     ["delivery timeline", "program timeline", "delivery timeframe", "doorlooptijd"],
     { helper: "Use one of: 7_days, 30_days, 60_days, 90_days, 6_months, 12_months, custom" },
   ),
+  field(
+    "offer_stack.stack.delivery_timeline_custom",
+    "Delivery Timeline — Custom Label",
+    "text",
+    ["delivery timeline custom", "custom delivery timeline", "custom timeline"],
+    { helper: "Short custom label when delivery_timeline = custom" },
+  ),
+
   ...indexedFields("offer_stack.stack.milestones", "Milestone", 3, [
     {
       key: "phase_name",
