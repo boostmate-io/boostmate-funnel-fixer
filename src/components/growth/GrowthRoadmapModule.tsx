@@ -111,7 +111,10 @@ export default function GrowthRoadmapModule({ onOpenModule }: Props) {
       )}
 
       {phase === "result" && row && (
-        <AssessmentResult row={row} onOpenModule={openModule} />
+        <div className="space-y-6">
+          <AssessmentResult row={row} onOpenModule={openModule} />
+          <GrowthPlanPanel subAccountId={activeSubAccountId} assessment={row} onOpenModule={openModule} />
+        </div>
       )}
     </div>
   );
