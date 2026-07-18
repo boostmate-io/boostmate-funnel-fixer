@@ -1279,8 +1279,11 @@ export type Database = {
         Row: {
           activation_conditions: Json
           applicable_stages: string[]
+          build_guide_ref: string | null
+          coach_prompt_ref: string | null
           completion_conditions: Json
           created_at: string
+          cta_label: string | null
           description: string
           id: string
           is_active: boolean
@@ -1294,8 +1297,11 @@ export type Database = {
         Insert: {
           activation_conditions?: Json
           applicable_stages?: string[]
+          build_guide_ref?: string | null
+          coach_prompt_ref?: string | null
           completion_conditions?: Json
           created_at?: string
+          cta_label?: string | null
           description?: string
           id?: string
           is_active?: boolean
@@ -1309,8 +1315,11 @@ export type Database = {
         Update: {
           activation_conditions?: Json
           applicable_stages?: string[]
+          build_guide_ref?: string | null
+          coach_prompt_ref?: string | null
           completion_conditions?: Json
           created_at?: string
+          cta_label?: string | null
           description?: string
           id?: string
           is_active?: boolean
