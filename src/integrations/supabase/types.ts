@@ -2108,6 +2108,19 @@ export type Database = {
       get_user_main_account: { Args: { _user_id: string }; Returns: string }
       get_user_main_accounts: { Args: { _user_id: string }; Returns: string[] }
       get_user_sub_accounts: { Args: { _user_id: string }; Returns: string[] }
+      growth_cycle_transition: {
+        Args: {
+          _action: string
+          _assessment_id?: string
+          _expected_cycle_id?: string
+          _from_stage?: string
+          _reason?: string
+          _stage?: string
+          _sub_account_id: string
+          _to_stage?: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
