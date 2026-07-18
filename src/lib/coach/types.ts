@@ -50,6 +50,12 @@ export interface CoachRoadmapDecisionOption {
   value: string;
   label: string;
 }
+export interface CoachRoadmapResource {
+  type: string;
+  ref: string;
+  label?: string;
+  strategy?: string;
+}
 export interface CoachRoadmapFocusTask {
   slug: string;
   title: string;
@@ -61,6 +67,19 @@ export interface CoachRoadmapFocusTask {
   decisionCurrentValue?: string | null;
   decisionFreeText?: boolean;
   decisionOptions?: CoachRoadmapDecisionOption[];
+  /** Coach prompt slug for task-scoped pre-prompt (pre-scoped guidance). */
+  coachPromptRef?: string | null;
+  /** Build guide slug the roadmap will link to for this task. */
+  buildGuideRef?: string | null;
+  /** Resolved (strategy-filtered) resources for the CURRENT workspace state. */
+  resources: CoachRoadmapResource[];
+}
+export interface CoachRoadmapUpcomingTask {
+  slug: string;
+  title: string;
+  status: string;
+  /** Resolved (strategy-filtered) resources for the CURRENT workspace state. */
+  resources: CoachRoadmapResource[];
 }
 export interface CoachRoadmapSnapshot {
   stage: string | null;
@@ -68,7 +87,7 @@ export interface CoachRoadmapSnapshot {
   cycleStartedAt: string | null;
   milestoneAttestedAt: string | null;
   focusTask: CoachRoadmapFocusTask | null;
-  upcomingTasks: { slug: string; title: string; status: string }[];
+  upcomingTasks: CoachRoadmapUpcomingTask[];
   foundationTasks: { slug: string; title: string; status: string }[];
   workspaceState: Record<string, unknown>;
   roadmapCompleted: boolean;
