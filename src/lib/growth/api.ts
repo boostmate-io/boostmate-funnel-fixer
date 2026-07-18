@@ -67,7 +67,64 @@ export async function createInternalAssessment(
     .single();
 
   if (error || !data) throw error ?? new Error("insert_failed");
-  return data as unknown as GrowthAssessmentRow;
+  const row = data as unknown as GrowthAssessmentRow;
+
+  // Trigger stage cycle transition based on the newly computed stage.
+  try {
+    await reconcileCycleForAssessment(subAccountId, row);
+  } catch (e) {
+    // Non-fatal: assessment is saved. Surface but don't block the UI flow.
+    console.error("cycle transition failed after assessment", e);
+  }
+
+  return row;
+}
+
+/**
+ * Reconcile stage cycle state after an assessment is saved.
+ *   - No cycles yet             → start_initial_cycle(computed).
+ *   - Active cycle on computed  → no-op.
+ *   - Active cycle elsewhere    → advance_stage(from → computed).
+ *   - Systemize gate passed     → complete_terminal.
+ */
+async function reconcileCycleForAssessment(
+  subAccountId: string,
+  assessment: GrowthAssessmentRow,
+): Promise<void> {
+  const computed = assessment.computed_stage as GrowthStage;
+  const systemizePassed =
+    computed === "systemize" && assessment.gate_results?.systemize?.passed === true;
+
+  if (systemizePassed) {
+    await completeTerminal({
+      subAccountId,
+      assessmentId: assessment.id,
+      reason: "systemize_gate_passed",
+    });
+    return;
+  }
+
+  const active = await fetchActiveCycles(subAccountId);
+  const onComputed = active.find((c) => c.stage === computed);
+  if (onComputed) return; // already aligned
+
+  if (active.length === 0) {
+    await startInitialCycle(subAccountId, computed, "initial_assessment");
+    return;
+  }
+
+  // Pick the most recently started active cycle as the "from" stage.
+  const from = [...active].sort((a, b) =>
+    b.started_at.localeCompare(a.started_at),
+  )[0];
+
+  await advanceStage({
+    subAccountId,
+    fromStage: from.stage,
+    toStage: computed,
+    assessmentId: assessment.id,
+    reason: "assessment_advance",
+  });
 }
 
 /** Trigger AI enrichment. Returns the ai_result. */
