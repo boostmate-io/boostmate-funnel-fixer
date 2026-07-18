@@ -1,23 +1,14 @@
 // Build a ConditionContext snapshot from raw workspace records.
 //
-// Layer-B workspace state (attestations, decisions) lives in
-// `growth_workspace_state.state` as JSONB, shaped per stage:
+// Layer-B workspace state (attestations, decisions, chosen paths) lives in
+// `growth_workspace_state.state` as JSONB. Per-cycle MILESTONE timestamps
+// do NOT live there — they live on the active cycle row itself
+// (`growth_stage_cycles.milestone_attested_at`) so they cannot leak across
+// cycles. See cycleService.attestMilestone / clearMilestone.
 //
-//   {
-//     "validate":  { "chosenPath": "cold_outreach", "trackingReady": true,
-//                    "paidClientsAttested": true, "proofCaptured": true,
-//                    "proofCapturedAt": "2026-01-05T..." },
-//     "attract":   { "leadVolumeAttested": true, "leadVolumeAttestedAt": "..." },
-//     "optimize":  { "targetHitAttested": true, "targetHitAttestedAt": "..." },
-//     "scale":     { "sustainedAttested": true, "sustainedAttestedAt": "..." },
-//     "systemize": { "handoffVerifiedAttested": true,
-//                    "handoffVerifiedAttestedAt": "..." },
-//     "roadmap_completed": true
-//   }
-//
-// buildConditionContext copies that state into `extras` and synthesizes
-// `extras.reassess.<stage>.completedAfterMilestone` from milestone
-// timestamps + assessment.created_at.
+// buildConditionContext copies workspace state into `extras` and synthesizes
+// `extras.reassess.<stage>.completedAfterMilestone` by comparing
+// `assessment.created_at` against `cycle.milestone_attested_at`.
 
 import type { ConditionContext, CycleSnapshot } from "./taskTypes";
 import type { GrowthAssessmentRow, GrowthStage } from "./types";
@@ -43,34 +34,33 @@ function nonEmpty(v: unknown): boolean {
   return Boolean(v);
 }
 
-// Milestone timestamp keys used to derive reassess.<stage>.completedAfterMilestone.
-const MILESTONE_TIMESTAMP_KEYS: Record<GrowthStage, string> = {
-  validate: "proofCapturedAt",
-  attract: "leadVolumeAttestedAt",
-  optimize: "targetHitAttestedAt",
-  scale: "sustainedAttestedAt",
-  systemize: "handoffVerifiedAttestedAt",
-};
-
 function parseIso(v: unknown): number | null {
   if (typeof v !== "string" || v.length === 0) return null;
   const t = new Date(v).getTime();
   return Number.isFinite(t) ? t : null;
 }
 
+/**
+ * Reassessment completion is derived, not persisted. A reassess task is
+ * "completed" for the current cycle when a NEW assessment has landed AFTER
+ * the milestone was attested on the active cycle.
+ *
+ * The flag is only meaningful for the currently active cycle's stage; other
+ * stages are set to false (their reassess task is not part of the active plan).
+ */
 function computeReassessFlags(
-  state: Record<string, unknown>,
+  cycle: CycleSnapshot | undefined,
   assessmentCreatedAt: string | undefined,
 ): Record<string, { completedAfterMilestone: boolean }> {
-  const assessmentAt = parseIso(assessmentCreatedAt);
+  const stages: GrowthStage[] = ["validate", "attract", "optimize", "scale", "systemize"];
   const out: Record<string, { completedAfterMilestone: boolean }> = {};
-  for (const stage of Object.keys(MILESTONE_TIMESTAMP_KEYS) as GrowthStage[]) {
-    const key = MILESTONE_TIMESTAMP_KEYS[stage];
-    const stageState = (state[stage] ?? {}) as Record<string, unknown>;
-    const milestoneAt = parseIso(stageState[key]);
-    out[stage] = {
+  const assessmentAt = parseIso(assessmentCreatedAt);
+  const milestoneAt = cycle ? parseIso(cycle.milestone_attested_at) : null;
+  for (const s of stages) {
+    const isActive = cycle?.stage === s;
+    out[s] = {
       completedAfterMilestone:
-        assessmentAt != null && milestoneAt != null && assessmentAt > milestoneAt,
+        isActive && assessmentAt != null && milestoneAt != null && assessmentAt > milestoneAt,
     };
   }
   return out;
@@ -111,7 +101,7 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
   const pa = (bp["proof_authority"] ?? {}) as Record<string, unknown>;
 
   // Extras = Layer-B workspace state + synthetic reassess flags + caller overrides.
-  const reassess = computeReassessFlags(state, assessment?.created_at);
+  const reassess = computeReassessFlags(cycle ?? undefined, assessment?.created_at);
   const mergedExtras: Record<string, unknown> = {
     ...state,
     reassess: {

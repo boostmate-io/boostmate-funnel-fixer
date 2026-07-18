@@ -1331,6 +1331,8 @@ export type Database = {
           ended_by_assessment_id: string | null
           ended_by_reason: string | null
           id: string
+          milestone_attested_at: string | null
+          milestone_attested_by: string | null
           stage: string
           started_at: string
           started_by_reason: string
@@ -1344,6 +1346,8 @@ export type Database = {
           ended_by_assessment_id?: string | null
           ended_by_reason?: string | null
           id?: string
+          milestone_attested_at?: string | null
+          milestone_attested_by?: string | null
           stage: string
           started_at?: string
           started_by_reason?: string
@@ -1357,6 +1361,8 @@ export type Database = {
           ended_by_assessment_id?: string | null
           ended_by_reason?: string | null
           id?: string
+          milestone_attested_at?: string | null
+          milestone_attested_by?: string | null
           stage?: string
           started_at?: string
           started_by_reason?: string

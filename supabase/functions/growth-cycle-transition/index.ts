@@ -42,6 +42,14 @@ const ActionSchema = z.discriminatedUnion("action", [
     action: z.literal("complete_terminal"),
     assessment_id: z.string().uuid().optional(),
   }),
+  BaseSchema.extend({
+    action: z.literal("attest_milestone"),
+    expected_cycle_id: z.string().uuid(),
+  }),
+  BaseSchema.extend({
+    action: z.literal("clear_milestone"),
+    expected_cycle_id: z.string().uuid(),
+  }),
 ]);
 
 function json(status: number, body: unknown) {
@@ -123,6 +131,10 @@ Deno.serve(async (req) => {
       break;
     case "complete_terminal":
       rpcArgs._assessment_id = input.assessment_id ?? null;
+      break;
+    case "attest_milestone":
+    case "clear_milestone":
+      rpcArgs._expected_cycle_id = input.expected_cycle_id;
       break;
   }
 

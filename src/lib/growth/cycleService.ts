@@ -16,6 +16,8 @@ export interface StageCycleRow {
   started_by_reason: string;
   ended_by_reason: string | null;
   ended_by_assessment_id: string | null;
+  milestone_attested_at: string | null;
+  milestone_attested_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,8 +28,13 @@ export interface TransitionResult {
     | "advanced"
     | "restarted"
     | "completed"
+    | "attested"
+    | "cleared"
     | "noop_existing"
-    | "noop_idempotent";
+    | "noop_idempotent"
+    | "noop_same_stage"
+    | "noop_already_attested"
+    | "noop_not_attested";
   cycle?: StageCycleRow;
 }
 
@@ -104,6 +111,41 @@ export function completeTerminal(params: {
     action: "complete_terminal",
     sub_account_id: params.subAccountId,
     assessment_id: params.assessmentId,
+    reason: params.reason,
+  });
+}
+
+/**
+ * Attest the milestone for the active cycle (cycle-scoped, idempotent).
+ * Called when the stage's milestone task is marked completed.
+ * `expectedCycleId` guards against writing to a stale/replaced cycle.
+ */
+export function attestMilestone(params: {
+  subAccountId: string;
+  expectedCycleId: string;
+  reason?: string;
+}): Promise<TransitionResult> {
+  return invoke({
+    action: "attest_milestone",
+    sub_account_id: params.subAccountId,
+    expected_cycle_id: params.expectedCycleId,
+    reason: params.reason,
+  });
+}
+
+/**
+ * Clear the milestone attestation on the active cycle. Used when the user
+ * un-completes the milestone task before a reassessment lands.
+ */
+export function clearMilestone(params: {
+  subAccountId: string;
+  expectedCycleId: string;
+  reason?: string;
+}): Promise<TransitionResult> {
+  return invoke({
+    action: "clear_milestone",
+    sub_account_id: params.subAccountId,
+    expected_cycle_id: params.expectedCycleId,
     reason: params.reason,
   });
 }
