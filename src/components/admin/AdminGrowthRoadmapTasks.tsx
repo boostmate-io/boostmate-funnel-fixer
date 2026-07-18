@@ -31,6 +31,7 @@ import type {
 import type { GrowthStage } from "@/lib/growth/types";
 import { STAGE_ORDER } from "@/lib/growth/engine";
 import { DECISION_SPECS } from "@/lib/growth/decisionOptions";
+import { resolveTaskResourcesForStrategy } from "@/lib/growth/resourceResolver";
 import { summarizeCondition } from "@/lib/growth/conditionSummary";
 
 // ---------------------------------------------------------------------------
