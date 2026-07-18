@@ -23,7 +23,7 @@ import {
   readDecisionValue,
 } from "@/lib/growth/decisionOptions";
 import { resolveTaskResources } from "@/lib/growth/resourceResolver";
-import { askCoachForTask } from "@/lib/coach/askCoachForTask";
+import { askCoachForTask, normalizeExternalUrl } from "@/lib/coach/askCoachForTask";
 
 interface Props {
   subAccountId: string | null;
