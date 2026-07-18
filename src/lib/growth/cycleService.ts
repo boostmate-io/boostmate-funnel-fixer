@@ -16,6 +16,8 @@ export interface StageCycleRow {
   started_by_reason: string;
   ended_by_reason: string | null;
   ended_by_assessment_id: string | null;
+  milestone_attested_at: string | null;
+  milestone_attested_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,8 +28,13 @@ export interface TransitionResult {
     | "advanced"
     | "restarted"
     | "completed"
+    | "attested"
+    | "cleared"
     | "noop_existing"
-    | "noop_idempotent";
+    | "noop_idempotent"
+    | "noop_same_stage"
+    | "noop_already_attested"
+    | "noop_not_attested";
   cycle?: StageCycleRow;
 }
 
