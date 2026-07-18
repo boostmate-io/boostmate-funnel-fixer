@@ -2127,6 +2127,14 @@ export type Database = {
         }
         Returns: Json
       }
+      growth_workspace_state_set: {
+        Args: {
+          _delete_keys?: string[]
+          _patch?: Json
+          _sub_account_id: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
