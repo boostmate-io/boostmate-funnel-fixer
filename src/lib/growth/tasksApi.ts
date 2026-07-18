@@ -29,13 +29,13 @@ export async function setTaskStatus(
   status: TaskStatus,
 ): Promise<GrowthTaskProgressRow> {
   const now = new Date().toISOString();
-  const patch: Record<string, unknown> = {
+  const patch = {
     sub_account_id: subAccountId,
     task_id: taskId,
     status,
+    ...(status === "in_progress" ? { started_at: now } : {}),
+    ...(status === "completed" ? { completed_at: now } : {}),
   };
-  if (status === "in_progress") patch.started_at = now;
-  if (status === "completed") patch.completed_at = now;
 
   const { data, error } = await supabase
     .from("growth_task_progress")
