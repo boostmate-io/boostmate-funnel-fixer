@@ -20,6 +20,10 @@ interface UseGrowthPlanResult {
   plan: DerivedTask[];
   activeCycle: CycleSnapshot | null;
   needsCycleBootstrap: boolean;
+  /** Raw Layer-B workspace state (unwrapped — no `extras` prefix). Consumers
+   *  read decision values from here (e.g. `state.attract.chosenChannel`) and
+   *  the `roadmap_completed` terminal flag. */
+  workspaceState: Record<string, unknown>;
   refresh: () => Promise<void>;
   updateStatus: (taskId: string, status: TaskStatus) => Promise<void>;
 }
