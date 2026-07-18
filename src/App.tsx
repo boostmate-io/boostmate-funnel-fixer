@@ -17,6 +17,7 @@ import SharedBlueprint from "./pages/SharedBlueprint.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import OAuthConsent from "./pages/OAuthConsent.tsx";
+import PublicAssessment from "./pages/PublicAssessment.tsx";
 
 const queryClient = new QueryClient();
 
