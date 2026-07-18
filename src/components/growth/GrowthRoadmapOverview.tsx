@@ -12,6 +12,7 @@ import {
   readDecisionValue,
 } from "@/lib/growth/decisionOptions";
 import { setWorkspaceState } from "@/lib/growth/cycleService";
+import { resolveTaskResources } from "@/lib/growth/resourceResolver";
 import type { DerivedTask, TaskResource, TaskStatus } from "@/lib/growth/taskTypes";
 import type { GrowthAssessmentRow, GrowthStage, RelatedModule } from "@/lib/growth/types";
 import { Button } from "@/components/ui/button";
@@ -399,13 +400,17 @@ function FocusTaskCard({
             />
           )}
 
-          {task.resources && task.resources.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {task.resources.map((r, i) => (
-                <ResourceLink key={i} r={r} onOpenModule={onOpenModule} />
-              ))}
-            </div>
-          )}
+          {(() => {
+            const resolved = resolveTaskResources(task, workspaceState);
+            if (resolved.length === 0) return null;
+            return (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {resolved.map((r, i) => (
+                  <ResourceLink key={i} r={r} onOpenModule={onOpenModule} />
+                ))}
+              </div>
+            );
+          })()}
 
           {isReassess ? (
             <div className="mt-3">

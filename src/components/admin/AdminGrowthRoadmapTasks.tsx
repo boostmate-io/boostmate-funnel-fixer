@@ -31,6 +31,7 @@ import type {
 import type { GrowthStage } from "@/lib/growth/types";
 import { STAGE_ORDER } from "@/lib/growth/engine";
 import { DECISION_SPECS } from "@/lib/growth/decisionOptions";
+import { resolveTaskResourcesForStrategy } from "@/lib/growth/resourceResolver";
 import { summarizeCondition } from "@/lib/growth/conditionSummary";
 
 // ---------------------------------------------------------------------------
@@ -672,9 +673,7 @@ function StrategyPreview({
       </div>
       <div className="space-y-1.5">
         {options.map((o) => {
-          const resolved = resources.filter(
-            (r) => !r.strategy || r.strategy === o.value,
-          );
+          const resolved = resolveTaskResourcesForStrategy(resources, stage, o.value);
           return (
             <div key={o.value} className="text-xs flex items-start gap-2">
               <span className="font-medium min-w-[140px]">{o.label}</span>
