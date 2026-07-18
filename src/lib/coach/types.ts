@@ -37,6 +37,12 @@ export interface CoachTarget {
   helper?: string;
   placeholder?: string;
   listSection?: CoachListSectionMeta;
+  /** Growth Roadmap task slug when this Coach conversation is scoped to a
+   *  specific roadmap task (via the "Ask Coach" CTA). */
+  growthTaskSlug?: string;
+  /** Admin-managed instruction block name to inject as task-specific coaching
+   *  guidance server-side. Resolves against `ai_instruction_blocks.name`. */
+  coachPromptRef?: string;
 }
 
 /**
