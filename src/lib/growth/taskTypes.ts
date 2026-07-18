@@ -25,7 +25,12 @@ export interface TaskResource {
   label?: string;
   /** For type='module', the RelatedModule id (optional convenience). */
   module?: RelatedModule;
+  /** Optional strategy tag. When set, this resource only surfaces when the
+   *  workspace's current strategy value (e.g. `validate.chosenPath`) matches.
+   *  Shared/universal resources leave this undefined. */
+  strategy?: string;
 }
+
 
 // ------------------------------------------------------------------
 // Condition tree
@@ -74,10 +79,17 @@ export interface GrowthRoadmapTaskRow {
   activation_conditions: ConditionNode;
   completion_conditions: ConditionNode;
   resources: TaskResource[];
+  /** Optional primary CTA label. Falls back to the first resource label. */
+  cta_label: string | null;
+  /** Optional build-guide slug (deep-linked from the plan / build guide layer). */
+  build_guide_ref: string | null;
+  /** Optional coach prompt slug (used by the AI Coach for task-scoped help). */
+  coach_prompt_ref: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
+
 
 export interface GrowthTaskProgressRow {
   id: string;

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, TrendingUp, Users, ChevronsLeft, ChevronsRight, Sparkles, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, ChevronDown, ChevronRight } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, TrendingUp, Users, ChevronsLeft, ChevronsRight, Sparkles, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, Milestone, ChevronDown, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -19,7 +19,9 @@ const adminSubItems = [
   { id: "admin-accounts", label: "Accounts", icon: Building2 },
   { id: "admin-ai", label: "AI", icon: Zap },
   { id: "admin-copy", label: "Copy", icon: Puzzle },
+  { id: "admin-growth", label: "Growth Roadmap", icon: Milestone },
 ];
+
 
 const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProps) => {
   const { t } = useTranslation();
