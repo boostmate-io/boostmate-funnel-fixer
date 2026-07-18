@@ -124,7 +124,7 @@ const PublicAssessment = () => {
               <div className="bg-primary/5 border border-primary/30 rounded-xl p-6 text-center">
                 <p className="text-foreground mb-4">{t("growth.createAccountCta")}</p>
                 <Button size="lg" onClick={handleCreateAccount}>
-                  {t("auth.signUp") || "Create account"}
+                  {t("growth.createAccountCtaButton")}
                 </Button>
               </div>
             }
