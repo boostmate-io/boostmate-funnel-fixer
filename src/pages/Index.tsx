@@ -22,8 +22,10 @@ const Index = () => {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>("wizard");
   const [formData, setFormData] = useState<AuditFormData | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [screenshot, setScreenshot] = useState("");
+  const [pageContent, setPageContent] = useState("");
   const [analysisResult, setAnalysisResult] = useState<Awaited<ReturnType<typeof analyzeAudit>> | null>(null);
-  const [showAuth, _setShowAuth] = [false, (_: boolean) => {}]; // placeholder replaced below
 
   const nextParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null;
   const safeNext = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
