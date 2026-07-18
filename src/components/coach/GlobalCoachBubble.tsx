@@ -1,6 +1,8 @@
 // =============================================================================
 // GlobalCoachBubble — floating "Growth Strategist" entry point.
 // Uses the SAME CoachPanel + coach-chat engine as every scoped Coach entry.
+// Additionally grounds the Coach in the workspace's cycle-aware Growth Plan
+// via `roadmapSnapshot` on the CoachContext.
 // =============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -11,16 +13,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import CoachPanel from "@/components/coach/CoachPanel";
 import { buildGlobalContext } from "@/lib/coach/buildContext";
+import { buildRoadmapSnapshot } from "@/lib/coach/buildRoadmapSnapshot";
 import { applyBlueprintWrites } from "@/lib/coach/applyBlueprintWrites";
-import type { CoachBlueprintWrite } from "@/lib/coach/types";
+import type { CoachBlueprintWrite, CoachGrowthDecision } from "@/lib/coach/types";
 import type { BlueprintRow } from "@/components/business-blueprint/types";
+import { useGrowthPlan } from "@/lib/growth/useGrowthPlan";
+import { readActiveForWorkspace } from "@/lib/growth/api";
+import { buildDecisionPatch, DECISION_SPECS } from "@/lib/growth/decisionOptions";
+import { setWorkspaceState } from "@/lib/growth/cycleService";
+import type { GrowthAssessmentRow } from "@/lib/growth/types";
 
 const GlobalCoachBubble = () => {
   const [open, setOpen] = useState(false);
   const [blueprint, setBlueprint] = useState<BlueprintRow | null>(null);
+  const [assessment, setAssessment] = useState<GrowthAssessmentRow | null>(null);
   const { activeSubAccountId } = useWorkspace();
   const location = useLocation();
 
+  // Blueprint fetch
   useEffect(() => {
     let cancelled = false;
     if (!activeSubAccountId) {
@@ -40,12 +50,49 @@ const GlobalCoachBubble = () => {
     };
   }, [activeSubAccountId, open]);
 
+  // Active assessment fetch — needed to derive the Growth Plan snapshot.
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeSubAccountId) {
+      setAssessment(null);
+      return;
+    }
+    (async () => {
+      try {
+        const row = await readActiveForWorkspace(activeSubAccountId);
+        if (!cancelled) setAssessment(row);
+      } catch {
+        if (!cancelled) setAssessment(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSubAccountId, open]);
+
+  const { plan, activeCycle, workspaceState, refresh } = useGrowthPlan(
+    activeSubAccountId,
+    assessment,
+  );
+
+  const roadmapSnapshot = useMemo(() => {
+    if (!activeSubAccountId) return null;
+    // Even without an active cycle we pass foundation + workspace state so
+    // the Coach can nudge the user through the assessment/bootstrap path.
+    return buildRoadmapSnapshot({ plan, activeCycle, workspaceState });
+  }, [activeSubAccountId, plan, activeCycle, workspaceState]);
+
   const context = useMemo(() => {
     if (!activeSubAccountId) return null;
     const params = new URLSearchParams(location.search);
     const module = params.get("module") ?? "overview";
-    return buildGlobalContext(blueprint, activeSubAccountId, `Route: ${location.pathname} · module: ${module}`);
-  }, [activeSubAccountId, blueprint, location.pathname, location.search]);
+    return buildGlobalContext(
+      blueprint,
+      activeSubAccountId,
+      `Route: ${location.pathname} · module: ${module}`,
+      roadmapSnapshot,
+    );
+  }, [activeSubAccountId, blueprint, location.pathname, location.search, roadmapSnapshot]);
 
   const handleApplyBlueprintWrites = useCallback(
     async (writes: CoachBlueprintWrite[]) => {
@@ -55,7 +102,6 @@ const GlobalCoachBubble = () => {
         toast.error(`Kon Blueprint niet bijwerken: ${res.error}`);
       } else {
         toast.success(`${res.applied} veld(en) bijgewerkt`);
-        // Refresh local snapshot so subsequent turns see the new values.
         const { data } = await supabase
           .from("business_blueprints")
           .select("*")
@@ -65,6 +111,40 @@ const GlobalCoachBubble = () => {
       }
     },
     [activeSubAccountId],
+  );
+
+  const handleApplyGrowthDecision = useCallback(
+    async (decision: CoachGrowthDecision) => {
+      if (!activeSubAccountId) return;
+      // Validate against the canonical spec — the server also validates,
+      // but a client-side guard prevents an obviously bad write.
+      const spec = DECISION_SPECS[decision.taskSlug];
+      if (!spec || spec.stateKey !== decision.stateKey) {
+        toast.error("Ongeldig roadmap-besluit.");
+        return;
+      }
+      const value = decision.value?.trim();
+      if (!value) {
+        toast.error("Geen waarde opgegeven.");
+        return;
+      }
+      if (!spec.freeText && !spec.options?.some((o) => o.value === value)) {
+        toast.error("Waarde niet in de toegestane opties.");
+        return;
+      }
+      try {
+        await setWorkspaceState({
+          subAccountId: activeSubAccountId,
+          patch: buildDecisionPatch(spec.stateKey, value),
+        });
+        toast.success("Roadmap-besluit opgeslagen");
+        await refresh();
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Opslaan mislukt";
+        toast.error(msg);
+      }
+    },
+    [activeSubAccountId, refresh],
   );
 
   if (!activeSubAccountId) return null;
@@ -91,6 +171,7 @@ const GlobalCoachBubble = () => {
         onOpenChange={setOpen}
         context={context}
         onApplyBlueprintWrites={handleApplyBlueprintWrites}
+        onApplyGrowthDecision={handleApplyGrowthDecision}
       />
     </>
   );
