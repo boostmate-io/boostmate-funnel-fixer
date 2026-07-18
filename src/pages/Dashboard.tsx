@@ -53,7 +53,9 @@ const Dashboard = () => {
     return () => window.removeEventListener("boostmate:navigate-module", handler);
   }, []);
 
-  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
+  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "admin-accounts", "admin-ai", "admin-copy", "outreach", "growth-roadmap"];
+
+  usePendingGrowthClaim();
 
   if (loading) {
     return (
