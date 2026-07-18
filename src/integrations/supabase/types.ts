@@ -1323,11 +1323,69 @@ export type Database = {
         }
         Relationships: []
       }
+      growth_stage_cycles: {
+        Row: {
+          created_at: string
+          cycle_number: number
+          ended_at: string | null
+          ended_by_assessment_id: string | null
+          ended_by_reason: string | null
+          id: string
+          stage: string
+          started_at: string
+          started_by_reason: string
+          sub_account_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_number: number
+          ended_at?: string | null
+          ended_by_assessment_id?: string | null
+          ended_by_reason?: string | null
+          id?: string
+          stage: string
+          started_at?: string
+          started_by_reason?: string
+          sub_account_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cycle_number?: number
+          ended_at?: string | null
+          ended_by_assessment_id?: string | null
+          ended_by_reason?: string | null
+          id?: string
+          stage?: string
+          started_at?: string
+          started_by_reason?: string
+          sub_account_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_stage_cycles_ended_by_assessment_id_fkey"
+            columns: ["ended_by_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "growth_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_stage_cycles_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       growth_task_progress: {
         Row: {
           activated_at: string | null
           completed_at: string | null
           created_at: string
+          cycle_id: string | null
           id: string
           notes: string | null
           snoozed_until: string | null
@@ -1341,6 +1399,7 @@ export type Database = {
           activated_at?: string | null
           completed_at?: string | null
           created_at?: string
+          cycle_id?: string | null
           id?: string
           notes?: string | null
           snoozed_until?: string | null
@@ -1354,6 +1413,7 @@ export type Database = {
           activated_at?: string | null
           completed_at?: string | null
           created_at?: string
+          cycle_id?: string | null
           id?: string
           notes?: string | null
           snoozed_until?: string | null
@@ -1364,6 +1424,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "growth_task_progress_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "growth_stage_cycles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "growth_task_progress_sub_account_id_fkey"
             columns: ["sub_account_id"]
@@ -1376,6 +1443,38 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "growth_roadmap_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_workspace_state: {
+        Row: {
+          created_at: string
+          id: string
+          state: Json
+          sub_account_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          state?: Json
+          sub_account_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          state?: Json
+          sub_account_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_workspace_state_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: true
+            referencedRelation: "sub_accounts"
             referencedColumns: ["id"]
           },
         ]
