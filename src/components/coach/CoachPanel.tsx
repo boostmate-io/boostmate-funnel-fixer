@@ -26,6 +26,11 @@ interface Props {
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
   /** Called when the user accepts a Coach-proposed Growth Roadmap decision. */
   onApplyGrowthDecision?: (decision: CoachGrowthDecision) => Promise<void> | void;
+  /** When the panel opens with a fresh (empty) conversation, auto-send this
+   *  text as the first user message exactly once. Used by the Growth Roadmap
+   *  "Ask Coach" CTA to open the Coach already scoped to a specific task.
+   *  The `key` guards against re-seeding when navigating between tasks. */
+  pendingSeed?: { key: string; text: string } | null;
 }
 
 const openerFor = (context: CoachContext | null): CoachMessage | null => {
