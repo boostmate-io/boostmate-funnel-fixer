@@ -269,14 +269,82 @@ async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Growth Roadmap context — feeds current stage + top priorities into the Coach.
+// -----------------------------------------------------------------------------
+const GROWTH_STAGE_META: Record<string, { label: string; bottleneck: string; objective: string }> = {
+  validate: {
+    label: "Validate",
+    bottleneck: "Not enough proven demand or consistent outcomes yet.",
+    objective: "Prove the offer works: paying clients + repeatable outcome delivery.",
+  },
+  attract: {
+    label: "Attract",
+    bottleneck: "Lead generation is inconsistent — traffic doesn't flow predictably.",
+    objective: "Build a repeatable lead engine that generates qualified prospects weekly.",
+  },
+  optimize: {
+    label: "Optimize",
+    bottleneck: "The funnel leaks — conversion at key steps is unclear or weak.",
+    objective: "Understand every step's conversion and plug the biggest leaks first.",
+  },
+  scale: {
+    label: "Scale",
+    bottleneck: "Growth is capped by paid-traffic economics or delivery capacity.",
+    objective: "Scale profitably via paid acquisition + delivery that holds up under volume.",
+  },
+  systemize: {
+    label: "Systemize",
+    bottleneck: "The business still runs on the founder — hard to grow without breaking.",
+    objective: "Systemize operations so growth continues without founder bottleneck.",
+  },
+};
+
+function renderGrowthContext(row: any | null): string {
+  if (!row?.computed_stage) return "";
+  const stage = row.computed_stage as string;
+  const meta = GROWTH_STAGE_META[stage];
+  if (!meta) return "";
+
+  const priorities: any[] = Array.isArray(row?.ai_result?.next_priorities)
+    ? row.ai_result.next_priorities.slice(0, 3)
+    : [];
+  const priorityLines = priorities.length
+    ? priorities.map((p: any, i: number) => {
+        const title = p?.title ?? "(untitled)";
+        const rationale = p?.rationale ? ` — ${p.rationale}` : "";
+        const mod = p?.related_module ? ` [module: ${p.related_module}]` : "";
+        return `  ${i + 1}. ${title}${rationale}${mod}`;
+      }).join("\n")
+    : "  (no AI-generated priorities yet)";
+
+  const scores = row?.stage_scores
+    ? Object.entries(row.stage_scores).map(([k, v]) => `${k}=${v}`).join(", ")
+    : "";
+
+  return `# Growth Roadmap context (current business stage)
+The user's business is currently at stage: **${meta.label}** (${stage}).
+- Bottleneck: ${meta.bottleneck}
+- Stage objective: ${meta.objective}
+${scores ? `- Stage scores: ${scores}` : ""}
+
+Top current priorities from their Growth Roadmap:
+${priorityLines}
+
+Use this as strategic anchor: when the user asks broad or open questions, connect your advice to their current stage, bottleneck and top priorities. Don't lecture them about the stage — weave it into your reasoning. If they ask something clearly off-stage, help anyway but briefly note the trade-off.`;
+}
+
 function buildSystemPrompt(
   context: any,
   memoryFacts: Array<{ key: string; value: string }>,
   prompts: PromptSet,
   messages: any[] = [],
   handledDecisions: Array<{ path: string; decision: string }> = [],
+  growthRow: any | null = null,
 ): string {
   const parts: string[] = [prompts.base];
+  const growthBlock = renderGrowthContext(growthRow);
+  if (growthBlock) parts.push(growthBlock);
 
   const uiLocale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
   const explicit = explicitLanguageInstruction(messages);
@@ -1447,8 +1515,8 @@ Deno.serve(async (req) => {
 
     const subAccountId = conv.sub_account_id as string;
 
-    // Load memory facts + previously handled Blueprint paths for this conversation
-    const [{ data: memoryRows }, { data: decisionRows }] = await Promise.all([
+    // Load memory facts + previously handled Blueprint paths + active Growth assessment
+    const [{ data: memoryRows }, { data: decisionRows }, { data: growthRow }] = await Promise.all([
       supabase
         .from("ai_coach_memory")
         .select("key, value")
@@ -1459,6 +1527,14 @@ Deno.serve(async (req) => {
         .from("ai_coach_proposal_decisions")
         .select("path, decision")
         .eq("conversation_id", conversationId),
+      supabase
+        .from("growth_assessments")
+        .select("computed_stage, stage_scores, ai_result")
+        .eq("sub_account_id", subAccountId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
     const memoryFacts = (memoryRows ?? []) as Array<{ key: string; value: string }>;
     const handledDecisions = (decisionRows ?? []) as Array<{ path: string; decision: string }>;
@@ -1468,7 +1544,7 @@ Deno.serve(async (req) => {
     const prompts = await loadCoachPrompts(supabase);
     const forcedMainOfferStep = detectMainOfferForcedWriteStep(context?.scope, messages, handledDecisions);
     const systemPrompt = [
-      buildSystemPrompt(context, memoryFacts, prompts, messages, handledDecisions),
+      buildSystemPrompt(context, memoryFacts, prompts, messages, handledDecisions, growthRow),
       forcedMainOfferStep ? renderForcedMainOfferBlueprintWritesPrompt(forcedMainOfferStep) : "",
     ]
       .filter(Boolean)
