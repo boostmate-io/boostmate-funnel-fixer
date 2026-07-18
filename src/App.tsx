@@ -33,6 +33,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<WithAuth><Index /></WithAuth>} />
+          <Route path="/assessment" element={<WithAuth><PublicAssessment /></WithAuth>} />
           <Route path="/invite/:code" element={<InviteRegistration />} />
           <Route path="/shared/:token" element={<SharedFunnel />} />
           <Route path="/analytics/:token" element={<SharedAnalytics />} />
