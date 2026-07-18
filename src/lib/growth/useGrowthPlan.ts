@@ -91,6 +91,7 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
           fetchWorkspaceState(subAccountId),
         ]);
 
+      setWorkspaceStateSnap(wsState ?? {});
       // Invariant: at most one active cycle per workspace.
       const cycle = toSnapshot(cycles[0]);
 
