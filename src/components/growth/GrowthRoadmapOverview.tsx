@@ -652,6 +652,3 @@ function DecisionPicker({
   );
 }
 
-// The `useState` import used by DecisionPicker is declared at the top.
-import { useState as _useState } from "react";
-void _useState;
