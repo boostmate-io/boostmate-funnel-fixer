@@ -131,6 +131,7 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
       setPlan([]);
       setActiveCycle(null);
       setNeedsCycleBootstrap(false);
+      setWorkspaceStateSnap({});
     } finally {
       setLoading(false);
     }
