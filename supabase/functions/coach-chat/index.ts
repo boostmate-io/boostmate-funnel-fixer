@@ -269,6 +269,71 @@ async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Growth Roadmap context — feeds current stage + top priorities into the Coach.
+// -----------------------------------------------------------------------------
+const GROWTH_STAGE_META: Record<string, { label: string; bottleneck: string; objective: string }> = {
+  validate: {
+    label: "Validate",
+    bottleneck: "Not enough proven demand or consistent outcomes yet.",
+    objective: "Prove the offer works: paying clients + repeatable outcome delivery.",
+  },
+  attract: {
+    label: "Attract",
+    bottleneck: "Lead generation is inconsistent — traffic doesn't flow predictably.",
+    objective: "Build a repeatable lead engine that generates qualified prospects weekly.",
+  },
+  optimize: {
+    label: "Optimize",
+    bottleneck: "The funnel leaks — conversion at key steps is unclear or weak.",
+    objective: "Understand every step's conversion and plug the biggest leaks first.",
+  },
+  scale: {
+    label: "Scale",
+    bottleneck: "Growth is capped by paid-traffic economics or delivery capacity.",
+    objective: "Scale profitably via paid acquisition + delivery that holds up under volume.",
+  },
+  systemize: {
+    label: "Systemize",
+    bottleneck: "The business still runs on the founder — hard to grow without breaking.",
+    objective: "Systemize operations so growth continues without founder bottleneck.",
+  },
+};
+
+function renderGrowthContext(row: any | null): string {
+  if (!row?.computed_stage) return "";
+  const stage = row.computed_stage as string;
+  const meta = GROWTH_STAGE_META[stage];
+  if (!meta) return "";
+
+  const priorities: any[] = Array.isArray(row?.ai_result?.next_priorities)
+    ? row.ai_result.next_priorities.slice(0, 3)
+    : [];
+  const priorityLines = priorities.length
+    ? priorities.map((p: any, i: number) => {
+        const title = p?.title ?? "(untitled)";
+        const rationale = p?.rationale ? ` — ${p.rationale}` : "";
+        const mod = p?.related_module ? ` [module: ${p.related_module}]` : "";
+        return `  ${i + 1}. ${title}${rationale}${mod}`;
+      }).join("\n")
+    : "  (no AI-generated priorities yet)";
+
+  const scores = row?.stage_scores
+    ? Object.entries(row.stage_scores).map(([k, v]) => `${k}=${v}`).join(", ")
+    : "";
+
+  return `# Growth Roadmap context (current business stage)
+The user's business is currently at stage: **${meta.label}** (${stage}).
+- Bottleneck: ${meta.bottleneck}
+- Stage objective: ${meta.objective}
+${scores ? `- Stage scores: ${scores}` : ""}
+
+Top current priorities from their Growth Roadmap:
+${priorityLines}
+
+Use this as strategic anchor: when the user asks broad or open questions, connect your advice to their current stage, bottleneck and top priorities. Don't lecture them about the stage — weave it into your reasoning. If they ask something clearly off-stage, help anyway but briefly note the trade-off.`;
+}
+
 function buildSystemPrompt(
   context: any,
   memoryFacts: Array<{ key: string; value: string }>,
