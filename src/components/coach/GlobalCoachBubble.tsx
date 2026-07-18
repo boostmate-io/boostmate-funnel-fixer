@@ -15,20 +15,50 @@ import CoachPanel from "@/components/coach/CoachPanel";
 import { buildGlobalContext } from "@/lib/coach/buildContext";
 import { buildRoadmapSnapshot } from "@/lib/coach/buildRoadmapSnapshot";
 import { applyBlueprintWrites } from "@/lib/coach/applyBlueprintWrites";
-import type { CoachBlueprintWrite, CoachGrowthDecision } from "@/lib/coach/types";
+import type { CoachBlueprintWrite, CoachContext, CoachGrowthDecision } from "@/lib/coach/types";
 import type { BlueprintRow } from "@/components/business-blueprint/types";
 import { useGrowthPlan } from "@/lib/growth/useGrowthPlan";
 import { readActiveForWorkspace } from "@/lib/growth/api";
 import { buildDecisionPatch, DECISION_SPECS } from "@/lib/growth/decisionOptions";
 import { setWorkspaceState } from "@/lib/growth/cycleService";
 import type { GrowthAssessmentRow } from "@/lib/growth/types";
+import {
+  COACH_OPEN_FOR_TASK_EVENT,
+  buildTaskSeedMessage,
+  type CoachOpenForTaskDetail,
+} from "@/lib/coach/askCoachForTask";
+import i18n from "@/i18n";
 
 const GlobalCoachBubble = () => {
   const [open, setOpen] = useState(false);
   const [blueprint, setBlueprint] = useState<BlueprintRow | null>(null);
   const [assessment, setAssessment] = useState<GrowthAssessmentRow | null>(null);
+  const [taskFocus, setTaskFocus] = useState<CoachOpenForTaskDetail | null>(null);
   const { activeSubAccountId } = useWorkspace();
   const location = useLocation();
+
+  // Listen for "Ask Coach" CTAs from the Growth Roadmap. Opens the panel and
+  // scopes the conversation to that specific task; the auto-seed message and
+  // the admin-managed instruction block referenced by `coachPromptRef` are
+  // wired below.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<CoachOpenForTaskDetail>).detail;
+      if (!detail || !detail.taskSlug) return;
+      setTaskFocus(detail);
+      setOpen(true);
+    };
+    window.addEventListener(COACH_OPEN_FOR_TASK_EVENT, handler);
+    return () => window.removeEventListener(COACH_OPEN_FOR_TASK_EVENT, handler);
+  }, []);
+
+  // Closing the panel clears the task focus so the next open reverts to the
+  // generic Growth Strategist scope.
+  const handleOpenChange = useCallback((next: boolean) => {
+    setOpen(next);
+    if (!next) setTaskFocus(null);
+  }, []);
+
 
   // Blueprint fetch
   useEffect(() => {
@@ -82,17 +112,43 @@ const GlobalCoachBubble = () => {
     return buildRoadmapSnapshot({ plan, activeCycle, workspaceState });
   }, [activeSubAccountId, plan, activeCycle, workspaceState]);
 
-  const context = useMemo(() => {
+  const context = useMemo<CoachContext | null>(() => {
     if (!activeSubAccountId) return null;
     const params = new URLSearchParams(location.search);
     const module = params.get("module") ?? "overview";
-    return buildGlobalContext(
+    const base = buildGlobalContext(
       blueprint,
       activeSubAccountId,
       `Route: ${location.pathname} · module: ${module}`,
       roadmapSnapshot,
     );
-  }, [activeSubAccountId, blueprint, location.pathname, location.search, roadmapSnapshot]);
+    // Task-scoped override: same global scope + blueprint/roadmap grounding,
+    // but with a per-task target. `useCoachChat` keys conversations by
+    // (scope, target.id) so each Roadmap task gets its own thread.
+    if (taskFocus) {
+      return {
+        ...base,
+        target: {
+          id: `growth-task:${taskFocus.taskSlug}`,
+          label: taskFocus.taskTitle,
+          kind: "text",
+          currentValue: null,
+          growthTaskSlug: taskFocus.taskSlug,
+          coachPromptRef: taskFocus.coachPromptRef ?? undefined,
+        },
+      };
+    }
+    return base;
+  }, [activeSubAccountId, blueprint, location.pathname, location.search, roadmapSnapshot, taskFocus]);
+
+  const pendingSeed = useMemo(() => {
+    if (!taskFocus) return null;
+    const locale = (i18n.language ?? "en").split("-")[0];
+    return {
+      key: `growth-task:${taskFocus.taskSlug}`,
+      text: buildTaskSeedMessage(taskFocus.taskTitle, locale),
+    };
+  }, [taskFocus]);
 
   const handleApplyBlueprintWrites = useCallback(
     async (writes: CoachBlueprintWrite[]) => {
@@ -168,10 +224,11 @@ const GlobalCoachBubble = () => {
 
       <CoachPanel
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={handleOpenChange}
         context={context}
         onApplyBlueprintWrites={handleApplyBlueprintWrites}
         onApplyGrowthDecision={handleApplyGrowthDecision}
+        pendingSeed={pendingSeed}
       />
     </>
   );

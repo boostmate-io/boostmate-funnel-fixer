@@ -13,6 +13,7 @@ import {
 } from "@/lib/growth/decisionOptions";
 import { setWorkspaceState } from "@/lib/growth/cycleService";
 import { resolveTaskResources } from "@/lib/growth/resourceResolver";
+import { askCoachForTask, normalizeExternalUrl } from "@/lib/coach/askCoachForTask";
 import type { DerivedTask, TaskResource, TaskStatus } from "@/lib/growth/taskTypes";
 import type { GrowthAssessmentRow, GrowthStage, RelatedModule } from "@/lib/growth/types";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,11 @@ import {
 import { Input } from "@/components/ui/input";
 import {
   ArrowRight,
+  BookOpen,
   CheckCircle2,
   Circle,
   ExternalLink,
+  MessageCircle,
   PlayCircle,
   RefreshCw,
   Sparkles,
@@ -402,12 +405,42 @@ function FocusTaskCard({
 
           {(() => {
             const resolved = resolveTaskResources(task, workspaceState);
-            if (resolved.length === 0) return null;
+            const buildGuideUrl = normalizeExternalUrl(task.build_guide_ref);
+            const hasCoachPrompt = Boolean(task.coach_prompt_ref);
+            if (resolved.length === 0 && !buildGuideUrl && !hasCoachPrompt) return null;
             return (
-              <div className="flex flex-wrap gap-2 mt-3">
+              <div className="flex flex-wrap gap-2 mt-3 items-center">
                 {resolved.map((r, i) => (
                   <ResourceLink key={i} r={r} onOpenModule={onOpenModule} />
                 ))}
+                {buildGuideUrl && (
+                  <a
+                    href={buildGuideUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors text-foreground"
+                  >
+                    <BookOpen className="w-3 h-3" />
+                    Open Build Guide
+                    <ExternalLink className="w-3 h-3 opacity-60" />
+                  </a>
+                )}
+                {hasCoachPrompt && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      askCoachForTask({
+                        taskSlug: task.slug,
+                        taskTitle: task.title,
+                        coachPromptRef: task.coach_prompt_ref ?? null,
+                      })
+                    }
+                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    <MessageCircle className="w-3 h-3" />
+                    Ask Coach
+                  </button>
+                )}
               </div>
             );
           })()}

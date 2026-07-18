@@ -26,6 +26,11 @@ interface Props {
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
   /** Called when the user accepts a Coach-proposed Growth Roadmap decision. */
   onApplyGrowthDecision?: (decision: CoachGrowthDecision) => Promise<void> | void;
+  /** When the panel opens with a fresh (empty) conversation, auto-send this
+   *  text as the first user message exactly once. Used by the Growth Roadmap
+   *  "Ask Coach" CTA to open the Coach already scoped to a specific task.
+   *  The `key` guards against re-seeding when navigating between tasks. */
+  pendingSeed?: { key: string; text: string } | null;
 }
 
 const openerFor = (context: CoachContext | null): CoachMessage | null => {
@@ -116,8 +121,8 @@ const openerFor = (context: CoachContext | null): CoachMessage | null => {
   };
 };
 
-const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrites, onApplyGrowthDecision }: Props) => {
-  const { messages, status, error, sendMessage, decisions, recordDecision } = useCoachChat(context, open);
+const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrites, onApplyGrowthDecision, pendingSeed }: Props) => {
+  const { messages, status, error, sendMessage, decisions, recordDecision, conversationId } = useCoachChat(context, open);
   const [input, setInput] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -146,6 +151,20 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
       });
     }
   }, [displayMessages.length, open, status]);
+
+  // Auto-seed: when the panel opens on a fresh (empty) conversation with a
+  // pending seed message, send it exactly once. Guarded by seed key so that
+  // switching between task-scoped Coach entries reseeds appropriately, and
+  // by messages.length so we never replay on an existing conversation.
+  const seededKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open || !pendingSeed || !conversationId) return;
+    if (status !== "idle") return;
+    if (messages.length > 0) return;
+    if (seededKeyRef.current === pendingSeed.key) return;
+    seededKeyRef.current = pendingSeed.key;
+    void sendMessage(pendingSeed.text);
+  }, [open, pendingSeed, conversationId, status, messages.length, sendMessage]);
 
   const handleSend = async (text?: string) => {
     const value = (text ?? input).trim();
