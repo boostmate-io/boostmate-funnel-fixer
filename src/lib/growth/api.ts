@@ -51,9 +51,9 @@ export async function createInternalAssessment(
       user_id: userId,
       sub_account_id: subAccountId,
       source: "internal",
-      answers,
-      stage_scores: engine.stageScores,
-      gate_results: engine.gateResults,
+      answers: answers as any,
+      stage_scores: engine.stageScores as any,
+      gate_results: engine.gateResults as any,
       computed_stage: engine.computedStage,
       is_active: true,
     })
