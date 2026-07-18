@@ -300,7 +300,71 @@ const GROWTH_STAGE_META: Record<string, { label: string; bottleneck: string; obj
   },
 };
 
-function renderGrowthContext(row: any | null): string {
+function renderGrowthContext(row: any | null, snapshot: any | null): string {
+  // Prefer the cycle-aware snapshot when the client provides one — it reflects
+  // the SAME `derivePlan` output the user sees in the roadmap UI.
+  if (snapshot && typeof snapshot === "object") {
+    const stage = snapshot.stage as string | null;
+    const meta = stage ? GROWTH_STAGE_META[stage] : null;
+    const stageLine = meta
+      ? `**${meta.label}** (${stage}) — cycle #${snapshot.cycleNumber ?? "?"}`
+      : "no active stage yet (assessment or bootstrap pending)";
+    const focus = snapshot.focusTask;
+    const focusBlock = focus
+      ? `Current focus task:
+- slug: ${focus.slug}
+- title: ${focus.title}
+- description: ${focus.description}
+- status: ${focus.status}${focus.isDecision ? `
+- kind: DECISION — state key: ${focus.decisionStateKey}${focus.decisionFreeText ? " (free-text)" : ""}${
+  focus.decisionOptions ? `
+- allowed values: ${focus.decisionOptions.map((o: any) => `${o.value} (${o.label})`).join(" | ")}` : ""
+}${focus.decisionCurrentValue ? `
+- current value: ${focus.decisionCurrentValue}` : ""}` : ""}`
+      : "No current focus task (roadmap idle, bootstrap needed, or completed).";
+    const upcoming = Array.isArray(snapshot.upcomingTasks) && snapshot.upcomingTasks.length
+      ? snapshot.upcomingTasks.map((t: any, i: number) => `  ${i + 1}. ${t.title} [${t.slug}] (${t.status})`).join("\n")
+      : "  (none)";
+    const foundation = Array.isArray(snapshot.foundationTasks) && snapshot.foundationTasks.length
+      ? snapshot.foundationTasks.map((t: any) => `  - ${t.title} [${t.slug}] — ${t.status}`).join("\n")
+      : "  (none)";
+    const systems = Array.isArray(snapshot.canonicalGrowthSystems)
+      ? snapshot.canonicalGrowthSystems.map((s: any) => `  - ${s.id} — ${s.name}: ${s.summary}`).join("\n")
+      : "";
+    const terminal = snapshot.roadmapCompleted ? "\n\nROADMAP STATE: **completed** (Systemize gate passed)." : "";
+
+    return `# Growth Roadmap context (cycle-aware, live)
+Current stage: ${stageLine}${terminal}
+
+${focusBlock}
+
+Next upcoming tasks:
+${upcoming}
+
+Foundation tasks:
+${foundation}
+
+Layer-B workspace state (decisions + attestations):
+\`\`\`json
+${JSON.stringify(snapshot.workspaceState ?? {}, null, 2)}
+\`\`\`
+
+Canonical Boostmate Growth Systems (the ONLY systems you may reference by name):
+${systems}
+
+# HARD RULES for roadmap guidance
+- NEVER invent tasks, task slugs, stages, decision options, or Growth Systems that aren't listed above.
+- When the user asks "what should I focus on now?", anchor on the current focus task above.
+- When the current focus task is a DECISION and the user has expressed a preference or reached a conclusion, call the \`propose_growth_decision\` tool with:
+    - task_slug = the focus task slug
+    - state_key = the focus task's decisionStateKey
+    - value = one of the allowed values (or a concise free-text value for free-text decisions)
+    - label = the focus task title
+  Do NOT propose a decision until the user has actually chosen; never fill "unspecified" or a placeholder.
+- Do not toggle task completion yourself — only the user can mark tasks complete in the roadmap UI.`;
+  }
+
+  // Fallback (no snapshot): keep the legacy AI-priorities rendering.
   if (!row?.computed_stage) return "";
   const stage = row.computed_stage as string;
   const meta = GROWTH_STAGE_META[stage];
@@ -318,20 +382,13 @@ function renderGrowthContext(row: any | null): string {
       }).join("\n")
     : "  (no AI-generated priorities yet)";
 
-  const scores = row?.stage_scores
-    ? Object.entries(row.stage_scores).map(([k, v]) => `${k}=${v}`).join(", ")
-    : "";
-
   return `# Growth Roadmap context (current business stage)
 The user's business is currently at stage: **${meta.label}** (${stage}).
 - Bottleneck: ${meta.bottleneck}
 - Stage objective: ${meta.objective}
-${scores ? `- Stage scores: ${scores}` : ""}
 
 Top current priorities from their Growth Roadmap:
-${priorityLines}
-
-Use this as strategic anchor: when the user asks broad or open questions, connect your advice to their current stage, bottleneck and top priorities. Don't lecture them about the stage — weave it into your reasoning. If they ask something clearly off-stage, help anyway but briefly note the trade-off.`;
+${priorityLines}`;
 }
 
 function buildSystemPrompt(
@@ -343,8 +400,10 @@ function buildSystemPrompt(
   growthRow: any | null = null,
 ): string {
   const parts: string[] = [prompts.base];
-  const growthBlock = renderGrowthContext(growthRow);
+  const roadmapSnapshot = context?.businessContext?.roadmapSnapshot ?? null;
+  const growthBlock = renderGrowthContext(growthRow, roadmapSnapshot);
   if (growthBlock) parts.push(growthBlock);
+
 
   const uiLocale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
   const explicit = explicitLanguageInstruction(messages);
@@ -1254,15 +1313,31 @@ const proposeBlueprintWritesTool = {
 function toolsForScope(scope: string | undefined) {
   const base = [suggestQuickRepliesTool, rememberFactTool];
   if (scope === "blueprint.field") return [proposeFieldValueTool, ...base];
-  if (scope === "blueprint.section" || scope === "global") {
-    // Always expose the writes tool; the model decides when to use it based on
-    // the system prompt's follow-up rules. This makes correction/language/tone
-    // modifiers ("in English", "shorter", "again") work like they would with a
-    // plain LLM instead of being blocked by regex intent gating.
-    return [proposeBlueprintWritesTool, ...base];
-  }
+  if (scope === "blueprint.section") return [proposeBlueprintWritesTool, ...base];
+  if (scope === "global") return [proposeBlueprintWritesTool, proposeGrowthDecisionTool, ...base];
   return base;
 }
+
+const proposeGrowthDecisionTool = {
+  type: "function",
+  function: {
+    name: "propose_growth_decision",
+    description:
+      "Propose the answer to the workspace's current Growth Roadmap DECISION task (e.g. choose a validation path, acquisition channel, bottleneck, scaling lever, process, systemize path). ONLY call when the user has actually chosen — never as a placeholder. task_slug + state_key MUST match the current focus task from the Growth Roadmap context, and value MUST match one of the allowed values (or a concise free-text value for free-text decisions).",
+    parameters: {
+      type: "object",
+      properties: {
+        task_slug: { type: "string", description: "Slug of the current decision task." },
+        state_key: { type: "string", description: "Dotted key inside growth_workspace_state.state, exactly as given in context." },
+        value: { type: "string", description: "The chosen value. Must match an allowed value for enumerated decisions." },
+        label: { type: "string", description: "Human-readable task title, shown on the decision card." },
+        reasoning: { type: "string", description: "One short sentence: why this decision." },
+      },
+      required: ["task_slug", "state_key", "value", "label"],
+      additionalProperties: false,
+    },
+  },
+};
 
 // Serialize the client's assistant `parts` into readable text so the model
 // can see what IT proposed on prior turns. Without this, tool-only turns come
@@ -1617,6 +1692,28 @@ Deno.serve(async (req) => {
         );
         if (writes.length > 0) {
           parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
+        }
+      } else if (name === "propose_growth_decision" && context?.scope === "global") {
+        const snap: any = context?.businessContext?.roadmapSnapshot ?? null;
+        const canonical = snap?.canonicalDecisions ?? {};
+        const taskSlug = String(args.task_slug ?? "").trim();
+        const stateKey = String(args.state_key ?? "").trim();
+        const value = String(args.value ?? "").trim();
+        const label = String(args.label ?? "").trim() || taskSlug;
+        const spec = canonical[taskSlug];
+        const focusSlug = snap?.focusTask?.slug;
+        const ok =
+          spec &&
+          spec.stateKey === stateKey &&
+          value.length > 0 &&
+          (spec.freeText || (Array.isArray(spec.values) && spec.values.includes(value))) &&
+          (!focusSlug || focusSlug === taskSlug);
+        if (ok) {
+          parts.push({
+            type: "growth_decision",
+            decision: { taskSlug, stateKey, value, label },
+            reasoning: args.reasoning ?? "",
+          });
         }
       } else if (name === "suggest_quick_replies") {
         parts.push({ type: "quick_replies", replies: Array.isArray(args.replies) ? args.replies : [] });

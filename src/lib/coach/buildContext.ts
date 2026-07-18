@@ -119,10 +119,16 @@ export function buildBlueprintListSectionContext(
  * Global Growth Strategist — no specific target, full blueprint context.
  * Used by the floating Coach bubble.
  */
+/**
+ * Global Growth Strategist — no specific target, full blueprint context.
+ * Used by the floating Coach bubble. When present, `roadmapSnapshot` grounds
+ * the Coach in the workspace's current cycle-aware Growth Plan.
+ */
 export function buildGlobalContext(
   blueprint: BlueprintRow | null,
   subAccountId: string,
   routeHint?: string,
+  roadmapSnapshot?: import("./types").CoachRoadmapSnapshot | null,
 ): CoachContext {
   return {
     scope: "global",
@@ -133,6 +139,7 @@ export function buildGlobalContext(
       blueprintSnapshot: blueprint,
       routeHint,
       locale: currentLocale(),
+      roadmapSnapshot: roadmapSnapshot ?? null,
     },
   };
 }
