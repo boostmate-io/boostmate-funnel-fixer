@@ -1142,6 +1142,65 @@ export type Database = {
           },
         ]
       }
+      growth_assessments: {
+        Row: {
+          ai_confidence: string | null
+          ai_result: Json | null
+          answers: Json
+          claim_token: string | null
+          computed_stage: string
+          created_at: string
+          gate_results: Json
+          id: string
+          is_active: boolean
+          source: string
+          stage_scores: Json
+          sub_account_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          ai_confidence?: string | null
+          ai_result?: Json | null
+          answers: Json
+          claim_token?: string | null
+          computed_stage: string
+          created_at?: string
+          gate_results: Json
+          id?: string
+          is_active?: boolean
+          source: string
+          stage_scores: Json
+          sub_account_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          ai_confidence?: string | null
+          ai_result?: Json | null
+          answers?: Json
+          claim_token?: string | null
+          computed_stage?: string
+          created_at?: string
+          gate_results?: Json
+          id?: string
+          is_active?: boolean
+          source?: string
+          stage_scores?: Json
+          sub_account_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_assessments_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       growth_funnel_mappings: {
         Row: {
           blueprint_id: string
