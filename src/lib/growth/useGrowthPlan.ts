@@ -3,8 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchActiveTasks, fetchProgressForWorkspace, setTaskStatus } from "./tasksApi";
 import { buildConditionContext } from "./buildConditionContext";
 import { derivePlan, type DerivedTask, type GrowthPlan, type TaskStatus, type CycleSnapshot } from "./taskTypes";
-import { fetchActiveCycles, fetchWorkspaceState, startInitialCycle } from "./cycleService";
-import type { GrowthAssessmentRow } from "./types";
+import {
+  fetchActiveCycles,
+  fetchWorkspaceState,
+  startInitialCycle,
+  attestMilestone,
+  clearMilestone,
+  type StageCycleRow,
+} from "./cycleService";
+import type { GrowthAssessmentRow, GrowthStage } from "./types";
 
 interface UseGrowthPlanResult {
   loading: boolean;
@@ -13,6 +20,29 @@ interface UseGrowthPlanResult {
   needsCycleBootstrap: boolean;
   refresh: () => Promise<void>;
   updateStatus: (taskId: string, status: TaskStatus) => Promise<void>;
+}
+
+/** Slug of the milestone task for each stage. Completing/uncompleting one of
+ *  these mirrors to `cycle.milestone_attested_at` via cycleService. Any other
+ *  task slug is a normal task-progress write only. */
+const MILESTONE_SLUG_BY_STAGE: Record<GrowthStage, string> = {
+  validate: "validate-deliver-capture-proof",
+  attract: "attract-reach-lead-volume",
+  optimize: "optimize-reach-target",
+  scale: "scale-sustain-acquisition",
+  systemize: "systemize-verify-reclaim",
+};
+
+function toSnapshot(row: StageCycleRow | undefined): CycleSnapshot | undefined {
+  if (!row) return undefined;
+  return {
+    id: row.id,
+    stage: row.stage,
+    cycle_number: row.cycle_number,
+    started_at: row.started_at,
+    ended_at: row.ended_at,
+    milestone_attested_at: row.milestone_attested_at,
+  };
 }
 
 /**
@@ -53,16 +83,8 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
           fetchWorkspaceState(subAccountId),
         ]);
 
-      // At most one active cycle per workspace (DB-enforced invariant).
-      const cycle: CycleSnapshot | undefined = cycles[0]
-        ? {
-            id: cycles[0].id,
-            stage: cycles[0].stage,
-            cycle_number: cycles[0].cycle_number,
-            started_at: cycles[0].started_at,
-            ended_at: cycles[0].ended_at,
-          }
-        : undefined;
+      // Invariant: at most one active cycle per workspace.
+      const cycle = toSnapshot(cycles[0]);
 
       const ctx = buildConditionContext({
         stage: cycle?.stage ?? assessment.computed_stage,
@@ -77,26 +99,14 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
 
       const derived: GrowthPlan = derivePlan(tasks, progress, ctx);
 
-      // Bootstrap the initial cycle if the workspace has an assessment stage
-      // but no active cycle yet. This is the only write-side call in this hook
-      // and it is delegated to the cycle service.
       if (derived.needsCycleBootstrap && assessment.computed_stage) {
         try {
           await startInitialCycle(subAccountId, assessment.computed_stage, "hook_bootstrap");
         } catch (e) {
           console.error("useGrowthPlan.bootstrap failed", e);
         }
-        // Re-fetch after bootstrap so the plan reflects the new cycle.
         const cyclesAfter = await fetchActiveCycles(subAccountId);
-        const bootstrapped: CycleSnapshot | undefined = cyclesAfter[0]
-          ? {
-              id: cyclesAfter[0].id,
-              stage: cyclesAfter[0].stage,
-              cycle_number: cyclesAfter[0].cycle_number,
-              started_at: cyclesAfter[0].started_at,
-              ended_at: cyclesAfter[0].ended_at,
-            }
-          : undefined;
+        const bootstrapped = toSnapshot(cyclesAfter[0]);
         const ctx2 = { ...ctx, cycle: bootstrapped, stage: bootstrapped?.stage ?? ctx.stage };
         const derived2 = derivePlan(tasks, progress, ctx2);
         setPlan(derived2.tasks);
@@ -121,15 +131,50 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
 
   const updateStatus = useCallback(async (taskId: string, status: TaskStatus) => {
     if (!subAccountId) return;
-    // Foundation tasks (stage='any') are cycle-less; stage tasks scoped to active cycle.
     const derivedTask = plan.find((d) => d.task.id === taskId);
-    const isFoundation = derivedTask?.task.stage === "any";
+    if (!derivedTask) return;
+
+    const isFoundation = derivedTask.task.stage === "any";
     const cycleId = isFoundation ? null : (activeCycle?.id ?? null);
     if (!isFoundation && !cycleId) {
       console.warn("updateStatus called for stage task without active cycle");
       return;
     }
+
+    // 1. Persist the task progress row (cycle-scoped for stage tasks).
     await setTaskStatus(subAccountId, taskId, status, cycleId);
+
+    // 2. Mirror to the cycle's milestone attestation when the task being
+    //    updated is the active stage's milestone task. Milestone timestamps
+    //    NEVER live in workspace_state — they live on the cycle row itself,
+    //    so a fresh cycle always starts with milestone_attested_at = NULL.
+    if (activeCycle && !isFoundation) {
+      const milestoneSlug = MILESTONE_SLUG_BY_STAGE[activeCycle.stage];
+      if (derivedTask.task.slug === milestoneSlug) {
+        try {
+          if (status === "completed") {
+            await attestMilestone({
+              subAccountId,
+              expectedCycleId: activeCycle.id,
+              reason: "milestone_task_completed",
+            });
+          } else if (
+            // Un-completion: any transition off 'completed' should clear it.
+            derivedTask.status === "completed" &&
+            status !== "completed"
+          ) {
+            await clearMilestone({
+              subAccountId,
+              expectedCycleId: activeCycle.id,
+              reason: "milestone_task_uncompleted",
+            });
+          }
+        } catch (e) {
+          console.error("useGrowthPlan.milestoneSync failed", e);
+        }
+      }
+    }
+
     await refresh();
   }, [subAccountId, refresh, plan, activeCycle]);
 
