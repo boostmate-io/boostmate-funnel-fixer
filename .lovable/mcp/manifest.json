@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "sdk_version": "0.23.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://exqexdgdkvfhmipblnco.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "boostmate-mcp",
+      "version": "0.1.0",
+      "title": "Boostmate MCP"
+    },
+    "tools": [
+      {
+        "name": "list_workspaces",
+        "title": "List workspaces",
+        "description": "List the Boostmate workspaces (sub-accounts) the signed-in user has access to.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_funnels",
+        "title": "List funnels",
+        "description": "List funnels in a Boostmate workspace (sub-account). Use list_workspaces to discover workspace IDs.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sub_account_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Boostmate workspace (sub_account) ID."
+            }
+          },
+          "required": [
+            "sub_account_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_offers",
+        "title": "List offers",
+        "description": "List offers in a Boostmate workspace.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sub_account_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Boostmate workspace (sub_account) ID."
+            }
+          },
+          "required": [
+            "sub_account_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_business_blueprint",
+        "title": "Get business blueprint",
+        "description": "Return the business blueprint (strategy document) for a Boostmate workspace.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sub_account_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Boostmate workspace (sub_account) ID."
+            }
+          },
+          "required": [
+            "sub_account_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_analytics_entries",
+        "title": "List analytics entries",
+        "description": "List recent daily analytics entries for a funnel.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "funnel_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Funnel ID."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Maximum number of entries to return (1-200)."
+            }
+          },
+          "required": [
+            "funnel_id",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

@@ -16,6 +16,7 @@ import SharedOffer from "./pages/SharedOffer.tsx";
 import SharedBlueprint from "./pages/SharedBlueprint.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import OAuthConsent from "./pages/OAuthConsent.tsx";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/offer/:token" element={<SharedOffer />} />
           <Route path="/blueprint/:token" element={<SharedBlueprint />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/.lovable/oauth/consent" element={<WithAuth><OAuthConsent /></WithAuth>} />
           <Route path="/dashboard" element={
             <WithAuth>
               <ProtectedRoute>

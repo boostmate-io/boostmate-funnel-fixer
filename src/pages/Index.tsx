@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +27,14 @@ const Index = () => {
   const [pageContent, setPageContent] = useState("");
   const [analysisResult, setAnalysisResult] = useState<Awaited<ReturnType<typeof analyzeAudit>> | null>(null);
 
-  if (isReady && user) return <Navigate to="/dashboard" replace />;
+  const nextParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null;
+  const safeNext = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
+
+  useEffect(() => {
+    if (safeNext && isReady && !user) setShowAuth(true);
+  }, [safeNext, isReady, user]);
+
+  if (isReady && user) return <Navigate to={safeNext ?? "/dashboard"} replace />;
 
   const handleWizardComplete = async (data: AuditFormData) => {
     setFormData(data);
