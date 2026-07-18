@@ -113,7 +113,12 @@ export default function GrowthRoadmapModule({ onOpenModule }: Props) {
       {phase === "result" && row && (
         <div className="space-y-6">
           <AssessmentResult row={row} onOpenModule={openModule} />
-          <GrowthPlanPanel subAccountId={activeSubAccountId} assessment={row} onOpenModule={openModule} />
+          <GrowthPlanPanel
+            subAccountId={activeSubAccountId}
+            assessment={row}
+            onOpenModule={openModule}
+            onRetakeAssessment={() => setPhase("wizard")}
+          />
         </div>
       )}
     </div>
