@@ -20,6 +20,9 @@ import AdminPanel from "@/components/admin/AdminPanel";
 import OutreachModule from "@/components/outreach/OutreachModule";
 import BusinessBlueprintModule from "@/components/business-blueprint/BusinessBlueprintModule";
 import GlobalCoachBubble from "@/components/coach/GlobalCoachBubble";
+import GrowthRoadmapOverview from "@/components/growth/GrowthRoadmapOverview";
+import GrowthRoadmapModule from "@/components/growth/GrowthRoadmapModule";
+import { usePendingGrowthClaim } from "@/hooks/usePendingGrowthClaim";
 
 const Dashboard = () => {
   const { t } = useTranslation();
