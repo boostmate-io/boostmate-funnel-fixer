@@ -106,6 +106,18 @@ export interface CoachBlueprintWrite {
   value: string;
 }
 
+export interface CoachGrowthDecision {
+  /** Task slug the decision resolves (e.g. "attract-choose-channel"). */
+  taskSlug: string;
+  /** Dotted key inside `growth_workspace_state.state`. */
+  stateKey: string;
+  /** The value to write. For enumerated decisions this MUST match one of the
+   *  canonical option values; for free-text decisions any non-empty string. */
+  value: string;
+  /** Human-readable label shown in the UI card. */
+  label: string;
+}
+
 export type CoachMessagePart =
   | { type: "text"; text: string }
   | { type: "proposal"; value: string; reasoning?: string }
@@ -114,6 +126,11 @@ export type CoachMessagePart =
   | {
       type: "blueprint_writes";
       writes: CoachBlueprintWrite[];
+      reasoning?: string;
+    }
+  | {
+      type: "growth_decision";
+      decision: CoachGrowthDecision;
       reasoning?: string;
     };
 
