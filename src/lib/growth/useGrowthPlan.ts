@@ -66,6 +66,7 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
   const [plan, setPlan] = useState<DerivedTask[]>([]);
   const [activeCycle, setActiveCycle] = useState<CycleSnapshot | null>(null);
   const [needsCycleBootstrap, setNeedsCycleBootstrap] = useState(false);
+  const [workspaceState, setWorkspaceStateSnap] = useState<Record<string, unknown>>({});
 
   const refresh = useCallback(async () => {
     if (!subAccountId || !assessment) {
