@@ -50,6 +50,11 @@ const ActionSchema = z.discriminatedUnion("action", [
     action: z.literal("clear_milestone"),
     expected_cycle_id: z.string().uuid(),
   }),
+  BaseSchema.extend({
+    action: z.literal("set_workspace_state"),
+    patch: z.record(z.unknown()).optional(),
+    delete_keys: z.array(z.string()).optional(),
+  }),
 ]);
 
 function json(status: number, body: unknown) {
@@ -109,7 +114,21 @@ Deno.serve(async (req) => {
   if (memberErr) return json(500, { error: "membership_check_failed" });
   if (!member) return json(403, { error: "not_a_member" });
 
-  // Dispatch to atomic RPC.
+  // set_workspace_state uses a separate RPC (not part of cycle transitions).
+  if (input.action === "set_workspace_state") {
+    const { data, error } = await service.rpc("growth_workspace_state_set", {
+      _sub_account_id: input.sub_account_id,
+      _patch: input.patch ?? {},
+      _delete_keys: input.delete_keys ?? [],
+    });
+    if (error) {
+      console.error("growth_workspace_state_set error", error);
+      return json(500, { error: "state_write_failed", details: error.message });
+    }
+    return json(200, { status: "state_written", state: data });
+  }
+
+  // Dispatch to atomic cycle-transition RPC.
   const rpcArgs: Record<string, unknown> = {
     _sub_account_id: input.sub_account_id,
     _action: input.action,

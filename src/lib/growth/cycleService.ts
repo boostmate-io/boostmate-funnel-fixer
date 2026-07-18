@@ -150,7 +150,35 @@ export function clearMilestone(params: {
   });
 }
 
+/**
+ * Merge a JSON patch into `growth_workspace_state.state` and/or delete keys.
+ * Atomic via `growth_workspace_state_set` RPC. Called by the roadmap task
+ * status handler to mirror completions into Layer-B facts, and by future
+ * Build Guide UIs to write user-selected decision values.
+ *
+ * Dotted keys in `deleteKeys` (e.g. `"attract.chosenChannel"`) remove the
+ * nested key while leaving siblings intact.
+ */
+export async function setWorkspaceState(params: {
+  subAccountId: string;
+  patch?: Record<string, unknown>;
+  deleteKeys?: string[];
+}): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase.functions.invoke("growth-cycle-transition", {
+    body: {
+      action: "set_workspace_state",
+      sub_account_id: params.subAccountId,
+      patch: params.patch ?? {},
+      delete_keys: params.deleteKeys ?? [],
+    },
+  });
+  if (error) throw error;
+  const result = data as { state?: Record<string, unknown> };
+  return result.state ?? {};
+}
+
 // ---------- Read helpers (pure reads, no mutation) ----------
+
 
 export async function fetchActiveCycles(subAccountId: string): Promise<StageCycleRow[]> {
   const { data, error } = await supabase
