@@ -175,6 +175,25 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
       }
     }
 
+    // 3. Mirror to Layer-B workspace state per the task's static effect.
+    //    Setup/execution tasks -> boolean flags. Decision tasks -> placeholder
+    //    "unspecified" (Build Guide UI will overwrite with the real value).
+    //    Foundation/reassess/none-effect tasks are skipped. This is a
+    //    best-effort mirror — a failure here is logged but does not block
+    //    the progress write already persisted above.
+    try {
+      const effect = effectForStatus(derivedTask.task.slug, status);
+      if (effect) {
+        await setWorkspaceState({
+          subAccountId,
+          patch: effect.patch,
+          deleteKeys: effect.deleteKeys,
+        });
+      }
+    } catch (e) {
+      console.error("useGrowthPlan.stateEffect failed", e);
+    }
+
     await refresh();
   }, [subAccountId, refresh, plan, activeCycle]);
 
