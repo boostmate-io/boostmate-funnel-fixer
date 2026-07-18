@@ -1313,15 +1313,31 @@ const proposeBlueprintWritesTool = {
 function toolsForScope(scope: string | undefined) {
   const base = [suggestQuickRepliesTool, rememberFactTool];
   if (scope === "blueprint.field") return [proposeFieldValueTool, ...base];
-  if (scope === "blueprint.section" || scope === "global") {
-    // Always expose the writes tool; the model decides when to use it based on
-    // the system prompt's follow-up rules. This makes correction/language/tone
-    // modifiers ("in English", "shorter", "again") work like they would with a
-    // plain LLM instead of being blocked by regex intent gating.
-    return [proposeBlueprintWritesTool, ...base];
-  }
+  if (scope === "blueprint.section") return [proposeBlueprintWritesTool, ...base];
+  if (scope === "global") return [proposeBlueprintWritesTool, proposeGrowthDecisionTool, ...base];
   return base;
 }
+
+const proposeGrowthDecisionTool = {
+  type: "function",
+  function: {
+    name: "propose_growth_decision",
+    description:
+      "Propose the answer to the workspace's current Growth Roadmap DECISION task (e.g. choose a validation path, acquisition channel, bottleneck, scaling lever, process, systemize path). ONLY call when the user has actually chosen — never as a placeholder. task_slug + state_key MUST match the current focus task from the Growth Roadmap context, and value MUST match one of the allowed values (or a concise free-text value for free-text decisions).",
+    parameters: {
+      type: "object",
+      properties: {
+        task_slug: { type: "string", description: "Slug of the current decision task." },
+        state_key: { type: "string", description: "Dotted key inside growth_workspace_state.state, exactly as given in context." },
+        value: { type: "string", description: "The chosen value. Must match an allowed value for enumerated decisions." },
+        label: { type: "string", description: "Human-readable task title, shown on the decision card." },
+        reasoning: { type: "string", description: "One short sentence: why this decision." },
+      },
+      required: ["task_slug", "state_key", "value", "label"],
+      additionalProperties: false,
+    },
+  },
+};
 
 // Serialize the client's assistant `parts` into readable text so the model
 // can see what IT proposed on prior turns. Without this, tool-only turns come
