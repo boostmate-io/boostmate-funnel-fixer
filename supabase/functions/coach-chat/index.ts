@@ -340,8 +340,11 @@ function buildSystemPrompt(
   prompts: PromptSet,
   messages: any[] = [],
   handledDecisions: Array<{ path: string; decision: string }> = [],
+  growthRow: any | null = null,
 ): string {
   const parts: string[] = [prompts.base];
+  const growthBlock = renderGrowthContext(growthRow);
+  if (growthBlock) parts.push(growthBlock);
 
   const uiLocale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
   const explicit = explicitLanguageInstruction(messages);
