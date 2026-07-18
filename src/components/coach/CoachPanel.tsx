@@ -275,6 +275,7 @@ function MessageBubble({
   onApply,
   onRefine,
   onApplyBlueprintWrites,
+  onApplyGrowthDecision,
   initialDecisions,
   onDecision,
 }: {
@@ -283,6 +284,7 @@ function MessageBubble({
   onApply: (value: string) => void;
   onRefine: (value: string) => void;
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  onApplyGrowthDecision?: (decision: CoachGrowthDecision) => Promise<void> | void;
   initialDecisions?: Record<string, "applied" | "dismissed">;
   onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
 }) {
@@ -299,6 +301,7 @@ function MessageBubble({
             onApply={onApply}
             onRefine={onRefine}
             onApplyBlueprintWrites={onApplyBlueprintWrites}
+            onApplyGrowthDecision={onApplyGrowthDecision}
             initialDecisions={initialDecisions}
             onDecision={onDecision}
           />
