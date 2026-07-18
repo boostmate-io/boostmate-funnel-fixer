@@ -116,7 +116,7 @@ const openerFor = (context: CoachContext | null): CoachMessage | null => {
   };
 };
 
-const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrites }: Props) => {
+const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrites, onApplyGrowthDecision }: Props) => {
   const { messages, status, error, sendMessage, decisions, recordDecision } = useCoachChat(context, open);
   const [input, setInput] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
