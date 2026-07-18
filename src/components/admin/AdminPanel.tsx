@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Layers, ShieldCheck, Zap, BookOpen, Puzzle, LayoutList } from "lucide-react";
+import { Building2, Users, Layers, ShieldCheck, Zap, BookOpen, Puzzle, LayoutList, Milestone } from "lucide-react";
 import AdminMainAccounts from "./AdminMainAccounts";
 import AdminSubAccounts from "./AdminSubAccounts";
 import AdminUsers from "./AdminUsers";
@@ -8,9 +8,10 @@ import AdminAIActions from "./AdminAIActions";
 import AdminInstructionBlocks from "./AdminInstructionBlocks";
 import AdminCopyComponents from "./AdminCopyComponents";
 import AdminCopyFrameworks from "./AdminCopyFrameworks";
+import AdminGrowthRoadmapTasks from "./AdminGrowthRoadmapTasks";
 
 interface AdminPanelProps {
-  category?: "accounts" | "ai" | "copy";
+  category?: "accounts" | "ai" | "copy" | "growth";
 }
 
 const categoryConfig = {
@@ -42,7 +43,16 @@ const categoryConfig = {
       { value: "copy-frameworks", label: "Frameworks", icon: LayoutList, content: <AdminCopyFrameworks /> },
     ],
   },
+  growth: {
+    title: "Growth Roadmap",
+    description: "Manage the seeded Growth Roadmap task catalog. Slug, activation, and completion logic remain code-controlled.",
+    defaultTab: "growth-tasks",
+    tabs: [
+      { value: "growth-tasks", label: "Tasks", icon: Milestone, content: <AdminGrowthRoadmapTasks /> },
+    ],
+  },
 };
+
 
 const AdminPanel = ({ category = "accounts" }: AdminPanelProps) => {
   const config = categoryConfig[category];
