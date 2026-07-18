@@ -20,6 +20,10 @@ interface UseGrowthPlanResult {
   plan: DerivedTask[];
   activeCycle: CycleSnapshot | null;
   needsCycleBootstrap: boolean;
+  /** Raw Layer-B workspace state (unwrapped — no `extras` prefix). Consumers
+   *  read decision values from here (e.g. `state.attract.chosenChannel`) and
+   *  the `roadmap_completed` terminal flag. */
+  workspaceState: Record<string, unknown>;
   refresh: () => Promise<void>;
   updateStatus: (taskId: string, status: TaskStatus) => Promise<void>;
 }
@@ -62,12 +66,14 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
   const [plan, setPlan] = useState<DerivedTask[]>([]);
   const [activeCycle, setActiveCycle] = useState<CycleSnapshot | null>(null);
   const [needsCycleBootstrap, setNeedsCycleBootstrap] = useState(false);
+  const [workspaceState, setWorkspaceStateSnap] = useState<Record<string, unknown>>({});
 
   const refresh = useCallback(async () => {
     if (!subAccountId || !assessment) {
       setPlan([]);
       setActiveCycle(null);
       setNeedsCycleBootstrap(false);
+      setWorkspaceStateSnap({});
       setLoading(false);
       return;
     }
@@ -85,6 +91,7 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
           fetchWorkspaceState(subAccountId),
         ]);
 
+      setWorkspaceStateSnap(wsState ?? {});
       // Invariant: at most one active cycle per workspace.
       const cycle = toSnapshot(cycles[0]);
 
@@ -124,6 +131,7 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
       setPlan([]);
       setActiveCycle(null);
       setNeedsCycleBootstrap(false);
+      setWorkspaceStateSnap({});
     } finally {
       setLoading(false);
     }
@@ -176,10 +184,11 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
     }
 
     // 3. Mirror to Layer-B workspace state per the task's static effect.
-    //    Setup/execution tasks -> boolean flags. Decision tasks -> placeholder
-    //    "unspecified" (Build Guide UI will overwrite with the real value).
-    //    Foundation/reassess/none-effect tasks are skipped. This is a
-    //    best-effort mirror — a failure here is logged but does not block
+    //    Setup/execution tasks -> boolean flags. Decision tasks have `none`
+    //    effects (real values come from the DecisionPicker via
+    //    `cycleService.setWorkspaceState`). Foundation/reassess tasks are
+    //    also skipped. Best-effort: a failure here is logged but does not
+    //    block the progress write already persisted above.
     //    the progress write already persisted above.
     try {
       const effect = effectForStatus(derivedTask.task.slug, status);
@@ -197,5 +206,5 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
     await refresh();
   }, [subAccountId, refresh, plan, activeCycle]);
 
-  return { loading, plan, activeCycle, needsCycleBootstrap, refresh, updateStatus };
+  return { loading, plan, activeCycle, needsCycleBootstrap, workspaceState, refresh, updateStatus };
 }
