@@ -1,4 +1,8 @@
 // Growth Roadmap V2 — task catalog + progress types + typed condition tree.
+//
+// `derivePlan` is a PURE read-only function. It never opens, closes, or
+// mutates cycles. Cycle transitions are the responsibility of
+// `cycleService` / the `growth-cycle-transition` edge function.
 
 import type { GrowthStage, RelatedModule } from "./types";
 
@@ -26,17 +30,6 @@ export interface TaskResource {
 // ------------------------------------------------------------------
 // Condition tree
 // ------------------------------------------------------------------
-// Conditions are stored as JSON on the task row and evaluated in TS
-// against a `ConditionContext` built from workspace signals.
-//
-// Shape:
-//   { all: [ Condition, ... ] }   // AND
-//   { any: [ Condition, ... ] }   // OR
-//   { not: Condition }
-//   { fact: "blueprint.hasMainOffer", op: "eq", value: true }
-//
-// Facts are dot-paths resolved server- or client-side from the context.
-// Unknown facts always resolve to `undefined` — treat as falsy.
 
 export type ConditionOp =
   | "eq"
@@ -90,6 +83,7 @@ export interface GrowthTaskProgressRow {
   id: string;
   sub_account_id: string;
   task_id: string;
+  cycle_id: string | null;
   status: TaskStatus;
   activated_at: string | null;
   started_at: string | null;
@@ -101,22 +95,33 @@ export interface GrowthTaskProgressRow {
 }
 
 // ------------------------------------------------------------------
+// Cycle snapshot (subset of the DB row that derivePlan needs)
+// ------------------------------------------------------------------
+
+export interface CycleSnapshot {
+  id: string;
+  stage: GrowthStage;
+  cycle_number: number;
+  started_at: string;
+  ended_at: string | null;
+}
+
+// ------------------------------------------------------------------
 // Evaluation context
 // ------------------------------------------------------------------
-// A flat, serializable snapshot of the workspace signals we evaluate
-// conditions against. Building this is the responsibility of the
-// caller (client or edge function).
 
 export interface ConditionContext {
   stage?: GrowthStage;
-  // Assessment signals
+  /** Currently active workspace cycle, if any. */
+  cycle?: CycleSnapshot;
   assessment?: {
     hasActive: boolean;
     stage?: GrowthStage;
     scores?: Partial<Record<GrowthStage, number>>;
     answers?: Record<string, unknown>;
+    /** ISO timestamp — used for reassessment completion derivation. */
+    createdAt?: string;
   };
-  // Blueprint signals
   blueprint?: {
     hasMainOffer: boolean;
     hasIcp: boolean;
@@ -125,24 +130,27 @@ export interface ConditionContext {
     hasProof: boolean;
     completionPct?: number;
   };
-  // Offer signals
   offers?: {
     count: number;
     hasHighTicket: boolean;
     hasLowMidTicket: boolean;
     hasFree: boolean;
   };
-  // Funnel signals
   funnels?: {
     count: number;
     hasPublished: boolean;
   };
-  // Analytics signals
   analytics?: {
     hasEntries: boolean;
     lastEntryDays?: number;
   };
-  // Free-form extras — used by ad-hoc conditions the admin adds later.
+  /**
+   * Layer-B workspace state (per-stage attestations, decisions) plus
+   * synthetic `reassess.<stage>.completedAfterMilestone` flags derived
+   * at context-build time from milestone timestamps + assessment time.
+   *
+   * Shape: { validate: {...}, attract: {...}, ..., reassess: { validate: {...} } }
+   */
   extras?: Record<string, unknown>;
 }
 
@@ -223,26 +231,56 @@ export interface DerivedTask {
   progress?: GrowthTaskProgressRow;
 }
 
+export interface GrowthPlan {
+  /** True when the workspace has no active cycle — caller must bootstrap one. */
+  needsCycleBootstrap: boolean;
+  /** Active cycle used to scope progress rows. Undefined when needsCycleBootstrap. */
+  activeCycle?: CycleSnapshot;
+  /** Derived, ordered task list for the active stage. Empty when bootstrap needed. */
+  tasks: DerivedTask[];
+}
+
 /**
- * Derive the ordered growth plan for a workspace.
+ * Derive the ordered growth plan for a workspace. PURE — no I/O, no side effects.
  *
- * A task is INCLUDED in the plan when it applies to the current stage
- * AND its activation_conditions evaluate to true against ctx.
+ * Cycle scoping:
+ *   - Foundation tasks (`stage === "any"`) use cycle-less progress rows
+ *     (`progress.cycle_id === null`).
+ *   - Stage tasks use progress rows scoped to the active cycle
+ *     (`progress.cycle_id === activeCycle.id`).
+ *   - When no active cycle exists, `needsCycleBootstrap` is true and the
+ *     caller MUST invoke `cycleService.startInitialCycle` before rendering.
  *
- * Status resolution order:
- *   1. Persisted progress row wins if it's completed/dismissed/snoozed/in_progress.
+ * Status resolution:
+ *   1. Persisted progress row wins for dismissed/snoozed/in_progress.
  *   2. Otherwise, if completion_conditions match → 'completed'.
- *   3. Otherwise → 'available'.
+ *   3. Otherwise, if a persisted completed row exists → 'completed'.
+ *   4. Otherwise → 'available'.
  */
 export function derivePlan(
   tasks: GrowthRoadmapTaskRow[],
   progress: GrowthTaskProgressRow[],
   ctx: ConditionContext,
-): DerivedTask[] {
+): GrowthPlan {
   const stage = ctx.stage;
-  if (!stage) return [];
+  if (!stage) return { needsCycleBootstrap: false, tasks: [] };
 
-  const progressByTask = new Map(progress.map((p) => [p.task_id, p]));
+  const activeCycle = ctx.cycle;
+  if (!activeCycle) {
+    return { needsCycleBootstrap: true, tasks: [] };
+  }
+
+  // Split progress rows by cycle scope so foundation and stage tasks
+  // read from the right bucket.
+  const foundationProgress = new Map<string, GrowthTaskProgressRow>();
+  const cycleProgress = new Map<string, GrowthTaskProgressRow>();
+  for (const p of progress) {
+    if (p.cycle_id == null) {
+      foundationProgress.set(p.task_id, p);
+    } else if (p.cycle_id === activeCycle.id) {
+      cycleProgress.set(p.task_id, p);
+    }
+  }
 
   const candidates = tasks
     .filter((t) => t.is_active)
@@ -250,12 +288,14 @@ export function derivePlan(
     .filter((t) => evaluateCondition(t.activation_conditions, ctx))
     .sort((a, b) => a.sort_order - b.sort_order);
 
-  return candidates.map((task) => {
-    const p = progressByTask.get(task.id);
-    let status: TaskStatus;
+  const derived: DerivedTask[] = candidates.map((task) => {
+    const p = task.stage === "any"
+      ? foundationProgress.get(task.id)
+      : cycleProgress.get(task.id);
 
     const completionMatches = evaluateCondition(task.completion_conditions, ctx);
 
+    let status: TaskStatus;
     if (p && (p.status === "dismissed" || p.status === "snoozed" || p.status === "in_progress")) {
       status = p.status;
     } else if (p?.status === "completed" || completionMatches) {
@@ -272,4 +312,6 @@ export function derivePlan(
       progress: p,
     };
   });
+
+  return { needsCycleBootstrap: false, activeCycle, tasks: derived };
 }
