@@ -224,10 +224,11 @@ const GlobalCoachBubble = () => {
 
       <CoachPanel
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={handleOpenChange}
         context={context}
         onApplyBlueprintWrites={handleApplyBlueprintWrites}
         onApplyGrowthDecision={handleApplyGrowthDecision}
+        pendingSeed={pendingSeed}
       />
     </>
   );
