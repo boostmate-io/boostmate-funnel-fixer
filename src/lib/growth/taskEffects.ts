@@ -85,7 +85,7 @@ export const TASK_STATE_EFFECTS: Record<string, TaskEffect> = {
  */
 export function effectForStatus(
   slug: string,
-  status: "not_started" | "in_progress" | "completed" | "skipped",
+  status: string,
 ): { patch: Record<string, unknown>; deleteKeys: string[] } | null {
   const eff = TASK_STATE_EFFECTS[slug];
   if (!eff || eff.kind === "none") return null;
