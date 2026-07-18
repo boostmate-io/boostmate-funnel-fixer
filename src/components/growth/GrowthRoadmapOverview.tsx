@@ -27,9 +27,11 @@ import {
 import { Input } from "@/components/ui/input";
 import {
   ArrowRight,
+  BookOpen,
   CheckCircle2,
   Circle,
   ExternalLink,
+  MessageCircle,
   PlayCircle,
   RefreshCw,
   Sparkles,
