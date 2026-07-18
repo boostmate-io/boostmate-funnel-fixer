@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Send, Sparkles, Loader2, RefreshCw, Check, X, Maximize2, Minimize2 } from "lucide-react";
 import { useCoachChat } from "@/lib/coach/useCoachChat";
-import type { CoachContext, CoachMessage, CoachMessagePart, CoachBlueprintWrite } from "@/lib/coach/types";
+import type { CoachContext, CoachMessage, CoachMessagePart, CoachBlueprintWrite, CoachGrowthDecision } from "@/lib/coach/types";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -24,6 +24,8 @@ interface Props {
   onApply?: (value: string) => void;
   /** Called when the user clicks "Apply all" on a batch blueprint-writes proposal. */
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  /** Called when the user accepts a Coach-proposed Growth Roadmap decision. */
+  onApplyGrowthDecision?: (decision: CoachGrowthDecision) => Promise<void> | void;
 }
 
 const openerFor = (context: CoachContext | null): CoachMessage | null => {
