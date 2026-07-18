@@ -101,7 +101,7 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
   const pa = (bp["proof_authority"] ?? {}) as Record<string, unknown>;
 
   // Extras = Layer-B workspace state + synthetic reassess flags + caller overrides.
-  const reassess = computeReassessFlags(state, assessment?.created_at);
+  const reassess = computeReassessFlags(cycle ?? undefined, assessment?.created_at);
   const mergedExtras: Record<string, unknown> = {
     ...state,
     reassess: {
