@@ -300,7 +300,71 @@ const GROWTH_STAGE_META: Record<string, { label: string; bottleneck: string; obj
   },
 };
 
-function renderGrowthContext(row: any | null): string {
+function renderGrowthContext(row: any | null, snapshot: any | null): string {
+  // Prefer the cycle-aware snapshot when the client provides one — it reflects
+  // the SAME `derivePlan` output the user sees in the roadmap UI.
+  if (snapshot && typeof snapshot === "object") {
+    const stage = snapshot.stage as string | null;
+    const meta = stage ? GROWTH_STAGE_META[stage] : null;
+    const stageLine = meta
+      ? `**${meta.label}** (${stage}) — cycle #${snapshot.cycleNumber ?? "?"}`
+      : "no active stage yet (assessment or bootstrap pending)";
+    const focus = snapshot.focusTask;
+    const focusBlock = focus
+      ? `Current focus task:
+- slug: ${focus.slug}
+- title: ${focus.title}
+- description: ${focus.description}
+- status: ${focus.status}${focus.isDecision ? `
+- kind: DECISION — state key: ${focus.decisionStateKey}${focus.decisionFreeText ? " (free-text)" : ""}${
+  focus.decisionOptions ? `
+- allowed values: ${focus.decisionOptions.map((o: any) => `${o.value} (${o.label})`).join(" | ")}` : ""
+}${focus.decisionCurrentValue ? `
+- current value: ${focus.decisionCurrentValue}` : ""}` : ""}`
+      : "No current focus task (roadmap idle, bootstrap needed, or completed).";
+    const upcoming = Array.isArray(snapshot.upcomingTasks) && snapshot.upcomingTasks.length
+      ? snapshot.upcomingTasks.map((t: any, i: number) => `  ${i + 1}. ${t.title} [${t.slug}] (${t.status})`).join("\n")
+      : "  (none)";
+    const foundation = Array.isArray(snapshot.foundationTasks) && snapshot.foundationTasks.length
+      ? snapshot.foundationTasks.map((t: any) => `  - ${t.title} [${t.slug}] — ${t.status}`).join("\n")
+      : "  (none)";
+    const systems = Array.isArray(snapshot.canonicalGrowthSystems)
+      ? snapshot.canonicalGrowthSystems.map((s: any) => `  - ${s.id} — ${s.name}: ${s.summary}`).join("\n")
+      : "";
+    const terminal = snapshot.roadmapCompleted ? "\n\nROADMAP STATE: **completed** (Systemize gate passed)." : "";
+
+    return `# Growth Roadmap context (cycle-aware, live)
+Current stage: ${stageLine}${terminal}
+
+${focusBlock}
+
+Next upcoming tasks:
+${upcoming}
+
+Foundation tasks:
+${foundation}
+
+Layer-B workspace state (decisions + attestations):
+\`\`\`json
+${JSON.stringify(snapshot.workspaceState ?? {}, null, 2)}
+\`\`\`
+
+Canonical Boostmate Growth Systems (the ONLY systems you may reference by name):
+${systems}
+
+# HARD RULES for roadmap guidance
+- NEVER invent tasks, task slugs, stages, decision options, or Growth Systems that aren't listed above.
+- When the user asks "what should I focus on now?", anchor on the current focus task above.
+- When the current focus task is a DECISION and the user has expressed a preference or reached a conclusion, call the \`propose_growth_decision\` tool with:
+    - task_slug = the focus task slug
+    - state_key = the focus task's decisionStateKey
+    - value = one of the allowed values (or a concise free-text value for free-text decisions)
+    - label = the focus task title
+  Do NOT propose a decision until the user has actually chosen; never fill "unspecified" or a placeholder.
+- Do not toggle task completion yourself — only the user can mark tasks complete in the roadmap UI.`;
+  }
+
+  // Fallback (no snapshot): keep the legacy AI-priorities rendering.
   if (!row?.computed_stage) return "";
   const stage = row.computed_stage as string;
   const meta = GROWTH_STAGE_META[stage];
@@ -318,20 +382,13 @@ function renderGrowthContext(row: any | null): string {
       }).join("\n")
     : "  (no AI-generated priorities yet)";
 
-  const scores = row?.stage_scores
-    ? Object.entries(row.stage_scores).map(([k, v]) => `${k}=${v}`).join(", ")
-    : "";
-
   return `# Growth Roadmap context (current business stage)
 The user's business is currently at stage: **${meta.label}** (${stage}).
 - Bottleneck: ${meta.bottleneck}
 - Stage objective: ${meta.objective}
-${scores ? `- Stage scores: ${scores}` : ""}
 
 Top current priorities from their Growth Roadmap:
-${priorityLines}
-
-Use this as strategic anchor: when the user asks broad or open questions, connect your advice to their current stage, bottleneck and top priorities. Don't lecture them about the stage — weave it into your reasoning. If they ask something clearly off-stage, help anyway but briefly note the trade-off.`;
+${priorityLines}`;
 }
 
 function buildSystemPrompt(
