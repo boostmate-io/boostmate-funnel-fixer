@@ -22,6 +22,7 @@ import {
   isDecisionTask,
   readDecisionValue,
 } from "@/lib/growth/decisionOptions";
+import { resolveTaskResources } from "@/lib/growth/resourceResolver";
 
 interface Props {
   subAccountId: string | null;
