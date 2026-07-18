@@ -442,5 +442,180 @@
     "sidebar": {
       "clients": "Clients"
     }
+  },
+  "growth": {
+    "title": "Growth Roadmap",
+    "publicTitle": "The Growth Roadmap Assessment",
+    "publicSubtitle": "In 3 minutes, discover which of the 5 stages your business is in — and the exact next steps to unblock growth.",
+    "start": "Start assessment",
+    "continue": "Continue",
+    "back": "Back",
+    "submit": "See my roadmap",
+    "loading": "Analyzing your business…",
+    "sidebar": "Growth Roadmap",
+    "next": "Next",
+    "yourStage": "Your current stage",
+    "bottleneck": "Bottleneck",
+    "objective": "Objective",
+    "milestone": "Milestone to unlock next stage",
+    "priorities": "Your next 3 priorities",
+    "recommendedSystem": "Recommended Growth System",
+    "openModule": "Open module",
+    "retake": "Retake assessment",
+    "createAccountCta": "Create your free Boostmate account to save this roadmap and start executing.",
+    "claiming": "Linking your roadmap…",
+    "stage0Title": "Complete your Business Blueprint",
+    "stage0Body": "Before the Growth Roadmap can point at the right next steps, fill out your Business Blueprint — offer, avatar, and outcome. That's the foundation we assess against.",
+    "openBlueprint": "Open Business Blueprint",
+    "aiError": "Couldn't generate personalized priorities right now, but your stage and scores are ready below.",
+    "stage": {
+      "validate": {
+        "label": "Validate",
+        "bottleneck": "No repeatable proof that the offer delivers.",
+        "objective": "5+ paying clients who received the promised outcome.",
+        "milestone": "Outcome is delivered consistently; sales are repeatable."
+      },
+      "attract": {
+        "label": "Attract",
+        "bottleneck": "Leads are inconsistent or referral-only.",
+        "objective": "One primary lead source producing qualified leads weekly.",
+        "milestone": "Known lead volume and lead-to-customer rate."
+      },
+      "optimize": {
+        "label": "Optimize",
+        "bottleneck": "Leaky journey; drop-offs are unmeasured.",
+        "objective": "Improved conversion at each step and higher revenue per customer.",
+        "milestone": "Measurable lift in conversion or LTV."
+      },
+      "scale": {
+        "label": "Scale",
+        "bottleneck": "Unit economics or delivery capacity blocks growth.",
+        "objective": "Predictable acquisition with healthy CAC/LTV and delivery that holds under volume.",
+        "milestone": "Profitable scaling channel + fulfillment capacity."
+      },
+      "systemize": {
+        "label": "Systemize",
+        "bottleneck": "Business relies on the founder for daily execution.",
+        "objective": "Recurring processes documented and delegated.",
+        "milestone": "One full week without owner intervention."
+      }
+    },
+    "q": {
+      "q1": {
+        "label": "How many paying clients have you served with this offer?",
+        "opt0": "0",
+        "opt33": "1–2",
+        "opt67": "3–5",
+        "opt100": "5+"
+      },
+      "q2": {
+        "label": "How consistently does your offer deliver the promised outcome for clients?",
+        "opt0": "I don't know / not measured",
+        "opt33": "Some clients get it",
+        "opt67": "Most clients get it",
+        "opt100": "Almost every client gets it"
+      },
+      "q3": {
+        "label": "Do you have written testimonials or case studies you can point to?",
+        "yes": "Yes",
+        "no": "Not yet"
+      },
+      "q4": {
+        "label": "When you talk to a qualified lead, how often does it turn into a sale?",
+        "opt0": "Rarely / never",
+        "opt33": "Occasionally",
+        "opt67": "Consistently",
+        "opt100": "Predictably (I know my rate)"
+      },
+      "q5": {
+        "label": "How consistent is your lead generation right now?",
+        "opt0": "Nothing consistent",
+        "opt33": "Bursts / referrals",
+        "opt67": "One channel works ~weekly",
+        "opt100": "One+ channel produces leads every week"
+      },
+      "q6": {
+        "label": "Which lead sources are actively working for you? (select all)",
+        "referrals": "Referrals / word of mouth",
+        "organic_social": "Organic social",
+        "paid_ads": "Paid ads",
+        "seo": "SEO / content",
+        "outreach": "Outbound outreach",
+        "partnerships": "Partnerships",
+        "email": "Email list",
+        "content": "Podcast / YouTube",
+        "none": "None yet"
+      },
+      "q7": {
+        "label": "Do you have a system that captures and follows up with every lead?",
+        "opt0": "No system",
+        "opt33": "Manual / ad-hoc",
+        "opt67": "Basic automation",
+        "opt100": "Fully automated + tracked"
+      },
+      "q8": {
+        "label": "Do you know your lead → customer numbers?",
+        "opt0": "No idea",
+        "opt33": "Rough guess",
+        "opt67": "Tracked monthly",
+        "opt100": "Tracked continuously"
+      },
+      "q9": {
+        "label": "Do you know where prospects drop off in your journey?",
+        "opt0": "No",
+        "opt33": "Kind of",
+        "opt67": "Yes, for the main step",
+        "opt100": "Yes, at every step"
+      },
+      "q10": {
+        "label": "How do you handle leads that don't buy the first time?",
+        "opt0": "Nothing",
+        "opt33": "Occasional manual follow-up",
+        "opt67": "Basic nurture sequence",
+        "opt100": "Structured long-term nurture"
+      },
+      "q11": {
+        "label": "Have you actively worked on raising revenue per customer (upsells, bumps, continuity)?",
+        "opt0": "No",
+        "opt33": "Thought about it",
+        "opt67": "One thing in place",
+        "opt100": "Multiple, tested and optimized"
+      },
+      "q12": {
+        "label": "Can you reliably turn ad spend (or paid effort) into customers?",
+        "opt0": "No / haven't tried",
+        "opt33": "Inconsistent results",
+        "opt67": "Reliable on one channel",
+        "opt100": "Predictable, scalable"
+      },
+      "q13": {
+        "label": "Do you know your CAC, LTV, and conversion rates well enough to make decisions?",
+        "opt0": "No",
+        "opt33": "Ballpark",
+        "opt67": "Tracked and used monthly",
+        "opt100": "Real-time; drive decisions"
+      },
+      "q14": {
+        "label": "How scalable is your delivery today?",
+        "opt0": "Breaks past current volume",
+        "opt33": "Manageable but stretched",
+        "opt67": "Room to grow with light hiring",
+        "opt100": "Team + SOPs ready to scale"
+      },
+      "q15": {
+        "label": "How dependent is the business on you personally?",
+        "opt0": "Fully — nothing runs without me",
+        "opt33": "Mostly",
+        "opt67": "Some parts delegated",
+        "opt100": "Runs largely without me"
+      },
+      "q16": {
+        "label": "Are your recurring processes documented and assigned?",
+        "opt0": "None",
+        "opt33": "A few notes",
+        "opt67": "Most core processes",
+        "opt100": "All key processes documented & owned"
+      }
+    }
   }
 }

@@ -442,5 +442,180 @@
     "sidebar": {
       "clients": "Klanten"
     }
+  },
+  "growth": {
+    "title": "Groei-Roadmap",
+    "publicTitle": "De Growth Roadmap Assessment",
+    "publicSubtitle": "Ontdek in 3 minuten in welke van de 5 fases jouw bedrijf zit — en de exacte volgende stappen om groei vrij te maken.",
+    "start": "Start assessment",
+    "continue": "Verder",
+    "back": "Terug",
+    "submit": "Toon mijn roadmap",
+    "loading": "We analyseren jouw bedrijf…",
+    "sidebar": "Groei-Roadmap",
+    "next": "Volgende",
+    "yourStage": "Jouw huidige fase",
+    "bottleneck": "Knelpunt",
+    "objective": "Doel",
+    "milestone": "Mijlpaal om de volgende fase te ontgrendelen",
+    "priorities": "Jouw 3 volgende prioriteiten",
+    "recommendedSystem": "Aanbevolen Growth System",
+    "openModule": "Open module",
+    "retake": "Assessment opnieuw doen",
+    "createAccountCta": "Maak je gratis Boostmate-account aan om deze roadmap te bewaren en aan de slag te gaan.",
+    "claiming": "We koppelen je roadmap…",
+    "stage0Title": "Vul eerst je Business Blueprint in",
+    "stage0Body": "Voordat de Growth Roadmap de juiste volgende stappen kan aanwijzen, moet je Business Blueprint ingevuld zijn — offer, avatar en outcome. Dat is de basis waar we tegen meten.",
+    "openBlueprint": "Open Business Blueprint",
+    "aiError": "Het is nu niet gelukt om gepersonaliseerde prioriteiten te genereren, maar je fase en scores staan hieronder klaar.",
+    "stage": {
+      "validate": {
+        "label": "Valideren",
+        "bottleneck": "Geen herhaalbaar bewijs dat het aanbod levert.",
+        "objective": "5+ betalende klanten met het beloofde resultaat.",
+        "milestone": "Resultaat wordt consistent geleverd; verkoop is herhaalbaar."
+      },
+      "attract": {
+        "label": "Aantrekken",
+        "bottleneck": "Leads zijn inconsistent of enkel via referrals.",
+        "objective": "Eén primair leadkanaal met wekelijkse gekwalificeerde leads.",
+        "milestone": "Gekend leadvolume en lead-naar-klant conversie."
+      },
+      "optimize": {
+        "label": "Optimaliseren",
+        "bottleneck": "Lekkende journey; drop-offs niet gemeten.",
+        "objective": "Betere conversie per stap en hogere omzet per klant.",
+        "milestone": "Meetbare stijging in conversie of LTV."
+      },
+      "scale": {
+        "label": "Schalen",
+        "bottleneck": "Unit economics of leveringscapaciteit blokkeren groei.",
+        "objective": "Voorspelbare acquisitie met gezonde CAC/LTV en levering die volume aankan.",
+        "milestone": "Winstgevend schaalkanaal + leveringscapaciteit."
+      },
+      "systemize": {
+        "label": "Systematiseren",
+        "bottleneck": "Bedrijf leunt op de founder voor dagelijkse uitvoering.",
+        "objective": "Terugkerende processen gedocumenteerd en gedelegeerd.",
+        "milestone": "Eén volledige week zonder tussenkomst van de eigenaar."
+      }
+    },
+    "q": {
+      "q1": {
+        "label": "Hoeveel betalende klanten heb je bediend met dit aanbod?",
+        "opt0": "0",
+        "opt33": "1–2",
+        "opt67": "3–5",
+        "opt100": "5+"
+      },
+      "q2": {
+        "label": "Hoe consistent levert je aanbod het beloofde resultaat?",
+        "opt0": "Weet ik niet / niet gemeten",
+        "opt33": "Sommige klanten",
+        "opt67": "Meeste klanten",
+        "opt100": "Bijna elke klant"
+      },
+      "q3": {
+        "label": "Heb je testimonials of cases die je kan tonen?",
+        "yes": "Ja",
+        "no": "Nog niet"
+      },
+      "q4": {
+        "label": "Hoe vaak wordt een gekwalificeerde lead een verkoop?",
+        "opt0": "Zelden / nooit",
+        "opt33": "Af en toe",
+        "opt67": "Consistent",
+        "opt100": "Voorspelbaar (ik ken mijn ratio)"
+      },
+      "q5": {
+        "label": "Hoe consistent is je lead generation nu?",
+        "opt0": "Niets consistents",
+        "opt33": "Pieken / referrals",
+        "opt67": "Eén kanaal werkt ~wekelijks",
+        "opt100": "Eén+ kanaal levert elke week"
+      },
+      "q6": {
+        "label": "Welke leadbronnen werken actief voor jou? (kies alles wat past)",
+        "referrals": "Referrals / mond-tot-mond",
+        "organic_social": "Organische social",
+        "paid_ads": "Betaalde ads",
+        "seo": "SEO / content",
+        "outreach": "Cold outreach",
+        "partnerships": "Partnerships",
+        "email": "E-maillijst",
+        "content": "Podcast / YouTube",
+        "none": "Nog geen"
+      },
+      "q7": {
+        "label": "Heb je een systeem dat elke lead vastlegt en opvolgt?",
+        "opt0": "Geen systeem",
+        "opt33": "Handmatig / ad-hoc",
+        "opt67": "Basis-automatisering",
+        "opt100": "Volledig automatisch + gemeten"
+      },
+      "q8": {
+        "label": "Ken je je lead → klant cijfers?",
+        "opt0": "Geen idee",
+        "opt33": "Ruwe inschatting",
+        "opt67": "Maandelijks gemeten",
+        "opt100": "Continu gemeten"
+      },
+      "q9": {
+        "label": "Weet je waar prospects afhaken in je journey?",
+        "opt0": "Nee",
+        "opt33": "Een beetje",
+        "opt67": "Ja, voor de hoofdstap",
+        "opt100": "Ja, elke stap"
+      },
+      "q10": {
+        "label": "Hoe ga je om met leads die niet meteen kopen?",
+        "opt0": "Niets",
+        "opt33": "Af en toe manueel",
+        "opt67": "Basic nurture-flow",
+        "opt100": "Gestructureerde long-term nurture"
+      },
+      "q11": {
+        "label": "Heb je actief gewerkt aan hogere omzet per klant (upsells, bumps, continuity)?",
+        "opt0": "Nee",
+        "opt33": "Erover nagedacht",
+        "opt67": "Eén ding actief",
+        "opt100": "Meerdere, getest en geoptimaliseerd"
+      },
+      "q12": {
+        "label": "Kan je betrouwbaar advertentiebudget omzetten in klanten?",
+        "opt0": "Nee / niet geprobeerd",
+        "opt33": "Wisselende resultaten",
+        "opt67": "Betrouwbaar op één kanaal",
+        "opt100": "Voorspelbaar, schaalbaar"
+      },
+      "q13": {
+        "label": "Ken je je CAC, LTV en conversieratio's goed genoeg om beslissingen te nemen?",
+        "opt0": "Nee",
+        "opt33": "Grofweg",
+        "opt67": "Maandelijks gebruikt",
+        "opt100": "Real-time; sturen beslissingen"
+      },
+      "q14": {
+        "label": "Hoe schaalbaar is je levering vandaag?",
+        "opt0": "Breekt bij meer volume",
+        "opt33": "Beheersbaar maar gerekt",
+        "opt67": "Ruimte met lichte uitbreiding",
+        "opt100": "Team + SOPs klaar om te schalen"
+      },
+      "q15": {
+        "label": "Hoe afhankelijk is het bedrijf van jou persoonlijk?",
+        "opt0": "Volledig — niets werkt zonder mij",
+        "opt33": "Meestal",
+        "opt67": "Deels gedelegeerd",
+        "opt100": "Loopt grotendeels zonder mij"
+      },
+      "q16": {
+        "label": "Zijn je terugkerende processen gedocumenteerd en toegewezen?",
+        "opt0": "Geen",
+        "opt33": "Wat notities",
+        "opt67": "De meeste kernprocessen",
+        "opt100": "Alle sleutelprocessen gedocumenteerd & eigenaarschap"
+      }
+    }
   }
 }
