@@ -310,12 +310,19 @@ function renderGrowthContext(row: any | null, snapshot: any | null): string {
       ? `**${meta.label}** (${stage}) — cycle #${snapshot.cycleNumber ?? "?"}`
       : "no active stage yet (assessment or bootstrap pending)";
     const focus = snapshot.focusTask;
+    const fmtResources = (rs: any[] | undefined) =>
+      Array.isArray(rs) && rs.length
+        ? rs.map((r: any) => `${r.label || r.ref} (${r.type}:${r.ref})`).join(", ")
+        : "(none)";
     const focusBlock = focus
       ? `Current focus task:
 - slug: ${focus.slug}
 - title: ${focus.title}
 - description: ${focus.description}
-- status: ${focus.status}${focus.isDecision ? `
+- status: ${focus.status}
+- resolved resources (already strategy-filtered): ${fmtResources(focus.resources)}${focus.buildGuideRef ? `
+- build guide: ${focus.buildGuideRef}` : ""}${focus.coachPromptRef ? `
+- coach prompt ref: ${focus.coachPromptRef}` : ""}${focus.isDecision ? `
 - kind: DECISION — state key: ${focus.decisionStateKey}${focus.decisionFreeText ? " (free-text)" : ""}${
   focus.decisionOptions ? `
 - allowed values: ${focus.decisionOptions.map((o: any) => `${o.value} (${o.label})`).join(" | ")}` : ""
@@ -323,7 +330,7 @@ function renderGrowthContext(row: any | null, snapshot: any | null): string {
 - current value: ${focus.decisionCurrentValue}` : ""}` : ""}`
       : "No current focus task (roadmap idle, bootstrap needed, or completed).";
     const upcoming = Array.isArray(snapshot.upcomingTasks) && snapshot.upcomingTasks.length
-      ? snapshot.upcomingTasks.map((t: any, i: number) => `  ${i + 1}. ${t.title} [${t.slug}] (${t.status})`).join("\n")
+      ? snapshot.upcomingTasks.map((t: any, i: number) => `  ${i + 1}. ${t.title} [${t.slug}] (${t.status}) — resources: ${fmtResources(t.resources)}`).join("\n")
       : "  (none)";
     const foundation = Array.isArray(snapshot.foundationTasks) && snapshot.foundationTasks.length
       ? snapshot.foundationTasks.map((t: any) => `  - ${t.title} [${t.slug}] — ${t.status}`).join("\n")
