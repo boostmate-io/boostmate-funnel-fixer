@@ -49,6 +49,10 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
     }
   }
 
+  const cc = (bp["customer_clarity"] ?? {}) as Record<string, unknown>;
+  const os = (bp["offer_stack"] ?? {}) as Record<string, unknown>;
+  const pa = (bp["proof_authority"] ?? {}) as Record<string, unknown>;
+
   return {
     stage: stage ?? assessment?.computed_stage,
     assessment: {
@@ -58,11 +62,11 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
       answers: assessment?.answers as Record<string, unknown> | undefined,
     },
     blueprint: {
-      hasMainOffer: nonEmpty(bp["main_offer"]) || nonEmpty(bp["mainOffer"]),
-      hasIcp: nonEmpty(bp["ideal_client_avatar"]) || nonEmpty(bp["icp"]),
-      hasCorePromise: nonEmpty(bp["core_promise"]) || nonEmpty(bp["desired_outcome"]),
-      hasPricing: nonEmpty(bp["pricing"]),
-      hasProof: nonEmpty(bp["proof"]) || nonEmpty(bp["testimonials"]),
+      hasMainOffer: nonEmpty(os["main_offer"]) || nonEmpty(os["core_offer"]),
+      hasIcp: nonEmpty(cc["ideal_client_avatar"]) || nonEmpty(cc["icp"]),
+      hasCorePromise: nonEmpty(cc["core_promise"]) || nonEmpty(cc["desired_outcome"]) || nonEmpty(os["core_promise"]),
+      hasPricing: nonEmpty(os["pricing"]),
+      hasProof: nonEmpty(pa["testimonials"]) || nonEmpty(pa["case_studies"]) || nonEmpty(pa["proof"]),
       completionPct: typeof bp["completion_pct"] === "number" ? (bp["completion_pct"] as number) : undefined,
     },
     offers: {
@@ -73,7 +77,7 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
     },
     funnels: {
       count: funnelList.length,
-      hasPublished: funnelList.some((f) => f.is_published === true || !!f.share_token),
+      hasPublished: funnelList.some((f) => !!f.share_token),
     },
     analytics: {
       hasEntries: entries.length > 0,
