@@ -17,9 +17,9 @@ export async function createPublicAssessment(answers: AnswerMap): Promise<{ id: 
       sub_account_id: null,
       claim_token,
       source: "public",
-      answers,
-      stage_scores: engine.stageScores,
-      gate_results: engine.gateResults,
+      answers: answers as any,
+      stage_scores: engine.stageScores as any,
+      gate_results: engine.gateResults as any,
       computed_stage: engine.computedStage,
       is_active: true,
     })
