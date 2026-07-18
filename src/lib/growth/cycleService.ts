@@ -115,6 +115,41 @@ export function completeTerminal(params: {
   });
 }
 
+/**
+ * Attest the milestone for the active cycle (cycle-scoped, idempotent).
+ * Called when the stage's milestone task is marked completed.
+ * `expectedCycleId` guards against writing to a stale/replaced cycle.
+ */
+export function attestMilestone(params: {
+  subAccountId: string;
+  expectedCycleId: string;
+  reason?: string;
+}): Promise<TransitionResult> {
+  return invoke({
+    action: "attest_milestone",
+    sub_account_id: params.subAccountId,
+    expected_cycle_id: params.expectedCycleId,
+    reason: params.reason,
+  });
+}
+
+/**
+ * Clear the milestone attestation on the active cycle. Used when the user
+ * un-completes the milestone task before a reassessment lands.
+ */
+export function clearMilestone(params: {
+  subAccountId: string;
+  expectedCycleId: string;
+  reason?: string;
+}): Promise<TransitionResult> {
+  return invoke({
+    action: "clear_milestone",
+    sub_account_id: params.subAccountId,
+    expected_cycle_id: params.expectedCycleId,
+    reason: params.reason,
+  });
+}
+
 // ---------- Read helpers (pure reads, no mutation) ----------
 
 export async function fetchActiveCycles(subAccountId: string): Promise<StageCycleRow[]> {
