@@ -17,6 +17,7 @@ import SharedBlueprint from "./pages/SharedBlueprint.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import OAuthConsent from "./pages/OAuthConsent.tsx";
+import PublicAssessment from "./pages/PublicAssessment.tsx";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<WithAuth><Index /></WithAuth>} />
+          <Route path="/assessment" element={<WithAuth><PublicAssessment /></WithAuth>} />
           <Route path="/invite/:code" element={<InviteRegistration />} />
           <Route path="/shared/:token" element={<SharedFunnel />} />
           <Route path="/analytics/:token" element={<SharedAnalytics />} />

@@ -20,6 +20,9 @@ import AdminPanel from "@/components/admin/AdminPanel";
 import OutreachModule from "@/components/outreach/OutreachModule";
 import BusinessBlueprintModule from "@/components/business-blueprint/BusinessBlueprintModule";
 import GlobalCoachBubble from "@/components/coach/GlobalCoachBubble";
+import GrowthRoadmapOverview from "@/components/growth/GrowthRoadmapOverview";
+import GrowthRoadmapModule from "@/components/growth/GrowthRoadmapModule";
+import { usePendingGrowthClaim } from "@/hooks/usePendingGrowthClaim";
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -50,7 +53,9 @@ const Dashboard = () => {
     return () => window.removeEventListener("boostmate:navigate-module", handler);
   }, []);
 
-  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "admin-accounts", "admin-ai", "admin-copy", "outreach"];
+  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "admin-accounts", "admin-ai", "admin-copy", "outreach", "growth-roadmap"];
+
+  usePendingGrowthClaim();
 
   if (loading) {
     return (
@@ -66,10 +71,9 @@ const Dashboard = () => {
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
         <main className={`flex-1 overflow-auto ${fullHeightModules.includes(activeModule) ? "" : "p-8"}`}>
-          {!fullHeightModules.includes(activeModule) && (
+          {!fullHeightModules.includes(activeModule) && activeModule !== "overview" && (
             <div className="mb-8">
               <h1 className="text-2xl font-display font-bold text-foreground">
-                {activeModule === "overview" && t("dashboard.title")}
                 {activeModule === "settings" && t("dashboard.settings.title")}
               </h1>
               <p className="text-muted-foreground text-sm mt-1">{t("dashboard.welcomeBack", { email: user?.email })}</p>
@@ -77,46 +81,16 @@ const Dashboard = () => {
           )}
 
           {activeModule === "overview" && (
-            <>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <button onClick={() => setActiveModule("business-blueprint")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                    <Sparkles className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <h3 className="font-display font-bold text-foreground mb-1">Business Blueprint</h3>
-                  <p className="text-sm text-muted-foreground">Your strategic foundation: customer, offers, growth, brand & proof.</p>
-                </button>
-                <button onClick={() => setActiveModule("funnel-audit")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                    <BarChart3 className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.funnelAudit.title")}</h3>
-                  <p className="text-sm text-muted-foreground">{t("dashboard.funnelAudit.description")}</p>
-                </button>
-                <button onClick={() => setActiveModule("funnels")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                    <GitBranch className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <h3 className="font-display font-bold text-foreground mb-1">Funnels</h3>
-                  <p className="text-sm text-muted-foreground">Design and manage your marketing funnels.</p>
-                </button>
-                <button onClick={() => setActiveModule("analytics")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                    <TrendingUp className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.analytics.title")}</h3>
-                  <p className="text-sm text-muted-foreground">{t("dashboard.analytics.description")}</p>
-                </button>
-                <button onClick={() => setActiveModule("copy-documents")} className="bg-card rounded-xl border border-border p-6 shadow-card hover:shadow-card-hover transition-shadow text-left group">
-                  <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center mb-4">
-                    <FileText className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <h3 className="font-display font-bold text-foreground mb-1">{t("dashboard.copyDocuments.title")}</h3>
-                  <p className="text-sm text-muted-foreground">{t("dashboard.copyDocuments.description")}</p>
-                </button>
-              </div>
-            </>
+            <GrowthRoadmapOverview
+              onStartAssessment={() => setActiveModule("growth-roadmap")}
+              onOpenModule={(m) => setActiveModule(m)}
+            />
           )}
+
+          {activeModule === "growth-roadmap" && (
+            <GrowthRoadmapModule onOpenModule={(m) => setActiveModule(m)} />
+          )}
+
 
           {activeModule === "clients" && <ClientManagement />}
           {activeModule === "outreach" && (
