@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo-boostmate.svg";
 import { Button } from "@/components/ui/button";
 import AuthModal from "@/components/auth/AuthModal";
@@ -26,8 +26,15 @@ const PublicAssessment = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // If a signed-in user lands here, send them to their internal roadmap.
-  if (isReady && user) return <Navigate to="/dashboard?module=growth-roadmap" replace />;
+  // Redirect authenticated users to their internal roadmap. Kept in a useEffect
+  // (not an early return between hooks) so hook order stays stable across the
+  // auth-loading -> authenticated transition — the previous early-return caused
+  // a blank screen when auth flipped ready+user mid-render.
+  useEffect(() => {
+    if (isReady && user) {
+      navigate("/dashboard?module=growth-roadmap", { replace: true });
+    }
+  }, [isReady, user, navigate]);
 
   const handleSubmit = async (answers: AnswerMap) => {
     setSubmitting(true);
@@ -63,10 +70,15 @@ const PublicAssessment = () => {
     setShowAuth(true);
   };
 
-  // Redirect once signup finishes (AuthContext user becomes truthy)
-  useEffect(() => {
-    if (isReady && user) navigate("/dashboard?module=growth-roadmap", { replace: true });
-  }, [isReady, user, navigate]);
+  // While auth is still resolving, or an authenticated user is about to be
+  // redirected, render a neutral loader instead of the public intro.
+  if (!isReady || user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,7 +124,7 @@ const PublicAssessment = () => {
               <div className="bg-primary/5 border border-primary/30 rounded-xl p-6 text-center">
                 <p className="text-foreground mb-4">{t("growth.createAccountCta")}</p>
                 <Button size="lg" onClick={handleCreateAccount}>
-                  {t("auth.signUp") || "Create account"}
+                  {t("growth.createAccountCtaButton")}
                 </Button>
               </div>
             }
