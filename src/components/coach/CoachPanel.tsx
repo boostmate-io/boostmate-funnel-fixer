@@ -318,6 +318,7 @@ function PartRenderer({
   onApply,
   onRefine,
   onApplyBlueprintWrites,
+  onApplyGrowthDecision,
   initialDecisions,
   onDecision,
 }: {
@@ -327,6 +328,7 @@ function PartRenderer({
   onApply: (value: string) => void;
   onRefine: (value: string) => void;
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  onApplyGrowthDecision?: (decision: CoachGrowthDecision) => Promise<void> | void;
   initialDecisions?: Record<string, "applied" | "dismissed">;
   onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
 }) {
