@@ -42,6 +42,14 @@ const ActionSchema = z.discriminatedUnion("action", [
     action: z.literal("complete_terminal"),
     assessment_id: z.string().uuid().optional(),
   }),
+  BaseSchema.extend({
+    action: z.literal("attest_milestone"),
+    expected_cycle_id: z.string().uuid(),
+  }),
+  BaseSchema.extend({
+    action: z.literal("clear_milestone"),
+    expected_cycle_id: z.string().uuid(),
+  }),
 ]);
 
 function json(status: number, body: unknown) {
