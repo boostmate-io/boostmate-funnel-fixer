@@ -469,6 +469,27 @@
     "stage0Body": "Before the Growth Roadmap can point at the right next steps, fill out your Business Blueprint — offer, avatar, and outcome. That's the foundation we assess against.",
     "openBlueprint": "Open Business Blueprint",
     "aiError": "Couldn't generate personalized priorities right now, but your stage and scores are ready below.",
+    "plan": {
+      "title": "Your Growth Plan",
+      "description": "Your next concrete actions, filtered to your current stage.",
+      "done": "done",
+      "empty": "No tasks match your current stage yet. Complete your Business Blueprint or retake the assessment for tailored next steps.",
+      "bootstrapping": "Preparing your plan…",
+      "groupFoundation": "Foundation",
+      "groupFoundationHint": "Cross-stage groundwork. Stays with your workspace.",
+      "groupStage": "This stage",
+      "completedTitle": "You've completed the Growth Roadmap",
+      "completedBody": "Every stage of the Growth Roadmap has been reached. Retake the assessment any time to spot new bottlenecks.",
+      "focus": "Your focus right now",
+      "upNext": "Up next",
+      "viewFull": "View full plan",
+      "foundationDone": "Foundation locked in",
+      "milestoneReachedTitle": "Stage milestone reached",
+      "milestoneReachedBody": "You've completed every task in this stage. Retake the assessment to advance.",
+      "reassessDone": "Reassessment complete for this stage.",
+      "retakeAssessment": "Retake assessment",
+      "decisionSelected": "Selected"
+    },
     "stage": {
       "validate": {
         "label": "Validate",

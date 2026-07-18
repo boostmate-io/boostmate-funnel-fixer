@@ -469,6 +469,27 @@
     "stage0Body": "Voordat de Growth Roadmap de juiste volgende stappen kan aanwijzen, moet je Business Blueprint ingevuld zijn — offer, avatar en outcome. Dat is de basis waar we tegen meten.",
     "openBlueprint": "Open Business Blueprint",
     "aiError": "Het is nu niet gelukt om gepersonaliseerde prioriteiten te genereren, maar je fase en scores staan hieronder klaar.",
+    "plan": {
+      "title": "Jouw Groeiplan",
+      "description": "Je concrete volgende acties, gefilterd op je huidige fase.",
+      "done": "klaar",
+      "empty": "Nog geen taken die bij jouw huidige fase passen. Vul je Business Blueprint aan of doe de assessment opnieuw voor gerichte volgende stappen.",
+      "bootstrapping": "We zetten je plan klaar…",
+      "groupFoundation": "Fundament",
+      "groupFoundationHint": "Fasedoorbrekende basis. Blijft aan je workspace gekoppeld.",
+      "groupStage": "Deze fase",
+      "completedTitle": "Je hebt de Growth Roadmap voltooid",
+      "completedBody": "Alle fases van de Growth Roadmap zijn bereikt. Doe de assessment opnieuw wanneer je nieuwe knelpunten wil opsporen.",
+      "focus": "Waar je nu op focust",
+      "upNext": "Hierna",
+      "viewFull": "Bekijk volledig plan",
+      "foundationDone": "Fundament staat",
+      "milestoneReachedTitle": "Mijlpaal van deze fase bereikt",
+      "milestoneReachedBody": "Je hebt elke taak van deze fase afgerond. Doe de assessment opnieuw om verder te gaan.",
+      "reassessDone": "Herbeoordeling voor deze fase is klaar.",
+      "retakeAssessment": "Assessment opnieuw doen",
+      "decisionSelected": "Gekozen"
+    },
     "stage": {
       "validate": {
         "label": "Valideren",
