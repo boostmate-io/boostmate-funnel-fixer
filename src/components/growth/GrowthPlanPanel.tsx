@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, Circle, PlayCircle, XCircle, ExternalLink, RefreshCw, Trophy } from "lucide-react";
+import { CheckCircle2, Circle, PlayCircle, XCircle, ExternalLink, RefreshCw, Trophy, MessageCircle, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { useGrowthPlan } from "@/lib/growth/useGrowthPlan";
 import type { DerivedTask, TaskResource, TaskStatus } from "@/lib/growth/taskTypes";
@@ -23,6 +23,7 @@ import {
   readDecisionValue,
 } from "@/lib/growth/decisionOptions";
 import { resolveTaskResources } from "@/lib/growth/resourceResolver";
+import { askCoachForTask } from "@/lib/coach/askCoachForTask";
 
 interface Props {
   subAccountId: string | null;
