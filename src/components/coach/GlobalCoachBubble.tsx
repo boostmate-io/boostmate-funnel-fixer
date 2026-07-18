@@ -15,13 +15,19 @@ import CoachPanel from "@/components/coach/CoachPanel";
 import { buildGlobalContext } from "@/lib/coach/buildContext";
 import { buildRoadmapSnapshot } from "@/lib/coach/buildRoadmapSnapshot";
 import { applyBlueprintWrites } from "@/lib/coach/applyBlueprintWrites";
-import type { CoachBlueprintWrite, CoachGrowthDecision } from "@/lib/coach/types";
+import type { CoachBlueprintWrite, CoachContext, CoachGrowthDecision } from "@/lib/coach/types";
 import type { BlueprintRow } from "@/components/business-blueprint/types";
 import { useGrowthPlan } from "@/lib/growth/useGrowthPlan";
 import { readActiveForWorkspace } from "@/lib/growth/api";
 import { buildDecisionPatch, DECISION_SPECS } from "@/lib/growth/decisionOptions";
 import { setWorkspaceState } from "@/lib/growth/cycleService";
 import type { GrowthAssessmentRow } from "@/lib/growth/types";
+import {
+  COACH_OPEN_FOR_TASK_EVENT,
+  buildTaskSeedMessage,
+  type CoachOpenForTaskDetail,
+} from "@/lib/coach/askCoachForTask";
+import i18n from "@/i18n";
 
 const GlobalCoachBubble = () => {
   const [open, setOpen] = useState(false);
