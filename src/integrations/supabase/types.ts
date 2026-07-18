@@ -1275,6 +1275,111 @@ export type Database = {
           },
         ]
       }
+      growth_roadmap_tasks: {
+        Row: {
+          activation_conditions: Json
+          applicable_stages: string[]
+          completion_conditions: Json
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          resources: Json
+          slug: string
+          sort_order: number
+          stage: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          activation_conditions?: Json
+          applicable_stages?: string[]
+          completion_conditions?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          resources?: Json
+          slug: string
+          sort_order?: number
+          stage: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          activation_conditions?: Json
+          applicable_stages?: string[]
+          completion_conditions?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          resources?: Json
+          slug?: string
+          sort_order?: number
+          stage?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      growth_task_progress: {
+        Row: {
+          activated_at: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          snoozed_until: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["growth_task_status"]
+          sub_account_id: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          snoozed_until?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["growth_task_status"]
+          sub_account_id: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          snoozed_until?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["growth_task_status"]
+          sub_account_id?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_task_progress_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_task_progress_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "growth_roadmap_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_documents: {
         Row: {
           created_at: string
@@ -1928,6 +2033,13 @@ export type Database = {
     Enums: {
       account_type: "personal" | "agency" | "client"
       app_role: "admin" | "user"
+      growth_task_status:
+        | "locked"
+        | "available"
+        | "in_progress"
+        | "completed"
+        | "dismissed"
+        | "snoozed"
       main_account_type: "standard" | "agency"
       membership_role:
         | "owner"
@@ -2075,6 +2187,14 @@ export const Constants = {
     Enums: {
       account_type: ["personal", "agency", "client"],
       app_role: ["admin", "user"],
+      growth_task_status: [
+        "locked",
+        "available",
+        "in_progress",
+        "completed",
+        "dismissed",
+        "snoozed",
+      ],
       main_account_type: ["standard", "agency"],
       membership_role: [
         "owner",
