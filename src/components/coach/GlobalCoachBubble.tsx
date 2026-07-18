@@ -112,17 +112,43 @@ const GlobalCoachBubble = () => {
     return buildRoadmapSnapshot({ plan, activeCycle, workspaceState });
   }, [activeSubAccountId, plan, activeCycle, workspaceState]);
 
-  const context = useMemo(() => {
+  const context = useMemo<CoachContext | null>(() => {
     if (!activeSubAccountId) return null;
     const params = new URLSearchParams(location.search);
     const module = params.get("module") ?? "overview";
-    return buildGlobalContext(
+    const base = buildGlobalContext(
       blueprint,
       activeSubAccountId,
       `Route: ${location.pathname} · module: ${module}`,
       roadmapSnapshot,
     );
-  }, [activeSubAccountId, blueprint, location.pathname, location.search, roadmapSnapshot]);
+    // Task-scoped override: same global scope + blueprint/roadmap grounding,
+    // but with a per-task target. `useCoachChat` keys conversations by
+    // (scope, target.id) so each Roadmap task gets its own thread.
+    if (taskFocus) {
+      return {
+        ...base,
+        target: {
+          id: `growth-task:${taskFocus.taskSlug}`,
+          label: taskFocus.taskTitle,
+          kind: "text",
+          currentValue: null,
+          growthTaskSlug: taskFocus.taskSlug,
+          coachPromptRef: taskFocus.coachPromptRef ?? undefined,
+        },
+      };
+    }
+    return base;
+  }, [activeSubAccountId, blueprint, location.pathname, location.search, roadmapSnapshot, taskFocus]);
+
+  const pendingSeed = useMemo(() => {
+    if (!taskFocus) return null;
+    const locale = (i18n.language ?? "en").split("-")[0];
+    return {
+      key: `growth-task:${taskFocus.taskSlug}`,
+      text: buildTaskSeedMessage(taskFocus.taskTitle, locale),
+    };
+  }, [taskFocus]);
 
   const handleApplyBlueprintWrites = useCallback(
     async (writes: CoachBlueprintWrite[]) => {
