@@ -14,7 +14,8 @@
 import type { DerivedTask, CycleSnapshot, TaskStatus } from "@/lib/growth/taskTypes";
 import { DECISION_SPECS, isDecisionTask, readDecisionValue } from "@/lib/growth/decisionOptions";
 import { getGrowthSystems } from "@/lib/growth/growthSystems";
-import type { CoachRoadmapSnapshot } from "./types";
+import { resolveTaskResources } from "@/lib/growth/resourceResolver";
+import type { CoachRoadmapSnapshot, CoachRoadmapResource } from "./types";
 
 const OPEN_STATUSES: TaskStatus[] = ["available", "in_progress"];
 
