@@ -1515,8 +1515,8 @@ Deno.serve(async (req) => {
 
     const subAccountId = conv.sub_account_id as string;
 
-    // Load memory facts + previously handled Blueprint paths for this conversation
-    const [{ data: memoryRows }, { data: decisionRows }] = await Promise.all([
+    // Load memory facts + previously handled Blueprint paths + active Growth assessment
+    const [{ data: memoryRows }, { data: decisionRows }, { data: growthRow }] = await Promise.all([
       supabase
         .from("ai_coach_memory")
         .select("key, value")
@@ -1527,6 +1527,14 @@ Deno.serve(async (req) => {
         .from("ai_coach_proposal_decisions")
         .select("path, decision")
         .eq("conversation_id", conversationId),
+      supabase
+        .from("growth_assessments")
+        .select("computed_stage, stage_scores, ai_result")
+        .eq("sub_account_id", subAccountId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
     const memoryFacts = (memoryRows ?? []) as Array<{ key: string; value: string }>;
     const handledDecisions = (decisionRows ?? []) as Array<{ path: string; decision: string }>;
@@ -1536,7 +1544,7 @@ Deno.serve(async (req) => {
     const prompts = await loadCoachPrompts(supabase);
     const forcedMainOfferStep = detectMainOfferForcedWriteStep(context?.scope, messages, handledDecisions);
     const systemPrompt = [
-      buildSystemPrompt(context, memoryFacts, prompts, messages, handledDecisions),
+      buildSystemPrompt(context, memoryFacts, prompts, messages, handledDecisions, growthRow),
       forcedMainOfferStep ? renderForcedMainOfferBlueprintWritesPrompt(forcedMainOfferStep) : "",
     ]
       .filter(Boolean)
