@@ -132,6 +132,10 @@ Deno.serve(async (req) => {
     case "complete_terminal":
       rpcArgs._assessment_id = input.assessment_id ?? null;
       break;
+    case "attest_milestone":
+    case "clear_milestone":
+      rpcArgs._expected_cycle_id = input.expected_cycle_id;
+      break;
   }
 
   const { data, error } = await service.rpc("growth_cycle_transition", rpcArgs);
