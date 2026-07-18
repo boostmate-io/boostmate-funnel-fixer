@@ -104,6 +104,10 @@ export interface CycleSnapshot {
   cycle_number: number;
   started_at: string;
   ended_at: string | null;
+  /** Cycle-scoped milestone attestation. NULL until the milestone task
+   *  is completed; cleared when the milestone task is un-completed;
+   *  never carries across cycles (a new cycle row starts NULL). */
+  milestone_attested_at: string | null;
 }
 
 // ------------------------------------------------------------------
