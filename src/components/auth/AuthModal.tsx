@@ -95,11 +95,16 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
           setLoading(false);
           return;
         }
+        const nextParam = new URLSearchParams(window.location.search).get("next");
+        const safeNext = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
+        const returnUrl = safeNext
+          ? `${window.location.origin}/?next=${encodeURIComponent(safeNext)}`
+          : window.location.origin;
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: returnUrl,
             data: { account_type: accountType, account_name: accountName.trim(), first_name: firstName.trim(), last_name: lastName.trim() },
           },
         });
