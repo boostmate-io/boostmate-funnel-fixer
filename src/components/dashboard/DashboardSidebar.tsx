@@ -33,11 +33,11 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
 
   const navItems = [
     { id: "overview", label: t("dashboard.sidebar.dashboard"), icon: LayoutDashboard },
+    { id: "growth-roadmap", label: t("growth.sidebar"), icon: TrendingUp },
     { id: "business-blueprint", label: "Business Blueprint", icon: Sparkles },
-    { id: "funnel-audit", label: t("dashboard.sidebar.funnelAudit"), icon: BarChart3 },
     { id: "funnels", label: "Funnels", icon: GitBranch },
     { id: "copy-documents", label: t("dashboard.sidebar.copyDocuments"), icon: FileText },
-    { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: TrendingUp },
+    { id: "analytics", label: t("dashboard.sidebar.analytics"), icon: BarChart3 },
     ...(isAgency ? [{ id: "outreach", label: "Outreach", icon: Send }] : []),
     ...(isAgency ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
     { id: "settings", label: t("dashboard.sidebar.settings"), icon: Settings },
