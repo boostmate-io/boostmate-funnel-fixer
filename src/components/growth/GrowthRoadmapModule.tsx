@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import AssessmentWizard from "@/components/growth/AssessmentWizard";
 import AssessmentResult from "@/components/growth/AssessmentResult";
+import GrowthPlanPanel from "@/components/growth/GrowthPlanPanel";
 import { createInternalAssessment, readActiveForWorkspace, runAiAnalysis } from "@/lib/growth/api";
 import type { AnswerMap, GrowthAssessmentRow, RelatedModule } from "@/lib/growth/types";
 
@@ -110,7 +111,10 @@ export default function GrowthRoadmapModule({ onOpenModule }: Props) {
       )}
 
       {phase === "result" && row && (
-        <AssessmentResult row={row} onOpenModule={openModule} />
+        <div className="space-y-6">
+          <AssessmentResult row={row} onOpenModule={openModule} />
+          <GrowthPlanPanel subAccountId={activeSubAccountId} assessment={row} onOpenModule={openModule} />
+        </div>
       )}
     </div>
   );
