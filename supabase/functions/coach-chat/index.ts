@@ -1693,6 +1693,28 @@ Deno.serve(async (req) => {
         if (writes.length > 0) {
           parts.push({ type: "blueprint_writes", writes, reasoning: args.reasoning ?? "" });
         }
+      } else if (name === "propose_growth_decision" && context?.scope === "global") {
+        const snap: any = context?.businessContext?.roadmapSnapshot ?? null;
+        const canonical = snap?.canonicalDecisions ?? {};
+        const taskSlug = String(args.task_slug ?? "").trim();
+        const stateKey = String(args.state_key ?? "").trim();
+        const value = String(args.value ?? "").trim();
+        const label = String(args.label ?? "").trim() || taskSlug;
+        const spec = canonical[taskSlug];
+        const focusSlug = snap?.focusTask?.slug;
+        const ok =
+          spec &&
+          spec.stateKey === stateKey &&
+          value.length > 0 &&
+          (spec.freeText || (Array.isArray(spec.values) && spec.values.includes(value))) &&
+          (!focusSlug || focusSlug === taskSlug);
+        if (ok) {
+          parts.push({
+            type: "growth_decision",
+            decision: { taskSlug, stateKey, value, label },
+            reasoning: args.reasoning ?? "",
+          });
+        }
       } else if (name === "suggest_quick_replies") {
         parts.push({ type: "quick_replies", replies: Array.isArray(args.replies) ? args.replies : [] });
       } else if (name === "remember_fact") {
