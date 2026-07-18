@@ -673,9 +673,7 @@ function StrategyPreview({
       </div>
       <div className="space-y-1.5">
         {options.map((o) => {
-          const resolved = resources.filter(
-            (r) => !r.strategy || r.strategy === o.value,
-          );
+          const resolved = resolveTaskResourcesForStrategy(resources, stage, o.value);
           return (
             <div key={o.value} className="text-xs flex items-start gap-2">
               <span className="font-medium min-w-[140px]">{o.label}</span>
