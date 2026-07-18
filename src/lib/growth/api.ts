@@ -3,7 +3,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { runEngine } from "./engine";
 import { serializeCatalogForPrompt } from "./growthSystems";
-import type { AnswerMap, GrowthAssessmentRow } from "./types";
+import type { AnswerMap, GrowthAssessmentRow, GrowthStage } from "./types";
+import {
+  advanceStage,
+  completeTerminal,
+  fetchActiveCycles,
+  startInitialCycle,
+} from "./cycleService";
 
 /** Create a public (anonymous) assessment. Returns { id, claim_token }. */
 export async function createPublicAssessment(answers: AnswerMap): Promise<{ id: string; claim_token: string }> {
