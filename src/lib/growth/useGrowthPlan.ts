@@ -205,5 +205,5 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
     await refresh();
   }, [subAccountId, refresh, plan, activeCycle]);
 
-  return { loading, plan, activeCycle, needsCycleBootstrap, refresh, updateStatus };
+  return { loading, plan, activeCycle, needsCycleBootstrap, workspaceState, refresh, updateStatus };
 }
