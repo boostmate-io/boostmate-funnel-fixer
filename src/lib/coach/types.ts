@@ -39,6 +39,47 @@ export interface CoachTarget {
   listSection?: CoachListSectionMeta;
 }
 
+/**
+ * Cycle-aware Growth Roadmap snapshot passed to the Coach so it can ground
+ * global-scope advice in the user's *actual* current stage, cycle, and
+ * focus task — without the server re-deriving the plan. The client is the
+ * source of truth: `useGrowthPlan` runs the pure `derivePlan` and this
+ * snapshot mirrors its output.
+ */
+export interface CoachRoadmapDecisionOption {
+  value: string;
+  label: string;
+}
+export interface CoachRoadmapFocusTask {
+  slug: string;
+  title: string;
+  description: string;
+  stage: string;
+  status: string;
+  isDecision: boolean;
+  decisionStateKey?: string;
+  decisionCurrentValue?: string | null;
+  decisionFreeText?: boolean;
+  decisionOptions?: CoachRoadmapDecisionOption[];
+}
+export interface CoachRoadmapSnapshot {
+  stage: string | null;
+  cycleNumber: number | null;
+  cycleStartedAt: string | null;
+  milestoneAttestedAt: string | null;
+  focusTask: CoachRoadmapFocusTask | null;
+  upcomingTasks: { slug: string; title: string; status: string }[];
+  foundationTasks: { slug: string; title: string; status: string }[];
+  workspaceState: Record<string, unknown>;
+  roadmapCompleted: boolean;
+  canonicalGrowthSystems: { id: string; name: string; summary: string }[];
+  /** Canonical decision spec keyed by task slug — server validates writes against this. */
+  canonicalDecisions: Record<
+    string,
+    { stateKey: string; freeText?: boolean; values?: string[] }
+  >;
+}
+
 export interface CoachContext {
   scope: CoachScope;
   target: CoachTarget | null;
@@ -50,6 +91,8 @@ export interface CoachContext {
     routeHint?: string;
     /** UI locale, e.g. "en" or "nl". Coach replies in this language. */
     locale?: string;
+    /** Present on global scope when the workspace has an active roadmap. */
+    roadmapSnapshot?: CoachRoadmapSnapshot | null;
   };
 }
 
