@@ -400,13 +400,17 @@ function FocusTaskCard({
             />
           )}
 
-          {task.resources && task.resources.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {task.resources.map((r, i) => (
-                <ResourceLink key={i} r={r} onOpenModule={onOpenModule} />
-              ))}
-            </div>
-          )}
+          {(() => {
+            const resolved = resolveTaskResources(task, workspaceState);
+            if (resolved.length === 0) return null;
+            return (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {resolved.map((r, i) => (
+                  <ResourceLink key={i} r={r} onOpenModule={onOpenModule} />
+                ))}
+              </div>
+            );
+          })()}
 
           {isReassess ? (
             <div className="mt-3">
