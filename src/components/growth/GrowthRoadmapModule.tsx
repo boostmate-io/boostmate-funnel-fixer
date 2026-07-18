@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import AssessmentWizard from "@/components/growth/AssessmentWizard";
 import AssessmentResult from "@/components/growth/AssessmentResult";
+import GrowthPlanPanel from "@/components/growth/GrowthPlanPanel";
 import { createInternalAssessment, readActiveForWorkspace, runAiAnalysis } from "@/lib/growth/api";
 import type { AnswerMap, GrowthAssessmentRow, RelatedModule } from "@/lib/growth/types";
 
