@@ -33,8 +33,32 @@ const GlobalCoachBubble = () => {
   const [open, setOpen] = useState(false);
   const [blueprint, setBlueprint] = useState<BlueprintRow | null>(null);
   const [assessment, setAssessment] = useState<GrowthAssessmentRow | null>(null);
+  const [taskFocus, setTaskFocus] = useState<CoachOpenForTaskDetail | null>(null);
   const { activeSubAccountId } = useWorkspace();
   const location = useLocation();
+
+  // Listen for "Ask Coach" CTAs from the Growth Roadmap. Opens the panel and
+  // scopes the conversation to that specific task; the auto-seed message and
+  // the admin-managed instruction block referenced by `coachPromptRef` are
+  // wired below.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<CoachOpenForTaskDetail>).detail;
+      if (!detail || !detail.taskSlug) return;
+      setTaskFocus(detail);
+      setOpen(true);
+    };
+    window.addEventListener(COACH_OPEN_FOR_TASK_EVENT, handler);
+    return () => window.removeEventListener(COACH_OPEN_FOR_TASK_EVENT, handler);
+  }, []);
+
+  // Closing the panel clears the task focus so the next open reverts to the
+  // generic Growth Strategist scope.
+  const handleOpenChange = useCallback((next: boolean) => {
+    setOpen(next);
+    if (!next) setTaskFocus(null);
+  }, []);
+
 
   // Blueprint fetch
   useEffect(() => {
