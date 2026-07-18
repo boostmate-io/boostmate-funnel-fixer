@@ -421,9 +421,86 @@ function PartRenderer({
     );
   }
 
+  if (part.type === "growth_decision") {
+    return (
+      <GrowthDecisionCard
+        decision={part.decision}
+        reasoning={part.reasoning}
+        onApply={onApplyGrowthDecision}
+      />
+    );
+  }
+
   if (part.type === "memory_saved") return null;
 
   return null;
+}
+
+function GrowthDecisionCard({
+  decision,
+  reasoning,
+  onApply,
+}: {
+  decision: CoachGrowthDecision;
+  reasoning?: string;
+  onApply?: (d: CoachGrowthDecision) => Promise<void> | void;
+}) {
+  const [state, setState] = useState<"pending" | "applying" | "applied" | "dismissed">("pending");
+  if (state === "dismissed") return null;
+  const handleApply = async () => {
+    if (!onApply || state !== "pending") return;
+    setState("applying");
+    try {
+      await onApply(decision);
+      setState("applied");
+    } catch {
+      setState("pending");
+    }
+  };
+  return (
+    <div className="rounded-xl border-2 border-primary/40 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-3 space-y-2 shadow-sm">
+      <div className="flex items-center gap-1.5">
+        <Sparkles className="w-3.5 h-3.5 text-primary" />
+        <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+          Roadmap decision
+        </Badge>
+      </div>
+      <div className="text-sm text-foreground bg-background rounded-lg p-2.5 border">
+        <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+          {decision.label}
+        </div>
+        <div className="text-sm mt-0.5">{decision.value}</div>
+      </div>
+      {reasoning && <p className="text-[11px] text-muted-foreground italic">{reasoning}</p>}
+      <div className="flex flex-wrap gap-1.5 pt-1">
+        {state === "applied" ? (
+          <Badge variant="secondary" className="text-[10px]">Applied</Badge>
+        ) : (
+          <>
+            <Button
+              size="sm"
+              className="h-7 gap-1.5"
+              onClick={handleApply}
+              disabled={!onApply || state === "applying"}
+            >
+              {state === "applying" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              Apply decision
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1.5"
+              onClick={() => setState("dismissed")}
+              disabled={state === "applying"}
+            >
+              <X className="w-3 h-3" />
+              Dismiss
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 type ItemState = "pending" | "applying" | "applied" | "dismissed";
