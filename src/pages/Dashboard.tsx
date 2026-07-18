@@ -134,6 +134,11 @@ const Dashboard = () => {
               <AdminPanel category="copy" />
             </div>
           )}
+          {activeModule === "admin-growth" && (
+            <div className="h-full">
+              <AdminPanel category="growth" />
+            </div>
+          )}
           {activeModule === "settings" && (
             <div className="space-y-6">
               <div className="bg-card rounded-xl border border-border p-6 shadow-card">
