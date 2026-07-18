@@ -38,6 +38,14 @@ export function buildRoadmapSnapshot(params: {
   const openStageTasks = stageTasks.filter((d) => OPEN_STATUSES.includes(d.status));
   const focusDerived = openStageTasks[0] ?? null;
 
+  const mapResources = (rs: ReturnType<typeof resolveTaskResources>): CoachRoadmapResource[] =>
+    rs.map((r) => ({
+      type: r.type,
+      ref: r.ref,
+      label: r.label,
+      strategy: r.strategy,
+    }));
+
   const focusTask = focusDerived
     ? (() => {
         const slug = focusDerived.task.slug;
@@ -55,6 +63,9 @@ export function buildRoadmapSnapshot(params: {
           decisionCurrentValue: decisionSpec
             ? readDecisionValue(workspaceState, slug) ?? null
             : null,
+          coachPromptRef: focusDerived.task.coach_prompt_ref ?? null,
+          buildGuideRef: focusDerived.task.build_guide_ref ?? null,
+          resources: mapResources(resolveTaskResources(focusDerived.task, workspaceState)),
         };
       })()
     : null;
@@ -63,6 +74,7 @@ export function buildRoadmapSnapshot(params: {
     slug: d.task.slug,
     title: d.task.title,
     status: d.status,
+    resources: mapResources(resolveTaskResources(d.task, workspaceState)),
   }));
 
   const canonicalDecisions: CoachRoadmapSnapshot["canonicalDecisions"] = {};
