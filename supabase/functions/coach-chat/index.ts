@@ -400,8 +400,10 @@ function buildSystemPrompt(
   growthRow: any | null = null,
 ): string {
   const parts: string[] = [prompts.base];
-  const growthBlock = renderGrowthContext(growthRow);
+  const roadmapSnapshot = context?.businessContext?.roadmapSnapshot ?? null;
+  const growthBlock = renderGrowthContext(growthRow, roadmapSnapshot);
   if (growthBlock) parts.push(growthBlock);
+
 
   const uiLocale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
   const explicit = explicitLanguageInstruction(messages);
