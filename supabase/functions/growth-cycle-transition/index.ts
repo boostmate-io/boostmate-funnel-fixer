@@ -50,6 +50,11 @@ const ActionSchema = z.discriminatedUnion("action", [
     action: z.literal("clear_milestone"),
     expected_cycle_id: z.string().uuid(),
   }),
+  BaseSchema.extend({
+    action: z.literal("set_workspace_state"),
+    patch: z.record(z.unknown()).optional(),
+    delete_keys: z.array(z.string()).optional(),
+  }),
 ]);
 
 function json(status: number, body: unknown) {
