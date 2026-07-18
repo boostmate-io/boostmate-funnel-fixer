@@ -32,3 +32,14 @@ export function buildTaskSeedMessage(taskTitle: string, locale: string | undefin
     ? `Help me met deze roadmap-taak: **${taskTitle}**.`
     : `Help me work through this roadmap task: **${taskTitle}**.`;
 }
+
+/** Return a safe external URL when `raw` is a full http(s) link. Non-URL
+ *  or empty values return null so callers can skip rendering the CTA.
+ *  Build Guide references are always stored as full spreadsheet URLs. */
+export function normalizeExternalUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (!/^https?:\/\//i.test(trimmed)) return null;
+  return trimmed;
+}
