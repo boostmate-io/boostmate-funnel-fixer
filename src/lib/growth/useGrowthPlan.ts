@@ -158,11 +158,9 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
               expectedCycleId: activeCycle.id,
               reason: "milestone_task_completed",
             });
-          } else if (
-            // Un-completion: any transition off 'completed' should clear it.
-            derivedTask.status === "completed" &&
-            status !== "completed"
-          ) {
+          } else {
+            // Any non-completed status clears the cycle's milestone attestation.
+            // Idempotent server-side: no-op when nothing was attested.
             await clearMilestone({
               subAccountId,
               expectedCycleId: activeCycle.id,
