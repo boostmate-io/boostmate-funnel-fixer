@@ -448,27 +448,38 @@ function EditForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Build Guide reference</Label>
+          <Label className="text-xs">Build Guide URL</Label>
           <Input
             value={editing.build_guide_ref ?? ""}
-            placeholder="build-guide-slug"
-            className="font-mono"
+            placeholder="https://docs.google.com/spreadsheets/…"
+            className="font-mono text-xs"
             onChange={(e) =>
               setEditing({ ...editing, build_guide_ref: e.target.value || null })
             }
           />
+          <p className="text-[11px] text-muted-foreground">
+            Full external spreadsheet URL. When set, the roadmap task shows an
+            "Open Build Guide" button that opens this link in a new tab.
+          </p>
         </div>
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Coach prompt reference</Label>
         <Input
           value={editing.coach_prompt_ref ?? ""}
-          placeholder="coach-prompt-slug"
+          placeholder="coach:growth-task-slug"
           className="font-mono"
           onChange={(e) =>
             setEditing({ ...editing, coach_prompt_ref: e.target.value || null })
           }
         />
+        <p className="text-[11px] text-muted-foreground">
+          Slug of an admin-managed Instruction Block (matches
+          <code className="mx-1">ai_instruction_blocks.name</code>). When set,
+          the roadmap task shows an "Ask Coach" button that opens the Coach
+          scoped to this task and auto-starts the conversation using that
+          instruction block.
+        </p>
       </div>
 
       {/* Resources */}
