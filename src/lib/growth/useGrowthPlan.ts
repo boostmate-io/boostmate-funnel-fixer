@@ -73,6 +73,7 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
       setPlan([]);
       setActiveCycle(null);
       setNeedsCycleBootstrap(false);
+      setWorkspaceStateSnap({});
       setLoading(false);
       return;
     }
