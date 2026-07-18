@@ -12,6 +12,7 @@ import {
   readDecisionValue,
 } from "@/lib/growth/decisionOptions";
 import { setWorkspaceState } from "@/lib/growth/cycleService";
+import { resolveTaskResources } from "@/lib/growth/resourceResolver";
 import type { DerivedTask, TaskResource, TaskStatus } from "@/lib/growth/taskTypes";
 import type { GrowthAssessmentRow, GrowthStage, RelatedModule } from "@/lib/growth/types";
 import { Button } from "@/components/ui/button";
