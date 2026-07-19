@@ -1,4 +1,4 @@
-import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Download, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2, Zap } from "lucide-react";
+import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -8,15 +8,6 @@ import { calculateClarityProgress, type SectionId, type CustomerClarityData } fr
 import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
 import { calculateGrowthSystemProgress, getFunnelTypeLabel, type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
 import { getBusinessType } from "./businessTypes";
-
-const GOAL_LABELS: Record<string, string> = {
-  "more-leads": "More leads",
-  "more-sales": "More sales",
-  "build-funnel": "Build a funnel",
-  "improve-conversion": "Improve conversion",
-  "clarify-offer": "Clarify my offer",
-  "launch": "Launch something new",
-};
 
 interface OfferLite { id: string; name: string; tier?: string }
 
@@ -36,12 +27,6 @@ interface Props {
   mappings: FunnelMappingRow[];
   offers: OfferLite[];
   businessType: string;
-  snapshot?: {
-    help_achieve?: string;
-    who_help?: string;
-    main_goal?: string;
-    biggest_challenge?: string;
-  };
   onEdit: (section?: SectionId) => void;
   onView: () => void;
   onShare: () => void;
@@ -49,10 +34,10 @@ interface Props {
   setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, snapshot, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
+const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
-  const BtIcon = bt.icon;
+
   const clarityProgress = calculateClarityProgress(clarity);
   const offerProgress = calculateOfferDesignProgress(offer);
   const growthProgress = calculateGrowthSystemProgress(growth, mappings);
