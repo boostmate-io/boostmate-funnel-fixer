@@ -112,10 +112,13 @@ export default function GrowthPlanPanel({
     );
   }
 
-  const foundationTasks = plan.filter((p) => p.task.stage === "any");
-  const stageTasks = plan.filter((p) => p.task.stage !== "any");
-
   const completedCount = plan.filter((p) => p.isCompleted).length;
+
+  // Determine the first actionable incomplete step (foundations already come
+  // first in `plan` order). Locked / completed / dismissed steps are skipped.
+  const focusTaskId = plan.find(
+    (p) => p.status === "available" || p.status === "in_progress",
+  )?.task.id ?? null;
 
   return (
     <div className="bg-card rounded-xl border border-border p-6 shadow-card">
@@ -142,36 +145,22 @@ export default function GrowthPlanPanel({
           )}
         </p>
       ) : (
-        <div className="space-y-6">
-          {foundationTasks.length > 0 && (
-            <TaskGroup
-              label={t("growth.plan.groupFoundation", "Foundation")}
-              hint={t(
-                "growth.plan.groupFoundationHint",
-                "Cross-stage groundwork. Stays with your workspace.",
-              )}
-              items={foundationTasks}
+        <ol className="space-y-3">
+          {plan.map((item, idx) => (
+            <PlanRow
+              key={item.task.id}
+              item={item}
+              index={idx + 1}
+              isFocus={item.task.id === focusTaskId}
               subAccountId={subAccountId}
               workspaceState={workspaceState}
-              onStatus={updateStatus}
+              onStatus={(status) => updateStatus(item.task.id, status)}
               onRefresh={refresh}
               onOpenModule={onOpenModule}
               onRetakeAssessment={onRetakeAssessment}
             />
-          )}
-          {stageTasks.length > 0 && (
-            <TaskGroup
-              label={t("growth.plan.groupStage", "This stage")}
-              items={stageTasks}
-              subAccountId={subAccountId}
-              workspaceState={workspaceState}
-              onStatus={updateStatus}
-              onRefresh={refresh}
-              onOpenModule={onOpenModule}
-              onRetakeAssessment={onRetakeAssessment}
-            />
-          )}
-        </div>
+          ))}
+        </ol>
       )}
     </div>
   );
