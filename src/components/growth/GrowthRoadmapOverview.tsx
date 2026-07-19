@@ -214,13 +214,15 @@ export default function GrowthRoadmapOverview({ onStartAssessment, onOpenModule 
   const foundationTasks = plan.filter((p) => p.task.stage === "any");
   const stageTasks = plan.filter((p) => p.task.stage !== "any");
   const completedFoundations = foundationTasks.filter((p) => p.isCompleted);
-  const openStage = stageTasks.filter((p) => !p.isCompleted);
-  const openFoundation = foundationTasks.filter((p) => !p.isCompleted);
+  const actionable = (p: DerivedTask) => !p.isCompleted && p.status !== "locked" && p.status !== "dismissed";
+  const openFoundation = foundationTasks.filter(actionable);
+  const openStage = stageTasks.filter(actionable);
 
-  const focus: DerivedTask | undefined = openStage[0] ?? openFoundation[0];
+  // Foundations outrank stage tasks for focus selection.
+  const focus: DerivedTask | undefined = openFoundation[0] ?? openStage[0];
   const upcoming: DerivedTask[] = (() => {
+    if (openFoundation[0]) return [...openFoundation.slice(1), ...openStage].slice(0, 2);
     if (openStage[0]) return openStage.slice(1, 3);
-    if (openFoundation[0]) return openFoundation.slice(1, 3);
     return [];
   })();
 

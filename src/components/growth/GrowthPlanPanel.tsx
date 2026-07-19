@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, Circle, PlayCircle, XCircle, ExternalLink, RefreshCw, Trophy, MessageCircle, BookOpen } from "lucide-react";
+import { CheckCircle2, Circle, PlayCircle, XCircle, ExternalLink, RefreshCw, Trophy, MessageCircle, BookOpen, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useGrowthPlan } from "@/lib/growth/useGrowthPlan";
 import type { DerivedTask, TaskResource, TaskStatus } from "@/lib/growth/taskTypes";
@@ -251,9 +251,11 @@ function PlanRow({
   const isReassess = REASSESS_SLUGS.has(task.slug);
   const isDecision = isDecisionTask(task.slug);
 
+  const isLocked = status === "locked";
+
   return (
-    <li className="flex gap-3 p-3 rounded-lg border border-border bg-background/40">
-      <StatusIcon status={status} interactive={!isReassess && !isDecision} onToggle={() =>
+    <li className={`flex gap-3 p-3 rounded-lg border border-border bg-background/40 ${isLocked ? "opacity-60" : ""}`}>
+      <StatusIcon status={status} interactive={!isReassess && !isDecision && !isLocked} onToggle={() =>
         onStatus(status === "completed" ? "available" : "completed")
       } />
 
@@ -264,8 +266,13 @@ function PlanRow({
         {task.description && (
           <div className="text-sm text-muted-foreground mt-0.5">{task.description}</div>
         )}
+        {isLocked && (
+          <div className="text-xs text-muted-foreground mt-1 italic">
+            Complete the previous step to unlock this.
+          </div>
+        )}
 
-        {isDecision && subAccountId && (
+        {isDecision && subAccountId && !isLocked && (
           <DecisionPicker
             slug={task.slug}
             subAccountId={subAccountId}
@@ -316,17 +323,20 @@ function PlanRow({
           );
         })()}
 
-        <RowActions
-          status={status}
-          isReassess={isReassess}
-          isDecision={isDecision}
-          onStatus={onStatus}
-          onRetakeAssessment={onRetakeAssessment}
-        />
+        {!isLocked && (
+          <RowActions
+            status={status}
+            isReassess={isReassess}
+            isDecision={isDecision}
+            onStatus={onStatus}
+            onRetakeAssessment={onRetakeAssessment}
+          />
+        )}
       </div>
     </li>
   );
 }
+
 
 function StatusIcon({
   status,
@@ -344,17 +354,19 @@ function StatusIcon({
         ? PlayCircle
         : status === "dismissed"
           ? XCircle
-          : Circle;
+          : status === "locked"
+            ? Lock
+            : Circle;
   const iconClass =
     status === "completed"
       ? "text-green-500"
       : status === "in_progress"
         ? "text-primary"
-        : status === "dismissed"
-          ? "text-muted-foreground"
+        : status === "locked"
+          ? "text-muted-foreground/60"
           : "text-muted-foreground";
 
-  if (!interactive) {
+  if (!interactive || status === "locked") {
     return <Icon className={`w-5 h-5 mt-0.5 shrink-0 ${iconClass}`} aria-hidden />;
   }
   return (

@@ -1278,6 +1278,7 @@ export type Database = {
       growth_roadmap_tasks: {
         Row: {
           activation_conditions: Json
+          applicability_conditions: Json
           applicable_stages: string[]
           build_guide_ref: string | null
           coach_prompt_ref: string | null
@@ -1296,6 +1297,7 @@ export type Database = {
         }
         Insert: {
           activation_conditions?: Json
+          applicability_conditions?: Json
           applicable_stages?: string[]
           build_guide_ref?: string | null
           coach_prompt_ref?: string | null
@@ -1314,6 +1316,7 @@ export type Database = {
         }
         Update: {
           activation_conditions?: Json
+          applicability_conditions?: Json
           applicable_stages?: string[]
           build_guide_ref?: string | null
           coach_prompt_ref?: string | null

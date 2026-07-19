@@ -81,40 +81,6 @@ export default function AssessmentResult({ row, onOpenModule, ctaSlot }: Props) 
         </dl>
       </div>
 
-      {/* Priorities */}
-      <div className="bg-card rounded-xl border border-border p-6 shadow-card">
-        <h4 className="font-display font-bold text-foreground mb-4">
-          {t("growth.priorities")}
-        </h4>
-        {priorities.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("growth.aiError")}</p>
-        ) : (
-          <ol className="space-y-4">
-            {priorities.slice(0, 3).map((p, i) => (
-              <li key={i} className="flex gap-4">
-                <div className="w-8 h-8 shrink-0 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center">
-                  {i + 1}
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-foreground">{p.title}</div>
-                  <div className="text-sm text-muted-foreground mt-1">{p.rationale}</div>
-                  {p.related_module && p.related_module !== "none" && onOpenModule && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="px-0 h-auto mt-1"
-                      onClick={() => onOpenModule(p.related_module!)}
-                    >
-                      {t("growth.openModule")} →
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-
       {/* Recommended system */}
       {sys && (
         <div className="bg-card rounded-xl border border-border p-6 shadow-card">
