@@ -162,8 +162,8 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
           </div>
         </div>
 
-        {/* Setup banner — always visible, switches state */}
-        {!setupCompleted ? (
+        {/* Setup banner — shown only until personalization completed */}
+        {!setupCompleted && (
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
@@ -172,7 +172,7 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
               <div>
                 <p className="text-sm font-semibold text-foreground">Personalize your Blueprint</p>
                 <p className="text-xs text-muted-foreground">
-                  Answer 5 quick questions so every example, AI suggestion and template fits your business.
+                  Pick your business type so every example, AI suggestion and template fits your business.
                 </p>
               </div>
             </div>
@@ -181,51 +181,8 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
               Start setup
             </Button>
           </div>
-        ) : (
-          <div className="rounded-xl border border-primary/25 bg-gradient-to-br from-primary/5 to-transparent p-5">
-            <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
-                  <BtIcon className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-display font-bold text-foreground">Business Snapshot</h3>
-                  <Badge variant="secondary" className="mt-1 gap-1 text-[10px]">
-                    <Zap className="w-3 h-3" />
-                    Powers your AI recommendations
-                  </Badge>
-                </div>
-              </div>
-              <Button size="sm" variant="outline" onClick={onOpenSetup} className="gap-1.5 h-8">
-                <Pencil className="w-3.5 h-3.5" />
-                Edit Snapshot
-              </Button>
-            </div>
-            {(() => {
-              const snapshotItems = [
-                { label: "Business Type", value: bt.label },
-                { label: "Helping", value: snapshot?.help_achieve?.trim() || undefined },
-                { label: "Audience", value: snapshot?.who_help?.trim() || undefined },
-                { label: "Primary Goal", value: snapshot?.main_goal ? (GOAL_LABELS[snapshot.main_goal] ?? snapshot.main_goal) : undefined },
-                { label: "Biggest Challenge", value: snapshot?.biggest_challenge?.trim() || undefined },
-              ].filter((item) => !!item.value);
-              return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                  {snapshotItems.map((item) => (
-                    <div key={item.label} className="rounded-lg bg-card border border-border px-3 py-2.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                        {item.label}
-                      </p>
-                      <p className="text-xs leading-snug line-clamp-3 text-foreground">
-                        {item.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-          </div>
         )}
+
 
         {/* Top completion card */}
         <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-2xl border border-primary/20 p-6">
