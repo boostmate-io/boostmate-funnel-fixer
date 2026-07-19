@@ -76,6 +76,13 @@ export interface GrowthRoadmapTaskRow {
   stage: TaskStage;
   applicable_stages: GrowthStage[];
   sort_order: number;
+  /** Whether the task belongs in the user's roadmap at all. Empty `{all: []}`
+   *  means always applicable. Evaluated first — an inapplicable task is
+   *  hidden entirely; an applicable-but-not-yet-actionable task is shown
+   *  as `locked`. */
+  applicability_conditions: ConditionNode;
+  /** Prerequisites that must be met before the task becomes actionable.
+   *  Applicable tasks whose prerequisites are unmet render as `locked`. */
   activation_conditions: ConditionNode;
   completion_conditions: ConditionNode;
   resources: TaskResource[];
