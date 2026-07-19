@@ -164,17 +164,6 @@ const BusinessBlueprintModule = () => {
             }
           }}
         />
-          onComplete={(patch) => {
-            updateSettings(patch, { immediate: true });
-            setSetupOpen(false);
-          }}
-          onSkip={() => {
-            if (settings.setup_status === "pending") {
-              updateSettings({ setup_status: "skipped" }, { immediate: true, silent: true });
-            }
-            setSetupOpen(false);
-          }}
-        />
         <BlueprintShareDialog
           open={shareOpen}
           onOpenChange={setShareOpen}
