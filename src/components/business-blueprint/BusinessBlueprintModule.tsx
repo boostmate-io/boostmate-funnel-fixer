@@ -118,6 +118,11 @@ const BusinessBlueprintModule = () => {
     );
   }
 
+  const overallProgress = Math.round(
+    (clarityProgress + offerProgress + growthProgress + 0 + proofProgress) / 5,
+  );
+  const isEmptyBlueprint = overallProgress === 0;
+
   if (mode === "overview") {
     return (
       <>
@@ -128,12 +133,6 @@ const BusinessBlueprintModule = () => {
           mappings={mappings}
           offers={offers}
           businessType={settings.business_type}
-          snapshot={{
-            help_achieve: settings.help_achieve,
-            who_help: settings.who_help,
-            main_goal: settings.main_goal,
-            biggest_challenge: settings.biggest_challenge,
-          }}
           onEdit={handleEdit}
           onView={() => setMode("view")}
           onShare={() => setShareOpen(true)}
@@ -146,20 +145,23 @@ const BusinessBlueprintModule = () => {
           isEdit={settings.setup_status === "completed"}
           initialValues={{
             business_type: settings.business_type,
-            help_achieve: settings.help_achieve,
-            who_help: settings.who_help,
-            main_goal: settings.main_goal,
-            biggest_challenge: settings.biggest_challenge,
           }}
           onComplete={(patch) => {
+            const wasFirstTime = settings.setup_status !== "completed";
             updateSettings(patch, { immediate: true });
             setSetupOpen(false);
+            if (wasFirstTime && isEmptyBlueprint) {
+              setMode("edit");
+            }
           }}
           onSkip={() => {
             if (settings.setup_status === "pending") {
               updateSettings({ setup_status: "skipped" }, { immediate: true, silent: true });
             }
             setSetupOpen(false);
+            if (settings.setup_status !== "completed" && isEmptyBlueprint) {
+              setMode("edit");
+            }
           }}
         />
         <BlueprintShareDialog
