@@ -138,6 +138,17 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {setupCompleted && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={onOpenSetup} className="gap-1.5 h-8">
+                    <Settings2 className="w-4 h-4" />
+                    Business type: {bt.label}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Change your business type</TooltipContent>
+              </Tooltip>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-60 h-8">
