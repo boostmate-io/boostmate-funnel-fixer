@@ -251,9 +251,11 @@ function PlanRow({
   const isReassess = REASSESS_SLUGS.has(task.slug);
   const isDecision = isDecisionTask(task.slug);
 
+  const isLocked = status === "locked";
+
   return (
-    <li className="flex gap-3 p-3 rounded-lg border border-border bg-background/40">
-      <StatusIcon status={status} interactive={!isReassess && !isDecision} onToggle={() =>
+    <li className={`flex gap-3 p-3 rounded-lg border border-border bg-background/40 ${isLocked ? "opacity-60" : ""}`}>
+      <StatusIcon status={status} interactive={!isReassess && !isDecision && !isLocked} onToggle={() =>
         onStatus(status === "completed" ? "available" : "completed")
       } />
 
@@ -263,6 +265,11 @@ function PlanRow({
         </div>
         {task.description && (
           <div className="text-sm text-muted-foreground mt-0.5">{task.description}</div>
+        )}
+        {isLocked && (
+          <div className="text-xs text-muted-foreground mt-1 italic">
+            Complete the previous step to unlock this.
+          </div>
         )}
 
         {isDecision && subAccountId && (
