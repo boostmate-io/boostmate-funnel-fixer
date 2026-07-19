@@ -201,22 +201,19 @@ export function calcArchitectureProgress(mappings: FunnelMappingRow[]): number {
 export function calcAscensionProgress(a: AscensionData): number {
   if (!a) return 0;
   let score = 0;
-  if (a.next_offer_after_core_id) score += 30;
+  if (a.next_offer_after_core_id) score += 40;
   if (a.retention_offer_id) score += 30;
   if (a.referral_enabled) {
     score += 10;
-    if (a.referral_description?.trim()) score += 10;
-  } else {
-    score += 10;
+    if (a.referral_description?.trim()) score += 5;
   }
   if (a.reactivation_enabled) {
-    score += 5;
-    if (a.reactivation_description?.trim()) score += 5;
-  } else {
     score += 10;
+    if (a.reactivation_description?.trim()) score += 5;
   }
   return Math.min(100, score);
 }
+
 
 export function calculateGrowthSystemProgress(
   data: GrowthSystemData,
