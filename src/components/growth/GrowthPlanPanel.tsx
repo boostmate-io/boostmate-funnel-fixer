@@ -344,17 +344,19 @@ function StatusIcon({
         ? PlayCircle
         : status === "dismissed"
           ? XCircle
-          : Circle;
+          : status === "locked"
+            ? Lock
+            : Circle;
   const iconClass =
     status === "completed"
       ? "text-green-500"
       : status === "in_progress"
         ? "text-primary"
-        : status === "dismissed"
-          ? "text-muted-foreground"
+        : status === "locked"
+          ? "text-muted-foreground/60"
           : "text-muted-foreground";
 
-  if (!interactive) {
+  if (!interactive || status === "locked") {
     return <Icon className={`w-5 h-5 mt-0.5 shrink-0 ${iconClass}`} aria-hidden />;
   }
   return (
