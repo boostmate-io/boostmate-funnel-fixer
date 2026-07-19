@@ -317,17 +317,13 @@ export function calcPricingProgress(p: PricingData): number {
   if (!p) return 0;
   let score = 0;
   const paymentPlans = p.payment_plans ?? [];
-  if (typeof p.core_price === "number" && p.core_price > 0) score += 30;
-  if (paymentPlans.length > 0) score += 20;
-  if (p.recurring_enabled) {
-    if (p.recurring_offer?.name?.trim() && typeof p.recurring_offer?.monthly_price === "number") score += 15;
-  } else {
-    score += 5;
+  if (typeof p.core_price === "number" && p.core_price > 0) score += 35;
+  if (paymentPlans.length > 0) score += 25;
+  if (p.recurring_enabled && p.recurring_offer?.name?.trim() && typeof p.recurring_offer?.monthly_price === "number") {
+    score += 15;
   }
-  if (p.premium_enabled) {
-    if (p.premium_upgrade?.name?.trim()) score += 15;
-  } else {
-    score += 5;
+  if (p.premium_enabled && p.premium_upgrade?.name?.trim()) {
+    score += 10;
   }
   if (p.guarantee_type && p.guarantee_type !== "none") {
     score += 10;
@@ -335,6 +331,7 @@ export function calcPricingProgress(p: PricingData): number {
   }
   return Math.min(100, score);
 }
+
 
 export function calcEcosystemProgress(tierCounts: Record<string, number>): number {
   const tiers = ["free", "low_ticket", "mid_ticket", "core", "premium", "continuity"];
