@@ -323,17 +323,15 @@ function PlanRow({
           );
         })()}
 
-        <RowActions
-          status={status}
-          isReassess={isReassess}
-          isDecision={isDecision}
-          onStatus={onStatus}
-          onRetakeAssessment={onRetakeAssessment}
-        />
-      </div>
-    </li>
-  );
-}
+        {!isLocked && (
+          <RowActions
+            status={status}
+            isReassess={isReassess}
+            isDecision={isDecision}
+            onStatus={onStatus}
+            onRetakeAssessment={onRetakeAssessment}
+          />
+        )}
 
 function StatusIcon({
   status,
