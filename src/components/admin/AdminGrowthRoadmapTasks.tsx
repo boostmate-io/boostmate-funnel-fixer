@@ -549,7 +549,15 @@ function EditForm({
       <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
         <div>
           <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">
-            Activation logic (code-controlled)
+            Applicability logic (code-controlled)
+          </div>
+          <div className="text-xs font-mono break-words">
+            {summarizeCondition((editing as { applicability_conditions?: unknown }).applicability_conditions as never ?? null)}
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">
+            Prerequisite (activation) logic (code-controlled)
           </div>
           <div className="text-xs font-mono break-words">
             {summarizeCondition(editing.activation_conditions ?? null)}
