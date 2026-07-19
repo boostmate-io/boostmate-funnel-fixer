@@ -332,6 +332,11 @@ function PlanRow({
             onRetakeAssessment={onRetakeAssessment}
           />
         )}
+      </div>
+    </li>
+  );
+}
+
 
 function StatusIcon({
   status,
