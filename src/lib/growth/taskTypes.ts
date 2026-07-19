@@ -266,19 +266,25 @@ export interface GrowthPlan {
 /**
  * Derive the ordered growth plan for a workspace. PURE — no I/O, no side effects.
  *
+ * Filtering model (Option A — explicit):
+ *   • `applicability_conditions` decides whether a task belongs in the plan
+ *     at all. Inapplicable tasks are excluded entirely (e.g. strategy-specific
+ *     branches for a strategy the user did not pick).
+ *   • `activation_conditions` decides whether an applicable task is currently
+ *     actionable. Unmet prerequisites → `locked` (visible, greyed).
+ *
  * Cycle scoping:
  *   - Foundation tasks (`stage === "any"`) use cycle-less progress rows
  *     (`progress.cycle_id === null`).
  *   - Stage tasks use progress rows scoped to the active cycle
  *     (`progress.cycle_id === activeCycle.id`).
- *   - When no active cycle exists, `needsCycleBootstrap` is true and the
- *     caller MUST invoke `cycleService.startInitialCycle` before rendering.
+ *   - When no active cycle exists, `needsCycleBootstrap` is true.
  *
  * Status resolution:
- *   1. Persisted progress row wins for dismissed/snoozed/in_progress.
- *   2. Otherwise, if completion_conditions match → 'completed'.
- *   3. Otherwise, if a persisted completed row exists → 'completed'.
- *   4. Otherwise → 'available'.
+ *   1. If completion_conditions match OR persisted status is completed → `completed`.
+ *   2. Else if persisted status is dismissed/snoozed/in_progress → that.
+ *   3. Else if activation_conditions are unmet → `locked`.
+ *   4. Else → `available`.
  */
 export function derivePlan(
   tasks: GrowthRoadmapTaskRow[],
@@ -293,8 +299,6 @@ export function derivePlan(
     return { needsCycleBootstrap: true, tasks: [] };
   }
 
-  // Split progress rows by cycle scope so foundation and stage tasks
-  // read from the right bucket.
   const foundationProgress = new Map<string, GrowthTaskProgressRow>();
   const cycleProgress = new Map<string, GrowthTaskProgressRow>();
   for (const p of progress) {
@@ -308,7 +312,7 @@ export function derivePlan(
   const candidates = tasks
     .filter((t) => t.is_active)
     .filter((t) => taskAppliesToStage(t, stage))
-    .filter((t) => evaluateCondition(t.activation_conditions, ctx))
+    .filter((t) => evaluateCondition(t.applicability_conditions ?? { all: [] }, ctx))
     .sort((a, b) => a.sort_order - b.sort_order);
 
   const derived: DerivedTask[] = candidates.map((task) => {
@@ -317,12 +321,15 @@ export function derivePlan(
       : cycleProgress.get(task.id);
 
     const completionMatches = evaluateCondition(task.completion_conditions, ctx);
+    const activationMet = evaluateCondition(task.activation_conditions, ctx);
 
     let status: TaskStatus;
-    if (p && (p.status === "dismissed" || p.status === "snoozed" || p.status === "in_progress")) {
-      status = p.status;
-    } else if (p?.status === "completed" || completionMatches) {
+    if (p?.status === "completed" || completionMatches) {
       status = "completed";
+    } else if (p && (p.status === "dismissed" || p.status === "snoozed" || p.status === "in_progress")) {
+      status = p.status;
+    } else if (!activationMet) {
+      status = "locked";
     } else {
       status = "available";
     }
@@ -330,7 +337,7 @@ export function derivePlan(
     return {
       task,
       status,
-      isActivated: true,
+      isActivated: activationMet,
       isCompleted: status === "completed",
       progress: p,
     };
