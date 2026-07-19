@@ -167,60 +167,13 @@ export default function GrowthPlanPanel({
 }
 
 // ---------------------------------------------------------------------------
-// Task group
-// ---------------------------------------------------------------------------
-
-function TaskGroup({
-  label,
-  hint,
-  items,
-  subAccountId,
-  workspaceState,
-  onStatus,
-  onRefresh,
-  onOpenModule,
-  onRetakeAssessment,
-}: {
-  label: string;
-  hint?: string;
-  items: DerivedTask[];
-  subAccountId: string | null;
-  workspaceState: Record<string, unknown>;
-  onStatus: (taskId: string, status: TaskStatus) => Promise<void>;
-  onRefresh: () => Promise<void>;
-  onOpenModule?: (m: RelatedModule) => void;
-  onRetakeAssessment?: () => void;
-}) {
-  return (
-    <div>
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-        {label}
-      </div>
-      {hint && <p className="text-xs text-muted-foreground mb-2">{hint}</p>}
-      <ol className="space-y-3">
-        {items.map((item) => (
-          <PlanRow
-            key={item.task.id}
-            item={item}
-            subAccountId={subAccountId}
-            workspaceState={workspaceState}
-            onStatus={(status) => onStatus(item.task.id, status)}
-            onRefresh={onRefresh}
-            onOpenModule={onOpenModule}
-            onRetakeAssessment={onRetakeAssessment}
-          />
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Row variants
+// Row
 // ---------------------------------------------------------------------------
 
 function PlanRow({
   item,
+  index,
+  isFocus,
   subAccountId,
   workspaceState,
   onStatus,
@@ -229,6 +182,8 @@ function PlanRow({
   onRetakeAssessment,
 }: {
   item: DerivedTask;
+  index: number;
+  isFocus: boolean;
   subAccountId: string | null;
   workspaceState: Record<string, unknown>;
   onStatus: (status: TaskStatus) => Promise<void>;
@@ -241,9 +196,34 @@ function PlanRow({
   const isDecision = isDecisionTask(task.slug);
 
   const isLocked = status === "locked";
+  const isCompleted = status === "completed";
+
+  const containerClass = [
+    "flex gap-3 p-3 rounded-lg border bg-background/40 transition-colors",
+    isFocus
+      ? "border-primary/60 bg-primary/5 shadow-sm ring-1 ring-primary/20"
+      : "border-border",
+    isLocked ? "opacity-60" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <li className={`flex gap-3 p-3 rounded-lg border border-border bg-background/40 ${isLocked ? "opacity-60" : ""}`}>
+    <li className={containerClass}>
+      <div
+        className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold mt-0.5 ${
+          isCompleted
+            ? "bg-green-500/15 text-green-600"
+            : isFocus
+              ? "bg-primary text-primary-foreground"
+              : isLocked
+                ? "bg-muted text-muted-foreground/60"
+                : "bg-muted text-muted-foreground"
+        }`}
+        aria-hidden
+      >
+        {index}
+      </div>
       <StatusIcon status={status} interactive={!isReassess && !isDecision && !isLocked} onToggle={() =>
         onStatus(status === "completed" ? "available" : "completed")
       } />
