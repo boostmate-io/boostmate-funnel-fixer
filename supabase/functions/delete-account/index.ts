@@ -97,24 +97,13 @@ Deno.serve(async (req) => {
       (accountAnalyticsEntries || []).forEach((row: any) => analyticsEntryIds.add(row.id));
     }
 
-    const assetIds = new Set<string>();
-    const { data: userAssets } = await adminClient.from("assets").select("id").eq("user_id", userId);
-    (userAssets || []).forEach((row: any) => assetIds.add(row.id));
-
-    if (ownedSubIds.length > 0) {
-      const { data: accountAssets } = await adminClient.from("assets").select("id").in("sub_account_id", ownedSubIds);
-      (accountAssets || []).forEach((row: any) => assetIds.add(row.id));
-    }
-
     await deleteWhereIn("funnel_step_metrics", "entry_id", Array.from(analyticsEntryIds));
-    await deleteWhereIn("asset_sections", "asset_id", Array.from(assetIds));
 
     await adminClient.from("funnel_analytics_entries").delete().eq("user_id", userId);
     if (ownedSubIds.length > 0) {
       await deleteWhereIn("funnel_analytics_entries", "sub_account_id", ownedSubIds);
     }
 
-    await adminClient.from("assets").delete().eq("user_id", userId);
     await adminClient.from("funnel_briefs").delete().eq("user_id", userId);
     await adminClient.from("offers").delete().eq("user_id", userId);
     await adminClient.from("funnels").delete().eq("user_id", userId);
@@ -126,9 +115,9 @@ Deno.serve(async (req) => {
       await deleteWhereIn("offers", "sub_account_id", ownedSubIds);
       await deleteWhereIn("funnels", "sub_account_id", ownedSubIds);
       await deleteWhereIn("audits", "sub_account_id", ownedSubIds);
-      await deleteWhereIn("assets", "sub_account_id", ownedSubIds);
       await deleteWhereIn("account_invites", "sub_account_id", ownedSubIds);
     }
+
 
     await adminClient.from("agency_clients").delete().eq("agency_user_id", userId);
     await adminClient.from("agency_clients").delete().eq("client_user_id", userId);
