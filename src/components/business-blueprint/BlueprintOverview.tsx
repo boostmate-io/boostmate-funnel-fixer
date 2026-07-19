@@ -216,24 +216,29 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
                 Edit Snapshot
               </Button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              {[
+            {(() => {
+              const snapshotItems = [
                 { label: "Business Type", value: bt.label },
-                { label: "Helping", value: snapshot?.help_achieve },
-                { label: "Audience", value: snapshot?.who_help },
+                { label: "Helping", value: snapshot?.help_achieve?.trim() || undefined },
+                { label: "Audience", value: snapshot?.who_help?.trim() || undefined },
                 { label: "Primary Goal", value: snapshot?.main_goal ? (GOAL_LABELS[snapshot.main_goal] ?? snapshot.main_goal) : undefined },
-                { label: "Biggest Challenge", value: snapshot?.biggest_challenge },
-              ].map((item) => (
-                <div key={item.label} className="rounded-lg bg-card border border-border px-3 py-2.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                    {item.label}
-                  </p>
-                  <p className={`text-xs leading-snug line-clamp-3 ${item.value ? "text-foreground" : "text-muted-foreground/60 italic"}`}>
-                    {item.value?.trim() || "Not set"}
-                  </p>
+                { label: "Biggest Challenge", value: snapshot?.biggest_challenge?.trim() || undefined },
+              ].filter((item) => !!item.value);
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  {snapshotItems.map((item) => (
+                    <div key={item.label} className="rounded-lg bg-card border border-border px-3 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                        {item.label}
+                      </p>
+                      <p className="text-xs leading-snug line-clamp-3 text-foreground">
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
         )}
 
