@@ -1,50 +1,41 @@
+## Scope
 
-# Growth Roadmap V2 — Final Plan (incorporating multi-stage task clarification)
+Reduce first-time Blueprint personalization to a single question ("What best describes your business?") and stop rendering empty snapshot placeholders for the four removed fields. No DB migration, no schema changes, no changes to business-type-driven personalization.
 
-Approved plan updated with your multi-stage task model. Ready to execute on build-mode switch.
+## Pre-plan verification
 
-## Multi-stage task applicability — final shape
+Confirmed by reading current code:
+- `BlueprintSetupWizard.tsx` is self-contained: steps 1–4 exist only inside this file. No other component references those wizard steps. Removing Q2–Q5 will not break anything outside the wizard.
+- `useWorkspaceSettings` types (`help_achieve`, `who_help`, `main_goal`, `biggest_challenge`) stay unchanged — DB columns and reads elsewhere (SharedBlueprint, BusinessBlueprintModule coach context) still work with legacy data.
+- `BlueprintOverview` Business Snapshot renders all 5 cards unconditionally with "Not set" fallback → for new users this would show 4 empty cards. Needs a conditional-render fix.
+- `BlueprintViewMode` uses `KeyValueGrid` and per-field `show=` guards → already hides empty values, only the "Goal:" badge (line 405) is already guarded by truthiness. No change needed there.
 
-Your proposed model is the cleanest fit and does not conflict with anything in the current schema. Adopting it as-is:
+## Changes
 
-- `stage` — the **primary** stage for stage-specific tasks. Enum: `validate | attract | optimize | scale | systemize | any`.
-- `stage = 'any'` — reserved exclusively for truly cross-stage foundation tasks (e.g. "Complete Business Blueprint"). Activation conditions decide when they surface.
-- `applicable_stages` (nullable `text[]`) — optional. When set, the task also appears in these additional specific stages beyond its primary `stage`. When null, only the primary `stage` applies. `stage = 'any'` ignores this field.
+### 1. `src/components/business-blueprint/BlueprintSetupWizard.tsx`
+- Remove steps 1–4 (helpAchieve, whoHelp, mainGoal, biggestChallenge) and their state, GOALS constant, and re-sync effect lines for those fields.
+- `totalSteps = 1`; drop step pips or render a single filled bar.
+- Footer: no Back button; single "Finish setup" primary button (still labelled "Save changes" in edit mode).
+- `handleFinish` only writes `business_type` + `setup_status: "completed"`. Leaves legacy field values in DB untouched (no writes = no overwrites).
+- Keep `initialValues` prop signature so existing callers compile; unused legacy props simply ignored.
+- Update `DialogTitle`/description copy to reflect a 10-second setup.
 
-Plan builder logic:
+### 2. `src/components/business-blueprint/BlueprintOverview.tsx` (Business Snapshot card, ~line 219–236)
+- Build the items array dynamically: always include Business Type; include the other four entries only when their value is non-empty.
+- Drop the "Not set" italic fallback branch (no longer needed since empty items aren't rendered).
+- Grid keeps `lg:grid-cols-5` for legacy users with full data; collapses naturally when fewer items.
+- Keep "Edit Snapshot" button → opens the (now single-question) wizard, so users can still change business type here.
 
-```
-task is a candidate for the user's current stage S when:
-  task.stage === 'any'
-  OR task.stage === S
-  OR (task.applicable_stages is not null AND S ∈ task.applicable_stages)
-AND all activation_conditions evaluate true against workspace signals
-```
+### 3. No changes to
+- `BusinessBlueprintModule.tsx` (still forwards legacy fields for coach/AI context — harmless when empty).
+- `BlueprintViewMode.tsx` (already guards empty values).
+- `SharedBlueprint.tsx`, `useWorkspaceSettings.ts`, DB schema, types.
+- `businessTypes.ts`, all personalization consumers.
 
-This gives us three clean tiers without introducing indirection through stage-score conditions:
+### 4. Verify
+Run `tsgo` typecheck after edits.
 
-1. **Cross-stage foundations** → `stage = 'any'` (e.g. Blueprint).
-2. **Stage-specific tasks** → single `stage` (e.g. Validate's "Design your Main Offer").
-3. **Multi-stage strategic tasks** → primary `stage` + `applicable_stages` (e.g. "Build your Client Converter" primary `validate`, also applicable in `attract`, `optimize`).
-
-Admin UI: `stage` is a dropdown; `applicable_stages` is a multi-select shown only when `stage !== 'any'`.
-
-## No other changes to the approved plan
-
-Everything else stands:
-- Two new tables (`growth_roadmap_tasks`, `growth_task_progress`), typed condition vocabulary, no rules engine.
-- `resource_type` includes `build_guide` from day one (renders "Coming soon" until wired).
-- Canonical Growth Systems registry (Audience Builder, Client Converter, Offer Launcher, Launch Engine); AI output constrained by `enum`.
-- Stages stay in code.
-- Assessment retake remains the sole authority for stage promotion.
-- Phased execution: Phase 1 fixes → Phase 2 data model + evaluator → Phase 3 admin UI → Phase 4 dashboard/detail UI → Phase 5 Coach integration → Phase 6 progressive completion signals.
-
-## Phase 1 scope (execute now)
-
-1. **`/assessment` blank screen fix** — the current `if (isReady && user) return <Navigate>` sits between hooks, so when auth flips to ready+user the hook count drops and React errors out into a blank screen. Replace with a useEffect-driven redirect + a neutral loader guard for the `!isReady || user` window.
-2. **CTA copy** — add `growth.createAccountCtaButton` in `en.json` / `nl.json` ("Create your free account" / "Maak je gratis account aan") and use it in `PublicAssessment.tsx` instead of `t("auth.signUp") || "Create account"`.
-3. **Canonical Growth Systems** — rewrite `src/lib/growth/growthSystems.ts` to expose only Audience Builder, Client Converter, Offer Launcher, Launch Engine (each with id, name, summary, stage_relevance, related module). Existing `serializeCatalogForPrompt()` and getters keep their signatures; call sites stay unchanged.
-4. **Reject invented systems** — in `supabase/functions/growth-analyze/index.ts`, drop `recommended_growth_system` when its `id` is not in the canonical registry (validated server-side against a shared allowed-id list). No schema change; failure mode is a missing field, not a fabricated one. Coach-side registry injection covered in Phase 5.
-5. **Coach: no high-ticket assumption** — patch `coach:offer-strategy` instruction block to add an explicit routing rule: before entering any walkthrough, check Blueprint offer type; if unknown, ask the user which offer tier fits (free / low-mid / high-ticket) rather than defaulting to high-ticket. Also add a Coach-level rule forbidding invention of Growth Systems / modules / tasks outside provided lists (short addition to `coach:base` or `coach:global`).
-
-Await build-mode switch and I'll execute Phase 1.
+## Out of scope
+- No DB migration or column removal.
+- No changes to Roadmap, Coach, or business-type personalization behavior.
+- Manual "Personalize" action remains functional via the simplified wizard.
