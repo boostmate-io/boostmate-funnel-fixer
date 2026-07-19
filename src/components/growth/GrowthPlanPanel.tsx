@@ -272,7 +272,7 @@ function PlanRow({
           </div>
         )}
 
-        {isDecision && subAccountId && (
+        {isDecision && subAccountId && !isLocked && (
           <DecisionPicker
             slug={task.slug}
             subAccountId={subAccountId}
