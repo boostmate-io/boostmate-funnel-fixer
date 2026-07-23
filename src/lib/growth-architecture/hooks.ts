@@ -175,7 +175,7 @@ export function useGrowthArchitecture(subAccountId: string | null) {
     setLoading(true);
     const { data, error } = await supabase
       .from("growth_architecture_systems")
-      .select("id,sub_account_id,system_catalog_id,source_offer_id,target_offer_id,status,notes,sort_order")
+      .select("id,sub_account_id,system_catalog_id,source_offer_id,target_offer_id,status,notes,sort_order,funnel_id")
       .eq("sub_account_id", subAccountId)
       .order("sort_order", { ascending: true });
     setLoading(false);
@@ -194,7 +194,7 @@ export function useGrowthArchitecture(subAccountId: string | null) {
       const { data, error } = await supabase
         .from("growth_architecture_systems")
         .insert({ ...payload, sub_account_id: subAccountId, sort_order: sortOrder } as any)
-        .select("id,sub_account_id,system_catalog_id,source_offer_id,target_offer_id,status,notes,sort_order")
+        .select("id,sub_account_id,system_catalog_id,source_offer_id,target_offer_id,status,notes,sort_order,funnel_id")
         .single();
       if (error) {
         if (/offer_relationship/i.test(error.message)) {
