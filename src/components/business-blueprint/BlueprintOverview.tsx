@@ -6,8 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
 import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
-import { calculateGrowthSystemProgress, getFunnelTypeLabel, type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
+import { calculateGrowthSystemProgress, type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
+import { calcBrandIdentityProgress, type BrandIdentityData } from "./BrandIdentitySection";
+import { calcProofAuthorityProgress, type ProofAuthorityData } from "./proofAuthorityTypes";
 import { getBusinessType } from "./businessTypes";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useGrowthArchitecture, useOfferRelationships } from "@/lib/growth-architecture/hooks";
+import { deriveRouteState } from "@/lib/growth-architecture/deriveStatus";
 
 interface OfferLite { id: string; name: string; tier?: string }
 
@@ -26,6 +31,8 @@ interface Props {
   growth: GrowthSystemData;
   mappings: FunnelMappingRow[];
   offers: OfferLite[];
+  brandIdentity?: BrandIdentityData;
+  proofAuthority?: ProofAuthorityData;
   businessType: string;
   onEdit: (section?: SectionId) => void;
   onView: () => void;
@@ -34,15 +41,23 @@ interface Props {
   setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
+const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, brandIdentity, proofAuthority, businessType, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
+  const { activeSubAccountId } = useWorkspace();
+  const { rows: routes } = useGrowthArchitecture(activeSubAccountId ?? null);
+  const { rows: relationships } = useOfferRelationships(activeSubAccountId ?? null);
 
   const clarityProgress = calculateClarityProgress(clarity);
   const offerProgress = calculateOfferDesignProgress(offer);
   const growthProgress = calculateGrowthSystemProgress(growth, mappings);
+  const brandProgress = calcBrandIdentityProgress(brandIdentity);
+  const proofProgress = proofAuthority ? calcProofAuthorityProgress(proofAuthority) : 0;
   const offerName = (id?: string | null) => (id ? offers.find((o) => o.id === id)?.name : undefined);
-  const firstMapping = mappings[0];
+  const activeRoutes = routes.filter((r) => {
+    const s = deriveRouteState(r, relationships).state;
+    return s !== "planned";
+  });
 
   const sections: SectionSummary[] = [
     {
