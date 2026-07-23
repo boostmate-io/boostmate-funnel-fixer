@@ -149,7 +149,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const [showSaveSeed, setShowSaveSeed] = useState(false);
   const [seedTemplateName, setSeedTemplateName] = useState("");
   const [seedTemplateType, setSeedTemplateType] = useState<TemplateTypeValue>("full-funnel");
-  const [seedTemplates, setSeedTemplates] = useState<Array<{ id: string; name: string; description: string; created_at: string; nodes: any[]; edges: any[]; is_active: boolean; template_type?: string | null }>>([]);
+  const [seedTemplates, setSeedTemplates] = useState<Array<{ id: string; name: string; description: string; created_at: string; nodes: any[]; edges: any[]; is_active: boolean; template_type?: string | null; entry_node_id?: string | null }>>([]);
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
   const [editingSeedTemplate, setEditingSeedTemplate] = useState<{ id: string; name: string } | null>(null);
   const [showBriefPanel, setShowBriefPanel] = useState(false);
@@ -889,6 +889,13 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
 
     // If editing a seed template, save to seed_templates table
     if (editingSeedTemplate) {
+      // Guard: seed templates must never contain trafficSource nodes.
+      // Acquisition channels are injected dynamically at Start Building time
+      // based on the route's primary + additional channels.
+      if (persistedNodes.some((n) => n.type === "trafficSource")) {
+        toast.error("Seed templates cannot contain Acquisition/Traffic Source nodes — remove them before saving.");
+        return;
+      }
       const rawNodes = JSON.parse(JSON.stringify(persistedNodes));
       const cleanedNodes = rawNodes.map((node: any) => {
         if (node.type === "funnelPage" && node.data) {
@@ -2061,6 +2068,24 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                   </div>
                 </button>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <Select
+                    value={st.entry_node_id || "__none__"}
+                    onValueChange={async (v) => {
+                      const val = v === "__none__" ? null : v;
+                      await supabase.from("seed_templates").update({ entry_node_id: val }).eq("id", st.id);
+                      setSeedTemplates((prev) => prev.map((t) => t.id === st.id ? { ...t, entry_node_id: val } : t));
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue placeholder="Entry node" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__" className="text-xs">Auto-detect entry</SelectItem>
+                      {(Array.isArray(st.nodes) ? st.nodes : []).filter((n: any) => n?.type === "funnelPage").map((n: any) => (
+                        <SelectItem key={n.id} value={n.id} className="text-xs">
+                          {n.data?.label || n.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Select
                     value={(st.template_type as TemplateTypeValue) || "full-funnel"}
                     onValueChange={async (v) => {

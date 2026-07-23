@@ -90,8 +90,18 @@ export default function AdminGrowthRoadmapTasks() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<EditingTask | null>(null);
+  const [growthSystems, setGrowthSystems] = useState<Array<{ id: string; label: string }>>([]);
   const [stageFilter, setStageFilter] = useState<TaskStage | "all">("all");
   const [showInactive, setShowInactive] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("growth_systems_catalog")
+      .select("id,label")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => setGrowthSystems((data ?? []) as Array<{ id: string; label: string }>));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -137,6 +147,7 @@ export default function AdminGrowthRoadmapTasks() {
         resources: (editing.resources ?? []) as unknown as TaskResource[],
         cta_label: editing.cta_label ?? null,
         build_guide_ref: editing.build_guide_ref ?? null,
+        target_growth_system_id: (editing as any).target_growth_system_id ?? null,
         coach_prompt_ref: editing.coach_prompt_ref ?? null,
       };
       const { error } = await supabase
@@ -234,6 +245,7 @@ export default function AdminGrowthRoadmapTasks() {
               onCancel={() => setEditing(null)}
               onSave={save}
               saving={saving}
+              growthSystems={growthSystems}
             />
           )}
         </DialogContent>
@@ -314,12 +326,14 @@ function EditForm({
   onCancel,
   onSave,
   saving,
+  growthSystems,
 }: {
   editing: EditingTask;
   setEditing: (t: EditingTask) => void;
   onCancel: () => void;
   onSave: () => Promise<void>;
   saving: boolean;
+  growthSystems: Array<{ id: string; label: string }>;
 }) {
   const stage: TaskStage = (editing.stage ?? "any") as TaskStage;
   const resources = editing.resources ?? [];
@@ -462,6 +476,29 @@ function EditForm({
             "Open Build Guide" button that opens this link in a new tab.
           </p>
         </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Target Growth System (route resolver)</Label>
+        <Select
+          value={((editing as any).target_growth_system_id as string) ?? "__none__"}
+          onValueChange={(v) =>
+            setEditing({ ...editing, target_growth_system_id: v === "__none__" ? null : v } as EditingTask)
+          }
+        >
+          <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="No target system" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__" className="text-xs">None</SelectItem>
+            {growthSystems.map((s) => (
+              <SelectItem key={s.id} value={s.id} className="text-xs">{s.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">
+          When set, the task CTA resolves to a Growth Architecture route using this system:
+          jump when exactly one route matches, open the filtered map when several match,
+          or pre-fill Add Route when none exist. Legacy Build Guide URL above is used only
+          when no target system is set.
+        </p>
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Coach prompt reference</Label>
