@@ -134,6 +134,8 @@ const BusinessBlueprintModule = () => {
           growth={growthData}
           mappings={mappings}
           offers={offers}
+          brandIdentity={brandIdentity}
+          proofAuthority={proofAuthority}
           businessType={settings.business_type}
           onEdit={handleEdit}
           onView={() => setMode("view")}
