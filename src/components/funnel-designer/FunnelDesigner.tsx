@@ -70,7 +70,7 @@ import TrafficSourceNode from "./TrafficSourceNode";
 import NodeDetailsPanel from "./NodeDetailsPanel";
 import TrafficSourceDetailsPanel from "./TrafficSourceDetailsPanel";
 import SequenceGroupNode from "./SequenceGroupNode";
-import { TRAFFIC_SOURCES, FUNNEL_ELEMENTS } from "./constants";
+import { FUNNEL_ELEMENTS } from "./constants";
 import { toPng } from "html-to-image";
 import { Switch } from "@/components/ui/switch";
 import FunnelBriefPanel from "@/components/funnel-brief/FunnelBriefPanel";
@@ -826,13 +826,10 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       nodeIdCounter.current += 1;
       const id = `node_${Date.now()}_${nodeIdCounter.current}`;
       if (category === "traffic") {
-        const source = TRAFFIC_SOURCES.find((s) => s.type === type);
-        if (!source) return;
-        setNodes((nds) => [...nds, {
-          id, type: "trafficSource",
-          position: { x: 50, y: 100 + nodes.length * 120 },
-          data: { label: source.label, icon: source.icon, color: source.color },
-        }]);
+        // Traffic nodes are added exclusively via drag-drop (onDrop) using
+        // the acquisition_channels hook data; this click-add path is unused
+        // and intentionally a no-op.
+        return;
       } else {
         const el = FUNNEL_ELEMENTS.find((p) => p.type === type);
         if (!el) return;
