@@ -7,19 +7,16 @@
 //   1. Auth: validate JWT, ensure caller is a member of route's sub_account.
 //   2. Idempotent: if route.funnel_id already set, return it.
 //   3. Load system_catalog seed_template_id → load seed_templates row.
-//   4. Load primary acquisition channel for route (if any).
-//   5. Clone seed template nodes/edges. Inject a trafficSource node linked to
-//      the entry_node_id (explicit) or the single funnelPage with no
-//      incoming edges (auto). Fail if ambiguous. Skip injection if the
-//      seed already contains a matching acquisition node.
-//   6. Insert new funnel scoped to sub_account.
+//   4. Load all acquisition channels for the route (primary + additional).
+//   5. Clone seed template nodes/edges. Inject a trafficSource node for each
+//      channel, all connected to the entry node (explicit entry_node_id or
+//      the single funnelPage with no incoming edges — fail if ambiguous).
+//      Skip individual channels already present in the seed.
+//   6. Insert new funnel scoped to sub_account, linking the destination offer.
 //   7. Clone seed brief_structure into funnel_briefs (if any).
-//   8. Attach build guides: union of system + channel guides into
+//   8. Attach build guides: union of system + all channel guides into
 //      funnel_build_guides.
 //   9. Update growth_architecture_systems.funnel_id.
-//
-// All DB mutations use the service role client to keep the flow atomic-ish
-// (no cross-table transaction available, but each step is idempotent-safe).
 // =============================================================================
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -67,13 +64,12 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (rErr || !route) return json(404, { error: "route_not_found" });
 
-  // Auth: membership check
   const { data: isMember } = await admin.rpc("is_sub_account_member", {
     _user_id: userId, _sub_id: route.sub_account_id,
   });
   if (!isMember) return json(403, { error: "not_a_member" });
 
-  // 2. Idempotent
+  // 2. Idempotent — duplicate funnel creation prevention
   if (route.funnel_id) {
     return json(200, { funnel_id: route.funnel_id, status: "already_started" });
   }
@@ -94,68 +90,72 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (seedErr || !seed) return json(404, { error: "seed_template_not_found" });
 
-  // 4. Primary channel
-  const { data: primaryLink } = await admin
+  // 4. All channels (primary + additional)
+  const { data: channelLinks } = await admin
     .from("growth_architecture_channels")
-    .select("channel_id, acquisition_channels:channel_id(id,key,label,icon,color)")
+    .select("is_primary, sort_order, acquisition_channels:channel_id(id,key,label,icon,color)")
     .eq("architecture_system_id", route.id)
-    .eq("is_primary", true)
-    .maybeSingle();
-  const primaryChannel = (primaryLink as any)?.acquisition_channels ?? null;
+    .order("is_primary", { ascending: false })
+    .order("sort_order", { ascending: true });
+
+  const channels = (channelLinks ?? [])
+    .map((l: any) => ({ ...l.acquisition_channels, is_primary: !!l.is_primary }))
+    .filter((c: any) => c && c.id);
+  const primaryChannel = channels.find((c: any) => c.is_primary) ?? null;
 
   // 5. Clone nodes/edges + inject acquisition
   const rawNodes: any[] = Array.isArray(seed.nodes) ? JSON.parse(JSON.stringify(seed.nodes)) : [];
   const rawEdges: any[] = Array.isArray(seed.edges) ? JSON.parse(JSON.stringify(seed.edges)) : [];
 
   let injectionWarning: string | null = null;
+  let entryId: string | null = seed.entry_node_id ?? null;
 
-  if (primaryChannel) {
-    // Skip if seed already has a trafficSource matching this channel.
-    const dup = rawNodes.some(
-      (n) => n?.type === "trafficSource" &&
-        ((n?.data?.channelKey && n.data.channelKey === primaryChannel.key) ||
-         (n?.data?.label && String(n.data.label).toLowerCase() === String(primaryChannel.label).toLowerCase())),
-    );
+  if (channels.length > 0) {
+    if (!entryId) {
+      const funnelPages = rawNodes.filter((n) => n?.type === "funnelPage");
+      const targeted = new Set(rawEdges.map((e) => e?.target).filter(Boolean));
+      const roots = funnelPages.filter((n) => !targeted.has(n.id));
+      if (roots.length === 1) entryId = roots[0].id;
+      else if (roots.length === 0) injectionWarning = "no_entry_candidate";
+      else injectionWarning = "ambiguous_entry";
+    }
 
-    if (!dup) {
-      // Determine entry node id
-      let entryId: string | null = seed.entry_node_id ?? null;
-      if (!entryId) {
-        const funnelPages = rawNodes.filter((n) => n?.type === "funnelPage");
-        const targeted = new Set(rawEdges.map((e) => e?.target).filter(Boolean));
-        const roots = funnelPages.filter((n) => !targeted.has(n.id));
-        if (roots.length === 1) entryId = roots[0].id;
-        else if (roots.length === 0) injectionWarning = "no_entry_candidate";
-        else injectionWarning = "ambiguous_entry";
-      }
-
-      if (entryId) {
-        const entryNode = rawNodes.find((n) => n.id === entryId);
+    if (entryId) {
+      const entryNode = rawNodes.find((n) => n.id === entryId);
+      const pos = entryNode?.position ?? { x: 0, y: 0 };
+      let offsetY = 0;
+      channels.forEach((ch: any, idx: number) => {
+        const dup = rawNodes.some(
+          (n) => n?.type === "trafficSource" &&
+            ((n?.data?.channelKey && n.data.channelKey === ch.key) ||
+             (n?.data?.label && String(n.data.label).toLowerCase() === String(ch.label).toLowerCase())),
+        );
+        if (dup) return;
         const trafficId = crypto.randomUUID();
-        const pos = entryNode?.position ?? { x: 0, y: 0 };
         rawNodes.push({
           id: trafficId,
           type: "trafficSource",
-          position: { x: (pos.x ?? 0) - 220, y: pos.y ?? 0 },
+          position: { x: (pos.x ?? 0) - 260, y: (pos.y ?? 0) + offsetY },
           data: {
-            label: primaryChannel.label,
-            icon: primaryChannel.icon ?? "Globe",
-            color: primaryChannel.color ?? "#6246ff",
-            channelKey: primaryChannel.key,
+            label: ch.label,
+            icon: ch.icon ?? "Globe",
+            color: ch.color ?? "#6246ff",
+            channelKey: ch.key,
           },
         });
         rawEdges.push({
           id: `e-${trafficId}-${entryId}`,
           source: trafficId,
-          target: entryId,
+          target: entryId!,
           type: "smoothstep",
         });
-      }
+        offsetY += 140;
+      });
     }
   }
 
-  // 6. Insert funnel
-  const funnelName = `${system.label} → ${route.notes ?? "Route"}`.slice(0, 120);
+  // 6. Insert funnel — link destination offer
+  const funnelName = `${system.label}${route.notes ? " — " + route.notes : ""}`.slice(0, 120);
   const { data: newFunnel, error: fErr } = await admin
     .from("funnels")
     .insert({
@@ -167,6 +167,7 @@ Deno.serve(async (req) => {
       is_template: false,
       seed_template_id: seed.id,
       template_type: seed.template_type ?? null,
+      linked_offer_id: route.target_offer_id ?? null,
     })
     .select("id")
     .single();
@@ -185,8 +186,9 @@ Deno.serve(async (req) => {
     });
   }
 
-  // 8. Attach build guides (union of system + channel guides)
+  // 8. Attach build guides (union of system + all channel guides)
   const guideInserts: Array<{ funnel_id: string; build_guide_id: string; source: string; source_ref_id: string; sort_order: number }> = [];
+  const seen = new Set<string>();
 
   const { data: sysGuides } = await admin
     .from("growth_system_build_guides")
@@ -194,29 +196,33 @@ Deno.serve(async (req) => {
     .eq("growth_system_id", system.id)
     .order("sort_order", { ascending: true });
   for (const g of sysGuides ?? []) {
+    const gid = (g as any).build_guide_id;
+    if (seen.has(gid)) continue;
+    seen.add(gid);
     guideInserts.push({
       funnel_id: funnelId,
-      build_guide_id: (g as any).build_guide_id,
+      build_guide_id: gid,
       source: "growth_system",
       source_ref_id: system.id,
       sort_order: (g as any).sort_order ?? 0,
     });
   }
 
-  if (primaryChannel) {
+  for (const ch of channels) {
     const { data: chGuides } = await admin
       .from("acquisition_channel_build_guides")
       .select("build_guide_id, sort_order")
-      .eq("acquisition_channel_id", primaryChannel.id)
+      .eq("acquisition_channel_id", (ch as any).id)
       .order("sort_order", { ascending: true });
     for (const g of chGuides ?? []) {
-      // De-dupe on build_guide_id
-      if (guideInserts.some((x) => x.build_guide_id === (g as any).build_guide_id)) continue;
+      const gid = (g as any).build_guide_id;
+      if (seen.has(gid)) continue;
+      seen.add(gid);
       guideInserts.push({
         funnel_id: funnelId,
-        build_guide_id: (g as any).build_guide_id,
+        build_guide_id: gid,
         source: "acquisition_channel",
-        source_ref_id: primaryChannel.id,
+        source_ref_id: (ch as any).id,
         sort_order: (g as any).sort_order ?? 0,
       });
     }
@@ -236,6 +242,7 @@ Deno.serve(async (req) => {
     funnel_id: funnelId,
     status: "started",
     guides_attached: guideInserts.length,
+    channels_injected: channels.length,
     injection_warning: injectionWarning,
   });
 });
