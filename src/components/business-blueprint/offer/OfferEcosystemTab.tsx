@@ -29,6 +29,7 @@ import {
 } from "../offerDesignTypes";
 import { useEcosystemOffers, type EcosystemOfferRow } from "../useEcosystemOffers";
 import { getBusinessType } from "../businessTypes";
+import OfferRelationshipsSelector from "./OfferRelationshipsSelector";
 
 interface Props {
   blueprintId: string | null;
