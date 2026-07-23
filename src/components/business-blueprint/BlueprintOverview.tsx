@@ -105,9 +105,9 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, brandIden
       description: "Positioning, voice & visual direction.",
       progress: brandProgress,
       items: [
-        { label: "Positioning", value: brandIdentity?.positioning?.statement ? "Defined" : undefined },
-        { label: "Voice", value: brandIdentity?.voice?.tone ? "Defined" : undefined },
-        { label: "Visual", value: brandIdentity?.visual?.style ? "Defined" : undefined },
+        { label: "Positioning", value: brandIdentity?.positioning_statement ? "Defined" : undefined },
+        { label: "Voice", value: brandIdentity?.voice_tone ? "Defined" : undefined },
+        { label: "Visual", value: brandIdentity?.visual_style ? "Defined" : undefined },
       ],
     },
     {
