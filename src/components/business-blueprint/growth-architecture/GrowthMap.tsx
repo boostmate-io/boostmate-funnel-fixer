@@ -19,6 +19,7 @@ import type {
   AcquisitionChannelRow,
   GrowthSystemCatalogRow,
 } from "@/lib/growth-architecture/hooks";
+import { deriveRouteState } from "@/lib/growth-architecture/deriveStatus";
 import { ECOSYSTEM_TIERS } from "../offerDesignTypes";
 
 interface Props {
@@ -140,23 +141,25 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems }: Props) 
       });
     });
 
-    // Route edges (bold, labeled with system name + status)
+    // Route edges (bold, labeled with system name + derived state)
     routes.forEach((r) => {
       const sys = systems.find((s) => s.id === r.system_catalog_id);
+      const derived = deriveRouteState(r, relationships);
       const source = r.source_offer_id
         ? `offer-${r.source_offer_id}`
         : r.acquisition_channel_id
           ? `ext-${r.acquisition_channel_id}`
           : "ext-none";
+      const isReady = derived.state === "ready_to_build" || derived.state === "in_progress" || derived.state === "built" || derived.state === "locked";
       edges.push({
         id: `route-${r.id}`,
         source,
         target: `offer-${r.target_offer_id}`,
-        label: `${sys?.label ?? "System"} · ${r.status}`,
+        label: `${sys?.label ?? "System"} · ${derived.label}`,
         style: {
-          stroke: r.status === "active" ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-          strokeWidth: r.status === "active" ? 2.5 : 1.5,
-          strokeDasharray: r.status === "planned" ? "4 4" : undefined,
+          stroke: isReady ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+          strokeWidth: isReady ? 2.5 : 1.5,
+          strokeDasharray: derived.state === "planned" ? "4 4" : undefined,
         },
         labelStyle: { fontSize: 11, fontWeight: 600 },
         labelBgStyle: { fill: "hsl(var(--background))" },

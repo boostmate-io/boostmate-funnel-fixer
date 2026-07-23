@@ -315,22 +315,18 @@ export function calcStackProgress(s: OfferStackData): number {
 
 export function calcPricingProgress(p: PricingData): number {
   if (!p) return 0;
+  // V3: Premium / Recurring blocks removed. Score core price + payment plans + guarantee.
   let score = 0;
   const paymentPlans = p.payment_plans ?? [];
-  if (typeof p.core_price === "number" && p.core_price > 0) score += 35;
+  if (typeof p.core_price === "number" && p.core_price > 0) score += 50;
   if (paymentPlans.length > 0) score += 25;
-  if (p.recurring_enabled && p.recurring_offer?.name?.trim() && typeof p.recurring_offer?.monthly_price === "number") {
-    score += 15;
-  }
-  if (p.premium_enabled && p.premium_upgrade?.name?.trim()) {
-    score += 10;
-  }
   if (p.guarantee_type && p.guarantee_type !== "none") {
-    score += 10;
-    if (p.guarantee_details?.trim()) score += 5;
+    score += 15;
+    if (p.guarantee_details?.trim()) score += 10;
   }
   return Math.min(100, score);
 }
+
 
 
 export function calcEcosystemProgress(tierCounts: Record<string, number>): number {

@@ -18,7 +18,7 @@ import { getBusinessType } from "./businessTypes";
 import CustomerClaritySection from "./CustomerClaritySection";
 import OfferDesignSection from "./OfferDesignSection";
 import GrowthArchitectureSection from "./growth-architecture/GrowthArchitectureSection";
-import PlaceholderSection from "./PlaceholderSection";
+import BrandIdentitySection, { calcBrandIdentityProgress, type BrandIdentityData } from "./BrandIdentitySection";
 import BlueprintOverview from "./BlueprintOverview";
 import BlueprintSetupWizard from "./BlueprintSetupWizard";
 import BlueprintViewMode from "./BlueprintViewMode";
@@ -41,7 +41,7 @@ const BusinessBlueprintModule = () => {
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
   const [setupOpen, setSetupOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const { blueprint, offerDesign, proofAuthority, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, updateProofAuthority, setShareToken } = useBlueprint();
+  const { blueprint, offerDesign, proofAuthority, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, updateProofAuthority, updateBrandStrategy, setShareToken } = useBlueprint();
   const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
   const { activeSubAccount } = useWorkspace() as any;
 
@@ -68,15 +68,17 @@ const BusinessBlueprintModule = () => {
   const bt = getBusinessType(settings.business_type);
   const offerData = offerDesign;
   const growthData: GrowthSystemData = normalizeGrowthSystem(blueprint.growth_system);
+  const brandIdentity = (blueprint.brand_strategy || {}) as BrandIdentityData;
   const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
   const offerProgress = calculateOfferDesignProgress(offerData, tierCounts);
   const growthProgress = calculateGrowthSystemProgress(growthData, mappings);
+  const brandProgress = calcBrandIdentityProgress(brandIdentity);
   const proofProgress = calcProofAuthorityProgress(proofAuthority);
   const sectionProgress: Record<SectionId, number> = {
     "customer-clarity": clarityProgress,
     "offer-design": offerProgress,
     "growth-system": growthProgress,
-    "brand-strategy": 0,
+    "brand-strategy": brandProgress,
     "proof-authority": proofProgress,
   };
 
@@ -119,7 +121,7 @@ const BusinessBlueprintModule = () => {
   }
 
   const overallProgress = Math.round(
-    (clarityProgress + offerProgress + growthProgress + 0 + proofProgress) / 5,
+    (clarityProgress + offerProgress + growthProgress + brandProgress + proofProgress) / 5,
   );
   const isEmptyBlueprint = overallProgress === 0;
 
@@ -132,6 +134,8 @@ const BusinessBlueprintModule = () => {
           growth={growthData}
           mappings={mappings}
           offers={offers}
+          brandIdentity={brandIdentity}
+          proofAuthority={proofAuthority}
           businessType={settings.business_type}
           onEdit={handleEdit}
           onView={() => setMode("view")}
@@ -205,12 +209,10 @@ const BusinessBlueprintModule = () => {
         );
       case "brand-strategy":
         return (
-          <PlaceholderSection
-            title="Brand Identity"
-            description={`Make your ${bt.label.toLowerCase()} brand unmistakable — positioning, voice and visual direction.`}
-            icon={Palette}
-            comingNext={bt.brandExamples}
-            businessType={settings.business_type}
+          <BrandIdentitySection
+            data={brandIdentity}
+            onChange={updateBrandStrategy}
+            saving={saving}
           />
         );
       case "proof-authority":

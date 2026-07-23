@@ -6,8 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
 import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
-import { calculateGrowthSystemProgress, getFunnelTypeLabel, type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
+import { calculateGrowthSystemProgress, type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
+import { calcBrandIdentityProgress, type BrandIdentityData } from "./BrandIdentitySection";
+import { calcProofAuthorityProgress, type ProofAuthorityData } from "./proofAuthorityTypes";
 import { getBusinessType } from "./businessTypes";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useGrowthArchitecture, useOfferRelationships } from "@/lib/growth-architecture/hooks";
+import { deriveRouteState } from "@/lib/growth-architecture/deriveStatus";
 
 interface OfferLite { id: string; name: string; tier?: string }
 
@@ -26,6 +31,8 @@ interface Props {
   growth: GrowthSystemData;
   mappings: FunnelMappingRow[];
   offers: OfferLite[];
+  brandIdentity?: BrandIdentityData;
+  proofAuthority?: ProofAuthorityData;
   businessType: string;
   onEdit: (section?: SectionId) => void;
   onView: () => void;
@@ -34,15 +41,23 @@ interface Props {
   setupCompleted: boolean;
 }
 
-const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessType, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
+const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, brandIdentity, proofAuthority, businessType, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
+  const { activeSubAccountId } = useWorkspace();
+  const { rows: routes } = useGrowthArchitecture(activeSubAccountId ?? null);
+  const { rows: relationships } = useOfferRelationships(activeSubAccountId ?? null);
 
   const clarityProgress = calculateClarityProgress(clarity);
   const offerProgress = calculateOfferDesignProgress(offer);
   const growthProgress = calculateGrowthSystemProgress(growth, mappings);
+  const brandProgress = calcBrandIdentityProgress(brandIdentity);
+  const proofProgress = proofAuthority ? calcProofAuthorityProgress(proofAuthority) : 0;
   const offerName = (id?: string | null) => (id ? offers.find((o) => o.id === id)?.name : undefined);
-  const firstMapping = mappings[0];
+  const activeRoutes = routes.filter((r) => {
+    const s = deriveRouteState(r, relationships).state;
+    return s !== "planned";
+  });
 
   const sections: SectionSummary[] = [
     {
@@ -73,43 +88,34 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, businessT
     },
     {
       id: "growth-system",
-      label: "Growth System",
+      label: "Growth Architecture",
       icon: Workflow,
-      description: "Acquisition, funnel architecture & ascension.",
+      description: "Systems, routes & offer progression.",
       progress: growthProgress,
       items: [
-        {
-          label: "Traffic sources",
-          value: growth.acquisition?.traffic_sources?.length
-            ? `${growth.acquisition.traffic_sources.length} selected`
-            : undefined,
-        },
-        { label: "Entry offer", value: offerName(growth.acquisition?.primary_entry_offer_id) },
-        {
-          label: "Funnel mapping",
-          value: firstMapping
-            ? `${offerName(firstMapping.offer_id) ?? "Offer"} → ${getFunnelTypeLabel(firstMapping.funnel_type)}`
-            : mappings.length
-              ? `${mappings.length} mapped`
-              : undefined,
-        },
-        { label: "Next after core", value: offerName(growth.ascension?.next_offer_after_core_id) },
+        { label: "Routes configured", value: routes.length ? `${routes.length}` : undefined },
+        { label: "Active routes", value: activeRoutes.length ? `${activeRoutes.length}` : undefined },
+        { label: "Offer relationships", value: relationships.length ? `${relationships.length}` : undefined },
       ],
     },
     {
       id: "brand-strategy",
-      label: "Brand Strategy",
+      label: "Brand Identity",
       icon: Palette,
       description: "Positioning, voice & visual direction.",
-      progress: 0,
-      items: bt.brandExamples.slice(0, 3).map((label) => ({ label })),
+      progress: brandProgress,
+      items: [
+        { label: "Positioning", value: brandIdentity?.positioning_statement ? "Defined" : undefined },
+        { label: "Voice", value: brandIdentity?.voice_tone ? "Defined" : undefined },
+        { label: "Visual", value: brandIdentity?.visual_style ? "Defined" : undefined },
+      ],
     },
     {
       id: "proof-authority",
       label: "Proof & Authority",
       icon: Award,
       description: "Credibility stack & trust assets.",
-      progress: 0,
+      progress: proofProgress,
       items: bt.proofExamples.slice(0, 3).map((label) => ({ label })),
     },
   ];

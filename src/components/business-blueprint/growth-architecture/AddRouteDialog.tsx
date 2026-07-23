@@ -55,7 +55,6 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate }:
   const [sourceId, setSourceId] = useState<string>(EXTERNAL);
   const [targetId, setTargetId] = useState<string>("");
   const [channelId, setChannelId] = useState<string>(NONE);
-  const [status, setStatus] = useState<GrowthArchStatus>("planned");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -77,7 +76,6 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate }:
     setSourceId(EXTERNAL);
     setTargetId("");
     setChannelId(NONE);
-    setStatus("planned");
     setNotes("");
   };
 
@@ -89,7 +87,10 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate }:
       source_offer_id: isExternal ? null : sourceId,
       target_offer_id: targetId,
       acquisition_channel_id: channelId === NONE ? null : channelId,
-      status,
+      // Status is DERIVED (see deriveRouteState). We insert "planned" as a
+      // neutral placeholder to satisfy the NOT NULL constraint on the legacy
+      // column — the UI never reads it.
+      status: "planned",
       notes: notes.trim() ? notes.trim() : null,
     });
     setSaving(false);
@@ -175,19 +176,6 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate }:
           )}
 
           <div>
-            <Label className="text-xs font-medium mb-1.5 block">Status</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as GrowthArchStatus)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="planned">Planned</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="paused">Paused</SelectItem>
-                <SelectItem value="retired">Retired</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
             <Label className="text-xs font-medium mb-1.5 block">Notes (optional)</Label>
             <Textarea
               value={notes}
@@ -196,6 +184,11 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate }:
               rows={2}
             />
           </div>
+
+          <p className="text-[11px] text-muted-foreground border-t border-border pt-3">
+            Implementation state is derived automatically from your architecture,
+            linked funnels and Growth Roadmap — you don't set it manually.
+          </p>
         </div>
 
         <DialogFooter>
