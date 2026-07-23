@@ -28,6 +28,7 @@ export function useBlueprint() {
   const offerSaveTimer = useRef<number | null>(null);
   const growthSaveTimer = useRef<number | null>(null);
   const proofSaveTimer = useRef<number | null>(null);
+  const brandSaveTimer = useRef<number | null>(null);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!activeSubAccountId || !user) return;
@@ -179,6 +180,28 @@ export function useBlueprint() {
     [blueprint?.id],
   );
 
+  const updateBrandStrategy = useCallback(
+    (patch: Record<string, any>) => {
+      setBlueprint((prev) => {
+        if (!prev) return prev;
+        const nextBrand = { ...(prev.brand_strategy || {}), ...patch };
+        const next = { ...prev, brand_strategy: nextBrand };
+        if (brandSaveTimer.current) window.clearTimeout(brandSaveTimer.current);
+        brandSaveTimer.current = window.setTimeout(async () => {
+          setSaving(true);
+          const { error } = await supabase
+            .from("business_blueprints")
+            .update({ brand_strategy: nextBrand as any })
+            .eq("id", prev.id);
+          setSaving(false);
+          if (error) toast.error("Save failed");
+        }, 800);
+        return next;
+      });
+    },
+    [],
+  );
+
   const setShareToken = useCallback((token: string | null) => {
     setBlueprint((prev) => (prev ? { ...prev, share_token: token } : prev));
   }, []);
@@ -193,6 +216,7 @@ export function useBlueprint() {
     updateOfferDesign,
     updateGrowthSystem,
     updateProofAuthority,
+    updateBrandStrategy,
     setShareToken,
     reload: load,
   };
