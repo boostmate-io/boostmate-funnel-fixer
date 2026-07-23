@@ -735,46 +735,6 @@ const BlueprintViewMode = ({
             </div>
           </SubBlock>
 
-          <SubBlock
-            title="Ascension"
-            show={Boolean(
-              growth.ascension?.next_offer_after_core_id ||
-              growth.ascension?.retention_offer_id ||
-              growth.ascension?.referral_enabled ||
-              growth.ascension?.reactivation_enabled ||
-              hasText(growth.ascension?.referral_description) ||
-              hasText(growth.ascension?.reactivation_description),
-            )}
-          >
-            <KeyValueGrid
-              items={[
-                {
-                  label: "Next offer after core",
-                  value: offerName(growth.ascension?.next_offer_after_core_id),
-                },
-                {
-                  label: "Retention offer",
-                  value: offerName(growth.ascension?.retention_offer_id),
-                },
-                {
-                  label: "Referrals",
-                  value: growth.ascension?.referral_enabled ? "Enabled" : undefined,
-                },
-                {
-                  label: "Reactivation",
-                  value: growth.ascension?.reactivation_enabled ? "Enabled" : undefined,
-                },
-              ]}
-            />
-            <Field
-              label="Referral mechanic"
-              value={growth.ascension?.referral_description}
-            />
-            <Field
-              label="Reactivation mechanic"
-              value={growth.ascension?.reactivation_description}
-            />
-          </SubBlock>
         </Section>
 
         {/* ============= PROOF & AUTHORITY ============= */}
