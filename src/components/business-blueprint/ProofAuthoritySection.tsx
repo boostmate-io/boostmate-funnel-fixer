@@ -1,7 +1,7 @@
 // =============================================================================
-// ProofAuthoritySection — Trust / Proof / Persuasion module.
-// Uses the SAME sticky sub-tab layout as CustomerClaritySection / OfferDesign.
-// 4 tabs: Authority Positioning · Social Proof · Objections & Beliefs · Stories & Educational
+// AuthorityContentSection (file: ProofAuthoritySection.tsx) — "Authority & Content".
+// V3: 3 tabs — Authority Positioning · Social Proof · Stories & Lessons.
+// Objections & Beliefs moved to the offer level (see OfferEditor "Objections / FAQ").
 // Text-first. No file uploads. Optional external links only.
 // =============================================================================
 
@@ -53,7 +53,7 @@ interface Props {
 
 const newId = () => crypto.randomUUID();
 
-type TabId = "authority" | "social" | "objections" | "stories";
+type TabId = "authority" | "social" | "stories";
 
 const TABS: { id: TabId; label: string; icon: typeof Award; description: string; insight: string }[] = [
   {
@@ -71,15 +71,8 @@ const TABS: { id: TabId; label: string; icon: typeof Award; description: string;
     insight: "AI copy is only as persuasive as the proof you feed it. Specific numbers, named clients and structured outcomes outperform vague claims every time.",
   },
   {
-    id: "objections",
-    label: "Objections & Beliefs",
-    icon: MessageSquareWarning,
-    description: "Capture the doubts that block buying — and the reframes that dissolve them.",
-    insight: "Sales pages and emails convert when they address the exact objections in the prospect's head. The more specific, the better.",
-  },
-  {
     id: "stories",
-    label: "Stories & Educational Assets",
+    label: "Stories & Lessons",
     icon: BookOpen,
     description: "Reusable narrative arcs and value lessons for nurture, VSLs, webinars and content.",
     insight: "Stories and lessons are the raw material of every great campaign. Capture them once, reuse them everywhere.",
@@ -671,7 +664,6 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
         || data.social_proof.testimonials.length > 0
         || data.social_proof.authority_assets.length > 0;
     }
-    if (id === "objections") return data.objections.objections.length > 0;
     if (id === "stories") {
       return data.authority.founder_stories.length > 0 || data.educational.lessons.length > 0;
     }
@@ -746,7 +738,6 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
 
           {active === "authority" && <AuthorityTab data={data.authority} onChange={updateAuthority} />}
           {active === "social" && <SocialProofTab data={data.social_proof} onChange={updateSocial} />}
-          {active === "objections" && <ObjectionsTab data={data.objections} onChange={updateObj} />}
           {active === "stories" && (
             <StoriesTab
               authority={data.authority}
@@ -769,7 +760,7 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
           activeSubAccountId
             ? buildBlueprintSectionContext(
                 "proof_authority",
-                "Proof & Authority",
+                "Authority & Content",
                 { proof_authority: data } as unknown as BlueprintRow,
                 activeSubAccountId,
               )
