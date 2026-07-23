@@ -39,10 +39,38 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
   const { rows: systems } = useGrowthSystemsCatalog();
   const routeIds = useMemo(() => routes.map((r) => r.id), [routes]);
   const routeChannels = useRouteChannels(routeIds);
+  const funnelIds = useMemo(() => routes.map((r) => r.funnel_id), [routes]);
+  const { byFunnel: buildProgress, reload: reloadProgress } = useRoutesBuildProgress(funnelIds);
 
   const [addOpen, setAddOpen] = useState(false);
+  const [startingId, setStartingId] = useState<string | null>(null);
 
   const offerById = useMemo(() => new Map(offers.map((o) => [o.id, o])), [offers]);
+
+  const openFunnelsModule = () => {
+    window.dispatchEvent(new CustomEvent("boostmate:navigate-module", { detail: "funnels" }));
+  };
+
+  const handleStartBuilding = async (routeId: string) => {
+    setStartingId(routeId);
+    try {
+      const { data, error } = await supabase.functions.invoke("start-building-route", {
+        body: { route_id: routeId },
+      });
+      if (error) throw error;
+      if ((data as any)?.injection_warning === "ambiguous_entry") {
+        toast.warning("Funnel created, but entry node was ambiguous — set one on the seed template.");
+      } else {
+        toast.success("Funnel created — opening Funnels…");
+      }
+      await Promise.all([reloadRoutes(), reloadProgress()]);
+      openFunnelsModule();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not start building");
+    } finally {
+      setStartingId(null);
+    }
+  };
 
   return (
     <div className="h-full overflow-y-auto">
