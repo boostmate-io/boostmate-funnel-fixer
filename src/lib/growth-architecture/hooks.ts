@@ -59,6 +59,7 @@ export interface GrowthArchitectureRow {
   status: GrowthArchStatus;
   notes: string | null;
   sort_order: number;
+  funnel_id: string | null;
 }
 
 // ---------- useOfferRelationships ------------------------------------------
