@@ -39,24 +39,33 @@ interface CompatRow {
   acquisition_channel_id: string;
 }
 
+interface GuideRow { id: string; name: string; }
+interface SystemGuideRow { growth_system_id: string; build_guide_id: string; }
+
 const AdminGrowthSystemsCatalog = () => {
   const [rows, setRows] = useState<System[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [compat, setCompat] = useState<CompatRow[]>([]);
+  const [guides, setGuides] = useState<GuideRow[]>([]);
+  const [systemGuides, setSystemGuides] = useState<SystemGuideRow[]>([]);
   const [editing, setEditing] = useState<Partial<System> | null>(null);
   const [archText, setArchText] = useState("");
   const [archError, setArchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [sys, ch, cp] = await Promise.all([
+    const [sys, ch, cp, gd, sg] = await Promise.all([
       supabase.from("growth_systems_catalog").select("*").order("sort_order", { ascending: true }),
       supabase.from("acquisition_channels").select("id,key,label").eq("is_active", true).order("sort_order"),
       supabase.from("growth_system_channel_compat").select("growth_system_id,acquisition_channel_id"),
+      supabase.from("build_guides").select("id,name").eq("is_active", true).order("sort_order"),
+      supabase.from("growth_system_build_guides").select("growth_system_id,build_guide_id"),
     ]);
     if (sys.data) setRows(sys.data as any);
     if (ch.data) setChannels(ch.data as any);
     if (cp.data) setCompat(cp.data as any);
+    if (gd.data) setGuides(gd.data as any);
+    if (sg.data) setSystemGuides(sg.data as any);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -68,6 +77,16 @@ const AdminGrowthSystemsCatalog = () => {
     }
     return map;
   }, [compat]);
+
+  const guidesBySystem = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const row of systemGuides) {
+      if (!map.has(row.growth_system_id)) map.set(row.growth_system_id, new Set());
+      map.get(row.growth_system_id)!.add(row.build_guide_id);
+    }
+    return map;
+  }, [systemGuides]);
+
 
   const openEdit = (r?: System) => {
     setEditing(r ?? { is_active: true, sort_order: rows.length * 10, suitable_offer_tiers: [], recommended_stages: [], architecture: {} });
