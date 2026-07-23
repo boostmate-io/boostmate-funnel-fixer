@@ -248,6 +248,19 @@ const AdminAcquisitionChannels = () => {
               </div>
             </div>
             <div><Label>Description</Label><Textarea value={editing?.description ?? ""} onChange={(e) => setEditing({ ...editing!, description: e.target.value })} rows={3} /></div>
+            <div>
+              <Label>Attached build guides</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2 max-h-40 overflow-y-auto p-2 border rounded">
+                {guides.length === 0 && <div className="text-xs text-muted-foreground col-span-2">No build guides yet — create them in the Build Guides admin tab.</div>}
+                {guides.map((g) => (
+                  <label key={g.id} className="flex items-center gap-2 text-xs">
+                    <Checkbox checked={editingGuides.has(g.id)} onCheckedChange={() => toggleGuide(g.id)} />
+                    {g.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Sort order</Label><Input type="number" value={editing?.sort_order ?? 0} onChange={(e) => setEditing({ ...editing!, sort_order: Number(e.target.value) })} /></div>
               <div className="flex items-end gap-3"><Switch checked={editing?.is_active ?? true} onCheckedChange={(v) => setEditing({ ...editing!, is_active: v })} /><Label>Active</Label></div>
