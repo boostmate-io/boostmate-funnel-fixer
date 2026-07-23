@@ -338,3 +338,81 @@ export function useCurrentWorkspaceRelationships() {
   const { activeSubAccountId } = useWorkspace();
   return useOfferRelationships(activeSubAccountId ?? null);
 }
+
+
+// ---------- useRoutesBuildProgress -----------------------------------------
+// Aggregates funnel_build_guides + tasks + completions for a set of funnel ids
+// so the UI can derive per-route "built" state.
+
+import type { RouteBuildInfo } from "./deriveStatus";
+
+export function useRoutesBuildProgress(funnelIds: (string | null)[]) {
+  const ids = useMemo(
+    () => Array.from(new Set(funnelIds.filter((x): x is string => !!x))),
+    [funnelIds.join(",")], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const [byFunnel, setByFunnel] = useState<Map<string, RouteBuildInfo>>(new Map());
+
+  const load = useCallback(async () => {
+    if (ids.length === 0) { setByFunnel(new Map()); return; }
+    const [{ data: guides }, { data: progress }] = await Promise.all([
+      supabase
+        .from("funnel_build_guides")
+        .select("funnel_id, build_guide_id")
+        .in("funnel_id", ids),
+      supabase
+        .from("funnel_build_task_progress")
+        .select("funnel_id, task_id, completed_at")
+        .in("funnel_id", ids),
+    ]);
+
+    const guideIds = Array.from(new Set((guides ?? []).map((g: any) => g.build_guide_id)));
+    let taskRows: any[] = [];
+    if (guideIds.length > 0) {
+      const { data: stages } = await supabase
+        .from("build_guide_stages")
+        .select("id, build_guide_id")
+        .in("build_guide_id", guideIds);
+      const stageIds = (stages ?? []).map((s: any) => s.id);
+      if (stageIds.length > 0) {
+        const { data: tasks } = await supabase
+          .from("build_guide_tasks")
+          .select("id, stage_id, is_active")
+          .in("stage_id", stageIds)
+          .eq("is_active", true);
+        const stageToGuide = new Map((stages ?? []).map((s: any) => [s.id, s.build_guide_id]));
+        taskRows = (tasks ?? []).map((t: any) => ({
+          task_id: t.id,
+          build_guide_id: stageToGuide.get(t.stage_id),
+        }));
+      }
+    }
+
+    const guidesByFunnel = new Map<string, Set<string>>();
+    for (const g of guides ?? []) {
+      const set = guidesByFunnel.get((g as any).funnel_id) ?? new Set<string>();
+      set.add((g as any).build_guide_id);
+      guidesByFunnel.set((g as any).funnel_id, set);
+    }
+
+    const map = new Map<string, RouteBuildInfo>();
+    for (const fid of ids) {
+      const attachedGuides = guidesByFunnel.get(fid) ?? new Set<string>();
+      const activeTasks = taskRows.filter((t) => attachedGuides.has(t.build_guide_id));
+      const completed = (progress ?? []).filter(
+        (p: any) => p.funnel_id === fid && p.completed_at &&
+          activeTasks.some((t) => t.task_id === p.task_id),
+      ).length;
+      map.set(fid, {
+        guideCount: attachedGuides.size,
+        activeTaskCount: activeTasks.length,
+        completedTaskCount: completed,
+      });
+    }
+    setByFunnel(map);
+  }, [ids]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  return { byFunnel, reload: load };
+}
