@@ -31,21 +31,31 @@ interface Channel {
   is_active: boolean;
 }
 
+interface GuideRow { id: string; name: string; }
+interface ChannelGuideRow { acquisition_channel_id: string; build_guide_id: string; }
+
 const AdminAcquisitionChannels = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [guides, setGuides] = useState<GuideRow[]>([]);
+  const [channelGuides, setChannelGuides] = useState<ChannelGuideRow[]>([]);
   const [editing, setEditing] = useState<Partial<Channel> | null>(null);
   const [editingCat, setEditingCat] = useState<Partial<Category> | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [chRes, catRes] = await Promise.all([
+    const [chRes, catRes, gRes, cgRes] = await Promise.all([
       supabase.from("acquisition_channels").select("*").order("sort_order", { ascending: true }),
       supabase.from("acquisition_channel_categories").select("*").order("sort_order", { ascending: true }),
+      supabase.from("build_guides").select("id,name").eq("is_active", true).order("sort_order"),
+      supabase.from("acquisition_channel_build_guides").select("acquisition_channel_id,build_guide_id"),
     ]);
     if (chRes.data) setChannels(chRes.data as any);
     if (catRes.data) setCategories(catRes.data as any);
+    if (gRes.data) setGuides(gRes.data as any);
+    if (cgRes.data) setChannelGuides(cgRes.data as any);
   }, []);
+
   useEffect(() => { load(); }, [load]);
 
   const save = async () => {
