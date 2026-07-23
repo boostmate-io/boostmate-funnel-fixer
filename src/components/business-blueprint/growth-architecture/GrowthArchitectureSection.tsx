@@ -4,11 +4,13 @@
 // =============================================================================
 
 import { useMemo, useState } from "react";
-import { Workflow, Plus, Trash2, Loader2, Map as MapIcon, List } from "lucide-react";
+import { Workflow, Plus, Trash2, Loader2, Map as MapIcon, List, Rocket, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   useGrowthArchitecture,
@@ -16,6 +18,7 @@ import {
   useAcquisitionChannels,
   useGrowthSystemsCatalog,
   useRouteChannels,
+  useRoutesBuildProgress,
 } from "@/lib/growth-architecture/hooks";
 import { deriveRouteState, ROUTE_STATE_STYLES } from "@/lib/growth-architecture/deriveStatus";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
