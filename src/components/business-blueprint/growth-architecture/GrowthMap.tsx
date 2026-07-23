@@ -1,5 +1,6 @@
 // =============================================================================
 // GrowthMap — read-only React Flow view of offers + relationships + routes.
+// Channels sourced from growth_architecture_channels (junction).
 // =============================================================================
 
 import { useMemo } from "react";
@@ -18,6 +19,7 @@ import type {
   GrowthArchitectureRow,
   AcquisitionChannelRow,
   GrowthSystemCatalogRow,
+  RouteChannelRow,
 } from "@/lib/growth-architecture/hooks";
 import { deriveRouteState } from "@/lib/growth-architecture/deriveStatus";
 import { ECOSYSTEM_TIERS } from "../offerDesignTypes";
@@ -28,6 +30,7 @@ interface Props {
   routes: GrowthArchitectureRow[];
   channels: AcquisitionChannelRow[];
   systems: GrowthSystemCatalogRow[];
+  routeChannelsByRoute: Map<string, { primary: RouteChannelRow | null; additional: RouteChannelRow[] }>;
 }
 
 const TIER_ORDER = ECOSYSTEM_TIERS.map((t) => t.id);
@@ -39,12 +42,11 @@ const REL_COLOR: Record<string, string> = {
   downsell: "hsl(30 80% 55%)",
 };
 
-const GrowthMap = ({ offers, relationships, routes, channels, systems }: Props) => {
+const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChannelsByRoute }: Props) => {
   const { nodes, edges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    // Column per tier
     const columnByTier: Record<string, number> = {};
     TIER_ORDER.forEach((t, i) => { columnByTier[t] = i; });
 
@@ -82,15 +84,18 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems }: Props) 
       });
     });
 
-    // External acquisition nodes (one per unique channel used in routes with source=null)
+    // Resolve primary channel per external route via junction
+    const primaryChannelIdFor = (routeId: string): string | null =>
+      routeChannelsByRoute.get(routeId)?.primary?.channel_id ?? null;
+
     const externalRoutes = routes.filter((r) => r.source_offer_id == null);
-    const externalChannelIds = Array.from(
-      new Set(externalRoutes.map((r) => r.acquisition_channel_id).filter(Boolean) as string[]),
+    const externalPrimaryChannelIds = Array.from(
+      new Set(externalRoutes.map((r) => primaryChannelIdFor(r.id)).filter(Boolean) as string[]),
     );
-    const untaggedExternal = externalRoutes.some((r) => !r.acquisition_channel_id);
+    const untaggedExternal = externalRoutes.some((r) => !primaryChannelIdFor(r.id));
 
     let extRow = 0;
-    externalChannelIds.forEach((cid) => {
+    externalPrimaryChannelIds.forEach((cid) => {
       const ch = channels.find((c) => c.id === cid);
       nodes.push({
         id: `ext-${cid}`,
@@ -128,7 +133,6 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems }: Props) 
       });
     }
 
-    // Offer-to-offer relationship edges (light)
     relationships.forEach((r) => {
       edges.push({
         id: `rel-${r.id}`,
@@ -141,21 +145,26 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems }: Props) 
       });
     });
 
-    // Route edges (bold, labeled with system name + derived state)
     routes.forEach((r) => {
       const sys = systems.find((s) => s.id === r.system_catalog_id);
-      const derived = deriveRouteState(r, relationships);
+      const bucket = routeChannelsByRoute.get(r.id);
+      const primaryCid = bucket?.primary?.channel_id ?? null;
+      const additionalCount = bucket?.additional.length ?? 0;
+      const derived = deriveRouteState(r, relationships, primaryCid);
       const source = r.source_offer_id
         ? `offer-${r.source_offer_id}`
-        : r.acquisition_channel_id
-          ? `ext-${r.acquisition_channel_id}`
+        : primaryCid
+          ? `ext-${primaryCid}`
           : "ext-none";
       const isReady = derived.state === "ready_to_build" || derived.state === "in_progress" || derived.state === "built" || derived.state === "locked";
+      const label = additionalCount > 0
+        ? `${sys?.label ?? "System"} · ${derived.label} · +${additionalCount}`
+        : `${sys?.label ?? "System"} · ${derived.label}`;
       edges.push({
         id: `route-${r.id}`,
         source,
         target: `offer-${r.target_offer_id}`,
-        label: `${sys?.label ?? "System"} · ${derived.label}`,
+        label,
         style: {
           stroke: isReady ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
           strokeWidth: isReady ? 2.5 : 1.5,
@@ -170,7 +179,7 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems }: Props) 
     });
 
     return { nodes, edges };
-  }, [offers, relationships, routes, channels, systems]);
+  }, [offers, relationships, routes, channels, systems, routeChannelsByRoute]);
 
   if (offers.length === 0) {
     return (
