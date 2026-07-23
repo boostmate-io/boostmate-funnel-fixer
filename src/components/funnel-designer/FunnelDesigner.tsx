@@ -152,7 +152,7 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
   const [seedTemplates, setSeedTemplates] = useState<Array<{ id: string; name: string; description: string; created_at: string; nodes: any[]; edges: any[]; is_active: boolean; template_type?: string | null; entry_node_id?: string | null }>>([]);
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
   const [editingSeedTemplate, setEditingSeedTemplate] = useState<{ id: string; name: string } | null>(null);
-  const [showBriefPanel, setShowBriefPanel] = useState(false);
+  const [showBuildGuidePanel, setShowBuildGuidePanel] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showOfferPanel, setShowOfferPanel] = useState(false);
   const [linkedOfferId, setLinkedOfferId] = useState<string | null>(null);
@@ -1498,13 +1498,13 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
             </TooltipTrigger><TooltipContent>{t("funnelDesigner.downloadPng")}</TooltipContent></Tooltip>
 
             <Tooltip><TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={() => setShowBriefPanel(!showBriefPanel)} className={showBriefPanel ? "bg-primary/10 border-primary" : ""}>
+              <Button variant="outline" size="sm" onClick={() => { setShowBuildGuidePanel(!showBuildGuidePanel); if (showOfferPanel) setShowOfferPanel(false); }} className={showBuildGuidePanel ? "bg-primary/10 border-primary" : ""}>
                 <ClipboardList className="w-4 h-4" />
               </Button>
-            </TooltipTrigger><TooltipContent>Funnel Brief</TooltipContent></Tooltip>
+            </TooltipTrigger><TooltipContent>Build Guides</TooltipContent></Tooltip>
 
             <Tooltip><TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={() => { setShowOfferPanel(!showOfferPanel); if (showBriefPanel) setShowBriefPanel(false); }} className={showOfferPanel ? "bg-primary/10 border-primary" : ""}>
+              <Button variant="outline" size="sm" onClick={() => { setShowOfferPanel(!showOfferPanel); if (showBuildGuidePanel) setShowBuildGuidePanel(false); }} className={showOfferPanel ? "bg-primary/10 border-primary" : ""}>
                 <Gem className="w-4 h-4" />
               </Button>
             </TooltipTrigger><TooltipContent>Linked Offer</TooltipContent></Tooltip>
@@ -1811,13 +1811,10 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
       )}
 
 
-      {showBriefPanel && !detailsNode && !showOfferPanel && (
-        <FunnelBriefPanel
-          funnelId={currentFunnel?.id || editingSeedTemplate?.id || null}
-          userId={userId}
-          funnelName={currentFunnel?.name || editingSeedTemplate?.name || ""}
-          onClose={() => setShowBriefPanel(false)}
-          isSeedTemplate={!!editingSeedTemplate}
+      {showBuildGuidePanel && !detailsNode && !showOfferPanel && (
+        <FunnelBuildGuidePanel
+          funnelId={currentFunnel?.id || null}
+          onClose={() => setShowBuildGuidePanel(false)}
         />
       )}
 
