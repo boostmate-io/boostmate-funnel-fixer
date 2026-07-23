@@ -147,6 +147,7 @@ export default function AdminGrowthRoadmapTasks() {
         resources: (editing.resources ?? []) as unknown as TaskResource[],
         cta_label: editing.cta_label ?? null,
         build_guide_ref: editing.build_guide_ref ?? null,
+        target_growth_system_id: (editing as any).target_growth_system_id ?? null,
         coach_prompt_ref: editing.coach_prompt_ref ?? null,
       };
       const { error } = await supabase
