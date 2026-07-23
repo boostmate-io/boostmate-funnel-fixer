@@ -292,6 +292,21 @@ const AdminGrowthSystemsCatalog = () => {
             </div>
 
             <div>
+              <Label>Attached build guides</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto p-2 border rounded">
+                {guides.length === 0 && <div className="text-xs text-muted-foreground col-span-2">No build guides yet — create them in the Build Guides admin tab.</div>}
+                {guides.map((g) => (
+                  <label key={g.id} className="flex items-center gap-2 text-xs">
+                    <Checkbox checked={editingGuides.has(g.id)} onCheckedChange={() => toggleGuide(g.id)} />
+                    {g.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+
+
+            <div>
               <Label>Architecture (JSON)</Label>
               <Textarea value={archText} onChange={(e) => { setArchText(e.target.value); setArchError(null); }}
                 rows={8} className="font-mono text-xs" placeholder='{"stages":[]}' />
