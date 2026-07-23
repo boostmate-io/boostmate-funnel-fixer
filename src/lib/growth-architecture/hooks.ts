@@ -224,6 +224,113 @@ export function useGrowthArchitecture(subAccountId: string | null) {
   return { rows, loading, add, update, remove, reload: load };
 }
 
+// ---------- useRouteChannels (workspace-wide) ------------------------------
+// Fetches every growth_architecture_channels row for the given workspace's
+// routes. Consumers build their own per-route views by grouping on
+// architecture_system_id.
+
+export interface RouteChannelRow {
+  id: string;
+  architecture_system_id: string;
+  channel_id: string;
+  is_primary: boolean;
+  sort_order: number;
+}
+
+export function useRouteChannels(routeIds: string[]) {
+  const [rows, setRows] = useState<RouteChannelRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const key = useMemo(() => routeIds.slice().sort().join(","), [routeIds]);
+
+  const load = useCallback(async () => {
+    if (routeIds.length === 0) { setRows([]); return; }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("growth_architecture_channels")
+      .select("id,architecture_system_id,channel_id,is_primary,sort_order")
+      .in("architecture_system_id", routeIds)
+      .order("is_primary", { ascending: false })
+      .order("sort_order", { ascending: true });
+    setLoading(false);
+    if (error) { toast.error("Could not load route channels"); return; }
+    setRows((data ?? []) as RouteChannelRow[]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const byRoute = useMemo(() => {
+    const map = new Map<string, { primary: RouteChannelRow | null; additional: RouteChannelRow[] }>();
+    for (const id of routeIds) map.set(id, { primary: null, additional: [] });
+    for (const r of rows) {
+      const bucket = map.get(r.architecture_system_id);
+      if (!bucket) continue;
+      if (r.is_primary) bucket.primary = r;
+      else bucket.additional.push(r);
+    }
+    return map;
+  }, [rows, routeIds]);
+
+  const addChannel = useCallback(async (routeId: string, channelId: string, isPrimary: boolean) => {
+    const nextOrder = rows.filter((r) => r.architecture_system_id === routeId).length;
+    const { data, error } = await supabase
+      .from("growth_architecture_channels")
+      .insert({ architecture_system_id: routeId, channel_id: channelId, is_primary: isPrimary, sort_order: nextOrder })
+      .select("id,architecture_system_id,channel_id,is_primary,sort_order")
+      .single();
+    if (error) {
+      if (/duplicate/i.test(error.message)) toast.error("Channel already linked to this route");
+      else if (/growth_arch_channels_one_primary/i.test(error.message)) toast.error("This route already has a primary channel");
+      else toast.error("Could not add channel");
+      return null;
+    }
+    setRows((prev) => [...prev, data as RouteChannelRow]);
+    return data as RouteChannelRow;
+  }, [rows]);
+
+  const removeChannel = useCallback(async (id: string) => {
+    const target = rows.find((r) => r.id === id);
+    if (!target) return;
+    if (target.is_primary) {
+      toast.error("Promote another channel before removing the primary");
+      return;
+    }
+    setRows((prev) => prev.filter((r) => r.id !== id));
+    const { error } = await supabase.from("growth_architecture_channels").delete().eq("id", id);
+    if (error) { toast.error("Could not remove channel"); await load(); }
+  }, [rows, load]);
+
+  const setPrimary = useCallback(async (routeId: string, channelId: string) => {
+    // Ensure the channel is linked; if not, add it first as non-primary.
+    let link = rows.find((r) => r.architecture_system_id === routeId && r.channel_id === channelId);
+    if (!link) {
+      const inserted = await addChannel(routeId, channelId, false);
+      if (!inserted) return;
+      link = inserted;
+    }
+    // Atomic-ish swap: demote the current primary, promote the target.
+    // The partial unique index requires the demote to land first.
+    const currentPrimary = rows.find((r) => r.architecture_system_id === routeId && r.is_primary && r.channel_id !== channelId);
+    if (currentPrimary) {
+      const { error } = await supabase
+        .from("growth_architecture_channels")
+        .update({ is_primary: false })
+        .eq("id", currentPrimary.id);
+      if (error) { toast.error("Could not switch primary"); await load(); return; }
+    }
+    const { error } = await supabase
+      .from("growth_architecture_channels")
+      .update({ is_primary: true })
+      .eq("id", link.id);
+    if (error) { toast.error("Could not promote channel"); await load(); return; }
+    await load();
+  }, [rows, addChannel, load]);
+
+  return { rows, byRoute, loading, addChannel, removeChannel, setPrimary, reload: load };
+}
+
+
 // ---------- Convenience wrapper --------------------------------------------
 
 export function useCurrentWorkspaceRelationships() {
