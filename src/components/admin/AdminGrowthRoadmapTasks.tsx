@@ -325,12 +325,14 @@ function EditForm({
   onCancel,
   onSave,
   saving,
+  growthSystems,
 }: {
   editing: EditingTask;
   setEditing: (t: EditingTask) => void;
   onCancel: () => void;
   onSave: () => Promise<void>;
   saving: boolean;
+  growthSystems: Array<{ id: string; label: string }>;
 }) {
   const stage: TaskStage = (editing.stage ?? "any") as TaskStage;
   const resources = editing.resources ?? [];
