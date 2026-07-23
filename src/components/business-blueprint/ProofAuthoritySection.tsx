@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import {
-  Award, Users2, MessageSquareWarning, BookOpen, Plus, Trash2, Link as LinkIcon,
+  Award, Users2, BookOpen, Plus, Trash2, Link as LinkIcon,
   Sparkles, Shield, Star, BadgeCheck, BarChart3, Quote, Trophy, Lightbulb, Check, Info,
   MessageSquare,
 } from "lucide-react";
@@ -23,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import MultiSelectChips from "./offer/MultiSelectChips";
+import OfferAssociationPicker from "./offer/OfferAssociationPicker";
 import {
   type ProofAuthorityData,
   type AuthorityPositioningData,
@@ -34,7 +35,6 @@ import {
   type ClientResult,
   type Testimonial,
   type AuthorityAsset,
-  type Objection,
   type ValueLesson,
   AUTHORITY_TYPE_OPTIONS,
   CREDIBILITY_FOUNDATION_OPTIONS,
@@ -409,60 +409,7 @@ const SocialProofTab = ({
   );
 };
 
-// ============================================================================
-// Tab 3 — Objections & Beliefs (only Common Objections)
-// ============================================================================
-
-const ObjectionsTab = ({
-  data, onChange,
-}: {
-  data: ObjectionsBeliefsData;
-  onChange: (patch: Partial<ObjectionsBeliefsData>) => void;
-}) => {
-  const updateObj = (id: string, patch: Partial<Objection>) =>
-    onChange({ objections: data.objections.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
-  const removeObj = (id: string) => onChange({ objections: data.objections.filter((o) => o.id !== id) });
-  const addObj = () => onChange({ objections: [...data.objections, { id: newId() }] });
-
-  return (
-    <div className="space-y-5">
-      <SectionCard
-        icon={MessageSquareWarning}
-        title="Common Objections"
-        description={`The top doubts blocking the buy — paired with the reframe, proof and emotional concern behind them.`}
-        count={data.objections.length}
-        onAdd={addObj}
-        addLabel="Add Objection"
-      >
-        {data.objections.length === 0 ? (
-          <EmptyHint text={`e.g. "I don't have time", "I've tried this before", "What if it doesn't work for me?"`} />
-        ) : (
-          data.objections.map((o, i) => (
-            <EntryShell key={o.id} index={i} onDelete={() => removeObj(o.id)}>
-              <Field label="Objection">
-                <Input value={o.objection ?? ""} onChange={(e) => updateObj(o.id, { objection: e.target.value })} placeholder={`"I don't have time to implement another system."`} className="h-9 text-sm" />
-              </Field>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Why People Believe This">
-                  <AutoTextarea value={o.why_believed ?? ""} onChange={(e) => updateObj(o.id, { why_believed: e.target.value })} placeholder="They've been burned by complex tools that promised speed and delivered overhead." rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="Reframe / Rebuttal">
-                  <AutoTextarea value={o.reframe ?? ""} onChange={(e) => updateObj(o.id, { reframe: e.target.value })} placeholder="The system replaces 4 hours/week of manual work — most clients save time in the first 7 days." rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="Supporting Proof">
-                  <AutoTextarea value={o.supporting_proof ?? ""} onChange={(e) => updateObj(o.id, { supporting_proof: e.target.value })} placeholder="Sarah went from 8h to 1h/week on lead follow-up in week 1." rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="Emotional Concern Behind It">
-                  <AutoTextarea value={o.emotional_concern ?? ""} onChange={(e) => updateObj(o.id, { emotional_concern: e.target.value })} placeholder="Fear of starting yet another thing they can't keep up with." rows={2} className="text-sm resize-none" />
-                </Field>
-              </div>
-            </EntryShell>
-          ))
-        )}
-      </SectionCard>
-    </div>
-  );
-};
+// (Objections & Beliefs tab removed in V3 — objections live at the offer level.)
 
 // ============================================================================
 // Tab 4 — Stories & Educational Assets
