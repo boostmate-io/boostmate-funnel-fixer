@@ -90,8 +90,18 @@ export default function AdminGrowthRoadmapTasks() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<EditingTask | null>(null);
+  const [growthSystems, setGrowthSystems] = useState<Array<{ id: string; label: string }>>([]);
   const [stageFilter, setStageFilter] = useState<TaskStage | "all">("all");
   const [showInactive, setShowInactive] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("growth_systems_catalog")
+      .select("id,label")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => setGrowthSystems((data ?? []) as Array<{ id: string; label: string }>));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
