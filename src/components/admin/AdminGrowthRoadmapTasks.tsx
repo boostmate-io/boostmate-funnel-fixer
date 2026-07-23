@@ -475,6 +475,29 @@ function EditForm({
         </div>
       </div>
       <div className="space-y-1.5">
+        <Label className="text-xs">Target Growth System (route resolver)</Label>
+        <Select
+          value={((editing as any).target_growth_system_id as string) ?? "__none__"}
+          onValueChange={(v) =>
+            setEditing({ ...editing, target_growth_system_id: v === "__none__" ? null : v } as EditingTask)
+          }
+        >
+          <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="No target system" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__" className="text-xs">None</SelectItem>
+            {growthSystems.map((s) => (
+              <SelectItem key={s.id} value={s.id} className="text-xs">{s.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">
+          When set, the task CTA resolves to a Growth Architecture route using this system:
+          jump when exactly one route matches, open the filtered map when several match,
+          or pre-fill Add Route when none exist. Legacy Build Guide URL above is used only
+          when no target system is set.
+        </p>
+      </div>
+      <div className="space-y-1.5">
         <Label className="text-xs">Coach prompt reference</Label>
         <Input
           value={editing.coach_prompt_ref ?? ""}
