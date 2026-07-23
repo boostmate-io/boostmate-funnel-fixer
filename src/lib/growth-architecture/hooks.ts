@@ -122,7 +122,7 @@ export function useAcquisitionChannels() {
       setLoading(true);
       const { data, error } = await supabase
         .from("acquisition_channels")
-        .select("id,key,label,description,category,icon,sort_order,is_active")
+        .select("id,key,label,description,category_id,icon,color,sort_order,is_active")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
       if (cancelled) return;
@@ -148,7 +148,7 @@ export function useGrowthSystemsCatalog() {
       setLoading(true);
       const { data, error } = await supabase
         .from("growth_systems_catalog")
-        .select("id,key,label,description,system_type,icon,sort_order,is_active")
+        .select("id,key,label,description,primary_objective,suitable_offer_tiers,recommended_stages,architecture,seed_template_id,icon,sort_order,is_active")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
       if (cancelled) return;
@@ -173,7 +173,7 @@ export function useGrowthArchitecture(subAccountId: string | null) {
     setLoading(true);
     const { data, error } = await supabase
       .from("growth_architecture_systems")
-      .select("id,sub_account_id,system_catalog_id,source_offer_id,target_offer_id,acquisition_channel_id,status,notes,sort_order")
+      .select("id,sub_account_id,system_catalog_id,source_offer_id,target_offer_id,status,notes,sort_order")
       .eq("sub_account_id", subAccountId)
       .order("sort_order", { ascending: true });
     setLoading(false);
@@ -192,7 +192,7 @@ export function useGrowthArchitecture(subAccountId: string | null) {
       const { data, error } = await supabase
         .from("growth_architecture_systems")
         .insert({ ...payload, sub_account_id: subAccountId, sort_order: sortOrder } as any)
-        .select("id,sub_account_id,system_catalog_id,source_offer_id,target_offer_id,acquisition_channel_id,status,notes,sort_order")
+        .select("id,sub_account_id,system_catalog_id,source_offer_id,target_offer_id,status,notes,sort_order")
         .single();
       if (error) {
         if (/offer_relationship/i.test(error.message)) {
