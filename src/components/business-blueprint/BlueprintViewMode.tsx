@@ -863,27 +863,12 @@ const BlueprintViewMode = ({
                 </SubBlock>
               )}
 
-              {/* Objections & Beliefs */}
-              {proof.objections.objections.length > 0 && (
-                <SubBlock title="Objections & Beliefs">
-                  <div className="space-y-2">
-                    {proof.objections.objections.map((o) => (
-                      <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                        {o.objection && <p className="text-sm font-semibold text-foreground">"{o.objection}"</p>}
-                        {o.why_believed && <p className="text-xs text-muted-foreground mt-1"><span className="font-medium">Why believed:</span> {o.why_believed}</p>}
-                        {o.reframe && <p className="text-sm text-primary mt-1"><span className="font-medium">Reframe:</span> {o.reframe}</p>}
-                        {o.supporting_proof && <p className="text-xs text-foreground/80 mt-1"><span className="font-medium">Proof:</span> {o.supporting_proof}</p>}
-                        {o.emotional_concern && <p className="text-xs text-muted-foreground mt-1 italic">{o.emotional_concern}</p>}
-                      </div>
-                    ))}
-                  </div>
-                </SubBlock>
-              )}
+              {/* V3: Objections & Beliefs removed — objections now live at the offer level. */}
 
-              {/* Stories & Educational Assets */}
+              {/* Stories & Lessons */}
               {(proof.authority.founder_stories.length > 0 ||
                 proof.educational.lessons.length > 0) && (
-                <SubBlock title="Stories & Educational Assets">
+                <SubBlock title="Stories & Lessons">
                   {proof.authority.founder_stories.length > 0 && (
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
