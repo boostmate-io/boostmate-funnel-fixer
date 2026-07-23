@@ -19,18 +19,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 
 interface Guide {
   id: string;
-  key: string;
-  label: string;
+  key: string | null;
+  name: string;
   description: string | null;
-  scope: string; // 'system' | 'channel' | 'shared'
   is_active: boolean;
   sort_order: number;
 }
 
 interface Stage {
   id: string;
-  guide_id: string;
-  label: string;
+  build_guide_id: string;
+  title: string;
   description: string | null;
   sort_order: number;
 }
@@ -38,14 +37,13 @@ interface Stage {
 interface Task {
   id: string;
   stage_id: string;
-  label: string;
+  title: string;
   description_md: string | null;
-  is_required: boolean;
+  instructions_url: string | null;
+  video_url: string | null;
   is_active: boolean;
   sort_order: number;
 }
-
-const SCOPES = ["system", "channel", "shared"];
 
 const AdminBuildGuides = () => {
   const [guides, setGuides] = useState<Guide[]>([]);
@@ -54,20 +52,20 @@ const AdminBuildGuides = () => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
   const [editingGuide, setEditingGuide] = useState<Partial<Guide> | null>(null);
-  const [editingStage, setEditingStage] = useState<{ guide_id: string } & Partial<Stage> | null>(null);
-  const [editingTask, setEditingTask] = useState<{ stage_id: string } & Partial<Task> | null>(null);
+  const [editingStage, setEditingStage] = useState<({ build_guide_id: string } & Partial<Stage>) | null>(null);
+  const [editingTask, setEditingTask] = useState<({ stage_id: string } & Partial<Task>) | null>(null);
   const [loading, setLoading] = useState(false);
 
   const loadGuides = useCallback(async () => {
-    const { data } = await supabase.from("build_guides").select("*").order("sort_order");
+    const { data } = await supabase.from("build_guides").select("id,key,name,description,is_active,sort_order").order("sort_order");
     setGuides((data ?? []) as Guide[]);
   }, []);
 
   const loadStages = useCallback(async (guideId: string) => {
     const { data } = await supabase
       .from("build_guide_stages")
-      .select("*")
-      .eq("guide_id", guideId)
+      .select("id,build_guide_id,title,description,sort_order")
+      .eq("build_guide_id", guideId)
       .order("sort_order");
     setStagesByGuide((prev) => ({ ...prev, [guideId]: (data ?? []) as Stage[] }));
   }, []);
@@ -75,7 +73,7 @@ const AdminBuildGuides = () => {
   const loadTasks = useCallback(async (stageId: string) => {
     const { data } = await supabase
       .from("build_guide_tasks")
-      .select("*")
+      .select("id,stage_id,title,description_md,instructions_url,video_url,is_active,sort_order")
       .eq("stage_id", stageId)
       .order("sort_order");
     setTasksByStage((prev) => ({ ...prev, [stageId]: (data ?? []) as Task[] }));
@@ -102,13 +100,12 @@ const AdminBuildGuides = () => {
   };
 
   const saveGuide = async () => {
-    if (!editingGuide?.key || !editingGuide?.label) { toast.error("Key and label required"); return; }
+    if (!editingGuide?.name) { toast.error("Name required"); return; }
     setLoading(true);
     const payload: any = {
-      key: editingGuide.key,
-      label: editingGuide.label,
+      key: editingGuide.key ?? null,
+      name: editingGuide.name,
       description: editingGuide.description ?? null,
-      scope: editingGuide.scope ?? "shared",
       is_active: editingGuide.is_active ?? true,
       sort_order: editingGuide.sort_order ?? guides.length * 10,
     };
@@ -129,19 +126,19 @@ const AdminBuildGuides = () => {
   };
 
   const saveStage = async () => {
-    if (!editingStage?.label) { toast.error("Label required"); return; }
+    if (!editingStage?.title) { toast.error("Title required"); return; }
     const payload: any = {
-      guide_id: editingStage.guide_id,
-      label: editingStage.label,
+      build_guide_id: editingStage.build_guide_id,
+      title: editingStage.title,
       description: editingStage.description ?? null,
-      sort_order: editingStage.sort_order ?? (stagesByGuide[editingStage.guide_id]?.length ?? 0) * 10,
+      sort_order: editingStage.sort_order ?? (stagesByGuide[editingStage.build_guide_id]?.length ?? 0) * 10,
     };
     const q = editingStage.id
       ? supabase.from("build_guide_stages").update(payload).eq("id", editingStage.id)
       : supabase.from("build_guide_stages").insert(payload);
     const { error } = await q;
     if (error) toast.error(error.message);
-    else { toast.success("Saved"); loadStages(editingStage.guide_id); setEditingStage(null); }
+    else { toast.success("Saved"); loadStages(editingStage.build_guide_id); setEditingStage(null); }
   };
 
   const delStage = async (id: string, guideId: string) => {
@@ -152,12 +149,13 @@ const AdminBuildGuides = () => {
   };
 
   const saveTask = async () => {
-    if (!editingTask?.label) { toast.error("Label required"); return; }
+    if (!editingTask?.title) { toast.error("Title required"); return; }
     const payload: any = {
       stage_id: editingTask.stage_id,
-      label: editingTask.label,
+      title: editingTask.title,
       description_md: editingTask.description_md ?? null,
-      is_required: editingTask.is_required ?? true,
+      instructions_url: editingTask.instructions_url ?? null,
+      video_url: editingTask.video_url ?? null,
       is_active: editingTask.is_active ?? true,
       sort_order: editingTask.sort_order ?? (tasksByStage[editingTask.stage_id]?.length ?? 0) * 10,
     };
@@ -182,7 +180,7 @@ const AdminBuildGuides = () => {
         <h2 className="text-lg font-display font-bold flex items-center gap-2">
           <BookOpen className="w-4 h-4" /> Build Guides
         </h2>
-        <Button size="sm" onClick={() => setEditingGuide({ is_active: true, scope: "shared", sort_order: guides.length * 10 })}>
+        <Button size="sm" onClick={() => setEditingGuide({ is_active: true, sort_order: guides.length * 10 })}>
           <Plus className="w-4 h-4 mr-1" /> New Guide
         </Button>
       </div>
@@ -199,9 +197,8 @@ const AdminBuildGuides = () => {
                 </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold">{g.label}</span>
-                    <Badge variant="secondary" className="text-[10px]">{g.key}</Badge>
-                    <Badge variant="outline" className="text-[10px]">{g.scope}</Badge>
+                    <span className="font-semibold">{g.name}</span>
+                    {g.key && <Badge variant="secondary" className="text-[10px]">{g.key}</Badge>}
                     {!g.is_active && <Badge variant="destructive" className="text-[10px]">Inactive</Badge>}
                   </div>
                   {g.description && <div className="text-xs text-muted-foreground mt-0.5">{g.description}</div>}
@@ -216,7 +213,7 @@ const AdminBuildGuides = () => {
                 <div className="border-t border-border p-3 space-y-2 bg-muted/20">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stages</span>
-                    <Button size="sm" variant="outline" onClick={() => setEditingStage({ guide_id: g.id })}>
+                    <Button size="sm" variant="outline" onClick={() => setEditingStage({ build_guide_id: g.id })}>
                       <Plus className="w-3.5 h-3.5 mr-1" /> Stage
                     </Button>
                   </div>
@@ -238,17 +235,17 @@ const AdminBuildGuides = () => {
                                 {stageOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                               </button>
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium">{s.label}</div>
+                                <div className="text-sm font-medium">{s.title}</div>
                                 {s.description && <div className="text-[11px] text-muted-foreground truncate">{s.description}</div>}
                               </div>
-                              <button onClick={() => setEditingStage({ guide_id: g.id, ...s })} className="p-1 hover:bg-muted rounded"><Pencil className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => setEditingStage({ build_guide_id: g.id, ...s })} className="p-1 hover:bg-muted rounded"><Pencil className="w-3.5 h-3.5" /></button>
                               <button onClick={() => delStage(s.id, g.id)} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
                             {stageOpen && (
                               <div className="border-t border-border p-2 space-y-1.5 bg-muted/10">
                                 <div className="flex items-center justify-between">
                                   <span className="text-[10px] font-medium text-muted-foreground uppercase">Tasks</span>
-                                  <Button size="sm" variant="ghost" onClick={() => setEditingTask({ stage_id: s.id, is_required: true, is_active: true })}>
+                                  <Button size="sm" variant="ghost" onClick={() => setEditingTask({ stage_id: s.id, is_active: true })}>
                                     <Plus className="w-3 h-3 mr-1" /> Task
                                   </Button>
                                 </div>
@@ -261,8 +258,7 @@ const AdminBuildGuides = () => {
                                     <div key={t.id} className="flex items-center gap-2 px-2 py-1 rounded bg-background border border-border">
                                       <div className="flex-1 min-w-0">
                                         <div className="text-xs font-medium flex items-center gap-1.5">
-                                          {t.label}
-                                          {!t.is_required && <Badge variant="outline" className="text-[9px]">optional</Badge>}
+                                          {t.title}
                                           {!t.is_active && <Badge variant="destructive" className="text-[9px]">inactive</Badge>}
                                         </div>
                                       </div>
@@ -291,16 +287,8 @@ const AdminBuildGuides = () => {
           <DialogHeader><DialogTitle>{editingGuide?.id ? "Edit" : "New"} Build Guide</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Key</Label><Input value={editingGuide?.key ?? ""} onChange={(e) => setEditingGuide({ ...editingGuide!, key: e.target.value })} placeholder="meta-ads-launch" /></div>
-              <div><Label>Label</Label><Input value={editingGuide?.label ?? ""} onChange={(e) => setEditingGuide({ ...editingGuide!, label: e.target.value })} placeholder="Meta Ads Launch" /></div>
-            </div>
-            <div>
-              <Label>Scope</Label>
-              <select className="w-full border rounded h-10 px-2 bg-background"
-                value={editingGuide?.scope ?? "shared"}
-                onChange={(e) => setEditingGuide({ ...editingGuide!, scope: e.target.value })}>
-                {SCOPES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <div><Label>Key (optional)</Label><Input value={editingGuide?.key ?? ""} onChange={(e) => setEditingGuide({ ...editingGuide!, key: e.target.value || null })} placeholder="meta-ads-launch" /></div>
+              <div><Label>Name</Label><Input value={editingGuide?.name ?? ""} onChange={(e) => setEditingGuide({ ...editingGuide!, name: e.target.value })} placeholder="Meta Ads Launch" /></div>
             </div>
             <div><Label>Description</Label><Textarea rows={3} value={editingGuide?.description ?? ""} onChange={(e) => setEditingGuide({ ...editingGuide!, description: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
@@ -320,7 +308,7 @@ const AdminBuildGuides = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>{editingStage?.id ? "Edit" : "New"} Stage</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Label</Label><Input value={editingStage?.label ?? ""} onChange={(e) => setEditingStage({ ...editingStage!, label: e.target.value })} /></div>
+            <div><Label>Title</Label><Input value={editingStage?.title ?? ""} onChange={(e) => setEditingStage({ ...editingStage!, title: e.target.value })} /></div>
             <div><Label>Description</Label><Textarea rows={2} value={editingStage?.description ?? ""} onChange={(e) => setEditingStage({ ...editingStage!, description: e.target.value })} /></div>
             <div><Label>Sort order</Label><Input type="number" value={editingStage?.sort_order ?? 0} onChange={(e) => setEditingStage({ ...editingStage!, sort_order: Number(e.target.value) })} /></div>
           </div>
@@ -336,14 +324,17 @@ const AdminBuildGuides = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editingTask?.id ? "Edit" : "New"} Task</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Label</Label><Input value={editingTask?.label ?? ""} onChange={(e) => setEditingTask({ ...editingTask!, label: e.target.value })} /></div>
+            <div><Label>Title</Label><Input value={editingTask?.title ?? ""} onChange={(e) => setEditingTask({ ...editingTask!, title: e.target.value })} /></div>
             <div>
               <Label>Description (Markdown)</Label>
               <Textarea rows={10} className="font-mono text-xs" value={editingTask?.description_md ?? ""} onChange={(e) => setEditingTask({ ...editingTask!, description_md: e.target.value })} placeholder="## Steps&#10;1. ..." />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Instructions URL</Label><Input value={editingTask?.instructions_url ?? ""} onChange={(e) => setEditingTask({ ...editingTask!, instructions_url: e.target.value || null })} /></div>
+              <div><Label>Video URL</Label><Input value={editingTask?.video_url ?? ""} onChange={(e) => setEditingTask({ ...editingTask!, video_url: e.target.value || null })} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div><Label>Sort order</Label><Input type="number" value={editingTask?.sort_order ?? 0} onChange={(e) => setEditingTask({ ...editingTask!, sort_order: Number(e.target.value) })} /></div>
-              <div className="flex items-end gap-3"><Switch checked={editingTask?.is_required ?? true} onCheckedChange={(v) => setEditingTask({ ...editingTask!, is_required: v })} /><Label>Required</Label></div>
               <div className="flex items-end gap-3"><Switch checked={editingTask?.is_active ?? true} onCheckedChange={(v) => setEditingTask({ ...editingTask!, is_active: v })} /><Label>Active</Label></div>
             </div>
           </div>
