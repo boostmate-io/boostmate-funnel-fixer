@@ -151,6 +151,22 @@ const AdminGrowthSystemsCatalog = () => {
         .delete().eq("growth_system_id", systemId!).eq("acquisition_channel_id", cid);
     }
 
+    // Sync build guides.
+    const desiredG = new Set<string>((editing as any).__guides ?? Array.from(guidesBySystem.get(systemId!) ?? []));
+    const currentG = guidesBySystem.get(systemId!) ?? new Set<string>();
+    const gAdd = Array.from(desiredG).filter((id) => !currentG.has(id));
+    const gRemove = Array.from(currentG).filter((id) => !desiredG.has(id));
+    if (gAdd.length) {
+      const { error } = await supabase.from("growth_system_build_guides").insert(
+        gAdd.map((gid) => ({ growth_system_id: systemId!, build_guide_id: gid })),
+      );
+      if (error) toast.error(`Guides add: ${error.message}`);
+    }
+    for (const gid of gRemove) {
+      await supabase.from("growth_system_build_guides")
+        .delete().eq("growth_system_id", systemId!).eq("build_guide_id", gid);
+    }
+
     setLoading(false);
     toast.success("Saved");
     setEditing(null);
@@ -170,12 +186,27 @@ const AdminGrowthSystemsCatalog = () => {
     return new Set(editing.id ? compatBySystem.get(editing.id) ?? [] : []);
   }, [editing, compatBySystem]);
 
+  const editingGuides: Set<string> = useMemo(() => {
+    if (!editing) return new Set();
+    if ((editing as any).__guides) return new Set<string>((editing as any).__guides);
+    return new Set(editing.id ? guidesBySystem.get(editing.id) ?? [] : []);
+  }, [editing, guidesBySystem]);
+
   const toggleCompat = (cid: string) => {
     if (!editing) return;
     const next = new Set(editingCompat);
     if (next.has(cid)) next.delete(cid); else next.add(cid);
     setEditing({ ...editing, __compat: Array.from(next) } as any);
   };
+
+  const toggleGuide = (gid: string) => {
+    if (!editing) return;
+    const next = new Set(editingGuides);
+    if (next.has(gid)) next.delete(gid); else next.add(gid);
+    setEditing({ ...editing, __guides: Array.from(next) } as any);
+  };
+
+
 
   return (
     <div className="space-y-4">
