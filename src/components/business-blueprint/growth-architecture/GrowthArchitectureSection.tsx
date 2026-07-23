@@ -4,11 +4,13 @@
 // =============================================================================
 
 import { useMemo, useState } from "react";
-import { Workflow, Plus, Trash2, Loader2, Map as MapIcon, List } from "lucide-react";
+import { Workflow, Plus, Trash2, Loader2, Map as MapIcon, List, Rocket, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   useGrowthArchitecture,
@@ -16,6 +18,7 @@ import {
   useAcquisitionChannels,
   useGrowthSystemsCatalog,
   useRouteChannels,
+  useRoutesBuildProgress,
 } from "@/lib/growth-architecture/hooks";
 import { deriveRouteState, ROUTE_STATE_STYLES } from "@/lib/growth-architecture/deriveStatus";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
@@ -36,10 +39,38 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
   const { rows: systems } = useGrowthSystemsCatalog();
   const routeIds = useMemo(() => routes.map((r) => r.id), [routes]);
   const routeChannels = useRouteChannels(routeIds);
+  const funnelIds = useMemo(() => routes.map((r) => r.funnel_id), [routes]);
+  const { byFunnel: buildProgress, reload: reloadProgress } = useRoutesBuildProgress(funnelIds);
 
   const [addOpen, setAddOpen] = useState(false);
+  const [startingId, setStartingId] = useState<string | null>(null);
 
   const offerById = useMemo(() => new Map(offers.map((o) => [o.id, o])), [offers]);
+
+  const openFunnelsModule = () => {
+    window.dispatchEvent(new CustomEvent("boostmate:navigate-module", { detail: "funnels" }));
+  };
+
+  const handleStartBuilding = async (routeId: string) => {
+    setStartingId(routeId);
+    try {
+      const { data, error } = await supabase.functions.invoke("start-building-route", {
+        body: { route_id: routeId },
+      });
+      if (error) throw error;
+      if ((data as any)?.injection_warning === "ambiguous_entry") {
+        toast.warning("Funnel created, but entry node was ambiguous — set one on the seed template.");
+      } else {
+        toast.success("Funnel created — opening Funnels…");
+      }
+      await Promise.all([reloadRoutes(), reloadProgress()]);
+      openFunnelsModule();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not start building");
+    } finally {
+      setStartingId(null);
+    }
+  };
 
   return (
     <div className="h-full overflow-y-auto">
@@ -102,7 +133,10 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
                   const src = r.source_offer_id ? offerById.get(r.source_offer_id) : null;
                   const tgt = offerById.get(r.target_offer_id);
                   const bucket = routeChannels.byRoute.get(r.id) ?? { primary: null, additional: [] };
-                  const derived = deriveRouteState(r, relationships, bucket.primary?.channel_id ?? null);
+                  const buildInfo = r.funnel_id ? buildProgress.get(r.funnel_id) : undefined;
+                  const derived = deriveRouteState(r, relationships, bucket.primary?.channel_id ?? null, buildInfo);
+                  const canStart = derived.state === "ready_to_build";
+                  const isBusy = startingId === r.id;
                   return (
                     <div key={r.id} className="p-3 rounded-lg border border-border bg-background">
                       <div className="flex items-center gap-3">
@@ -117,12 +151,32 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
                               </TooltipTrigger>
                               <TooltipContent>{derived.reason}</TooltipContent>
                             </Tooltip>
+                            {buildInfo && buildInfo.activeTaskCount > 0 && (
+                              <span className="text-[10px] text-muted-foreground">
+                                {buildInfo.completedTaskCount}/{buildInfo.activeTaskCount} tasks
+                              </span>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground mt-1 truncate">
                             {src ? src.name : "External acquisition"} <span className="mx-1">→</span> {tgt?.name ?? "Unknown offer"}
                           </div>
                           {r.notes && <div className="text-[11px] text-muted-foreground mt-1 italic">{r.notes}</div>}
                         </div>
+                        {r.funnel_id ? (
+                          <Button size="sm" variant="outline" onClick={openFunnelsModule} className="gap-1.5 shrink-0">
+                            <ExternalLink className="w-3.5 h-3.5" /> Open Funnel
+                          </Button>
+                        ) : canStart ? (
+                          <Button
+                            size="sm"
+                            onClick={() => handleStartBuilding(r.id)}
+                            disabled={isBusy}
+                            className="gap-1.5 shrink-0"
+                          >
+                            {isBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
+                            Start Building
+                          </Button>
+                        ) : null}
                         <Button
                           size="icon"
                           variant="ghost"

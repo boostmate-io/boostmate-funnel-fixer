@@ -1,15 +1,19 @@
 // =============================================================================
 // deriveRouteStatus — computes a route's implementation state instead of
-// persisting a manual status. Signals available today:
-//   - target offer present (required — DB constraint)
-//   - source offer present + matching offer_relationship
-//   - acquisition channel selected (external routes)
-//   - notes filled (loose signal of intent)
+// persisting a manual status.
 //
-// Roadmap/stage state and Funnel Designer completion are not yet wired here;
-// when those signals are available they should be added below. The UI must
-// treat this as read-only: the DB column `status` is deprecated and ignored
-// by the app (kept for backward compatibility only).
+// States:
+//   - planned          : Prerequisites incomplete (missing offer relationship
+//                        for offer-to-offer routes, or no primary channel for
+//                        external acquisition routes).
+//   - ready_to_build   : Prerequisites satisfied; no funnel has been created.
+//   - in_progress      : Funnel exists but no attached build guides or some
+//                        active tasks still incomplete.
+//   - built            : Funnel exists, has attached build guides, and every
+//                        active task is complete.
+//
+// The DB column `status` is deprecated and ignored by the app (kept for
+// backward compatibility). The UI must treat this as read-only.
 // =============================================================================
 import type {
   GrowthArchitectureRow,
@@ -45,12 +49,22 @@ const LABELS: Record<DerivedRouteState, string> = {
   locked: "Locked",
 };
 
+export interface RouteBuildInfo {
+  guideCount: number;
+  activeTaskCount: number;
+  completedTaskCount: number;
+}
+
 export function deriveRouteState(
   route: GrowthArchitectureRow,
   relationships: OfferRelationshipRow[],
   primaryChannelId?: string | null,
+  buildInfo?: RouteBuildInfo,
 ): DerivedRouteMeta {
-  // Offer-to-offer route
+  // Prerequisite check
+  let prereqOk = false;
+  let prereqReason = "";
+
   if (route.source_offer_id) {
     const relExists = relationships.some(
       (r) =>
@@ -64,25 +78,52 @@ export function deriveRouteState(
         reason: "Missing offer relationship — add one on the source offer.",
       };
     }
+    prereqOk = true;
+    prereqReason = "Offer relationship in place.";
+  } else {
+    if (!primaryChannelId) {
+      return {
+        state: "planned",
+        label: LABELS.planned,
+        reason: "Pick a primary acquisition channel to move forward.",
+      };
+    }
+    prereqOk = true;
+    prereqReason = "Primary channel selected.";
+  }
+
+  if (!prereqOk) {
+    return { state: "planned", label: LABELS.planned, reason: prereqReason };
+  }
+
+  // No funnel yet
+  if (!route.funnel_id) {
     return {
       state: "ready_to_build",
       label: LABELS.ready_to_build,
-      reason: "Offer relationship in place. Build the funnel to progress.",
+      reason: `${prereqReason} Start building to generate your funnel.`,
     };
   }
 
-  // External acquisition route
-  if (primaryChannelId) {
+  // Funnel exists — evaluate build guides
+  const info = buildInfo ?? { guideCount: 0, activeTaskCount: 0, completedTaskCount: 0 };
+  if (info.guideCount === 0 || info.activeTaskCount === 0) {
     return {
-      state: "ready_to_build",
-      label: LABELS.ready_to_build,
-      reason: "Primary channel selected. Build the acquisition funnel to progress.",
+      state: "in_progress",
+      label: LABELS.in_progress,
+      reason: "Funnel created. Attach build guides to track progress.",
     };
   }
-
+  if (info.completedTaskCount >= info.activeTaskCount) {
+    return {
+      state: "built",
+      label: LABELS.built,
+      reason: `All ${info.activeTaskCount} build tasks complete.`,
+    };
+  }
   return {
-    state: "planned",
-    label: LABELS.planned,
-    reason: "Pick a primary channel or wire the offer relationship to move forward.",
+    state: "in_progress",
+    label: LABELS.in_progress,
+    reason: `${info.completedTaskCount}/${info.activeTaskCount} build tasks complete.`,
   };
 }
