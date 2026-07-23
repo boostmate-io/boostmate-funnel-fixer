@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, Radio, FolderTree } from "lucide-react";
@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+
 
 interface Category {
   id: string;
@@ -31,22 +33,54 @@ interface Channel {
   is_active: boolean;
 }
 
+interface GuideRow { id: string; name: string; }
+interface ChannelGuideRow { acquisition_channel_id: string; build_guide_id: string; }
+
 const AdminAcquisitionChannels = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [guides, setGuides] = useState<GuideRow[]>([]);
+  const [channelGuides, setChannelGuides] = useState<ChannelGuideRow[]>([]);
   const [editing, setEditing] = useState<Partial<Channel> | null>(null);
   const [editingCat, setEditingCat] = useState<Partial<Category> | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [chRes, catRes] = await Promise.all([
+    const [chRes, catRes, gRes, cgRes] = await Promise.all([
       supabase.from("acquisition_channels").select("*").order("sort_order", { ascending: true }),
       supabase.from("acquisition_channel_categories").select("*").order("sort_order", { ascending: true }),
+      supabase.from("build_guides").select("id,name").eq("is_active", true).order("sort_order"),
+      supabase.from("acquisition_channel_build_guides").select("acquisition_channel_id,build_guide_id"),
     ]);
     if (chRes.data) setChannels(chRes.data as any);
     if (catRes.data) setCategories(catRes.data as any);
+    if (gRes.data) setGuides(gRes.data as any);
+    if (cgRes.data) setChannelGuides(cgRes.data as any);
   }, []);
+
   useEffect(() => { load(); }, [load]);
+
+  const guidesByChannel = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const r of channelGuides) {
+      if (!map.has(r.acquisition_channel_id)) map.set(r.acquisition_channel_id, new Set());
+      map.get(r.acquisition_channel_id)!.add(r.build_guide_id);
+    }
+    return map;
+  }, [channelGuides]);
+
+  const editingGuides: Set<string> = useMemo(() => {
+    if (!editing) return new Set();
+    if ((editing as any).__guides) return new Set<string>((editing as any).__guides);
+    return new Set(editing.id ? guidesByChannel.get(editing.id) ?? [] : []);
+  }, [editing, guidesByChannel]);
+
+  const toggleGuide = (gid: string) => {
+    if (!editing) return;
+    const next = new Set(editingGuides);
+    if (next.has(gid)) next.delete(gid); else next.add(gid);
+    setEditing({ ...editing, __guides: Array.from(next) } as any);
+  };
 
   const save = async () => {
     if (!editing?.key || !editing?.label) { toast.error("Key and label required"); return; }
@@ -61,14 +95,38 @@ const AdminAcquisitionChannels = () => {
       sort_order: editing.sort_order ?? 100,
       is_active: editing.is_active ?? true,
     };
-    const q = editing.id
-      ? supabase.from("acquisition_channels").update(payload).eq("id", editing.id)
-      : supabase.from("acquisition_channels").insert(payload);
-    const { error } = await q;
+    let channelId = editing.id;
+    if (channelId) {
+      const { error } = await supabase.from("acquisition_channels").update(payload).eq("id", channelId);
+      if (error) { toast.error(error.message); setLoading(false); return; }
+    } else {
+      const { data, error } = await supabase.from("acquisition_channels").insert(payload).select("id").single();
+      if (error || !data) { toast.error(error?.message ?? "Insert failed"); setLoading(false); return; }
+      channelId = data.id;
+    }
+
+    // Sync build guides
+    const desired = new Set<string>((editing as any).__guides ?? Array.from(guidesByChannel.get(channelId!) ?? []));
+    const current = guidesByChannel.get(channelId!) ?? new Set<string>();
+    const toAdd = Array.from(desired).filter((id) => !current.has(id));
+    const toRemove = Array.from(current).filter((id) => !desired.has(id));
+    if (toAdd.length) {
+      const { error } = await supabase.from("acquisition_channel_build_guides").insert(
+        toAdd.map((gid) => ({ acquisition_channel_id: channelId!, build_guide_id: gid })),
+      );
+      if (error) toast.error(`Guides add: ${error.message}`);
+    }
+    for (const gid of toRemove) {
+      await supabase.from("acquisition_channel_build_guides")
+        .delete().eq("acquisition_channel_id", channelId!).eq("build_guide_id", gid);
+    }
+
     setLoading(false);
-    if (error) toast.error(error.message);
-    else { toast.success("Saved"); setEditing(null); load(); }
+    toast.success("Saved");
+    setEditing(null);
+    load();
   };
+
 
   const del = async (id: string) => {
     if (!confirm("Delete this channel?")) return;
@@ -190,6 +248,19 @@ const AdminAcquisitionChannels = () => {
               </div>
             </div>
             <div><Label>Description</Label><Textarea value={editing?.description ?? ""} onChange={(e) => setEditing({ ...editing!, description: e.target.value })} rows={3} /></div>
+            <div>
+              <Label>Attached build guides</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2 max-h-40 overflow-y-auto p-2 border rounded">
+                {guides.length === 0 && <div className="text-xs text-muted-foreground col-span-2">No build guides yet — create them in the Build Guides admin tab.</div>}
+                {guides.map((g) => (
+                  <label key={g.id} className="flex items-center gap-2 text-xs">
+                    <Checkbox checked={editingGuides.has(g.id)} onCheckedChange={() => toggleGuide(g.id)} />
+                    {g.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Sort order</Label><Input type="number" value={editing?.sort_order ?? 0} onChange={(e) => setEditing({ ...editing!, sort_order: Number(e.target.value) })} /></div>
               <div className="flex items-end gap-3"><Switch checked={editing?.is_active ?? true} onCheckedChange={(v) => setEditing({ ...editing!, is_active: v })} /><Label>Active</Label></div>

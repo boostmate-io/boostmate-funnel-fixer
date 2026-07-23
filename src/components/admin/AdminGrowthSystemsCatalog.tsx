@@ -39,24 +39,33 @@ interface CompatRow {
   acquisition_channel_id: string;
 }
 
+interface GuideRow { id: string; name: string; }
+interface SystemGuideRow { growth_system_id: string; build_guide_id: string; }
+
 const AdminGrowthSystemsCatalog = () => {
   const [rows, setRows] = useState<System[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [compat, setCompat] = useState<CompatRow[]>([]);
+  const [guides, setGuides] = useState<GuideRow[]>([]);
+  const [systemGuides, setSystemGuides] = useState<SystemGuideRow[]>([]);
   const [editing, setEditing] = useState<Partial<System> | null>(null);
   const [archText, setArchText] = useState("");
   const [archError, setArchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [sys, ch, cp] = await Promise.all([
+    const [sys, ch, cp, gd, sg] = await Promise.all([
       supabase.from("growth_systems_catalog").select("*").order("sort_order", { ascending: true }),
       supabase.from("acquisition_channels").select("id,key,label").eq("is_active", true).order("sort_order"),
       supabase.from("growth_system_channel_compat").select("growth_system_id,acquisition_channel_id"),
+      supabase.from("build_guides").select("id,name").eq("is_active", true).order("sort_order"),
+      supabase.from("growth_system_build_guides").select("growth_system_id,build_guide_id"),
     ]);
     if (sys.data) setRows(sys.data as any);
     if (ch.data) setChannels(ch.data as any);
     if (cp.data) setCompat(cp.data as any);
+    if (gd.data) setGuides(gd.data as any);
+    if (sg.data) setSystemGuides(sg.data as any);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -68,6 +77,16 @@ const AdminGrowthSystemsCatalog = () => {
     }
     return map;
   }, [compat]);
+
+  const guidesBySystem = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const row of systemGuides) {
+      if (!map.has(row.growth_system_id)) map.set(row.growth_system_id, new Set());
+      map.get(row.growth_system_id)!.add(row.build_guide_id);
+    }
+    return map;
+  }, [systemGuides]);
+
 
   const openEdit = (r?: System) => {
     setEditing(r ?? { is_active: true, sort_order: rows.length * 10, suitable_offer_tiers: [], recommended_stages: [], architecture: {} });
@@ -132,6 +151,22 @@ const AdminGrowthSystemsCatalog = () => {
         .delete().eq("growth_system_id", systemId!).eq("acquisition_channel_id", cid);
     }
 
+    // Sync build guides.
+    const desiredG = new Set<string>((editing as any).__guides ?? Array.from(guidesBySystem.get(systemId!) ?? []));
+    const currentG = guidesBySystem.get(systemId!) ?? new Set<string>();
+    const gAdd = Array.from(desiredG).filter((id) => !currentG.has(id));
+    const gRemove = Array.from(currentG).filter((id) => !desiredG.has(id));
+    if (gAdd.length) {
+      const { error } = await supabase.from("growth_system_build_guides").insert(
+        gAdd.map((gid) => ({ growth_system_id: systemId!, build_guide_id: gid })),
+      );
+      if (error) toast.error(`Guides add: ${error.message}`);
+    }
+    for (const gid of gRemove) {
+      await supabase.from("growth_system_build_guides")
+        .delete().eq("growth_system_id", systemId!).eq("build_guide_id", gid);
+    }
+
     setLoading(false);
     toast.success("Saved");
     setEditing(null);
@@ -151,12 +186,27 @@ const AdminGrowthSystemsCatalog = () => {
     return new Set(editing.id ? compatBySystem.get(editing.id) ?? [] : []);
   }, [editing, compatBySystem]);
 
+  const editingGuides: Set<string> = useMemo(() => {
+    if (!editing) return new Set();
+    if ((editing as any).__guides) return new Set<string>((editing as any).__guides);
+    return new Set(editing.id ? guidesBySystem.get(editing.id) ?? [] : []);
+  }, [editing, guidesBySystem]);
+
   const toggleCompat = (cid: string) => {
     if (!editing) return;
     const next = new Set(editingCompat);
     if (next.has(cid)) next.delete(cid); else next.add(cid);
     setEditing({ ...editing, __compat: Array.from(next) } as any);
   };
+
+  const toggleGuide = (gid: string) => {
+    if (!editing) return;
+    const next = new Set(editingGuides);
+    if (next.has(gid)) next.delete(gid); else next.add(gid);
+    setEditing({ ...editing, __guides: Array.from(next) } as any);
+  };
+
+
 
   return (
     <div className="space-y-4">
@@ -240,6 +290,21 @@ const AdminGrowthSystemsCatalog = () => {
                 ))}
               </div>
             </div>
+
+            <div>
+              <Label>Attached build guides</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto p-2 border rounded">
+                {guides.length === 0 && <div className="text-xs text-muted-foreground col-span-2">No build guides yet — create them in the Build Guides admin tab.</div>}
+                {guides.map((g) => (
+                  <label key={g.id} className="flex items-center gap-2 text-xs">
+                    <Checkbox checked={editingGuides.has(g.id)} onCheckedChange={() => toggleGuide(g.id)} />
+                    {g.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+
 
             <div>
               <Label>Architecture (JSON)</Label>
