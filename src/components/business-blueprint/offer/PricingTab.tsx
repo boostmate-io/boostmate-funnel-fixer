@@ -116,24 +116,9 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
       ],
     });
 
+  // Premium upgrade / Recurring updaters removed with the UI blocks (V3).
 
-  // Premium upgrade
-  const updatePremium = (patch: Partial<PremiumUpgrade>) =>
-    onChange({
-      premium_upgrade: {
-        ...(data.premium_upgrade ?? {}),
-        ...patch,
-      },
-    });
 
-  // Recurring offer
-  const updateRecurring = (patch: Partial<RecurringOffer>) =>
-    onChange({
-      recurring_offer: {
-        ...(data.recurring_offer ?? { interval: "monthly" }),
-        ...patch,
-      },
-    });
 
   const feedback =
     progress >= 100
