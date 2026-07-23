@@ -11,6 +11,7 @@ import AdminCopyFrameworks from "./AdminCopyFrameworks";
 import AdminGrowthRoadmapTasks from "./AdminGrowthRoadmapTasks";
 import AdminAcquisitionChannels from "./AdminAcquisitionChannels";
 import AdminGrowthSystemsCatalog from "./AdminGrowthSystemsCatalog";
+import AdminBuildGuides from "./AdminBuildGuides";
 
 interface AdminPanelProps {
   category?: "accounts" | "ai" | "copy" | "growth";
