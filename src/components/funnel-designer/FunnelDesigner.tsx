@@ -70,7 +70,7 @@ import TrafficSourceNode from "./TrafficSourceNode";
 import NodeDetailsPanel from "./NodeDetailsPanel";
 import TrafficSourceDetailsPanel from "./TrafficSourceDetailsPanel";
 import SequenceGroupNode from "./SequenceGroupNode";
-import { TRAFFIC_SOURCES, FUNNEL_ELEMENTS } from "./constants";
+import { FUNNEL_ELEMENTS } from "./constants";
 import { toPng } from "html-to-image";
 import { Switch } from "@/components/ui/switch";
 import FunnelBriefPanel from "@/components/funnel-brief/FunnelBriefPanel";
