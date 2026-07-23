@@ -60,6 +60,28 @@ const AdminAcquisitionChannels = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  const guidesByChannel = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const r of channelGuides) {
+      if (!map.has(r.acquisition_channel_id)) map.set(r.acquisition_channel_id, new Set());
+      map.get(r.acquisition_channel_id)!.add(r.build_guide_id);
+    }
+    return map;
+  }, [channelGuides]);
+
+  const editingGuides: Set<string> = useMemo(() => {
+    if (!editing) return new Set();
+    if ((editing as any).__guides) return new Set<string>((editing as any).__guides);
+    return new Set(editing.id ? guidesByChannel.get(editing.id) ?? [] : []);
+  }, [editing, guidesByChannel]);
+
+  const toggleGuide = (gid: string) => {
+    if (!editing) return;
+    const next = new Set(editingGuides);
+    if (next.has(gid)) next.delete(gid); else next.add(gid);
+    setEditing({ ...editing, __guides: Array.from(next) } as any);
+  };
+
   const save = async () => {
     if (!editing?.key || !editing?.label) { toast.error("Key and label required"); return; }
     setLoading(true);
@@ -73,14 +95,38 @@ const AdminAcquisitionChannels = () => {
       sort_order: editing.sort_order ?? 100,
       is_active: editing.is_active ?? true,
     };
-    const q = editing.id
-      ? supabase.from("acquisition_channels").update(payload).eq("id", editing.id)
-      : supabase.from("acquisition_channels").insert(payload);
-    const { error } = await q;
+    let channelId = editing.id;
+    if (channelId) {
+      const { error } = await supabase.from("acquisition_channels").update(payload).eq("id", channelId);
+      if (error) { toast.error(error.message); setLoading(false); return; }
+    } else {
+      const { data, error } = await supabase.from("acquisition_channels").insert(payload).select("id").single();
+      if (error || !data) { toast.error(error?.message ?? "Insert failed"); setLoading(false); return; }
+      channelId = data.id;
+    }
+
+    // Sync build guides
+    const desired = new Set<string>((editing as any).__guides ?? Array.from(guidesByChannel.get(channelId!) ?? []));
+    const current = guidesByChannel.get(channelId!) ?? new Set<string>();
+    const toAdd = Array.from(desired).filter((id) => !current.has(id));
+    const toRemove = Array.from(current).filter((id) => !desired.has(id));
+    if (toAdd.length) {
+      const { error } = await supabase.from("acquisition_channel_build_guides").insert(
+        toAdd.map((gid) => ({ acquisition_channel_id: channelId!, build_guide_id: gid })),
+      );
+      if (error) toast.error(`Guides add: ${error.message}`);
+    }
+    for (const gid of toRemove) {
+      await supabase.from("acquisition_channel_build_guides")
+        .delete().eq("acquisition_channel_id", channelId!).eq("build_guide_id", gid);
+    }
+
     setLoading(false);
-    if (error) toast.error(error.message);
-    else { toast.success("Saved"); setEditing(null); load(); }
+    toast.success("Saved");
+    setEditing(null);
+    load();
   };
+
 
   const del = async (id: string) => {
     if (!confirm("Delete this channel?")) return;
