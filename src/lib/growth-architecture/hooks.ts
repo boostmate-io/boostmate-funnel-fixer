@@ -25,8 +25,9 @@ export interface AcquisitionChannelRow {
   key: string;
   label: string;
   description: string | null;
-  category: string | null;
+  category_id: string | null;
   icon: string | null;
+  color: string | null;
   sort_order: number;
   is_active: boolean;
 }
@@ -36,7 +37,11 @@ export interface GrowthSystemCatalogRow {
   key: string;
   label: string;
   description: string | null;
-  system_type: "acquisition" | "ascension" | "retention" | "referral" | "other";
+  primary_objective: string | null;
+  suitable_offer_tiers: string[];
+  recommended_stages: string[];
+  architecture: unknown | null;
+  seed_template_id: string | null;
   icon: string | null;
   sort_order: number;
   is_active: boolean;
@@ -50,7 +55,6 @@ export interface GrowthArchitectureRow {
   system_catalog_id: string;
   source_offer_id: string | null;
   target_offer_id: string;
-  acquisition_channel_id: string | null;
   status: GrowthArchStatus;
   notes: string | null;
   sort_order: number;
