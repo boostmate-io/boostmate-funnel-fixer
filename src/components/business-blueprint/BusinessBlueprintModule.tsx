@@ -198,19 +198,15 @@ const BusinessBlueprintModule = () => {
         );
       case "growth-system":
         return (
-          <GrowthSystemSection
-            blueprintId={blueprint.id}
-            data={growthData}
+          <GrowthArchitectureSection
             offers={offers}
-            onChange={updateGrowthSystem}
             saving={saving}
-            businessType={settings.business_type}
           />
         );
       case "brand-strategy":
         return (
           <PlaceholderSection
-            title="Brand Strategy"
+            title="Brand Identity"
             description={`Make your ${bt.label.toLowerCase()} brand unmistakable — positioning, voice and visual direction.`}
             icon={Palette}
             comingNext={bt.brandExamples}
