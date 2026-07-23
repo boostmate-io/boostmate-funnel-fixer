@@ -2069,6 +2069,24 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                 </button>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
                   <Select
+                    value={st.entry_node_id || "__none__"}
+                    onValueChange={async (v) => {
+                      const val = v === "__none__" ? null : v;
+                      await supabase.from("seed_templates").update({ entry_node_id: val }).eq("id", st.id);
+                      setSeedTemplates((prev) => prev.map((t) => t.id === st.id ? { ...t, entry_node_id: val } : t));
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue placeholder="Entry node" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__" className="text-xs">Auto-detect entry</SelectItem>
+                      {(Array.isArray(st.nodes) ? st.nodes : []).filter((n: any) => n?.type === "funnelPage").map((n: any) => (
+                        <SelectItem key={n.id} value={n.id} className="text-xs">
+                          {n.data?.label || n.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
                     value={(st.template_type as TemplateTypeValue) || "full-funnel"}
                     onValueChange={async (v) => {
                       await supabase.from("seed_templates").update({ template_type: v }).eq("id", st.id);
