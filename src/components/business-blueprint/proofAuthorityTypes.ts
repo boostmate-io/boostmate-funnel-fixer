@@ -72,13 +72,18 @@ export interface SocialProofData {
   authority_assets: AuthorityAsset[];
 }
 
+// V3: Rich objection schema. Objections live at the offer level; this type
+// remains here for legacy read-compatibility of business_blueprints.proof_authority.
 export interface Objection {
   id: string;
   objection?: string;
   why_believed?: string;
-  reframe?: string;
-  supporting_proof?: string;
   emotional_concern?: string;
+  reframe?: string;
+  supporting_proof_ids?: string[];
+  supporting_proof_text?: string;
+  /** Legacy field — kept for read compatibility only. */
+  supporting_proof?: string;
 }
 export interface FailedSolution {
   id: string;
@@ -91,9 +96,6 @@ export interface FAQ {
   question?: string;
   answer?: string;
 }
-// V3: Objections & Beliefs no longer surfaced in the Authority & Content section
-// (objections have moved to the offer level). The type is preserved so any
-// legacy data stored in `business_blueprints.proof_authority` remains readable.
 export interface ObjectionsBeliefsData {
   objections: Objection[];
   failed_solutions: FailedSolution[];
