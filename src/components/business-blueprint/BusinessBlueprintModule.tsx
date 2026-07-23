@@ -207,12 +207,10 @@ const BusinessBlueprintModule = () => {
         );
       case "brand-strategy":
         return (
-          <PlaceholderSection
-            title="Brand Identity"
-            description={`Make your ${bt.label.toLowerCase()} brand unmistakable — positioning, voice and visual direction.`}
-            icon={Palette}
-            comingNext={bt.brandExamples}
-            businessType={settings.business_type}
+          <BrandIdentitySection
+            data={brandIdentity}
+            onChange={updateBrandStrategy}
+            saving={saving}
           />
         );
       case "proof-authority":
