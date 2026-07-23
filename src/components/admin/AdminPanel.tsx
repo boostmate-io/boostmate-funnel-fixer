@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Layers, ShieldCheck, Zap, BookOpen, Puzzle, LayoutList, Milestone } from "lucide-react";
+import { Building2, Users, Layers, ShieldCheck, Zap, BookOpen, Puzzle, LayoutList, Milestone, Radio, Workflow } from "lucide-react";
 import AdminMainAccounts from "./AdminMainAccounts";
 import AdminSubAccounts from "./AdminSubAccounts";
 import AdminUsers from "./AdminUsers";
@@ -9,6 +9,8 @@ import AdminInstructionBlocks from "./AdminInstructionBlocks";
 import AdminCopyComponents from "./AdminCopyComponents";
 import AdminCopyFrameworks from "./AdminCopyFrameworks";
 import AdminGrowthRoadmapTasks from "./AdminGrowthRoadmapTasks";
+import AdminAcquisitionChannels from "./AdminAcquisitionChannels";
+import AdminGrowthSystemsCatalog from "./AdminGrowthSystemsCatalog";
 
 interface AdminPanelProps {
   category?: "accounts" | "ai" | "copy" | "growth";
@@ -44,11 +46,13 @@ const categoryConfig = {
     ],
   },
   growth: {
-    title: "Growth Roadmap",
-    description: "Manage the seeded Growth Roadmap task catalog. Slug, activation, and completion logic remain code-controlled.",
+    title: "Growth",
+    description: "Manage the Growth Roadmap task catalog and the Growth Architecture catalogs used by the Blueprint.",
     defaultTab: "growth-tasks",
     tabs: [
-      { value: "growth-tasks", label: "Tasks", icon: Milestone, content: <AdminGrowthRoadmapTasks /> },
+      { value: "growth-tasks", label: "Roadmap Tasks", icon: Milestone, content: <AdminGrowthRoadmapTasks /> },
+      { value: "growth-systems", label: "Growth Systems", icon: Workflow, content: <AdminGrowthSystemsCatalog /> },
+      { value: "acquisition-channels", label: "Acquisition Channels", icon: Radio, content: <AdminAcquisitionChannels /> },
     ],
   },
 };
