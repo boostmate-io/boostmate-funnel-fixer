@@ -889,6 +889,13 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
 
     // If editing a seed template, save to seed_templates table
     if (editingSeedTemplate) {
+      // Guard: seed templates must never contain trafficSource nodes.
+      // Acquisition channels are injected dynamically at Start Building time
+      // based on the route's primary + additional channels.
+      if (persistedNodes.some((n) => n.type === "trafficSource")) {
+        toast.error("Seed templates cannot contain Acquisition/Traffic Source nodes — remove them before saving.");
+        return;
+      }
       const rawNodes = JSON.parse(JSON.stringify(persistedNodes));
       const cleanedNodes = rawNodes.map((node: any) => {
         if (node.type === "funnelPage" && node.data) {
