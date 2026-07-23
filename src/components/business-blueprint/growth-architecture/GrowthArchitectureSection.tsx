@@ -1,6 +1,6 @@
 // =============================================================================
 // GrowthArchitectureSection — V3 Blueprint section.
-// Combines: read-only Growth Map + routes list + Add Route.
+// Read-only Growth Map + Routes list with per-route channel management.
 // =============================================================================
 
 import { useMemo, useState } from "react";
@@ -15,11 +15,13 @@ import {
   useOfferRelationships,
   useAcquisitionChannels,
   useGrowthSystemsCatalog,
+  useRouteChannels,
 } from "@/lib/growth-architecture/hooks";
 import { deriveRouteState, ROUTE_STATE_STYLES } from "@/lib/growth-architecture/deriveStatus";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
 import AddRouteDialog from "./AddRouteDialog";
 import GrowthMap from "./GrowthMap";
+import RouteChannelsManager from "./RouteChannelsManager";
 
 interface Props {
   offers: EcosystemOfferRow[];
@@ -28,10 +30,12 @@ interface Props {
 
 const GrowthArchitectureSection = ({ offers }: Props) => {
   const { activeSubAccountId } = useWorkspace();
-  const { rows: routes, loading: loadingRoutes, add, remove } = useGrowthArchitecture(activeSubAccountId ?? null);
+  const { rows: routes, loading: loadingRoutes, add, remove, reload: reloadRoutes } = useGrowthArchitecture(activeSubAccountId ?? null);
   const { rows: relationships } = useOfferRelationships(activeSubAccountId ?? null);
   const { rows: channels } = useAcquisitionChannels();
   const { rows: systems } = useGrowthSystemsCatalog();
+  const routeIds = useMemo(() => routes.map((r) => r.id), [routes]);
+  const routeChannels = useRouteChannels(routeIds);
 
   const [addOpen, setAddOpen] = useState(false);
 
@@ -48,8 +52,8 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
             </div>
             <p className="text-sm text-muted-foreground max-w-2xl">
               How buyers actually flow through your business — from acquisition to ascension.
-              Routes connect a growth system to a specific target offer, either from another offer
-              (an ascension path) or from an external channel.
+              Each route connects a growth system to a target offer, and can use one primary
+              acquisition channel plus additional supporting channels.
             </p>
           </div>
           <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 shrink-0">
@@ -70,9 +74,10 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
               routes={routes}
               channels={channels}
               systems={systems}
+              routeChannelsByRoute={routeChannels.byRoute}
             />
             <p className="text-[11px] text-muted-foreground mt-2">
-              Read-only view. Dashed edges = planned routes. Solid = active.
+              Read-only view. Dashed edges = planned routes. Solid = active. Primary channel shown; additional channels count in hover label.
             </p>
           </TabsContent>
 
@@ -96,36 +101,47 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
                   const sys = systems.find((s) => s.id === r.system_catalog_id);
                   const src = r.source_offer_id ? offerById.get(r.source_offer_id) : null;
                   const tgt = offerById.get(r.target_offer_id);
-                  const ch = r.acquisition_channel_id ? channels.find((c) => c.id === r.acquisition_channel_id) : null;
-                  const derived = deriveRouteState(r, relationships);
+                  const bucket = routeChannels.byRoute.get(r.id) ?? { primary: null, additional: [] };
+                  const derived = deriveRouteState(r, relationships, bucket.primary?.channel_id ?? null);
                   return (
-                    <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold">{sys?.label ?? "System"}</span>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge className={`text-[10px] ${ROUTE_STATE_STYLES[derived.state]}`} variant="secondary">
-                                {derived.label}
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>{derived.reason}</TooltipContent>
-                          </Tooltip>
-                          {ch && <Badge variant="outline" className="text-[10px]">{ch.label}</Badge>}
+                    <div key={r.id} className="p-3 rounded-lg border border-border bg-background">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold">{sys?.label ?? "System"}</span>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge className={`text-[10px] ${ROUTE_STATE_STYLES[derived.state]}`} variant="secondary">
+                                  {derived.label}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>{derived.reason}</TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1 truncate">
+                            {src ? src.name : "External acquisition"} <span className="mx-1">→</span> {tgt?.name ?? "Unknown offer"}
+                          </div>
+                          {r.notes && <div className="text-[11px] text-muted-foreground mt-1 italic">{r.notes}</div>}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1 truncate">
-                          {src ? src.name : "External acquisition"} <span className="mx-1">→</span> {tgt?.name ?? "Unknown offer"}
-                        </div>
-                        {r.notes && <div className="text-[11px] text-muted-foreground mt-1 italic">{r.notes}</div>}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => remove(r.id)}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => remove(r.id)}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+
+                      <RouteChannelsManager
+                        routeId={r.id}
+                        channels={channels}
+                        primary={bucket.primary}
+                        additional={bucket.additional}
+                        onAddAdditional={(routeId, channelId) => routeChannels.addChannel(routeId, channelId, false)}
+                        onRemove={(rowId) => routeChannels.removeChannel(rowId)}
+                        onSetPrimary={(routeId, channelId) => routeChannels.setPrimary(routeId, channelId)}
+                      />
                     </div>
                   );
                 })}
@@ -141,6 +157,7 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
         offers={offers}
         relationships={relationships}
         onCreate={async (payload) => await add(payload)}
+        onCreated={() => { void reloadRoutes(); void routeChannels.reload(); }}
       />
     </div>
   );
