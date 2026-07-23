@@ -73,9 +73,9 @@ import SequenceGroupNode from "./SequenceGroupNode";
 import { FUNNEL_ELEMENTS } from "./constants";
 import { toPng } from "html-to-image";
 import { Switch } from "@/components/ui/switch";
-import FunnelBriefPanel from "@/components/funnel-brief/FunnelBriefPanel";
 import FunnelShareDialog from "./FunnelShareDialog";
 import OfferPanel from "@/components/offers/OfferPanel";
+import FunnelBuildGuidePanel from "@/components/funnel-build-guides/FunnelBuildGuidePanel";
 
 const nodeTypes = {
   funnelPage: FunnelNode,
