@@ -17,7 +17,7 @@ import {
 import { getBusinessType } from "./businessTypes";
 import CustomerClaritySection from "./CustomerClaritySection";
 import OfferDesignSection from "./OfferDesignSection";
-import GrowthSystemSection from "./GrowthSystemSection";
+import GrowthArchitectureSection from "./growth-architecture/GrowthArchitectureSection";
 import PlaceholderSection from "./PlaceholderSection";
 import BlueprintOverview from "./BlueprintOverview";
 import BlueprintSetupWizard from "./BlueprintSetupWizard";
@@ -29,8 +29,8 @@ import { calcProofAuthorityProgress } from "./proofAuthorityTypes";
 const sections: { id: SectionId; label: string; icon: typeof Users }[] = [
   { id: "customer-clarity", label: "Customer Clarity", icon: Users },
   { id: "offer-design", label: "Offer Design", icon: Package },
-  { id: "growth-system", label: "Growth System", icon: Workflow },
-  { id: "brand-strategy", label: "Brand Strategy", icon: Palette },
+  { id: "growth-system", label: "Growth Architecture", icon: Workflow },
+  { id: "brand-strategy", label: "Brand Identity", icon: Palette },
   { id: "proof-authority", label: "Proof & Authority", icon: Award },
 ];
 
