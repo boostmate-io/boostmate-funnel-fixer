@@ -4,17 +4,15 @@
 // (price, amount) don't get a Coach button — nothing to draft.
 // =============================================================================
 
-import { DollarSign, Trash2, Repeat, Crown, Shield } from "lucide-react";
+import { DollarSign, Trash2, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SectionShell from "./SectionShell";
 import BuilderCard from "./BuilderCard";
-import DeliveryTypePicker from "./DeliveryTypePicker";
 import CoachIconButton from "./CoachIconButton";
 import { useOfferCoach } from "./useOfferCoach";
 import { useLatestRef } from "@/lib/coach/useLatestRef";
@@ -23,8 +21,6 @@ import {
   type PaymentPlan,
   type PaymentPlanType,
   type GuaranteeType,
-  type PremiumUpgrade,
-  type RecurringOffer,
   PAYMENT_PLAN_TYPES,
   GUARANTEE_OPTIONS,
   calcPricingProgress,
