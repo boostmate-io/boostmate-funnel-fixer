@@ -19,6 +19,10 @@ import {
   computeOfferCompletion, STATUS_LABELS, STATUS_COLORS,
 } from "./offerFramework";
 import OfferShareDialog from "./OfferShareDialog";
+import OfferObjectionsEditor, {
+  migrateLegacyObjections,
+  type RichObjection,
+} from "./OfferObjectionsEditor";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Gem, Star, AlertTriangle, Lightbulb, Package, TrendingUp, Award, DollarSign, Shield, HelpCircle,
@@ -39,8 +43,11 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
   const [data, setData] = useState<OfferData>({});
   const [activeSection, setActiveSection] = useState(OFFER_SECTIONS[0].id);
   const [shareToken, setShareToken] = useState<string | null>(null);
+  const [subAccountId, setSubAccountId] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const isDirty = useRef(false);
+
+
 
   useEffect(() => {
     (async () => {
@@ -55,8 +62,17 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
         const r = row as any;
         setName(r.name);
         setStatus(r.status as OfferStatus);
-        setData(r.data || {});
+        const raw = r.data || {};
+        // Legacy → rich objections migration (runs client-side; persisted on next save).
+        raw.objections = migrateLegacyObjections(raw);
+        // Strip legacy flat fields so they don't leak back into UI.
+        for (let i = 1; i <= 5; i++) {
+          delete raw[`objection_${i}`];
+          delete raw[`rebuttal_${i}`];
+        }
+        setData(raw);
         setShareToken(r.share_token || null);
+        setSubAccountId(r.sub_account_id || null);
       }
       setLoading(false);
     })();
