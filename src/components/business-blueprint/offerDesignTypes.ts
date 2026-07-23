@@ -276,20 +276,33 @@ export function normalizeOfferDesign(raw: unknown): OfferDesignData {
 
 // ---------- Progress calculation --------------------------------------------
 
+// A card is only "filled" if it has any meaningful content beyond just an id.
+// Auto-created empty rows (`{ id }`) must not score.
+const hasCardContent = (c: Record<string, any>): boolean => {
+  if (!c) return false;
+  for (const [k, v] of Object.entries(c)) {
+    if (k === "id") continue;
+    if (typeof v === "string" && v.trim().length > 0) return true;
+    if (typeof v === "number" && Number.isFinite(v)) return true;
+    if (Array.isArray(v) && v.length > 0) return true;
+  }
+  return false;
+};
+const filledCards = <T extends Record<string, any>>(arr?: T[]) =>
+  (arr ?? []).filter(hasCardContent);
+
 export function calcAngleProgress(a: OfferAngleData): number {
   if (!a) return 0;
+  // V3: 4 differentiation fields removed from completion math (optional refinement only).
+  // Weight: essentials + framework + promise.
   let score = 0;
-  if (a.main_offer_name?.trim()) score += 10;
-  if (a.short_description?.trim()) score += 10;
-  if (a.core_outcome?.trim()) score += 10;
-  if (a.angle_new_vehicle?.trim()) score += 10;
-  if (a.angle_better_results?.trim()) score += 10;
-  if (a.angle_faster_outcome?.trim()) score += 10;
-  if (a.angle_easier_process?.trim()) score += 10;
-  if (a.framework?.name?.trim()) score += 8;
-  if ((a.framework?.pillars?.length ?? 0) >= 3) score += 7;
+  if (a.main_offer_name?.trim()) score += 20;
+  if (a.short_description?.trim()) score += 15;
+  if (a.core_outcome?.trim()) score += 20;
+  if (a.framework?.name?.trim()) score += 15;
+  if ((a.framework?.pillars?.length ?? 0) >= 3) score += 10;
   const p = a.core_promise;
-  if (p?.desired_outcome?.trim()) score += 10;
+  if (p?.desired_outcome?.trim()) score += 15;
   if (p?.timeframe && (p.timeframe !== "custom" || p.timeframe_custom?.trim())) score += 5;
   return Math.min(100, score);
 }
@@ -297,11 +310,11 @@ export function calcAngleProgress(a: OfferAngleData): number {
 export function calcStackProgress(s: OfferStackData): number {
   if (!s) return 0;
   let score = 0;
-  const deliverables = s.deliverables ?? [];
-  const resources = s.resources ?? [];
-  const supportChannels = s.support_channels ?? [];
-  const bonuses = s.bonuses ?? [];
-  const milestones = s.milestones ?? [];
+  const deliverables = filledCards(s.deliverables);
+  const resources = filledCards(s.resources);
+  const supportChannels = filledCards(s.support_channels);
+  const bonuses = filledCards(s.bonuses);
+  const milestones = filledCards(s.milestones);
   if (deliverables.length > 0) score += 25;
   if (deliverables.length >= 3) score += 10;
   if (resources.length > 0) score += 15;
