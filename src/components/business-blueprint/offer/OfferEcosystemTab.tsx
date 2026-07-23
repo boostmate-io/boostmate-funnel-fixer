@@ -29,6 +29,7 @@ import {
 } from "../offerDesignTypes";
 import { useEcosystemOffers, type EcosystemOfferRow } from "../useEcosystemOffers";
 import { getBusinessType } from "../businessTypes";
+import OfferRelationshipsSelector from "./OfferRelationshipsSelector";
 
 interface Props {
   blueprintId: string | null;
@@ -52,6 +53,7 @@ const OfferCardRow = ({
   cur,
   openCoach,
   tierLabel,
+  allOffers,
 }: {
   offer: EcosystemOfferRow;
   onUpdate: (patch: Partial<Pick<EcosystemOfferRow, "name" | "data">>) => void;
@@ -60,6 +62,7 @@ const OfferCardRow = ({
   cur: string;
   openCoach: (spec: OfferCoachSpec) => void;
   tierLabel: string;
+  allOffers: EcosystemOfferRow[];
 }) => {
   const [open, setOpen] = useState(false);
   const coachId = (field: string) => `offer_stack.ecosystem.${offer.id}.${field}`;
@@ -203,6 +206,7 @@ const OfferCardRow = ({
               placeholder="How is it delivered?"
             />
           </div>
+          <OfferRelationshipsSelector offer={offer} offers={allOffers} />
         </div>
       )}
     </div>
@@ -478,6 +482,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                       onDelete={() => deleteOffer(offer.id)}
                       openCoach={openCoach}
                       tierLabel={tier.label}
+                      allOffers={offers}
                     />
                   ))
                 )}
