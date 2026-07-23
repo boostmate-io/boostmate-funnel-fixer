@@ -42,6 +42,7 @@ export interface ClientResult {
   quote?: string;
   proof_type?: string;
   external_link?: string;
+  offer_ids?: string[]; // 🆕 V3: optional association to offers
 }
 
 export interface Testimonial {
@@ -52,6 +53,7 @@ export interface Testimonial {
   main_outcome?: string;
   tone?: string;
   external_link?: string;
+  offer_ids?: string[]; // 🆕 V3
 }
 
 export interface AuthorityAsset {
@@ -60,6 +62,7 @@ export interface AuthorityAsset {
   description?: string;
   why_it_matters?: string;
   external_link?: string;
+  offer_ids?: string[]; // 🆕 V3
 }
 
 export interface SocialProofData {
@@ -88,6 +91,9 @@ export interface FAQ {
   question?: string;
   answer?: string;
 }
+// V3: Objections & Beliefs no longer surfaced in the Authority & Content section
+// (objections have moved to the offer level). The type is preserved so any
+// legacy data stored in `business_blueprints.proof_authority` remains readable.
 export interface ObjectionsBeliefsData {
   objections: Objection[];
   failed_solutions: FailedSolution[];
@@ -104,6 +110,7 @@ export interface ValueLesson {
   breakthrough_lesson?: string;
   cta_goal?: string;
   external_link?: string;
+  offer_ids?: string[]; // 🆕 V3
 }
 export interface CommonMistake {
   id: string;
@@ -249,10 +256,8 @@ export function calcProofAuthorityProgress(d: ProofAuthorityData): number {
   if (d.social_proof.client_results.length > 0) score++;
   if (d.social_proof.testimonials.length > 0) score++;
   if (d.social_proof.authority_assets.length > 0) score++;
-  // Objections
-  total += 1;
-  if (d.objections.objections.length > 0) score++;
-  // Stories & Educational
+  // V3: Objections & Beliefs removed from this section (moved to offer level).
+  // Stories & Lessons
   total += 2;
   if (d.authority.founder_stories.length > 0) score++;
   if (d.educational.lessons.length > 0) score++;

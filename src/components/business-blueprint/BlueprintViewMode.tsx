@@ -263,8 +263,9 @@ const BlueprintViewMode = ({
     { id: "overview", label: "Overview", hasContent: hasOverview },
     { id: "customer-clarity", label: "Customer Clarity", hasContent: hasClarity },
     { id: "offer-design", label: "Offer Design", hasContent: hasOffer },
-    { id: "growth-system", label: "Growth System", hasContent: hasGrowth },
-    { id: "proof-authority", label: "Proof & Authority", hasContent: hasProof },
+    { id: "growth-system", label: "Growth Architecture", hasContent: hasGrowth },
+    { id: "brand-strategy", label: "Brand Strategy", hasContent: true },
+    { id: "proof-authority", label: "Authority & Content", hasContent: hasProof },
   ];
 
   const [activeId, setActiveId] = useState<string>("overview");
@@ -630,26 +631,6 @@ const BlueprintViewMode = ({
                       : undefined,
                 },
                 {
-                  label: "Premium upgrade",
-                  value: offer.pricing?.premium_enabled
-                    ? `${offer.pricing?.premium_upgrade?.name ?? "Enabled"}${
-                        typeof offer.pricing?.premium_upgrade?.price === "number"
-                          ? ` — ${cur}${offer.pricing.premium_upgrade.price.toLocaleString()}`
-                          : ""
-                      }`
-                    : undefined,
-                },
-                {
-                  label: "Recurring",
-                  value: offer.pricing?.recurring_enabled
-                    ? `${offer.pricing?.recurring_offer?.name ?? "Enabled"}${
-                        typeof offer.pricing?.recurring_offer?.monthly_price === "number"
-                          ? ` — ${cur}${offer.pricing.recurring_offer.monthly_price.toLocaleString()}/mo`
-                          : ""
-                      }`
-                    : undefined,
-                },
-                {
                   label: "Guarantee",
                   value:
                     offer.pricing?.guarantee_type && offer.pricing.guarantee_type !== "none"
@@ -695,7 +676,7 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= GROWTH SYSTEM ============= */}
-        <Section id="growth-system" title="Growth System" icon={Workflow} show={hasGrowth}>
+        <Section id="growth-system" title="Growth Architecture" icon={Workflow} show={hasGrowth}>
           <SubBlock
             title="Acquisition"
             show={Boolean(
@@ -754,50 +735,10 @@ const BlueprintViewMode = ({
             </div>
           </SubBlock>
 
-          <SubBlock
-            title="Ascension"
-            show={Boolean(
-              growth.ascension?.next_offer_after_core_id ||
-              growth.ascension?.retention_offer_id ||
-              growth.ascension?.referral_enabled ||
-              growth.ascension?.reactivation_enabled ||
-              hasText(growth.ascension?.referral_description) ||
-              hasText(growth.ascension?.reactivation_description),
-            )}
-          >
-            <KeyValueGrid
-              items={[
-                {
-                  label: "Next offer after core",
-                  value: offerName(growth.ascension?.next_offer_after_core_id),
-                },
-                {
-                  label: "Retention offer",
-                  value: offerName(growth.ascension?.retention_offer_id),
-                },
-                {
-                  label: "Referrals",
-                  value: growth.ascension?.referral_enabled ? "Enabled" : undefined,
-                },
-                {
-                  label: "Reactivation",
-                  value: growth.ascension?.reactivation_enabled ? "Enabled" : undefined,
-                },
-              ]}
-            />
-            <Field
-              label="Referral mechanic"
-              value={growth.ascension?.referral_description}
-            />
-            <Field
-              label="Reactivation mechanic"
-              value={growth.ascension?.reactivation_description}
-            />
-          </SubBlock>
         </Section>
 
         {/* ============= PROOF & AUTHORITY ============= */}
-        <Section id="proof-authority" title="Proof & Authority" icon={Award} show={hasProof}>
+        <Section id="proof-authority" title="Authority & Content" icon={Award} show={hasProof}>
           <>
               {/* Authority Positioning */}
               {(proof.authority.authority_types.length > 0 ||
@@ -922,27 +863,12 @@ const BlueprintViewMode = ({
                 </SubBlock>
               )}
 
-              {/* Objections & Beliefs */}
-              {proof.objections.objections.length > 0 && (
-                <SubBlock title="Objections & Beliefs">
-                  <div className="space-y-2">
-                    {proof.objections.objections.map((o) => (
-                      <div key={o.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                        {o.objection && <p className="text-sm font-semibold text-foreground">"{o.objection}"</p>}
-                        {o.why_believed && <p className="text-xs text-muted-foreground mt-1"><span className="font-medium">Why believed:</span> {o.why_believed}</p>}
-                        {o.reframe && <p className="text-sm text-primary mt-1"><span className="font-medium">Reframe:</span> {o.reframe}</p>}
-                        {o.supporting_proof && <p className="text-xs text-foreground/80 mt-1"><span className="font-medium">Proof:</span> {o.supporting_proof}</p>}
-                        {o.emotional_concern && <p className="text-xs text-muted-foreground mt-1 italic">{o.emotional_concern}</p>}
-                      </div>
-                    ))}
-                  </div>
-                </SubBlock>
-              )}
+              {/* V3: Objections & Beliefs removed — objections now live at the offer level. */}
 
-              {/* Stories & Educational Assets */}
+              {/* Stories & Lessons */}
               {(proof.authority.founder_stories.length > 0 ||
                 proof.educational.lessons.length > 0) && (
-                <SubBlock title="Stories & Educational Assets">
+                <SubBlock title="Stories & Lessons">
                   {proof.authority.founder_stories.length > 0 && (
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
