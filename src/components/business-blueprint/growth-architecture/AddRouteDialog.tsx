@@ -1,6 +1,8 @@
 // =============================================================================
-// AddRouteDialog — pick system, source (optional), target, channel, status.
+// AddRouteDialog — pick system, source (optional), target, PRIMARY channel.
 // Offer-to-offer routes are constrained to existing offer_relationships.
+// On save: inserts the route, then inserts one growth_architecture_channels
+// row with is_primary = true.
 // =============================================================================
 
 import { useMemo, useState } from "react";
@@ -21,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
 import {
   useAcquisitionChannels,
@@ -38,29 +42,27 @@ interface Props {
     system_catalog_id: string;
     source_offer_id: string | null;
     target_offer_id: string;
-    acquisition_channel_id: string | null;
     status: GrowthArchStatus;
     notes: string | null;
   }) => Promise<string | null>;
+  onCreated?: () => void;
 }
 
 const EXTERNAL = "__external__";
-const NONE = "__none__";
 
-const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate }: Props) => {
+const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate, onCreated }: Props) => {
   const { rows: systems } = useGrowthSystemsCatalog();
   const { rows: channels } = useAcquisitionChannels();
 
   const [systemId, setSystemId] = useState<string>("");
   const [sourceId, setSourceId] = useState<string>(EXTERNAL);
   const [targetId, setTargetId] = useState<string>("");
-  const [channelId, setChannelId] = useState<string>(NONE);
+  const [primaryChannelId, setPrimaryChannelId] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
   const isExternal = sourceId === EXTERNAL;
 
-  // For offer-to-offer routes, only allow target offers that have an existing relationship.
   const validTargets = useMemo(() => {
     if (isExternal) return offers;
     const targets = new Set(
@@ -69,13 +71,17 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate }:
     return offers.filter((o) => targets.has(o.id));
   }, [isExternal, sourceId, offers, relationships]);
 
-  const canSave = !!systemId && !!targetId && (isExternal || validTargets.some((o) => o.id === targetId));
+  const canSave =
+    !!systemId &&
+    !!targetId &&
+    !!primaryChannelId &&
+    (isExternal || validTargets.some((o) => o.id === targetId));
 
   const reset = () => {
     setSystemId("");
     setSourceId(EXTERNAL);
     setTargetId("");
-    setChannelId(NONE);
+    setPrimaryChannelId("");
     setNotes("");
   };
 
@@ -86,15 +92,24 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate }:
       system_catalog_id: systemId,
       source_offer_id: isExternal ? null : sourceId,
       target_offer_id: targetId,
-      acquisition_channel_id: channelId === NONE ? null : channelId,
-      // Status is DERIVED (see deriveRouteState). We insert "planned" as a
-      // neutral placeholder to satisfy the NOT NULL constraint on the legacy
-      // column — the UI never reads it.
       status: "planned",
       notes: notes.trim() ? notes.trim() : null,
     });
+    if (!id) { setSaving(false); return; }
+
+    const { error } = await supabase
+      .from("growth_architecture_channels")
+      .insert({
+        architecture_system_id: id,
+        channel_id: primaryChannelId,
+        is_primary: true,
+        sort_order: 0,
+      });
     setSaving(false);
-    if (id) {
+    if (error) {
+      toast.error("Route created but primary channel could not be attached");
+    } else {
+      onCreated?.();
       reset();
       onOpenChange(false);
     }
@@ -160,20 +175,20 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate }:
             </Select>
           </div>
 
-          {isExternal && (
-            <div>
-              <Label className="text-xs font-medium mb-1.5 block">Acquisition channel (optional)</Label>
-              <Select value={channelId} onValueChange={setChannelId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>None</SelectItem>
-                  {channels.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div>
+            <Label className="text-xs font-medium mb-1.5 block">Primary acquisition channel</Label>
+            <Select value={primaryChannelId} onValueChange={setPrimaryChannelId}>
+              <SelectTrigger><SelectValue placeholder="Pick the primary channel…" /></SelectTrigger>
+              <SelectContent>
+                {channels.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              You can add additional channels after the route is created.
+            </p>
+          </div>
 
           <div>
             <Label className="text-xs font-medium mb-1.5 block">Notes (optional)</Label>

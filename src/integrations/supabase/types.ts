@@ -107,9 +107,40 @@ export type Database = {
           },
         ]
       }
+      acquisition_channel_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          key: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       acquisition_channels: {
         Row: {
-          category: string | null
+          category_id: string | null
+          color: string | null
           created_at: string
           description: string | null
           icon: string | null
@@ -121,7 +152,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          category?: string | null
+          category_id?: string | null
+          color?: string | null
           created_at?: string
           description?: string | null
           icon?: string | null
@@ -133,7 +165,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          category?: string | null
+          category_id?: string | null
+          color?: string | null
           created_at?: string
           description?: string | null
           icon?: string | null
@@ -144,7 +177,15 @@ export type Database = {
           sort_order?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "acquisition_channels_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channel_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       agency_clients: {
         Row: {
@@ -1181,9 +1222,53 @@ export type Database = {
           },
         ]
       }
+      growth_architecture_channels: {
+        Row: {
+          architecture_system_id: string
+          channel_id: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          architecture_system_id: string
+          channel_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          architecture_system_id?: string
+          channel_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_architecture_channels_architecture_system_id_fkey"
+            columns: ["architecture_system_id"]
+            isOneToOne: false
+            referencedRelation: "growth_architecture_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_architecture_channels_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       growth_architecture_systems: {
         Row: {
-          acquisition_channel_id: string | null
           created_at: string
           id: string
           notes: string | null
@@ -1196,7 +1281,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          acquisition_channel_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -1209,7 +1293,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          acquisition_channel_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -1222,13 +1305,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "growth_architecture_systems_acquisition_channel_id_fkey"
-            columns: ["acquisition_channel_id"]
-            isOneToOne: false
-            referencedRelation: "acquisition_channels"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "growth_architecture_systems_source_offer_id_fkey"
             columns: ["source_offer_id"]
@@ -1515,8 +1591,42 @@ export type Database = {
           },
         ]
       }
+      growth_system_channel_compat: {
+        Row: {
+          acquisition_channel_id: string
+          created_at: string
+          growth_system_id: string
+        }
+        Insert: {
+          acquisition_channel_id: string
+          created_at?: string
+          growth_system_id: string
+        }
+        Update: {
+          acquisition_channel_id?: string
+          created_at?: string
+          growth_system_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_system_channel_compat_acquisition_channel_id_fkey"
+            columns: ["acquisition_channel_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_system_channel_compat_growth_system_id_fkey"
+            columns: ["growth_system_id"]
+            isOneToOne: false
+            referencedRelation: "growth_systems_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       growth_systems_catalog: {
         Row: {
+          architecture: Json | null
           created_at: string
           description: string | null
           icon: string | null
@@ -1524,11 +1634,15 @@ export type Database = {
           is_active: boolean
           key: string
           label: string
+          primary_objective: string | null
+          recommended_stages: string[]
+          seed_template_id: string | null
           sort_order: number
-          system_type: string
+          suitable_offer_tiers: string[]
           updated_at: string
         }
         Insert: {
+          architecture?: Json | null
           created_at?: string
           description?: string | null
           icon?: string | null
@@ -1536,11 +1650,15 @@ export type Database = {
           is_active?: boolean
           key: string
           label: string
+          primary_objective?: string | null
+          recommended_stages?: string[]
+          seed_template_id?: string | null
           sort_order?: number
-          system_type: string
+          suitable_offer_tiers?: string[]
           updated_at?: string
         }
         Update: {
+          architecture?: Json | null
           created_at?: string
           description?: string | null
           icon?: string | null
@@ -1548,11 +1666,22 @@ export type Database = {
           is_active?: boolean
           key?: string
           label?: string
+          primary_objective?: string | null
+          recommended_stages?: string[]
+          seed_template_id?: string | null
           sort_order?: number
-          system_type?: string
+          suitable_offer_tiers?: string[]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "growth_systems_catalog_seed_template_id_fkey"
+            columns: ["seed_template_id"]
+            isOneToOne: false
+            referencedRelation: "seed_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       growth_task_progress: {
         Row: {

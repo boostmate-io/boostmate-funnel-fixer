@@ -48,6 +48,7 @@ const LABELS: Record<DerivedRouteState, string> = {
 export function deriveRouteState(
   route: GrowthArchitectureRow,
   relationships: OfferRelationshipRow[],
+  primaryChannelId?: string | null,
 ): DerivedRouteMeta {
   // Offer-to-offer route
   if (route.source_offer_id) {
@@ -71,17 +72,17 @@ export function deriveRouteState(
   }
 
   // External acquisition route
-  if (route.acquisition_channel_id) {
+  if (primaryChannelId) {
     return {
       state: "ready_to_build",
       label: LABELS.ready_to_build,
-      reason: "Channel selected. Build the acquisition funnel to progress.",
+      reason: "Primary channel selected. Build the acquisition funnel to progress.",
     };
   }
 
   return {
     state: "planned",
     label: LABELS.planned,
-    reason: "Pick a channel or wire the offer relationship to move forward.",
+    reason: "Pick a primary channel or wire the offer relationship to move forward.",
   };
 }
