@@ -187,7 +187,7 @@ export function useGrowthArchitecture(subAccountId: string | null) {
 
   const add = useCallback(
     async (
-      payload: Omit<GrowthArchitectureRow, "id" | "sub_account_id" | "sort_order"> & { sort_order?: number },
+      payload: Omit<GrowthArchitectureRow, "id" | "sub_account_id" | "sort_order" | "funnel_id"> & { sort_order?: number; funnel_id?: string | null },
     ) => {
       if (!subAccountId) return null;
       const sortOrder = payload.sort_order ?? rows.length;
