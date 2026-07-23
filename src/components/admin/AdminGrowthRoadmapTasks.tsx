@@ -245,6 +245,7 @@ export default function AdminGrowthRoadmapTasks() {
               onCancel={() => setEditing(null)}
               onSave={save}
               saving={saving}
+              growthSystems={growthSystems}
             />
           )}
         </DialogContent>
