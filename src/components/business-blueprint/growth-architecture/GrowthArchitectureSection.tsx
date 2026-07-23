@@ -8,6 +8,7 @@ import { Workflow, Plus, Trash2, Loader2, Map as MapIcon, List } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   useGrowthArchitecture,
@@ -15,6 +16,7 @@ import {
   useAcquisitionChannels,
   useGrowthSystemsCatalog,
 } from "@/lib/growth-architecture/hooks";
+import { deriveRouteState, ROUTE_STATE_STYLES } from "@/lib/growth-architecture/deriveStatus";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
 import AddRouteDialog from "./AddRouteDialog";
 import GrowthMap from "./GrowthMap";
@@ -23,13 +25,6 @@ interface Props {
   offers: EcosystemOfferRow[];
   saving?: boolean;
 }
-
-const STATUS_STYLES: Record<string, string> = {
-  planned: "bg-muted text-muted-foreground",
-  active: "bg-primary/15 text-primary",
-  paused: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  retired: "bg-muted text-muted-foreground line-through",
-};
 
 const GrowthArchitectureSection = ({ offers }: Props) => {
   const { activeSubAccountId } = useWorkspace();
@@ -102,14 +97,20 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
                   const src = r.source_offer_id ? offerById.get(r.source_offer_id) : null;
                   const tgt = offerById.get(r.target_offer_id);
                   const ch = r.acquisition_channel_id ? channels.find((c) => c.id === r.acquisition_channel_id) : null;
+                  const derived = deriveRouteState(r, relationships);
                   return (
                     <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold">{sys?.label ?? "System"}</span>
-                          <Badge className={`text-[10px] ${STATUS_STYLES[r.status]}`} variant="secondary">
-                            {r.status}
-                          </Badge>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge className={`text-[10px] ${ROUTE_STATE_STYLES[derived.state]}`} variant="secondary">
+                                {derived.label}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>{derived.reason}</TooltipContent>
+                          </Tooltip>
                           {ch && <Badge variant="outline" className="text-[10px]">{ch.label}</Badge>}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1 truncate">
