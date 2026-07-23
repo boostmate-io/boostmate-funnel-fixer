@@ -107,12 +107,20 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
       ...section.fields,
       ...(section.subSections?.flatMap((ss) => ss.fields) ?? []),
     ];
-    if (fields.length === 0) return 0;
-    const filled = fields.filter((f) => {
+    let total = fields.length;
+    let filled = fields.filter((f) => {
       const v = data[f.id];
       return v !== null && v !== undefined && (typeof v === "string" ? v.trim().length > 0 : true);
     }).length;
-    return Math.round((filled / fields.length) * 100);
+    if (section.customEditor === "objections") {
+      total += 1;
+      const objs = (data as any).objections as RichObjection[] | undefined;
+      if (Array.isArray(objs) && objs.some((o) => (o?.objection ?? "").trim() || (o?.reframe ?? "").trim())) {
+        filled += 1;
+      }
+    }
+    if (total === 0) return 0;
+    return Math.round((filled / total) * 100);
   }, [data]);
 
   const isLocked = status === "approved" && !readOnly;
@@ -279,6 +287,18 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
             </div>
 
             <div className="mt-6 space-y-5">
+              {currentSection.customEditor === "objections" && (
+                <OfferObjectionsEditor
+                  value={((data as any).objections as RichObjection[] | undefined) ?? []}
+                  onChange={(next) => {
+                    setData((prev) => ({ ...prev, objections: next as any }));
+                    isDirty.current = true;
+                  }}
+                  subAccountId={subAccountId}
+                  readOnly={readOnly || isLocked}
+                />
+              )}
+
               {currentSection.fields.map(renderField)}
 
               {currentSection.subSections?.map((sub) => (
