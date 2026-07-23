@@ -25,6 +25,8 @@ export interface OfferSection {
   description: string;
   fields: OfferField[];
   subSections?: OfferSubSection[];
+  /** V3: opt-in custom editor rendered above `fields`. */
+  customEditor?: "objections";
 }
 
 export type OfferData = Record<string, string | string[] | number | null>;
@@ -197,18 +199,9 @@ export const OFFER_SECTIONS: OfferSection[] = [
     id: "objections",
     title: "Objections / FAQ",
     icon: "HelpCircle",
-    description: "Anticipate and overcome common objections.",
+    description: "Anticipate and dissolve the objections buyers actually raise.",
+    customEditor: "objections",
     fields: [
-      { id: "objection_1", label: "Objection 1", type: "text", placeholder: "e.g. It's too expensive" },
-      { id: "rebuttal_1", label: "Rebuttal 1", type: "textarea", placeholder: "How you address this objection..." },
-      { id: "objection_2", label: "Objection 2", type: "text", placeholder: "e.g. I don't have time" },
-      { id: "rebuttal_2", label: "Rebuttal 2", type: "textarea", placeholder: "How you address this objection..." },
-      { id: "objection_3", label: "Objection 3", type: "text", placeholder: "e.g. I've tried this before" },
-      { id: "rebuttal_3", label: "Rebuttal 3", type: "textarea", placeholder: "How you address this objection..." },
-      { id: "objection_4", label: "Objection 4", type: "text", placeholder: "e.g. I need to think about it" },
-      { id: "rebuttal_4", label: "Rebuttal 4", type: "textarea", placeholder: "How you address this objection..." },
-      { id: "objection_5", label: "Objection 5", type: "text", placeholder: "e.g. Will this work for me?" },
-      { id: "rebuttal_5", label: "Rebuttal 5", type: "textarea", placeholder: "How you address this objection..." },
       { id: "faq_1_q", label: "FAQ Question 1", type: "text", placeholder: "Common question..." },
       { id: "faq_1_a", label: "FAQ Answer 1", type: "textarea", placeholder: "Answer..." },
       { id: "faq_2_q", label: "FAQ Question 2", type: "text", placeholder: "Common question..." },
@@ -219,21 +212,34 @@ export const OFFER_SECTIONS: OfferSection[] = [
   },
 ];
 
-/** Count how many fields have values filled in */
+/** Count how many fields have values filled in. Custom-editor sections
+ * contribute 1 slot, counted as filled when the corresponding structured
+ * data is non-empty (currently: objections array). */
 export function computeOfferCompletion(data: OfferData): number {
   const allFields = OFFER_SECTIONS.flatMap((s) => [
     ...s.fields,
     ...(s.subSections?.flatMap((ss) => ss.fields) ?? []),
   ]);
-  const total = allFields.length;
-  if (total === 0) return 0;
-  const filled = allFields.filter((f) => {
+  let total = allFields.length;
+  let filled = allFields.filter((f) => {
     const v = data[f.id];
     if (v === null || v === undefined) return false;
     if (typeof v === "string") return v.trim().length > 0;
     if (Array.isArray(v)) return v.length > 0;
     return true;
   }).length;
+
+  for (const s of OFFER_SECTIONS) {
+    if (s.customEditor === "objections") {
+      total += 1;
+      const objs = (data as any).objections;
+      if (Array.isArray(objs) && objs.some((o: any) => (o?.objection ?? "").trim() || (o?.reframe ?? "").trim())) {
+        filled += 1;
+      }
+    }
+  }
+
+  if (total === 0) return 0;
   return Math.round((filled / total) * 100);
 }
 
