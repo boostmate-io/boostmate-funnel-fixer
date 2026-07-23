@@ -334,6 +334,10 @@ const SocialProofTab = ({
                 </Field>
                 <LinkField value={r.external_link} onChange={(v) => updateResult(r.id, { external_link: v })} />
               </div>
+              <OfferAssociationPicker
+                value={(r as any).offer_ids}
+                onChange={(offer_ids) => updateResult(r.id, { offer_ids } as any)}
+              />
             </EntryShell>
           ))
         )}
@@ -373,6 +377,10 @@ const SocialProofTab = ({
                 </Field>
               </div>
               <LinkField value={t.external_link} onChange={(v) => updateTesti(t.id, { external_link: v })} />
+              <OfferAssociationPicker
+                value={(t as any).offer_ids}
+                onChange={(offer_ids) => updateTesti(t.id, { offer_ids } as any)}
+              />
             </EntryShell>
           ))
         )}
@@ -401,6 +409,10 @@ const SocialProofTab = ({
                 <AutoTextarea value={a.why_it_matters ?? ""} onChange={(e) => updateAsset(a.id, { why_it_matters: e.target.value })} placeholder="Validates our methodology in front of a 2M+ founder audience." rows={2} className="text-sm resize-none" />
               </Field>
               <LinkField value={a.external_link} onChange={(v) => updateAsset(a.id, { external_link: v })} />
+              <OfferAssociationPicker
+                value={(a as any).offer_ids}
+                onChange={(offer_ids) => updateAsset(a.id, { offer_ids } as any)}
+              />
             </EntryShell>
           ))
         )}
@@ -568,6 +580,10 @@ const StoriesTab = ({
                 </Field>
               </div>
               <LinkField value={l.external_link} onChange={(v) => updateLesson(l.id, { external_link: v })} />
+              <OfferAssociationPicker
+                value={(l as any).offer_ids}
+                onChange={(offer_ids) => updateLesson(l.id, { offer_ids } as any)}
+              />
             </EntryShell>
           ))
         )}
@@ -592,8 +608,7 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
     onChange({ authority: { ...data.authority, ...patch } });
   const updateSocial = (patch: Partial<SocialProofData>) =>
     onChange({ social_proof: { ...data.social_proof, ...patch } });
-  const updateObj = (patch: Partial<ObjectionsBeliefsData>) =>
-    onChange({ objections: { ...data.objections, ...patch } });
+  // Objections handler removed — objections moved to the offer level.
   const updateEdu = (patch: Partial<EducationalMessagingData>) =>
     onChange({ educational: { ...data.educational, ...patch } });
 
