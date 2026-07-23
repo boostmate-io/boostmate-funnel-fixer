@@ -19,6 +19,10 @@ import {
   computeOfferCompletion, STATUS_LABELS, STATUS_COLORS,
 } from "./offerFramework";
 import OfferShareDialog from "./OfferShareDialog";
+import OfferObjectionsEditor, {
+  migrateLegacyObjections,
+  type RichObjection,
+} from "./OfferObjectionsEditor";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Gem, Star, AlertTriangle, Lightbulb, Package, TrendingUp, Award, DollarSign, Shield, HelpCircle,
@@ -39,8 +43,11 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
   const [data, setData] = useState<OfferData>({});
   const [activeSection, setActiveSection] = useState(OFFER_SECTIONS[0].id);
   const [shareToken, setShareToken] = useState<string | null>(null);
+  const [subAccountId, setSubAccountId] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const isDirty = useRef(false);
+
+
 
   useEffect(() => {
     (async () => {
@@ -55,8 +62,17 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
         const r = row as any;
         setName(r.name);
         setStatus(r.status as OfferStatus);
-        setData(r.data || {});
+        const raw = r.data || {};
+        // Legacy → rich objections migration (runs client-side; persisted on next save).
+        raw.objections = migrateLegacyObjections(raw);
+        // Strip legacy flat fields so they don't leak back into UI.
+        for (let i = 1; i <= 5; i++) {
+          delete raw[`objection_${i}`];
+          delete raw[`rebuttal_${i}`];
+        }
+        setData(raw);
         setShareToken(r.share_token || null);
+        setSubAccountId(r.sub_account_id || null);
       }
       setLoading(false);
     })();
@@ -91,12 +107,20 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
       ...section.fields,
       ...(section.subSections?.flatMap((ss) => ss.fields) ?? []),
     ];
-    if (fields.length === 0) return 0;
-    const filled = fields.filter((f) => {
+    let total = fields.length;
+    let filled = fields.filter((f) => {
       const v = data[f.id];
       return v !== null && v !== undefined && (typeof v === "string" ? v.trim().length > 0 : true);
     }).length;
-    return Math.round((filled / fields.length) * 100);
+    if (section.customEditor === "objections") {
+      total += 1;
+      const objs = (data as any).objections as RichObjection[] | undefined;
+      if (Array.isArray(objs) && objs.some((o) => (o?.objection ?? "").trim() || (o?.reframe ?? "").trim())) {
+        filled += 1;
+      }
+    }
+    if (total === 0) return 0;
+    return Math.round((filled / total) * 100);
   }, [data]);
 
   const isLocked = status === "approved" && !readOnly;
@@ -263,6 +287,18 @@ const OfferEditor = ({ offerId, onBack, readOnly, publicReadOnly }: OfferEditorP
             </div>
 
             <div className="mt-6 space-y-5">
+              {currentSection.customEditor === "objections" && (
+                <OfferObjectionsEditor
+                  value={((data as any).objections as RichObjection[] | undefined) ?? []}
+                  onChange={(next) => {
+                    setData((prev) => ({ ...prev, objections: next as any }));
+                    isDirty.current = true;
+                  }}
+                  subAccountId={subAccountId}
+                  readOnly={readOnly || isLocked}
+                />
+              )}
+
               {currentSection.fields.map(renderField)}
 
               {currentSection.subSections?.map((sub) => (
