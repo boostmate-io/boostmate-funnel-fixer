@@ -482,6 +482,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                       onDelete={() => deleteOffer(offer.id)}
                       openCoach={openCoach}
                       tierLabel={tier.label}
+                      allOffers={offers}
                     />
                   ))
                 )}
