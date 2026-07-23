@@ -263,8 +263,9 @@ const BlueprintViewMode = ({
     { id: "overview", label: "Overview", hasContent: hasOverview },
     { id: "customer-clarity", label: "Customer Clarity", hasContent: hasClarity },
     { id: "offer-design", label: "Offer Design", hasContent: hasOffer },
-    { id: "growth-system", label: "Growth System", hasContent: hasGrowth },
-    { id: "proof-authority", label: "Proof & Authority", hasContent: hasProof },
+    { id: "growth-system", label: "Growth Architecture", hasContent: hasGrowth },
+    { id: "brand-strategy", label: "Brand Strategy", hasContent: true },
+    { id: "proof-authority", label: "Authority & Content", hasContent: hasProof },
   ];
 
   const [activeId, setActiveId] = useState<string>("overview");
@@ -630,26 +631,6 @@ const BlueprintViewMode = ({
                       : undefined,
                 },
                 {
-                  label: "Premium upgrade",
-                  value: offer.pricing?.premium_enabled
-                    ? `${offer.pricing?.premium_upgrade?.name ?? "Enabled"}${
-                        typeof offer.pricing?.premium_upgrade?.price === "number"
-                          ? ` — ${cur}${offer.pricing.premium_upgrade.price.toLocaleString()}`
-                          : ""
-                      }`
-                    : undefined,
-                },
-                {
-                  label: "Recurring",
-                  value: offer.pricing?.recurring_enabled
-                    ? `${offer.pricing?.recurring_offer?.name ?? "Enabled"}${
-                        typeof offer.pricing?.recurring_offer?.monthly_price === "number"
-                          ? ` — ${cur}${offer.pricing.recurring_offer.monthly_price.toLocaleString()}/mo`
-                          : ""
-                      }`
-                    : undefined,
-                },
-                {
                   label: "Guarantee",
                   value:
                     offer.pricing?.guarantee_type && offer.pricing.guarantee_type !== "none"
@@ -695,7 +676,7 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= GROWTH SYSTEM ============= */}
-        <Section id="growth-system" title="Growth System" icon={Workflow} show={hasGrowth}>
+        <Section id="growth-system" title="Growth Architecture" icon={Workflow} show={hasGrowth}>
           <SubBlock
             title="Acquisition"
             show={Boolean(
@@ -797,7 +778,7 @@ const BlueprintViewMode = ({
         </Section>
 
         {/* ============= PROOF & AUTHORITY ============= */}
-        <Section id="proof-authority" title="Proof & Authority" icon={Award} show={hasProof}>
+        <Section id="proof-authority" title="Authority & Content" icon={Award} show={hasProof}>
           <>
               {/* Authority Positioning */}
               {(proof.authority.authority_types.length > 0 ||
