@@ -206,6 +206,7 @@ const OfferCardRow = ({
               placeholder="How is it delivered?"
             />
           </div>
+          <OfferRelationshipsSelector offer={offer} offers={allOffers} />
         </div>
       )}
     </div>
