@@ -107,6 +107,42 @@ export type Database = {
           },
         ]
       }
+      acquisition_channel_build_guides: {
+        Row: {
+          acquisition_channel_id: string
+          build_guide_id: string
+          created_at: string
+          sort_order: number
+        }
+        Insert: {
+          acquisition_channel_id: string
+          build_guide_id: string
+          created_at?: string
+          sort_order?: number
+        }
+        Update: {
+          acquisition_channel_id?: string
+          build_guide_id?: string
+          created_at?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acquisition_channel_build_guides_acquisition_channel_id_fkey"
+            columns: ["acquisition_channel_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acquisition_channel_build_guides_build_guide_id_fkey"
+            columns: ["build_guide_id"]
+            isOneToOne: false
+            referencedRelation: "build_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       acquisition_channel_categories: {
         Row: {
           created_at: string
@@ -644,6 +680,124 @@ export type Database = {
           },
         ]
       }
+      build_guide_stages: {
+        Row: {
+          build_guide_id: string
+          created_at: string
+          description: string | null
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          build_guide_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          build_guide_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "build_guide_stages_build_guide_id_fkey"
+            columns: ["build_guide_id"]
+            isOneToOne: false
+            referencedRelation: "build_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      build_guide_tasks: {
+        Row: {
+          created_at: string
+          description_md: string | null
+          id: string
+          instructions_url: string | null
+          is_active: boolean
+          sort_order: number
+          stage_id: string
+          title: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description_md?: string | null
+          id?: string
+          instructions_url?: string | null
+          is_active?: boolean
+          sort_order?: number
+          stage_id: string
+          title: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description_md?: string | null
+          id?: string
+          instructions_url?: string | null
+          is_active?: boolean
+          sort_order?: number
+          stage_id?: string
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "build_guide_tasks_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "build_guide_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      build_guides: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string | null
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string | null
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string | null
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_blueprints: {
         Row: {
           brand_strategy: Json
@@ -1095,6 +1249,93 @@ export type Database = {
           },
         ]
       }
+      funnel_build_guides: {
+        Row: {
+          build_guide_id: string
+          created_at: string
+          funnel_id: string
+          id: string
+          sort_order: number
+          source: string
+          source_ref_id: string | null
+        }
+        Insert: {
+          build_guide_id: string
+          created_at?: string
+          funnel_id: string
+          id?: string
+          sort_order?: number
+          source: string
+          source_ref_id?: string | null
+        }
+        Update: {
+          build_guide_id?: string
+          created_at?: string
+          funnel_id?: string
+          id?: string
+          sort_order?: number
+          source?: string
+          source_ref_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_build_guides_build_guide_id_fkey"
+            columns: ["build_guide_id"]
+            isOneToOne: false
+            referencedRelation: "build_guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_build_guides_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funnel_build_task_progress: {
+        Row: {
+          completed_at: string
+          completed_by: string | null
+          funnel_id: string
+          id: string
+          notes: string | null
+          task_id: string
+        }
+        Insert: {
+          completed_at?: string
+          completed_by?: string | null
+          funnel_id: string
+          id?: string
+          notes?: string | null
+          task_id: string
+        }
+        Update: {
+          completed_at?: string
+          completed_by?: string | null
+          funnel_id?: string
+          id?: string
+          notes?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_build_task_progress_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_build_task_progress_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "build_guide_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funnel_step_metrics: {
         Row: {
           created_at: string
@@ -1270,6 +1511,7 @@ export type Database = {
       growth_architecture_systems: {
         Row: {
           created_at: string
+          funnel_id: string | null
           id: string
           notes: string | null
           sort_order: number
@@ -1282,6 +1524,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          funnel_id?: string | null
           id?: string
           notes?: string | null
           sort_order?: number
@@ -1294,6 +1537,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          funnel_id?: string | null
           id?: string
           notes?: string | null
           sort_order?: number
@@ -1305,6 +1549,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "growth_architecture_systems_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "growth_architecture_systems_source_offer_id_fkey"
             columns: ["source_offer_id"]
@@ -1485,6 +1736,7 @@ export type Database = {
           slug: string
           sort_order: number
           stage: string
+          target_growth_system_id: string | null
           title: string
           updated_at: string
         }
@@ -1504,6 +1756,7 @@ export type Database = {
           slug: string
           sort_order?: number
           stage: string
+          target_growth_system_id?: string | null
           title: string
           updated_at?: string
         }
@@ -1523,10 +1776,19 @@ export type Database = {
           slug?: string
           sort_order?: number
           stage?: string
+          target_growth_system_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "growth_roadmap_tasks_target_growth_system_id_fkey"
+            columns: ["target_growth_system_id"]
+            isOneToOne: false
+            referencedRelation: "growth_systems_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       growth_stage_cycles: {
         Row: {
@@ -1587,6 +1849,42 @@ export type Database = {
             columns: ["sub_account_id"]
             isOneToOne: false
             referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_system_build_guides: {
+        Row: {
+          build_guide_id: string
+          created_at: string
+          growth_system_id: string
+          sort_order: number
+        }
+        Insert: {
+          build_guide_id: string
+          created_at?: string
+          growth_system_id: string
+          sort_order?: number
+        }
+        Update: {
+          build_guide_id?: string
+          created_at?: string
+          growth_system_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_system_build_guides_build_guide_id_fkey"
+            columns: ["build_guide_id"]
+            isOneToOne: false
+            referencedRelation: "build_guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_system_build_guides_growth_system_id_fkey"
+            columns: ["growth_system_id"]
+            isOneToOne: false
+            referencedRelation: "growth_systems_catalog"
             referencedColumns: ["id"]
           },
         ]
@@ -2310,6 +2608,7 @@ export type Database = {
           created_at: string
           description: string | null
           edges: Json
+          entry_node_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -2322,6 +2621,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           edges?: Json
+          entry_node_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -2334,6 +2634,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           edges?: Json
+          entry_node_id?: string | null
           id?: string
           is_active?: boolean
           name?: string

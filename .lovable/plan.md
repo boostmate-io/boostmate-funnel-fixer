@@ -1,138 +1,130 @@
 
-# Growth Systems & Acquisition Channels — Revised V3 Correction Plan
+# Growth Architecture V4 — Final Approved Plan (Phases A, B, C)
 
-## Confirmed current state
+All decisions locked. Phase D is out of scope until separately approved.
 
-- `growth_architecture_systems` uses a single `acquisition_channel_id UUID` (no junction). Row count: **0** — nothing to preserve.
-- `TRAFFIC_SOURCES` in `src/components/funnel-designer/constants.ts` = **57 entries** across 5 `TRAFFIC_SOURCE_GROUPS`.
-- `key` stays as the stable slug across all catalog tables (no rename to `slug` — churn without gain).
+---
 
-## Step 1 — Schema migration (structure only)
+## Locked decisions
 
-Single migration, in order:
+1. **Task descriptions:** Markdown, read-only rendering.
+2. **Entry node:** Start Building blocks if no explicit `entry_node_id` and the deterministic fallback is ambiguous — actionable error surfaces the fix.
+3. **Guide attachment:** Auto-resolved from route (Growth System + Primary Channel + Additional Channels). No manual attach/detach in V1. Panel always accessible.
+4. **Progress on funnel delete:** Cascade.
+5. **Funnel Brief:** Toolbar swap only in Phase 1. Tables, data, and `SharedBrief` route preserved. No drops.
 
-### 1a. `acquisition_channel_categories` (new)
-Fields: `key UNIQUE, label, sort_order, is_active`. RLS: authenticated read, admin write. GRANTs to authenticated + service_role.
+### Correction A — Duplicate acquisition-node prevention
+- Admin Seed Template editor rejects saves that contain any `trafficSource` nodes when the template is intended for a Growth System.
+- `start-building-route` edge function aborts with a clear error if the seed template still has any `trafficSource` nodes. No silent merge, no auto-strip.
 
-### 1b. `acquisition_channels` (alter)
-- Drop free-text `category`.
-- Add `category_id UUID REFERENCES acquisition_channel_categories(id) ON DELETE SET NULL`.
-- Add `color TEXT`. Keep `icon TEXT`.
-- Tighten RLS to authenticated-only reads.
+### Correction B — Roadmap Task → Route resolution
+- `growth_roadmap_tasks.target_growth_system_id` replaces `build_guide_ref`. CTA behaviour:
+  - Zero matching routes → open Add Route dialog pre-filled with the system.
+  - Exactly one route → jump to it.
+  - Multiple routes → open Growth Architecture filtered to routes using the system; user picks.
 
-### 1c. `growth_systems_catalog` (alter)
-- Add `primary_objective TEXT`, `suitable_offer_tiers TEXT[]`, `recommended_stages TEXT[]`, `architecture JSONB`, `seed_template_id UUID REFERENCES seed_templates(id) ON DELETE SET NULL`.
-- Trigger validates tier / stage array values.
-- Drop `system_type` column + CHECK (superseded).
-- Tighten RLS to authenticated-only reads.
+### Correction C — Derived route state
+Extended rules (finalized per user):
 
-### 1d. `growth_architecture_channels` (new — junction)
-- `architecture_system_id UUID REFERENCES growth_architecture_systems ON DELETE CASCADE`
-- `channel_id UUID REFERENCES acquisition_channels ON DELETE CASCADE`
-- `is_primary BOOL DEFAULT false`, `sort_order INT DEFAULT 0`.
-- Unique `(architecture_system_id, channel_id)`.
-- Partial unique index enforcing at most one `is_primary = true` per route.
-- RLS: `EXISTS` check on parent route's `sub_account_id`. GRANTs standard.
+| State | Condition |
+|---|---|
+| `planned` | Prerequisites incomplete (offer-to-offer: missing relationship; external: no primary channel). |
+| `ready_to_build` | Prerequisites met AND `funnel_id IS NULL`. |
+| `in_progress` | `funnel_id IS NOT NULL` AND (any attached active task incomplete OR no guides attached). |
+| `built` | `funnel_id IS NOT NULL` AND ≥1 guide attached AND all **active** tasks across attached guides complete. |
+| `locked` | Reserved. Not emitted. |
 
-### 1e. `growth_architecture_systems` (alter)
-- Drop `acquisition_channel_id` (safe — 0 rows). Existing `validate_growth_architecture_route` trigger doesn't reference it.
+Live-template behaviour accepted: if an admin adds a new active task to a guide on an already-Built funnel, that route drops back to `in_progress` until the new task is completed. Only `is_active = true` tasks count.
 
-### 1f. `growth_system_channel_compat` (new)
-- PK `(growth_system_id, acquisition_channel_id)`, cascade deletes.
-- RLS: authenticated read, admin write. **No rows seeded.**
+---
 
-## Step 2 — Data reseed (insert tool, after Step 1 lands)
+## Phase A — Schema + Admin
 
-### 2a. Categories
-5 rows from `TRAFFIC_SOURCE_GROUPS` (`paid_traffic, organic_traffic, owned_traffic, referral_partnerships, direct_other`), labels verbatim, `sort_order` = array index.
+### Migration (single call)
 
-### 2b. Acquisition Channels — full port
-- `DELETE FROM acquisition_channels` (only the dropped column referenced them; junction is empty).
-- Insert all **57** rows from `TRAFFIC_SOURCES`: `key = type`, `label/icon/color` verbatim, `category_id` from the group mapping, `sort_order` from array index. Report inserted count.
+**New tables** (all with GRANTs + RLS):
+- `build_guides` — id, key (unique), name, description, is_active, sort_order, timestamps. Admin write; authenticated read.
+- `build_guide_stages` — id, build_guide_id (cascade), title, description, sort_order, timestamps.
+- `build_guide_tasks` — id, stage_id (cascade), title, description_md, instructions_url, video_url, is_active (soft delete), sort_order, timestamps.
+- `growth_system_build_guides(growth_system_id, build_guide_id, sort_order)` — composite PK.
+- `acquisition_channel_build_guides(acquisition_channel_id, build_guide_id, sort_order)` — composite PK.
+- `funnel_build_guides(id, funnel_id cascade, build_guide_id cascade, source CHECK ('system'|'channel'), source_ref_id, sort_order)` — unique(funnel_id, build_guide_id). Workspace-member RW via `is_sub_account_member`.
+- `funnel_build_task_progress(id, funnel_id cascade, task_id cascade, completed_at, completed_by, notes)` — unique(funnel_id, task_id). Workspace-member RW.
 
-### 2c. Growth Systems Catalog — the approved five
-- `DELETE FROM growth_systems_catalog` (0 dependents).
-- Insert: `client-converter`, `audience-builder`, `offer-launcher`, `quiz-funnel`, `launch-engine` — with description, `primary_objective`, `suitable_offer_tiers`, `recommended_stages`, `sort_order`.
-- `architecture` and `seed_template_id` left NULL for manual Admin config.
+**Column additions:**
+- `growth_architecture_systems.funnel_id uuid` nullable + partial unique index (one funnel per route).
+- `seed_templates.entry_node_id text` nullable.
+- `growth_roadmap_tasks.target_growth_system_id uuid` nullable FK.
 
-### 2d. Compatibility
-No rows seeded.
+**Realtime:** enable `offers` on `supabase_realtime` publication for the stale-offer fix.
 
-## Step 3 — Admin UI
+**Nothing dropped.** `growth_systems_catalog.architecture` and `growth_roadmap_tasks.build_guide_ref` remain until Phase D.
 
-### `AdminAcquisitionChannels.tsx`
-- Category becomes `<Select>` from `acquisition_channel_categories`.
-- Add `icon` (text + lucide preview) and `color` (color picker + hex).
-- Inline "Manage categories" panel: CRUD on `acquisition_channel_categories`.
+### Admin UI
+- New **Build Guides** tab (4th) in Admin → Growth: guide list; on selection, nested Stages with their Tasks; `@dnd-kit` drag-and-drop for stages, for tasks, and tasks across stages. Task editor includes markdown description, instructions URL, video URL, active toggle.
+- `AdminGrowthSystemsCatalog.tsx`: adds "Attached Build Guides" multi-select (writes `growth_system_build_guides`). Also removes the raw `architecture` JSON editor from the UI (column stays until Phase D).
+- `AdminAcquisitionChannels.tsx`: adds "Attached Build Guides" multi-select.
+- Seed Template editor (add if not present, else extend): entry-node dropdown + save-time validator rejecting `trafficSource` nodes.
+- `AdminGrowthRoadmapTasks.tsx`: adds `target_growth_system_id` selector; keeps `build_guide_ref` as a legacy fallback field marked deprecated.
 
-### `AdminGrowthSystemsCatalog.tsx`
-- Remove `system_type` select.
-- Add `primary_objective` (textarea), `suitable_offer_tiers` (6-tier checkbox group), `recommended_stages` (5-stage checkbox group), `seed_template_id` (`<Select>` over `seed_templates` with explicit "None").
-- "Compatible Acquisition Channels" multi-select — writes `growth_system_channel_compat`.
-- **Architecture JSON editor**: monospace `<Textarea>` with live `JSON.parse` validation, inline errors, disabled Save on invalid; adjacent read-only Preview panel summarising `nodes`/`edges` (or formatted JSON tree). No graph canvas.
+---
 
-## Step 4 — Funnel Builder unification (single source of truth)
+## Phase B — Start Building + Runtime
 
-- New hook `useAcquisitionChannels()` in `src/lib/acquisition-channels/hooks.ts`: react-query, `staleTime: Infinity`, invalidated on Admin writes. Returns channels + categories grouped/sorted.
-- Replace consumers of `TRAFFIC_SOURCES` with the hook:
-  - `ElementsPanel.tsx`, `TrafficSourceNode.tsx`, `TrafficSourceDetailsPanel.tsx`, `FunnelDesigner.tsx`
-  - Analytics: `typeLabels.ts`, `AnalyticsHistory.tsx`, `AnalyticsCharts.tsx`, `AnalyticsKPIs.tsx`, `AnalyticsSummary.tsx`, `AnalyticsFunnelNode.tsx`, `AnalyticsTrafficNode.tsx`, `DailyDataEntry.tsx`, `metricDefinitions.ts` (as applicable).
-- **No runtime fallback.** Loading = skeleton in panels; nodes show raw `type` slug until fetch resolves.
-- Preserved locally: a small lucide-name → component resolver (rendering helper, not a metadata duplicate).
+### Edge function `start-building-route`
+Deno function; JWT validation from `Authorization` header; workspace-membership check; transactional insert flow:
 
-## Step 5 — Blueprint Growth Architecture UX: manage per-route channels (NEW)
+1. Load route → if `funnel_id` already set, return `{ funnel_id, already_existed: true }`.
+2. Load `growth_systems_catalog` → require `seed_template_id`; else 422 with actionable message.
+3. Load seed template. **Guard A**: if any node has `type === "trafficSource"`, 422 with template-fix message.
+4. Resolve entry node: `seed.entry_node_id` if set; else fallback = unique `funnelPage` node with zero incoming edges. If ambiguous → 422 with entry-node-required message.
+5. Load route channels (primary + additional) joined to `acquisition_channels` for label/icon/color/key.
+6. Compose funnel: copy seed nodes/edges; append one `trafficSource` node per channel (positioned left of entry), append edges channel→entry_node_id.
+7. Insert `funnels` row: `user_id, sub_account_id, name = "{system.label} → {targetOffer.name}", seed_template_id, linked_offer_id = target_offer_id, nodes, edges`.
+8. Update route `funnel_id = new.id`.
+9. Compute distinct guide ids: system guides ∪ primary-channel guides ∪ additional-channel guides. Insert `funnel_build_guides` rows with source annotation.
+10. Return `{ funnel_id, already_existed: false }`.
 
-The current `GrowthArchitectureSection.tsx` exposes only Growth Map + Routes, and `AddRouteDialog.tsx` collects a single channel. With the junction table in place, users must be able to fully manage each route's channels.
+### Frontend
+- `GrowthArchitectureSection` route cards: "Start Building" CTA when `ready_to_build`; "Open / Continue Building" when `funnel_id` present. Navigates to Funnel Builder with that funnel selected.
+- `FunnelDesigner.tsx`: repoint the existing `ClipboardList` toolbar icon to open a new `FunnelBuildGuidePanel` instead of `FunnelBriefPanel`. Panel always available.
+- `FunnelBuildGuidePanel`:
+  - Header: overall completed / total, percentage, progress bar.
+  - Per-guide section: name, count, bar, collapsible (default: first guide expanded).
+  - Per-stage: title, count, collapsible (default expanded).
+  - Per-task: checkbox, title, markdown description (react-markdown), instructions link, video link.
+  - Optimistic writes to `funnel_build_task_progress`; localStorage-persisted collapse state per funnel.
+  - Empty state when no guides resolved.
+- Derived-state extension in `deriveRouteState`: accept optional `{ funnelId, taskStats: { activeTotal, completed, guidesAttached } }` and emit per the finalized rules table above.
+- Hooks: `useFunnelBuildGuides(funnelId)`, `useTaskProgress(funnelId)` with optimistic toggle; `useRouteTaskStats(routeIds)` for section cards' state derivation.
 
-### 5a. Add Route flow (minimal change)
-- Continues to ask for the single **initial Primary Acquisition Channel** (required).
-- On save, insert the route, then insert one `growth_architecture_channels` row with `is_primary = true`, `sort_order = 0`.
+---
 
-### 5b. Acquisition management view
-Add a per-route "Acquisition" surface. Implementation choice (both meet the spec — flag the pick during build):
-- **Option A (default):** expand each Route card in the Routes tab with an inline "Acquisition Channels" section.
-- **Option B:** dedicated "Acquisition" tab listing routes with the same per-route panel.
+## Phase C — Stale offer data fix
 
-Per route, users can:
-- View the **Primary** channel (chip with a "Primary" badge, using icon + color from the catalog).
-- View **Additional** channels (chips, no primary badge, ordered by `sort_order`).
-- **Change Primary**: `<Select>` of channels, filtered to entries in `growth_system_channel_compat` for the route's growth system when compat rows exist; unfiltered otherwise. Switching primary runs as one RPC/transaction: set old primary `is_primary=false`, set new primary `is_primary=true`. Rejects if the target isn't already linked → prompt "Add and promote" which inserts (if missing) then promotes atomically.
-- **Add Additional**: multi-select of not-yet-linked channels (same compat filter behaviour). Inserts rows with `is_primary=false`, next `sort_order`.
-- **Remove Additional**: per-chip remove (× button, confirm on click). The Primary cannot be removed directly — user must promote another channel first (UI shows disabled × with tooltip "Promote another channel first").
-- Optimistic updates via react-query; failures roll back with a toast.
+- Add `reload()` to `useEcosystemOffers` return; propagate through `BusinessBlueprintModule` → `OfferEcosystemTab` → `OfferPanel`/`OfferEditor`. Every offer create/update/delete calls `reload()` after success.
+- Add Supabase realtime subscription in `useEcosystemOffers` filtered by `sub_account_id` (offers table added to publication in the Phase A migration). Reload on any INSERT/UPDATE/DELETE.
 
-### 5c. Data layer
-- Extend `src/lib/growth-architecture/hooks.ts`:
-  - `useRouteChannels(architectureSystemId)` — fetches `growth_architecture_channels` joined with `acquisition_channels`, returns `{ primary, additional }`.
-  - Mutations: `addRouteChannel`, `removeRouteChannel`, `setRoutePrimaryChannel` (atomic swap; guards against removing the only channel).
-- The partial unique index in Step 1d is the DB-side guarantee; the mutation is the transactional client of it.
+---
 
-### 5d. Growth Map
-- Read from the junction: node badge shows Primary label; hover/expand reveals Additional channels count and names. No editing on the map.
+## Out of scope (Phase D — later, separate approval)
 
-## Step 6 — Cleanup
+- Drop `growth_systems_catalog.architecture` column.
+- Drop `growth_roadmap_tasks.build_guide_ref`.
+- Retire Funnel Brief tables / components / SharedBrief.
 
-- Delete `TRAFFIC_SOURCES` + `TRAFFIC_SOURCE_GROUPS` from `constants.ts` (keep `FUNNEL_ELEMENTS`).
-- Derive `TrafficSource` type from generated DB types.
-- Remove dead imports. Regenerate `types.ts` (auto after migration approval).
+---
 
-## Verification checklist
+## Verification checklist (executed after implementation)
 
-1. `growth_systems_catalog` returns the 5 approved systems by `key`.
-2. `acquisition_channels` count = **57**; every `key` matches a pre-migration `TRAFFIC_SOURCES.type`.
-3. `acquisition_channel_categories` count = 5, matching `TRAFFIC_SOURCE_GROUPS`.
-4. Admin can CRUD channels, categories, growth systems, and compat rows; compat starts empty.
-5. Admin Growth Systems editor: architecture JSON textarea validates + previews; seed template `<Select>` loads and clears.
-6. Funnel Builder Elements panel + nodes render the same 57 channels grouped as before, via the DB hook.
-7. Add Route creates one `growth_architecture_channels` row with `is_primary=true`.
-8. **Per route in the Blueprint UI:** Primary is visible + swappable; Additional can be added and removed; Primary cannot be removed directly; UI enforces at most one Primary; partial unique index rejects any accidental duplicate primary write. (NEW)
-9. **Growth Map** displays Primary per route with Additional visible on hover/expand, sourced from the junction. (NEW)
-10. Existing funnels open — all traffic-source nodes resolve (keys unchanged).
-11. No `TRAFFIC_SOURCES` references remain in `src/` (rg check).
-12. `tsgo` typecheck clean.
-13. Prototype `growth_architecture_systems` row count reported (currently 0).
-
-## Deviations from previous plan (only the new addition)
-
-- Step 5 (Blueprint per-route channel management UX) added — Add Route stays single-Primary; full management lives in the Routes/Acquisition surface per your correction.
-- All other Steps 1–4 and 6 unchanged from the last approved revision.
+1. Migration applied cleanly; typecheck passes.
+2. Admin Build Guides CRUD works; stages/tasks drag reorder + cross-stage move.
+3. Growth Systems + Acquisition Channels editors show attach-guides multi-selects.
+4. Seed template editor: entry-node picker present; save rejected on `trafficSource` nodes.
+5. Roadmap task editor: `target_growth_system_id` selector present.
+6. Start Building on a valid route: creates funnel, links offer, injects channel nodes wired to entry, snapshots guides, sets `funnel_id`. Second click returns Open / Continue.
+7. Start Building on a template with traffic nodes / no entry node → error, no funnel created.
+8. Funnel Builder clipboard icon opens `FunnelBuildGuidePanel`; toggling tasks persists.
+9. Derived state cycles: planned → ready → in_progress → built as tasks complete; regresses to in_progress when an admin adds a new active task.
+10. Renaming an offer in Offer Ecosystem updates Growth Architecture cards without reload; realtime propagates across tabs.
+11. `SharedBrief.tsx` public route still functions with existing brief data.
