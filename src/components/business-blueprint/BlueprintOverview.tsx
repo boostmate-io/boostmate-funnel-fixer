@@ -100,7 +100,7 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, brandIden
     },
     {
       id: "brand-strategy",
-      label: "Brand Identity",
+      label: "Brand Strategy",
       icon: Palette,
       description: "Positioning, voice & visual direction.",
       progress: brandProgress,
@@ -112,7 +112,7 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, brandIden
     },
     {
       id: "proof-authority",
-      label: "Proof & Authority",
+      label: "Authority & Content",
       icon: Award,
       description: "Credibility stack & trust assets.",
       progress: proofProgress,

@@ -30,8 +30,8 @@ const sections: { id: SectionId; label: string; icon: typeof Users }[] = [
   { id: "customer-clarity", label: "Customer Clarity", icon: Users },
   { id: "offer-design", label: "Offer Design", icon: Package },
   { id: "growth-system", label: "Growth Architecture", icon: Workflow },
-  { id: "brand-strategy", label: "Brand Identity", icon: Palette },
-  { id: "proof-authority", label: "Proof & Authority", icon: Award },
+  { id: "brand-strategy", label: "Brand Strategy", icon: Palette },
+  { id: "proof-authority", label: "Authority & Content", icon: Award },
 ];
 
 type Mode = "overview" | "edit" | "view";
