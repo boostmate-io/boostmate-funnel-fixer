@@ -107,6 +107,45 @@ export type Database = {
           },
         ]
       }
+      acquisition_channels: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          key: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       agency_clients: {
         Row: {
           agency_user_id: string
@@ -1142,6 +1181,84 @@ export type Database = {
           },
         ]
       }
+      growth_architecture_systems: {
+        Row: {
+          acquisition_channel_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          sort_order: number
+          source_offer_id: string | null
+          status: string
+          sub_account_id: string
+          system_catalog_id: string
+          target_offer_id: string
+          updated_at: string
+        }
+        Insert: {
+          acquisition_channel_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sort_order?: number
+          source_offer_id?: string | null
+          status?: string
+          sub_account_id: string
+          system_catalog_id: string
+          target_offer_id: string
+          updated_at?: string
+        }
+        Update: {
+          acquisition_channel_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sort_order?: number
+          source_offer_id?: string | null
+          status?: string
+          sub_account_id?: string
+          system_catalog_id?: string
+          target_offer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_architecture_systems_acquisition_channel_id_fkey"
+            columns: ["acquisition_channel_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_architecture_systems_source_offer_id_fkey"
+            columns: ["source_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_architecture_systems_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_architecture_systems_system_catalog_id_fkey"
+            columns: ["system_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "growth_systems_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_architecture_systems_target_offer_id_fkey"
+            columns: ["target_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       growth_assessments: {
         Row: {
           ai_confidence: string | null
@@ -1398,6 +1515,45 @@ export type Database = {
           },
         ]
       }
+      growth_systems_catalog: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          key: string
+          label: string
+          sort_order: number
+          system_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          label: string
+          sort_order?: number
+          system_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+          system_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       growth_task_progress: {
         Row: {
           activated_at: string | null
@@ -1553,6 +1709,61 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      offer_relationships: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          relationship_type: string
+          source_offer_id: string
+          sub_account_id: string
+          target_offer_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          relationship_type: string
+          source_offer_id: string
+          sub_account_id: string
+          target_offer_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          relationship_type?: string
+          source_offer_id?: string
+          sub_account_id?: string
+          target_offer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_relationships_source_offer_id_fkey"
+            columns: ["source_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_relationships_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_relationships_target_offer_id_fkey"
+            columns: ["target_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       offers: {
         Row: {
