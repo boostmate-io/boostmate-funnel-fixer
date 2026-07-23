@@ -54,6 +54,7 @@ const categoryConfig = {
       { value: "growth-tasks", label: "Roadmap Tasks", icon: Milestone, content: <AdminGrowthRoadmapTasks /> },
       { value: "growth-systems", label: "Growth Systems", icon: Workflow, content: <AdminGrowthSystemsCatalog /> },
       { value: "acquisition-channels", label: "Acquisition Channels", icon: Radio, content: <AdminAcquisitionChannels /> },
+      { value: "build-guides", label: "Build Guides", icon: BookOpen, content: <AdminBuildGuides /> },
     ],
   },
 };
