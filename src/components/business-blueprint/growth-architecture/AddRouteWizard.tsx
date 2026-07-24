@@ -178,86 +178,61 @@ const AddRouteWizard = ({
     return channels.filter((c) => compatChannelIds.has(c.id));
   }, [channels, compatChannelIds, isAdmin]);
 
-  // ---- Auto-skip predicates -------------------------------------------------
+  // ---- Auto-lock predicates -------------------------------------------------
   // Only for external routes; offer-to-offer never needs channels.
   const isExternal = state.sourceKind === "external";
 
-  // Advance from a step: apply auto-skip forward until we hit a step needing input.
-  const advanceFrom = useCallback(
-    (from: StepId) => {
-      let next: StepId = (from + 1) as StepId;
-      while (next <= 5) {
-        // Step 5 is always shown
-        if (next === 5) break;
+  // When a step has exactly one valid option, preselect it and mark the step
+  // as "auto-locked" so it renders with an explanation and disabled controls.
+  // The user still clicks Continue — transparency over hidden skips.
+  const step2AutoLock = incomingRels.length === 0 && !state.unlocked[2];
+  const step3AutoLock =
+    !!targetOffer &&
+    selectableSystems.length === 1 &&
+    !state.unlocked[3] &&
+    // If Roadmap preselected an incompatible system, keep Step 3 open for context.
+    !(preselectedSystemId && !selectableSystems.some((s) => s.system.id === preselectedSystemId));
+  const step4AutoLock =
+    isExternal &&
+    compatChannelIds.size > 0 &&
+    availableChannels.length === 1 &&
+    !state.unlocked[4];
 
-        // If user manually unlocked this step, always render.
-        if (state.unlocked[next]) break;
+  // Apply preselection + autoSkipped flag when the wizard lands on a locked step.
+  useEffect(() => {
+    if (!open) return;
+    if (step === 2 && step2AutoLock) {
+      setState((s) =>
+        s.sourceKind === "external" && s.autoSkipped[2]
+          ? s
+          : { ...s, sourceKind: "external", sourceOfferId: null, autoSkipped: { ...s.autoSkipped, 2: true } },
+      );
+    }
+    if (step === 3 && step3AutoLock) {
+      const only = selectableSystems[0];
+      setState((s) =>
+        s.systemId === only.system.id && s.autoSkipped[3]
+          ? s
+          : { ...s, systemId: only.system.id, autoSkipped: { ...s.autoSkipped, 3: true } },
+      );
+    }
+    if (step === 4 && step4AutoLock) {
+      const only = availableChannels[0];
+      setState((s) =>
+        s.primaryChannelId === only.id && s.autoSkipped[4]
+          ? s
+          : { ...s, primaryChannelId: only.id, autoSkipped: { ...s.autoSkipped, 4: true } },
+      );
+    }
+  }, [open, step, step2AutoLock, step3AutoLock, step4AutoLock, selectableSystems, availableChannels]);
 
-        if (next === 2) {
-          // Skip if no incoming relationships → force external
-          if (incomingRels.length === 0) {
-            setState((s) => ({
-              ...s,
-              sourceKind: "external",
-              sourceOfferId: null,
-              autoSkipped: { ...s.autoSkipped, 2: true },
-            }));
-            next = 3;
-            continue;
-          }
-          break;
-        }
-        if (next === 3) {
-          // Only one selectable system → auto-skip
-          if (selectableSystems.length === 1) {
-            const only = selectableSystems[0];
-            setState((s) => ({
-              ...s,
-              systemId: only.system.id,
-              autoSkipped: { ...s.autoSkipped, 3: true },
-            }));
-            next = 4;
-            continue;
-          }
-          break;
-        }
-        if (next === 4) {
-          // Offer-to-offer: skip channel step
-          if (!isExternal) {
-            setState((s) => ({ ...s, autoSkipped: { ...s.autoSkipped, 4: true } }));
-            next = 5;
-            continue;
-          }
-          // Empty compat: cannot auto-skip; render warning
-          if (compatChannelIds.size === 0) break;
-          // Only one compat channel → auto-skip
-          if (availableChannels.length === 1) {
-            setState((s) => ({
-              ...s,
-              primaryChannelId: availableChannels[0].id,
-              autoSkipped: { ...s.autoSkipped, 4: true },
-            }));
-            next = 5;
-            continue;
-          }
-          break;
-        }
-      }
-      setStep(next);
-    },
-    [state.unlocked, incomingRels.length, selectableSystems, isExternal, compatChannelIds.size, availableChannels],
-  );
+  const advanceFrom = useCallback((from: StepId) => {
+    setStep(Math.min(5, (from + 1)) as StepId);
+  }, []);
 
   const goBack = useCallback(() => {
-    // Move to the nearest previous step that wasn't auto-skipped OR is Step 1.
-    let prev: StepId = (step - 1) as StepId;
-    while (prev >= 1) {
-      if (prev === 1) break;
-      if (!state.autoSkipped[prev]) break;
-      prev = (prev - 1) as StepId;
-    }
-    setStep(Math.max(1, prev) as StepId);
-  }, [step, state.autoSkipped]);
+    setStep(Math.max(1, (step - 1)) as StepId);
+  }, [step]);
 
   const unlockAndGo = useCallback((s: StepId) => {
     setState((prev) => ({
