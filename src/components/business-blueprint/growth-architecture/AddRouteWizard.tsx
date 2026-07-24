@@ -363,6 +363,7 @@ const AddRouteWizard = ({
               }
               isAdmin={isAdmin}
               hasAnyCompat={compatChannelIds.size > 0}
+              autoLocked={step4AutoLock}
             />
           )}
           {step === 5 && (
