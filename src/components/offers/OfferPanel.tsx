@@ -137,9 +137,6 @@ const OfferPanel = ({ funnelId, linkedOfferId, onLinkedOfferChange, onNavigateTo
                   {STATUS_LABELS[linkedOffer.status as OfferStatus]}
                 </Badge>
               </div>
-              {linkedOffer.description ? (
-                <p className="text-[11px] text-muted-foreground line-clamp-3">{linkedOffer.description}</p>
-              ) : null}
             </div>
 
             <div className="space-y-2">
