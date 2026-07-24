@@ -198,7 +198,7 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
                       isBusy={isBusy}
                       canStart={canStart}
                       onStartBuilding={() => handleStartBuilding(r.id)}
-                      onOpenFunnel={openFunnelsModule}
+                      onOpenFunnel={() => openFunnel(r.funnel_id)}
                       onEdit={() => setEditRouteId(r.id)}
                       onDelete={() => setDeleteTarget({
                         id: r.id,
