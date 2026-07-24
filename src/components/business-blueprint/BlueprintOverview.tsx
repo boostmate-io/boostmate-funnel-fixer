@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
 import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
-import { calculateGrowthSystemProgress, type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
+import { type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
 import { calcBrandIdentityProgress, type BrandIdentityData } from "./BrandIdentitySection";
 import { calcProofAuthorityProgress, type ProofAuthorityData } from "./proofAuthorityTypes";
 import { getBusinessType } from "./businessTypes";
@@ -50,7 +50,7 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, brandIden
 
   const clarityProgress = calculateClarityProgress(clarity);
   const offerProgress = calculateOfferDesignProgress(offer);
-  const growthProgress = calculateGrowthSystemProgress(growth, mappings);
+  const growthProgress = routes.length >= 1 ? 100 : 0;
   const brandProgress = calcBrandIdentityProgress(brandIdentity);
   const proofProgress = proofAuthority ? calcProofAuthorityProgress(proofAuthority) : 0;
   const offerName = (id?: string | null) => (id ? offers.find((o) => o.id === id)?.name : undefined);

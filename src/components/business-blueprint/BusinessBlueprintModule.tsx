@@ -10,10 +10,10 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { calculateClarityProgress, type SectionId } from "./types";
 import { calculateOfferDesignProgress } from "./offerDesignTypes";
 import {
-  calculateGrowthSystemProgress,
   normalizeGrowthSystem,
   type GrowthSystemData,
 } from "./growthSystemTypes";
+import { useGrowthArchitecture } from "@/lib/growth-architecture/hooks";
 import { getBusinessType } from "./businessTypes";
 import CustomerClaritySection from "./CustomerClaritySection";
 import OfferDesignSection from "./OfferDesignSection";
@@ -51,6 +51,7 @@ const BusinessBlueprintModule = () => {
     offerDesign: offerDesign,
   });
   const { mappings } = useFunnelMappings(blueprint?.id ?? null);
+  const { rows: growthRoutes } = useGrowthArchitecture((useWorkspace() as any).activeSubAccountId ?? null);
 
   useEffect(() => {
     if (!loadingSettings && settings && settings.setup_status === "pending") {
@@ -86,7 +87,7 @@ const BusinessBlueprintModule = () => {
   const brandIdentity = (blueprint.brand_strategy || {}) as BrandIdentityData;
   const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
   const offerProgress = calculateOfferDesignProgress(offerData, tierCounts);
-  const growthProgress = calculateGrowthSystemProgress(growthData, mappings);
+  const growthProgress = growthRoutes.length >= 1 ? 100 : 0;
   const brandProgress = calcBrandIdentityProgress(brandIdentity);
   const proofProgress = calcProofAuthorityProgress(proofAuthority);
   const sectionProgress: Record<SectionId, number> = {

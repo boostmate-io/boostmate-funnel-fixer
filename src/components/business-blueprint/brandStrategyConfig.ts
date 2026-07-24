@@ -21,6 +21,18 @@ export interface BrandTabConfig {
   fields: BrandFieldDef[];
 }
 
+const TONE_SUGGESTIONS = [
+  "Direct", "Friendly", "Professional", "Expert", "Practical", "Honest",
+  "Encouraging", "Inspirational", "Educational", "Premium", "Minimal", "Bold",
+  "Warm", "Playful", "Serious", "Analytical", "Empathetic", "Energetic",
+  "Calm", "No fluff",
+];
+
+const VISUAL_STYLE_SUGGESTIONS = [
+  "Modern", "Minimal", "Premium", "Bold", "Editorial",
+  "Clean", "Friendly", "Luxury", "Corporate", "Playful",
+];
+
 export const BRAND_STRATEGY_TABS: BrandTabConfig[] = [
   {
     id: "positioning",
@@ -49,10 +61,17 @@ export const BRAND_STRATEGY_TABS: BrandTabConfig[] = [
       {
         key: "positioning_differentiators",
         label: "Key Differentiators",
-        helper: "What makes you clearly different from every alternative. Short lines or comma-separated.",
-        placeholder: "Built by operators · Roadmap-driven · Coach-in-the-loop",
-        type: "textarea",
-        rows: 2,
+        helper: "What makes you clearly different from every alternative.",
+        placeholder: "Add a differentiator and press Enter…",
+        type: "tags",
+        fullWidth: true,
+      },
+      {
+        key: "messaging_pillars",
+        label: "Messaging Pillars",
+        helper: "The core topics your brand consistently communicates about.",
+        placeholder: "Add a pillar and press Enter…",
+        type: "tags",
         fullWidth: true,
       },
     ],
@@ -66,28 +85,26 @@ export const BRAND_STRATEGY_TABS: BrandTabConfig[] = [
       {
         key: "voice_tone",
         label: "Tone",
-        helper: "A few adjectives that describe how your brand sounds.",
-        placeholder: "Direct · warm · expert · no fluff",
-        type: "textarea",
-        rows: 2,
+        helper: "Pick the adjectives that describe how your brand sounds. Add your own if needed.",
+        placeholder: "Add custom tone and press Enter…",
+        type: "suggested-tags",
+        suggestions: TONE_SUGGESTIONS,
         fullWidth: true,
       },
       {
         key: "voice_do",
         label: "We Do",
-        helper: "Voice moves you always make.",
-        placeholder: "Speak plainly. Show numbers. Address objections head-on.",
-        type: "textarea",
-        rows: 3,
+        helper: "Voice moves you always make. One per line.",
+        placeholder: "Speak plainly",
+        type: "bullet-list",
         fullWidth: true,
       },
       {
         key: "voice_dont",
         label: "We Don't",
-        helper: "Voice moves you never make.",
-        placeholder: "Hype. Empty jargon. Fake scarcity.",
-        type: "textarea",
-        rows: 3,
+        helper: "Voice moves you never make. One per line.",
+        placeholder: "Empty jargon",
+        type: "bullet-list",
         fullWidth: true,
       },
     ],
@@ -101,19 +118,17 @@ export const BRAND_STRATEGY_TABS: BrandTabConfig[] = [
       {
         key: "visual_style",
         label: "Visual Style",
-        helper: "How your brand looks — overall style and feel.",
-        placeholder: "Clean · modern · confident. Generous whitespace. Bold display type.",
-        type: "textarea",
-        rows: 2,
+        helper: "Pick the words that describe your visual style. Add your own if needed.",
+        placeholder: "Add custom style and press Enter…",
+        type: "suggested-tags",
+        suggestions: VISUAL_STYLE_SUGGESTIONS,
         fullWidth: true,
       },
       {
         key: "visual_colors",
         label: "Brand Colors",
-        helper: "Primary + accents. Hex values or plain names.",
-        placeholder: "#6246ff · off-white · charcoal",
-        type: "textarea",
-        rows: 2,
+        helper: "Primary, secondary and accent colors used across your brand.",
+        type: "colors",
         fullWidth: true,
       },
       {
