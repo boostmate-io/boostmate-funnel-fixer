@@ -58,6 +58,20 @@ const BusinessBlueprintModule = () => {
     }
   }, [loadingSettings, settings]);
 
+  // Deep-link: open a specific offer in Offer Design > Ecosystem
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const offerId = detail?.offerId as string | undefined;
+      if (!offerId) return;
+      setMode("edit");
+      setActiveSection("offer-design");
+      setPendingOpenOfferId(offerId);
+    };
+    window.addEventListener("boostmate:open-offer-design", handler);
+    return () => window.removeEventListener("boostmate:open-offer-design", handler);
+  }, []);
+
   if (loading || loadingSettings || !blueprint || !settings) {
     return (
       <div className="flex items-center justify-center h-full">
