@@ -5,6 +5,9 @@ import { AutoTextarea } from "@/components/ui/auto-textarea";
 import type { FieldDef } from "./clarityConfig";
 import ChipsField from "./fields/ChipsField";
 import TagsField from "./fields/TagsField";
+import SuggestedTagsField from "./fields/SuggestedTagsField";
+import BulletListField from "./fields/BulletListField";
+import ColorsField from "./fields/ColorsField";
 
 interface Props {
   field: FieldDef;
@@ -23,6 +26,19 @@ const renderInput = (
       return <ChipsField value={value} onChange={onChange} options={field.options || []} />;
     case "tags":
       return <TagsField value={value} onChange={onChange} placeholder={field.placeholder} />;
+    case "suggested-tags":
+      return (
+        <SuggestedTagsField
+          value={value}
+          onChange={onChange}
+          suggestions={field.suggestions || []}
+          placeholder={field.placeholder}
+        />
+      );
+    case "bullet-list":
+      return <BulletListField value={value} onChange={onChange} placeholder={field.placeholder} />;
+    case "colors":
+      return <ColorsField value={value} onChange={onChange} />;
     case "textarea":
     default:
       return (
