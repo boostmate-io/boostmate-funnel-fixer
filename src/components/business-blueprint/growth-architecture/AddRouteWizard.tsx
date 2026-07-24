@@ -812,10 +812,9 @@ function Step5Review({ state, offers, systems, channels, stage, onChange, onNote
   );
 }
 
-// Small helper so we don't need to import from WorkspaceContext at top-level
+import { useWorkspace as _useWorkspace } from "@/contexts/WorkspaceContext";
 function useActiveSubAccount(): { activeSubAccountId: string | null } {
-  const { useWorkspace } = require("@/contexts/WorkspaceContext");
-  const w = useWorkspace();
+  const w = _useWorkspace();
   return { activeSubAccountId: w.activeSubAccountId ?? null };
 }
 
