@@ -1,14 +1,12 @@
 // =============================================================================
-// GrowthArchitectureSection — V3 Blueprint section.
-// Read-only Growth Map + Routes list with per-route channel management.
+// GrowthArchitectureSection — V3/V5 Blueprint section.
+// Read-only Growth Map + Routes list (RouteCard) with per-route channel management.
 // =============================================================================
 
 import { useEffect, useMemo, useState } from "react";
-import { Workflow, Plus, Trash2, Loader2, Map as MapIcon, List, Rocket, ExternalLink } from "lucide-react";
+import { Workflow, Plus, Loader2, Map as MapIcon, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -20,12 +18,13 @@ import {
   useRouteChannels,
   useRoutesBuildProgress,
 } from "@/lib/growth-architecture/hooks";
-import { deriveRouteState, ROUTE_STATE_STYLES } from "@/lib/growth-architecture/deriveStatus";
+import { deriveRouteState } from "@/lib/growth-architecture/deriveStatus";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
 import AddRouteWizard from "./AddRouteWizard";
 import DeleteRouteDialog from "./DeleteRouteDialog";
+import EditRouteDialog from "./EditRouteDialog";
 import GrowthMap from "./GrowthMap";
-import RouteChannelsManager from "./RouteChannelsManager";
+import RouteCard from "./RouteCard";
 
 interface Props {
   offers: EcosystemOfferRow[];
@@ -34,7 +33,7 @@ interface Props {
 
 const GrowthArchitectureSection = ({ offers }: Props) => {
   const { activeSubAccountId } = useWorkspace();
-  const { rows: routes, loading: loadingRoutes, add, remove, reload: reloadRoutes } = useGrowthArchitecture(activeSubAccountId ?? null);
+  const { rows: routes, loading: loadingRoutes, add, update, reload: reloadRoutes } = useGrowthArchitecture(activeSubAccountId ?? null);
   const { rows: relationships } = useOfferRelationships(activeSubAccountId ?? null);
   const { rows: channels } = useAcquisitionChannels();
   const { rows: systems } = useGrowthSystemsCatalog();
@@ -43,11 +42,26 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
   const funnelIds = useMemo(() => routes.map((r) => r.funnel_id), [routes]);
   const { byFunnel: buildProgress, reload: reloadProgress } = useRoutesBuildProgress(funnelIds);
 
+  // Lightweight funnel-name lookup for RouteCard display.
+  const [funnelNames, setFunnelNames] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    const ids = funnelIds.filter((v): v is string => !!v);
+    if (ids.length === 0) { setFunnelNames(new Map()); return; }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.from("funnels").select("id,name").in("id", ids);
+      if (cancelled || error || !data) return;
+      setFunnelNames(new Map(data.map((f: any) => [f.id as string, (f.name as string) ?? ""])));
+    })();
+    return () => { cancelled = true; };
+  }, [funnelIds.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [addOpen, setAddOpen] = useState(false);
   const [startingId, setStartingId] = useState<string | null>(null);
   const [preselectedSystemId, setPreselectedSystemId] = useState<string | null>(null);
   const [preselectedOfferId, setPreselectedOfferId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string; hasFunnel: boolean } | null>(null);
+  const [editTarget, setEditTarget] = useState<{ id: string; label: string; notes: string | null } | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -123,7 +137,8 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
               routeChannelsByRoute={routeChannels.byRoute}
             />
             <p className="text-[11px] text-muted-foreground mt-2">
-              Read-only view. Dashed edges = planned routes. Solid = active. Primary channel shown; additional channels count in hover label.
+              Read-only view. Dashed edges = planned routes. Solid = active. Only route-participating
+              offers appear on the graph; unrouted offers are listed below.
             </p>
           </TabsContent>
 
@@ -152,70 +167,47 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
                   const derived = deriveRouteState(r, relationships, bucket.primary?.channel_id ?? null, buildInfo);
                   const canStart = derived.state === "ready_to_build";
                   const isBusy = startingId === r.id;
-                  return (
-                    <div key={r.id} className="p-3 rounded-lg border border-border bg-background">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold">{sys?.label ?? "System"}</span>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge className={`text-[10px] ${ROUTE_STATE_STYLES[derived.state]}`} variant="secondary">
-                                  {derived.label}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>{derived.reason}</TooltipContent>
-                            </Tooltip>
-                            {buildInfo && buildInfo.activeTaskCount > 0 && (
-                              <span className="text-[10px] text-muted-foreground">
-                                {buildInfo.completedTaskCount}/{buildInfo.activeTaskCount} tasks
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1 truncate">
-                            {src ? src.name : "External acquisition"} <span className="mx-1">→</span> {tgt?.name ?? "Unknown offer"}
-                          </div>
-                          {r.notes && <div className="text-[11px] text-muted-foreground mt-1 italic">{r.notes}</div>}
-                        </div>
-                        {r.funnel_id ? (
-                          <Button size="sm" variant="outline" onClick={openFunnelsModule} className="gap-1.5 shrink-0">
-                            <ExternalLink className="w-3.5 h-3.5" /> Open Funnel
-                          </Button>
-                        ) : canStart ? (
-                          <Button
-                            size="sm"
-                            onClick={() => handleStartBuilding(r.id)}
-                            disabled={isBusy}
-                            className="gap-1.5 shrink-0"
-                          >
-                            {isBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
-                            Start Building
-                          </Button>
-                        ) : null}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setDeleteTarget({
-                            id: r.id,
-                            label: `${sys?.label ?? "System"} → ${tgt?.name ?? "Unknown offer"}`,
-                            hasFunnel: !!r.funnel_id,
-                          })}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                  const systemLabel = sys?.label ?? "System";
+                  const targetLabel = tgt?.name ?? "Unknown offer";
+                  const sourceLabel = src ? src.name : "External acquisition";
 
-                      <RouteChannelsManager
-                        routeId={r.id}
-                        channels={channels}
-                        primary={bucket.primary}
-                        additional={bucket.additional}
-                        onAddAdditional={(routeId, channelId) => routeChannels.addChannel(routeId, channelId, false)}
-                        onRemove={(rowId) => routeChannels.removeChannel(rowId)}
-                        onSetPrimary={(routeId, channelId) => routeChannels.setPrimary(routeId, channelId)}
-                      />
-                    </div>
+                  return (
+                    <RouteCard
+                      key={r.id}
+                      routeId={r.id}
+                      systemLabel={systemLabel}
+                      sourceLabel={sourceLabel}
+                      targetLabel={targetLabel}
+                      derived={derived}
+                      primary={bucket.primary}
+                      additional={bucket.additional}
+                      channels={channels}
+                      funnelName={r.funnel_id ? funnelNames.get(r.funnel_id) ?? null : null}
+                      hasFunnel={!!r.funnel_id}
+                      buildProgress={buildInfo ? {
+                        active: buildInfo.activeTaskCount,
+                        completed: buildInfo.completedTaskCount,
+                        guideCount: buildInfo.guideCount,
+                      } : null}
+                      notes={r.notes ?? null}
+                      isBusy={isBusy}
+                      canStart={canStart}
+                      onStartBuilding={() => handleStartBuilding(r.id)}
+                      onOpenFunnel={openFunnelsModule}
+                      onEdit={() => setEditTarget({
+                        id: r.id,
+                        label: `${systemLabel} → ${targetLabel}`,
+                        notes: r.notes ?? null,
+                      })}
+                      onDelete={() => setDeleteTarget({
+                        id: r.id,
+                        label: `${systemLabel} → ${targetLabel}`,
+                        hasFunnel: !!r.funnel_id,
+                      })}
+                      onAddAdditional={(routeId, channelId) => routeChannels.addChannel(routeId, channelId, false)}
+                      onRemoveChannel={(rowId) => routeChannels.removeChannel(rowId)}
+                      onSetPrimary={(routeId, channelId) => routeChannels.setPrimary(routeId, channelId)}
+                    />
                   );
                 })}
               </div>
@@ -237,6 +229,15 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
         preselectedOfferId={preselectedOfferId}
         onCreate={async (payload) => await add(payload)}
         onCreated={() => { void reloadRoutes(); void routeChannels.reload(); }}
+      />
+
+      <EditRouteDialog
+        open={!!editTarget}
+        onOpenChange={(open) => { if (!open) setEditTarget(null); }}
+        routeId={editTarget?.id ?? null}
+        routeLabel={editTarget?.label ?? ""}
+        initialNotes={editTarget?.notes ?? null}
+        onSave={async (id, patch) => { await update(id, patch); }}
       />
 
       <DeleteRouteDialog
