@@ -2,7 +2,7 @@
 // Growth Architecture V3 — data hooks for the new Blueprint tables.
 // =============================================================================
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
@@ -241,11 +241,20 @@ export interface RouteChannelRow {
 export function useRouteChannels(routeIds: string[]) {
   const [rows, setRows] = useState<RouteChannelRow[]>([]);
   const [loading, setLoading] = useState(false);
+  // Monotonic request id — the last dispatched load wins. Prevents an older
+  // in-flight fetch (e.g. auto-load triggered by routeIds change right after
+  // route creation) from overwriting a newer manual reload() invoked once the
+  // channel rows have been inserted.
+  const reqRef = useRef(0);
 
   const key = useMemo(() => routeIds.slice().sort().join(","), [routeIds]);
 
   const load = useCallback(async () => {
-    if (routeIds.length === 0) { setRows([]); return; }
+    const myReq = ++reqRef.current;
+    if (routeIds.length === 0) {
+      if (myReq === reqRef.current) setRows([]);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase
       .from("growth_architecture_channels")
@@ -253,6 +262,7 @@ export function useRouteChannels(routeIds: string[]) {
       .in("architecture_system_id", routeIds)
       .order("is_primary", { ascending: false })
       .order("sort_order", { ascending: true });
+    if (myReq !== reqRef.current) return; // superseded by a newer load
     setLoading(false);
     if (error) { toast.error("Could not load route channels"); return; }
     setRows((data ?? []) as RouteChannelRow[]);

@@ -61,7 +61,7 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
   const [preselectedSystemId, setPreselectedSystemId] = useState<string | null>(null);
   const [preselectedOfferId, setPreselectedOfferId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string; hasFunnel: boolean } | null>(null);
-  const [editTarget, setEditTarget] = useState<{ id: string; label: string; notes: string | null } | null>(null);
+  const [editRouteId, setEditRouteId] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -194,11 +194,7 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
                       canStart={canStart}
                       onStartBuilding={() => handleStartBuilding(r.id)}
                       onOpenFunnel={openFunnelsModule}
-                      onEdit={() => setEditTarget({
-                        id: r.id,
-                        label: `${systemLabel} → ${targetLabel}`,
-                        notes: r.notes ?? null,
-                      })}
+                      onEdit={() => setEditRouteId(r.id)}
                       onDelete={() => setDeleteTarget({
                         id: r.id,
                         label: `${systemLabel} → ${targetLabel}`,
@@ -232,12 +228,19 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
       />
 
       <EditRouteDialog
-        open={!!editTarget}
-        onOpenChange={(open) => { if (!open) setEditTarget(null); }}
-        routeId={editTarget?.id ?? null}
-        routeLabel={editTarget?.label ?? ""}
-        initialNotes={editTarget?.notes ?? null}
-        onSave={async (id, patch) => { await update(id, patch); }}
+        open={!!editRouteId}
+        onOpenChange={(open) => { if (!open) setEditRouteId(null); }}
+        route={editRouteId ? routes.find((r) => r.id === editRouteId) ?? null : null}
+        offers={offers}
+        relationships={relationships}
+        systems={systems}
+        channels={channels}
+        primary={editRouteId ? routeChannels.byRoute.get(editRouteId)?.primary ?? null : null}
+        additional={editRouteId ? routeChannels.byRoute.get(editRouteId)?.additional ?? [] : []}
+        onSaveCore={async (id, patch) => { await update(id, patch); await reloadRoutes(); }}
+        onAddChannel={(routeId, channelId, isPrimary) => routeChannels.addChannel(routeId, channelId, isPrimary)}
+        onRemoveChannel={(rowId) => routeChannels.removeChannel(rowId)}
+        onSetPrimary={(routeId, channelId) => routeChannels.setPrimary(routeId, channelId)}
       />
 
       <DeleteRouteDialog
