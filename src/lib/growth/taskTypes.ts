@@ -92,6 +92,10 @@ export interface GrowthRoadmapTaskRow {
   build_guide_ref: string | null;
   /** Optional coach prompt slug (used by the AI Coach for task-scoped help). */
   coach_prompt_ref: string | null;
+  /** Optional target growth system id — when set, roadmap surfaces a
+   *  "Configure in Growth Architecture" CTA that opens the Blueprint wizard
+   *  preselected with this system. */
+  target_growth_system_id?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
