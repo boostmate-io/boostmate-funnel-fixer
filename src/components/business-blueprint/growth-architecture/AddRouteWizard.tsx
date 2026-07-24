@@ -459,13 +459,15 @@ function Step1Target({ offers, existingRoutes, value, onChange }: {
 }
 
 // ---------- Step 2 ----------------------------------------------------------
-function Step2Source({ value, sourceOfferId, sourceOptions, onKindChange, onSourceOfferChange, hasRelationships }: {
+function Step2Source({ value, sourceOfferId, sourceOptions, onKindChange, onSourceOfferChange, hasRelationships, autoLocked, targetOfferName }: {
   value: "external" | "offer";
   sourceOfferId: string | null;
   sourceOptions: EcosystemOfferRow[];
   onKindChange: (k: "external" | "offer") => void;
   onSourceOfferChange: (id: string) => void;
   hasRelationships: boolean;
+  autoLocked: boolean;
+  targetOfferName: string | null;
 }) {
   return (
     <div className="space-y-4">
@@ -473,16 +475,28 @@ function Step2Source({ value, sourceOfferId, sourceOptions, onKindChange, onSour
         <Label className="text-sm font-semibold">How will people reach this offer?</Label>
         <p className="text-xs text-muted-foreground mt-1">External acquisition brings new leads in from outside your ecosystem; ascension routes convert existing customers.</p>
       </div>
+      {autoLocked && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-xs">
+          <Wand2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-foreground mb-0.5">External acquisition auto-selected</div>
+            <div className="text-muted-foreground">
+              {targetOfferName ? <><strong>{targetOfferName}</strong> has </> : "This offer has "}
+              no incoming offer relationships, so external acquisition is the only valid source. Click Continue to proceed.
+            </div>
+          </div>
+        </div>
+      )}
       <RadioGroup value={value} onValueChange={(v) => onKindChange(v as any)} className="grid gap-2">
-        <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${value === "external" ? "border-primary bg-primary/5" : "border-border"}`}>
-          <RadioGroupItem value="external" id="src-ext" className="mt-1" />
+        <label className={`flex items-start gap-3 p-3 border rounded-lg ${autoLocked ? "cursor-not-allowed" : "cursor-pointer"} ${value === "external" ? "border-primary bg-primary/5" : "border-border"}`}>
+          <RadioGroupItem value="external" id="src-ext" className="mt-1" disabled={autoLocked} />
           <div>
             <div className="text-sm font-semibold">From an acquisition channel</div>
             <div className="text-xs text-muted-foreground">External traffic — cold outreach, ads, organic content, etc.</div>
           </div>
         </label>
-        <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${value === "offer" ? "border-primary bg-primary/5" : "border-border"} ${!hasRelationships ? "opacity-60" : ""}`}>
-          <RadioGroupItem value="offer" id="src-offer" className="mt-1" disabled={!hasRelationships} />
+        <label className={`flex items-start gap-3 p-3 border rounded-lg ${(!hasRelationships || autoLocked) ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${value === "offer" ? "border-primary bg-primary/5" : "border-border"}`}>
+          <RadioGroupItem value="offer" id="src-offer" className="mt-1" disabled={!hasRelationships || autoLocked} />
           <div>
             <div className="text-sm font-semibold">From another offer</div>
             <div className="text-xs text-muted-foreground">
