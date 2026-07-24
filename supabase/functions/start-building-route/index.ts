@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
     guideInserts.push({
       funnel_id: funnelId,
       build_guide_id: gid,
-      source: "growth_system",
+      source: "system",
       source_ref_id: system.id,
       sort_order: (g as any).sort_order ?? 0,
     });
