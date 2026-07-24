@@ -686,6 +686,7 @@ function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, pr
   onAdditionalToggle: (id: string) => void;
   isAdmin: boolean;
   hasAnyCompat: boolean;
+  autoLocked: boolean;
 }) {
   if (!isExternal) {
     return (
@@ -704,12 +705,25 @@ function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, pr
   }
 
   const list = hasAnyCompat ? suggestions : channels.map((c) => ({ channel: c, compatible: false, isSuggestedDefault: false, why: "Admin override — no compatibility configured." }));
+  const autoLockedChannelLabel = autoLocked ? list[0]?.channel.label ?? null : null;
 
   return (
     <div className="space-y-4">
       {!hasAnyCompat && isAdmin && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
           Admin override: no compatibility configured for this system. Any channel may be picked, but non-admins would be blocked here.
+        </div>
+      )}
+
+      {autoLocked && autoLockedChannelLabel && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-xs">
+          <Wand2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-foreground mb-0.5">{autoLockedChannelLabel} auto-selected</div>
+            <div className="text-muted-foreground">
+              It is the only compatible acquisition channel for this Growth System. Click Continue to proceed.
+            </div>
+          </div>
         </div>
       )}
 
@@ -721,8 +735,9 @@ function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, pr
             <button
               key={s.channel.id}
               type="button"
+              disabled={autoLocked}
               onClick={() => onPrimaryChange(s.channel.id)}
-              className={`text-left p-3 rounded-lg border ${primary === s.channel.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
+              className={`text-left p-3 rounded-lg border ${primary === s.channel.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"} ${autoLocked ? "opacity-70 cursor-not-allowed" : ""}`}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
