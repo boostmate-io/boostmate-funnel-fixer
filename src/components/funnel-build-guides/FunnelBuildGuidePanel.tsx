@@ -191,7 +191,6 @@ const FunnelBuildGuidePanel = ({ funnelId, onClose }: Props) => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold truncate">{g.name}</span>
-                          <Badge variant="outline" className="text-[9px] uppercase">{g.source === "growth_system" ? "System" : "Channel"}</Badge>
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <Progress value={gPct} className="h-1.5 flex-1" />

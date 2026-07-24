@@ -39,6 +39,7 @@ type Mode = "overview" | "edit" | "view";
 const BusinessBlueprintModule = () => {
   const [mode, setMode] = useState<Mode>("overview");
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
+  const [pendingOpenOfferId, setPendingOpenOfferId] = useState<string | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const { blueprint, offerDesign, proofAuthority, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, updateProofAuthority, updateBrandStrategy, setShareToken } = useBlueprint();
@@ -56,6 +57,20 @@ const BusinessBlueprintModule = () => {
       setSetupOpen(true);
     }
   }, [loadingSettings, settings]);
+
+  // Deep-link: open a specific offer in Offer Design > Ecosystem
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const offerId = detail?.offerId as string | undefined;
+      if (!offerId) return;
+      setMode("edit");
+      setActiveSection("offer-design");
+      setPendingOpenOfferId(offerId);
+    };
+    window.addEventListener("boostmate:open-offer-design", handler);
+    return () => window.removeEventListener("boostmate:open-offer-design", handler);
+  }, []);
 
   if (loading || loadingSettings || !blueprint || !settings) {
     return (
@@ -198,6 +213,8 @@ const BusinessBlueprintModule = () => {
             onChange={updateOfferDesign}
             saving={saving}
             businessType={settings.business_type}
+            pendingOpenOfferId={pendingOpenOfferId}
+            onOpenedOffer={() => setPendingOpenOfferId(null)}
           />
         );
       case "growth-system":

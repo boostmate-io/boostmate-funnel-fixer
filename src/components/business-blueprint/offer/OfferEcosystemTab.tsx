@@ -4,7 +4,7 @@
 // Delivery Type. Primary purpose removed.
 // =============================================================================
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight, Plus, MessageSquare,
 } from "lucide-react";
@@ -37,6 +37,8 @@ interface Props {
   onChangeOfferDesign?: (patch: Partial<OfferDesignData>) => void;
   saving: boolean;
   businessType?: string;
+  pendingOpenOfferId?: string | null;
+  onOpenedOffer?: () => void;
 }
 
 const numberOrEmpty = (raw: string): number | "" => {
@@ -213,7 +215,7 @@ const OfferCardRow = ({
   );
 };
 
-const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, saving, businessType }: Props) => {
+const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, saving, businessType, pendingOpenOfferId, onOpenedOffer }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const { offers, addOffer, updateOffer, deleteOffer, tierCounts } = useEcosystemOffers({
@@ -236,6 +238,15 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   };
 
   const [editing, setEditing] = useState<{ id: string; isPrimary: boolean } | null>(null);
+
+  // Deep-link: open a specific offer's editor once the row is available in state
+  useEffect(() => {
+    if (!pendingOpenOfferId) return;
+    const row = offers.find((o) => o.id === pendingOpenOfferId);
+    if (!row) return;
+    setEditing({ id: row.id, isPrimary: false });
+    onOpenedOffer?.();
+  }, [pendingOpenOfferId, offers, onOpenedOffer]);
 
   const handleGenerateIdeas = (tier: EcosystemTier) => {
     toast.info(`Generate ${tier.replace("_", " ")} ideas — AI coming soon`);

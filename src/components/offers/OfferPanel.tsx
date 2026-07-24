@@ -148,25 +148,41 @@ const OfferPanel = ({ funnelId, linkedOfferId, onLinkedOfferChange, onNavigateTo
               const tier = (linkedOffer as any).tier as string | undefined;
               const tierLabel = tier ? TIER_LABELS[tier] ?? tier : null;
               const price = (d.primary_price || d.price || "").toString().trim();
+              const delivery = (d.delivery_timeline || d.delivery_method || d.format || "").toString().trim();
               const offerType = (d.offer_type || "").toString().trim();
-              const delivery = (d.delivery_timeline || "").toString().trim();
-              const outcome = (d.specific_outcome || d.dream_state || "").toString().trim();
-              const metaChips = [tierLabel, offerType, price, delivery].filter(Boolean) as string[];
+              const outcome = (d.specific_outcome || d.dream_state || d.core_outcome || d.description || "").toString().trim();
+
+              // Delivery fallback: if empty, use offer_type as the 3rd row
+              const thirdLabel = delivery ? "Delivery" : offerType ? "Type" : null;
+              const thirdValue = delivery || offerType || null;
+
+              const rows: { label: string; value: string | null }[] = [
+                { label: "Tier", value: tierLabel },
+                { label: "Price", value: price || null },
+                thirdLabel && thirdValue ? { label: thirdLabel, value: thirdValue } : null,
+                { label: "Outcome", value: outcome ? truncate(outcome, 180) : null },
+              ].filter(Boolean) as { label: string; value: string | null }[];
+
+              const anyContent = rows.some((r) => r.value);
+
               return (
-                <div className="p-4 rounded-lg border border-border bg-muted/20 space-y-2">
-                  <h4 className="text-sm font-display font-bold text-foreground leading-tight">{linkedOffer.name}</h4>
-                  {metaChips.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {metaChips.map((chip, i) => (
-                        <Badge key={i} variant="secondary" className="text-[10px] font-normal">{chip}</Badge>
-                      ))}
-                    </div>
-                  )}
-                  {outcome && (
-                    <p className="text-xs text-muted-foreground leading-relaxed pt-1">{truncate(outcome, 160)}</p>
-                  )}
-                  {metaChips.length === 0 && !outcome && (
-                    <p className="text-xs text-muted-foreground italic">No offer details yet. Open in Offer Module to fill it in.</p>
+                <div className="rounded-lg border border-border bg-muted/20 overflow-hidden">
+                  <div className="px-4 pt-4 pb-3 border-b border-border">
+                    <h4 className="text-sm font-display font-bold text-foreground leading-tight">{linkedOffer.name}</h4>
+                  </div>
+                  {anyContent ? (
+                    <dl className="divide-y divide-border">
+                      {rows.map((r, i) =>
+                        r.value ? (
+                          <div key={i} className="grid grid-cols-[80px_1fr] gap-3 px-4 py-2.5">
+                            <dt className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{r.label}</dt>
+                            <dd className="text-xs text-foreground leading-relaxed">{r.value}</dd>
+                          </div>
+                        ) : null,
+                      )}
+                    </dl>
+                  ) : (
+                    <p className="px-4 py-3 text-xs text-muted-foreground italic">No offer details yet. Open Offer Design to fill it in.</p>
                   )}
                 </div>
               );
@@ -175,9 +191,14 @@ const OfferPanel = ({ funnelId, linkedOfferId, onLinkedOfferChange, onNavigateTo
             <div className="space-y-2">
               <Button
                 variant="outline" size="sm" className="w-full h-8 text-xs gap-1.5"
-                onClick={() => onNavigateToOffer(linkedOffer.id)}
+                onClick={() => {
+                  const id = linkedOffer.id;
+                  window.dispatchEvent(new CustomEvent("boostmate:open-offer-design", { detail: { offerId: id } }));
+                  window.dispatchEvent(new CustomEvent("boostmate:navigate-module", { detail: "business-blueprint" }));
+                  onNavigateToOffer(id);
+                }}
               >
-                <ExternalLink className="w-3.5 h-3.5" /> Open in Offer Module
+                <ExternalLink className="w-3.5 h-3.5" /> Open Offer Design
               </Button>
               <Button
                 variant="outline" size="sm" className="w-full h-8 text-xs gap-1.5 text-destructive hover:text-destructive"

@@ -2,7 +2,7 @@
 // OfferDesignSection — orchestrator with tab navigation across the 4 tabs.
 // =============================================================================
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import {
   OFFER_TABS,
@@ -28,10 +28,16 @@ interface Props {
   onChange: (patch: Partial<OfferDesignData>) => void;
   saving: boolean;
   businessType?: string;
+  pendingOpenOfferId?: string | null;
+  onOpenedOffer?: () => void;
 }
 
-const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType }: Props) => {
+const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType, pendingOpenOfferId, onOpenedOffer }: Props) => {
   const [active, setActive] = useState<OfferTab>("angle");
+
+  useEffect(() => {
+    if (pendingOpenOfferId) setActive("ecosystem");
+  }, [pendingOpenOfferId]);
 
   // We piggyback on useEcosystemOffers here so the sub-tab nav can show ecosystem
   // progress even when the user is not on the ecosystem tab.
@@ -123,6 +129,8 @@ const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType 
             onChangeOfferDesign={onChange}
             saving={saving}
             businessType={businessType}
+            pendingOpenOfferId={pendingOpenOfferId ?? null}
+            onOpenedOffer={onOpenedOffer}
           />
         )}
       </div>
