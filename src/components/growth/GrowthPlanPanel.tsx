@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, Circle, PlayCircle, XCircle, ExternalLink, RefreshCw, Trophy, MessageCircle, BookOpen, Lock } from "lucide-react";
+import { CheckCircle2, Circle, PlayCircle, XCircle, ExternalLink, RefreshCw, Trophy, MessageCircle, BookOpen, Lock, Workflow } from "lucide-react";
 import { toast } from "sonner";
 import { useGrowthPlan } from "@/lib/growth/useGrowthPlan";
 import type { DerivedTask, TaskResource, TaskStatus } from "@/lib/growth/taskTypes";
@@ -286,6 +286,24 @@ function PlanRow({
                 >
                   <MessageCircle className="w-3 h-3" />
                   Ask Coach
+                </button>
+              )}
+              {task.target_growth_system_id && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("boostmate:navigate-module", { detail: "business-blueprint" }));
+                    // Small delay so the module mounts before the wizard event fires
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent("boostmate:open-add-growth-route", {
+                        detail: { systemId: task.target_growth_system_id },
+                      }));
+                    }, 150);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <Workflow className="w-3 h-3" />
+                  Configure in Growth Architecture
                 </button>
               )}
             </div>
