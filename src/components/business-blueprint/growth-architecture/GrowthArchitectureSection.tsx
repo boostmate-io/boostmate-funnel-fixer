@@ -76,8 +76,16 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
 
   const offerById = useMemo(() => new Map(offers.map((o) => [o.id, o])), [offers]);
 
-  const openFunnelsModule = () => {
+  const openFunnel = (funnelId: string | null) => {
     window.dispatchEvent(new CustomEvent("boostmate:navigate-module", { detail: "funnels" }));
+    if (funnelId) {
+      // Fire on next tick so FunnelModule has mounted and its listener is live.
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("boostmate:open-funnel", { detail: { funnelId } }),
+        );
+      }, 50);
+    }
   };
 
   const handleStartBuilding = async (routeId: string) => {
@@ -87,13 +95,10 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
         body: { route_id: routeId },
       });
       if (error) throw error;
-      if ((data as any)?.injection_warning === "ambiguous_entry") {
-        toast.warning("Funnel created, but entry node was ambiguous — set one on the seed template.");
-      } else {
-        toast.success("Funnel created — opening Funnels…");
-      }
+      const funnelId = (data as any)?.funnel_id as string | undefined;
+      toast.success("Funnel created — opening Funnel Builder…");
       await Promise.all([reloadRoutes(), reloadProgress()]);
-      openFunnelsModule();
+      openFunnel(funnelId ?? null);
     } catch (e: any) {
       toast.error(e?.message ?? "Could not start building");
     } finally {
@@ -193,7 +198,7 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
                       isBusy={isBusy}
                       canStart={canStart}
                       onStartBuilding={() => handleStartBuilding(r.id)}
-                      onOpenFunnel={openFunnelsModule}
+                      onOpenFunnel={() => openFunnel(r.funnel_id)}
                       onEdit={() => setEditRouteId(r.id)}
                       onDelete={() => setDeleteTarget({
                         id: r.id,

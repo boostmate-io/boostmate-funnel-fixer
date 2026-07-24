@@ -3,10 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
-import { X, ExternalLink, Link2, Unlink, Plus, Gem, CheckCircle2, Circle } from "lucide-react";
+import { X, ExternalLink, Link2, Unlink, Plus, Gem } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Offer, STATUS_LABELS, STATUS_COLORS, OfferStatus } from "./offerFramework";
 
@@ -131,31 +130,12 @@ const OfferPanel = ({ funnelId, linkedOfferId, onLinkedOfferChange, onNavigateTo
         {linkedOffer ? (
           <>
             {/* Linked offer summary */}
-            <div className="p-4 rounded-lg border border-border bg-muted/20 space-y-3">
-              <div className="flex items-start justify-between">
+            <div className="p-4 rounded-lg border border-border bg-muted/20 space-y-2">
+              <div className="flex items-start justify-between gap-2">
                 <h4 className="text-sm font-display font-bold text-foreground leading-tight">{linkedOffer.name}</h4>
-                <Badge variant="secondary" className={`text-[10px] shrink-0 ml-2 ${STATUS_COLORS[linkedOffer.status as OfferStatus]}`}>
+                <Badge variant="secondary" className={`text-[10px] shrink-0 ${STATUS_COLORS[linkedOffer.status as OfferStatus]}`}>
                   {STATUS_LABELS[linkedOffer.status as OfferStatus]}
                 </Badge>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-muted-foreground">Completion</span>
-                  <span className="text-[10px] font-medium">{linkedOffer.completion}%</span>
-                </div>
-                <Progress value={linkedOffer.completion} className="h-1.5" />
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                {linkedOffer.status === "approved" ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                ) : (
-                  <Circle className="w-3.5 h-3.5 text-muted-foreground" />
-                )}
-                <span className="text-[10px] text-muted-foreground">
-                  {linkedOffer.status === "approved" ? "Approved" : "Not yet approved"}
-                </span>
               </div>
             </div>
 
