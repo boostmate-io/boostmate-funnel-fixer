@@ -1,17 +1,14 @@
 // =============================================================================
 // GrowthMap — read-only React Flow view of the Growth Architecture.
 //
-// V5 layout (top-to-bottom layered):
-//   Layer 0 : Acquisition channel nodes (explicit, one per (route, channel)
-//             junction — primary and additional).
-//   Layer 1+: Offer nodes, grouped by tier order (top = earliest tier).
-//
-// Only route-participating offers appear on the active graph. Offers without
-// any route render below the graph in a separate "Offers without a growth
-// route" section.
+// V5 layout: nodes and edges are constructed logically (channels, canonical
+// offer nodes, route + relationship edges) and then positioned by dagre in a
+// top-to-bottom layered graph. Dagre handles multi-route separation so shared
+// offer nodes remain canonical while distinct routes never overlap.
 // =============================================================================
 
 import { useMemo } from "react";
+import dagre from "@dagrejs/dagre";
 import {
   ReactFlow,
   Background,
@@ -31,7 +28,6 @@ import type {
   RouteChannelRow,
 } from "@/lib/growth-architecture/hooks";
 import { deriveRouteState } from "@/lib/growth-architecture/deriveStatus";
-import { ECOSYSTEM_TIERS } from "../offerDesignTypes";
 
 interface Props {
   offers: EcosystemOfferRow[];
@@ -42,7 +38,6 @@ interface Props {
   routeChannelsByRoute: Map<string, { primary: RouteChannelRow | null; additional: RouteChannelRow[] }>;
 }
 
-const TIER_ORDER = ECOSYSTEM_TIERS.map((t) => t.id);
 const REL_COLOR: Record<string, string> = {
   ascends_to: "hsl(var(--primary))",
   leads_into: "hsl(220 70% 55%)",
@@ -51,13 +46,10 @@ const REL_COLOR: Record<string, string> = {
 };
 
 const NODE_WIDTH = 220;
-const COL_GAP = 60;
-const ROW_GAP = 60;
-const OFFER_ROW_HEIGHT = 90;
-const CHANNEL_ROW_HEIGHT = 70;
+const OFFER_HEIGHT = 78;
+const CHANNEL_HEIGHT = 60;
 
 const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChannelsByRoute }: Props) => {
-  // Route-participating offer IDs
   const routedOfferIds = useMemo(() => {
     const set = new Set<string>();
     routes.forEach((r) => {
@@ -77,88 +69,19 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
   );
 
   const { nodes, edges } = useMemo(() => {
-    const nodes: Node[] = [];
+    // Nodes built without positions; dagre assigns them below.
+    const rawNodes: Array<{ id: string; width: number; height: number; render: Node }> = [];
     const edges: Edge[] = [];
 
-    // Group offers by tier (present tiers only), preserving TIER_ORDER
-    const offersByTier = new Map<string, EcosystemOfferRow[]>();
+    // Canonical offer nodes
     graphOffers.forEach((o) => {
-      const list = offersByTier.get(o.tier) ?? [];
-      list.push(o);
-      offersByTier.set(o.tier, list);
-    });
-    const presentTiers = TIER_ORDER.filter((t) => (offersByTier.get(t)?.length ?? 0) > 0);
-
-    // Build a per-(route, channel) explicit channel-node id and collect them.
-    type ChannelJunction = { key: string; channelId: string; routeId: string };
-    const channelJunctionsForRoute = new Map<string, ChannelJunction[]>(); // routeId -> its junctions (primary + additional)
-    const externalChannelJunctions: ChannelJunction[] = []; // channel nodes to render for external routes (source==null)
-
-    routes.forEach((r) => {
-      const bucket = routeChannelsByRoute.get(r.id);
-      const junctions: ChannelJunction[] = [];
-      if (bucket?.primary) {
-        junctions.push({ key: `ch-${r.id}-${bucket.primary.channel_id}`, channelId: bucket.primary.channel_id, routeId: r.id });
-      }
-      (bucket?.additional ?? []).forEach((a) => {
-        junctions.push({ key: `ch-${r.id}-${a.channel_id}`, channelId: a.channel_id, routeId: r.id });
-      });
-      channelJunctionsForRoute.set(r.id, junctions);
-      // External routes surface channel nodes at the top layer
-      if (r.source_offer_id == null) {
-        externalChannelJunctions.push(...junctions);
-      }
-    });
-
-    // Compute layout widths per layer
-    const channelCount = externalChannelJunctions.length;
-    const layerCounts = [channelCount, ...presentTiers.map((t) => offersByTier.get(t)?.length ?? 0)];
-    const maxLayerWidth = Math.max(1, ...layerCounts);
-    const layerPixelWidth = (count: number) =>
-      count * NODE_WIDTH + Math.max(0, count - 1) * COL_GAP;
-    const canvasWidth = layerPixelWidth(maxLayerWidth);
-    const xForIndex = (index: number, count: number) => {
-      const totalWidth = layerPixelWidth(count);
-      const offset = (canvasWidth - totalWidth) / 2;
-      return offset + index * (NODE_WIDTH + COL_GAP);
-    };
-
-    // Layer 0: channel nodes for external routes
-    const channelLayerY = 20;
-    externalChannelJunctions.forEach((junction, i) => {
-      const ch = channels.find((c) => c.id === junction.channelId);
-      nodes.push({
-        id: junction.key,
-        position: { x: xForIndex(i, channelCount), y: channelLayerY },
-        data: {
-          label: (
-            <div className="text-left">
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Channel</div>
-              <div className="text-sm font-semibold truncate max-w-[190px]">{ch?.label ?? "Unknown"}</div>
-            </div>
-          ) as any,
-        },
-        sourcePosition: Position.Bottom,
-        targetPosition: Position.Top,
-        style: {
-          background: "hsl(var(--muted))",
-          border: `1px ${ch?.color ? "solid" : "dashed"} ${ch?.color ?? "hsl(var(--border))"}`,
-          borderRadius: 10,
-          padding: 10,
-          width: NODE_WIDTH,
-        },
-      });
-    });
-
-    // Offer layers — canonical single node per offer
-    const offerLayerBaseY = channelLayerY + CHANNEL_ROW_HEIGHT + ROW_GAP;
-    presentTiers.forEach((tier, layerIndex) => {
-      const list = offersByTier.get(tier) ?? [];
-      const y = offerLayerBaseY + layerIndex * (OFFER_ROW_HEIGHT + ROW_GAP);
-      list.forEach((o, i) => {
-        nodes.push({
+      rawNodes.push({
+        id: `offer-${o.id}`,
+        width: NODE_WIDTH,
+        height: OFFER_HEIGHT,
+        render: {
           id: `offer-${o.id}`,
-          position: { x: xForIndex(i, list.length), y },
+          position: { x: 0, y: 0 },
           data: {
             label: (
               <div className="text-left">
@@ -185,11 +108,58 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
             padding: 10,
             width: NODE_WIDTH,
           },
+        },
+      });
+    });
+
+    // Explicit channel nodes, one per (route, channel) junction for external routes
+    type Junction = { key: string; channelId: string; routeId: string; isPrimary: boolean };
+    const junctionsByRoute = new Map<string, Junction[]>();
+    routes.forEach((r) => {
+      if (r.source_offer_id != null) return; // ascension routes: no channel node
+      const bucket = routeChannelsByRoute.get(r.id);
+      const list: Junction[] = [];
+      if (bucket?.primary) {
+        list.push({ key: `ch-${r.id}-${bucket.primary.channel_id}`, channelId: bucket.primary.channel_id, routeId: r.id, isPrimary: true });
+      }
+      (bucket?.additional ?? []).forEach((a) => {
+        list.push({ key: `ch-${r.id}-${a.channel_id}`, channelId: a.channel_id, routeId: r.id, isPrimary: false });
+      });
+      junctionsByRoute.set(r.id, list);
+      list.forEach((j) => {
+        const ch = channels.find((c) => c.id === j.channelId);
+        rawNodes.push({
+          id: j.key,
+          width: NODE_WIDTH,
+          height: CHANNEL_HEIGHT,
+          render: {
+            id: j.key,
+            position: { x: 0, y: 0 },
+            data: {
+              label: (
+                <div className="text-left">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {j.isPrimary ? "Primary channel" : "Channel"}
+                  </div>
+                  <div className="text-sm font-semibold truncate max-w-[190px]">{ch?.label ?? "Unknown"}</div>
+                </div>
+              ) as any,
+            },
+            sourcePosition: Position.Bottom,
+            targetPosition: Position.Top,
+            style: {
+              background: "hsl(var(--muted))",
+              border: `1px ${j.isPrimary ? "solid" : "dashed"} ${ch?.color ?? "hsl(var(--border))"}`,
+              borderRadius: 10,
+              padding: 8,
+              width: NODE_WIDTH,
+            },
+          },
         });
       });
     });
 
-    // Relationship edges — only between routed offers (both endpoints must be on graph)
+    // Relationship edges (between routed offers only) — soft, thin
     relationships.forEach((r) => {
       if (!routedOfferIds.has(r.source_offer_id) || !routedOfferIds.has(r.target_offer_id)) return;
       edges.push({
@@ -200,7 +170,7 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
         style: {
           stroke: REL_COLOR[r.relationship_type] ?? "hsl(var(--border))",
           strokeWidth: 1,
-          opacity: 0.45,
+          opacity: 0.4,
         },
         labelStyle: { fontSize: 10, fill: "hsl(var(--muted-foreground))" },
         markerEnd: { type: MarkerType.ArrowClosed },
@@ -213,27 +183,25 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
       const bucket = routeChannelsByRoute.get(r.id);
       const primaryCid = bucket?.primary?.channel_id ?? null;
       const derived = deriveRouteState(r, relationships, primaryCid);
-      const isActive = derived.state === "ready_to_build" || derived.state === "in_progress" || derived.state === "built" || derived.state === "locked";
+      const isActive = derived.state !== "planned";
       const stroke = isActive ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))";
       const strokeWidth = isActive ? 2.5 : 1.5;
       const dash = derived.state === "planned" ? "4 4" : undefined;
 
       if (r.source_offer_id == null) {
-        // External route: explicit channel node(s) -> target offer
-        const junctions = channelJunctionsForRoute.get(r.id) ?? [];
-        if (junctions.length === 0) return; // nothing to draw without a channel
-        junctions.forEach((junction, idx) => {
-          const isPrimary = idx === 0 && bucket?.primary?.channel_id === junction.channelId;
+        const junctions = junctionsByRoute.get(r.id) ?? [];
+        if (junctions.length === 0) return;
+        junctions.forEach((j) => {
           edges.push({
-            id: `route-${r.id}-${junction.channelId}`,
-            source: junction.key,
+            id: `route-${r.id}-${j.channelId}`,
+            source: j.key,
             target: `offer-${r.target_offer_id}`,
-            label: isPrimary ? `${sys?.label ?? "System"} · ${derived.label}` : undefined,
+            label: j.isPrimary ? `${sys?.label ?? "System"} · ${derived.label}` : undefined,
             style: {
               stroke,
-              strokeWidth: isPrimary ? strokeWidth : 1.25,
+              strokeWidth: j.isPrimary ? strokeWidth : 1.25,
               strokeDasharray: dash,
-              opacity: isPrimary ? 1 : 0.55,
+              opacity: j.isPrimary ? 1 : 0.55,
             },
             labelStyle: { fontSize: 11, fontWeight: 600 },
             labelBgStyle: { fill: "hsl(var(--background))" },
@@ -243,7 +211,6 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
           });
         });
       } else {
-        // Ascension route: canonical offer -> canonical offer, labelled with system
         const additionalCount = bucket?.additional.length ?? 0;
         const label = additionalCount > 0
           ? `${sys?.label ?? "System"} · ${derived.label} · +${additionalCount}`
@@ -263,6 +230,22 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
       }
     });
 
+    // Dagre layout — top→bottom, with generous spacing so routes never overlap.
+    const g = new dagre.graphlib.Graph({ multigraph: true });
+    g.setDefaultEdgeLabel(() => ({}));
+    g.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 90, marginx: 20, marginy: 20 });
+    rawNodes.forEach((n) => g.setNode(n.id, { width: n.width, height: n.height }));
+    edges.forEach((e) => g.setEdge(e.source, e.target, {}, e.id));
+    dagre.layout(g);
+
+    const nodes: Node[] = rawNodes.map((n) => {
+      const p = g.node(n.id);
+      return {
+        ...n.render,
+        position: { x: (p?.x ?? 0) - n.width / 2, y: (p?.y ?? 0) - n.height / 2 },
+      };
+    });
+
     return { nodes, edges };
   }, [graphOffers, relationships, routes, channels, systems, routeChannelsByRoute, routedOfferIds]);
 
@@ -276,7 +259,7 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
 
   return (
     <div className="space-y-4">
-      <div className="h-[560px] rounded-lg border border-border bg-background">
+      <div className="h-[600px] rounded-lg border border-border bg-background">
         {graphOffers.length === 0 ? (
           <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-6">
             No routes yet. Add a growth route to populate your map.
