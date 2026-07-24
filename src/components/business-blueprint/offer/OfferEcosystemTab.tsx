@@ -37,6 +37,8 @@ interface Props {
   onChangeOfferDesign?: (patch: Partial<OfferDesignData>) => void;
   saving: boolean;
   businessType?: string;
+  pendingOpenOfferId?: string | null;
+  onOpenedOffer?: () => void;
 }
 
 const numberOrEmpty = (raw: string): number | "" => {
