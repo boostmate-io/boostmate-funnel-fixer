@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Workflow } from "lucide-react";
+import { Plus, Trash2, Pencil, Workflow, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const OFFER_TIERS = ["free", "low_ticket", "mid_ticket", "core", "premium", "continuity"] as const;
 const STAGES = ["validate", "attract", "optimize", "scale", "systemize"] as const;
@@ -22,7 +23,7 @@ interface System {
   primary_objective: string | null;
   suitable_offer_tiers: string[] | null;
   recommended_stages: string[] | null;
-  architecture: any;
+  seed_template_id: string | null;
   icon: string | null;
   sort_order: number;
   is_active: boolean;
@@ -41,6 +42,7 @@ interface CompatRow {
 
 interface GuideRow { id: string; name: string; }
 interface SystemGuideRow { growth_system_id: string; build_guide_id: string; }
+interface SeedTemplate { id: string; name: string; template_type: string | null; }
 
 const AdminGrowthSystemsCatalog = () => {
   const [rows, setRows] = useState<System[]>([]);
@@ -48,24 +50,25 @@ const AdminGrowthSystemsCatalog = () => {
   const [compat, setCompat] = useState<CompatRow[]>([]);
   const [guides, setGuides] = useState<GuideRow[]>([]);
   const [systemGuides, setSystemGuides] = useState<SystemGuideRow[]>([]);
+  const [seedTemplates, setSeedTemplates] = useState<SeedTemplate[]>([]);
   const [editing, setEditing] = useState<Partial<System> | null>(null);
-  const [archText, setArchText] = useState("");
-  const [archError, setArchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [sys, ch, cp, gd, sg] = await Promise.all([
-      supabase.from("growth_systems_catalog").select("*").order("sort_order", { ascending: true }),
+    const [sys, ch, cp, gd, sg, st] = await Promise.all([
+      supabase.from("growth_systems_catalog").select("id,key,label,description,primary_objective,suitable_offer_tiers,recommended_stages,seed_template_id,icon,sort_order,is_active").order("sort_order", { ascending: true }),
       supabase.from("acquisition_channels").select("id,key,label").eq("is_active", true).order("sort_order"),
       supabase.from("growth_system_channel_compat").select("growth_system_id,acquisition_channel_id"),
       supabase.from("build_guides").select("id,name").eq("is_active", true).order("sort_order"),
       supabase.from("growth_system_build_guides").select("growth_system_id,build_guide_id"),
+      supabase.from("seed_templates").select("id,name,template_type").eq("is_active", true).order("name"),
     ]);
     if (sys.data) setRows(sys.data as any);
     if (ch.data) setChannels(ch.data as any);
     if (cp.data) setCompat(cp.data as any);
     if (gd.data) setGuides(gd.data as any);
     if (sg.data) setSystemGuides(sg.data as any);
+    if (st.data) setSeedTemplates(st.data as any);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -89,9 +92,7 @@ const AdminGrowthSystemsCatalog = () => {
 
 
   const openEdit = (r?: System) => {
-    setEditing(r ?? { is_active: true, sort_order: rows.length * 10, suitable_offer_tiers: [], recommended_stages: [], architecture: {} });
-    setArchText(JSON.stringify(r?.architecture ?? {}, null, 2));
-    setArchError(null);
+    setEditing(r ?? { is_active: true, sort_order: rows.length * 10, suitable_offer_tiers: [], recommended_stages: [], seed_template_id: null });
   };
 
   const toggleArr = (arr: string[] | null | undefined, val: string) => {
@@ -102,15 +103,6 @@ const AdminGrowthSystemsCatalog = () => {
 
   const save = async () => {
     if (!editing?.key || !editing?.label) { toast.error("Key and label required"); return; }
-    let architecture: any = {};
-    try {
-      architecture = archText.trim() ? JSON.parse(archText) : {};
-      setArchError(null);
-    } catch (e: any) {
-      setArchError(e.message);
-      toast.error("Invalid JSON in architecture");
-      return;
-    }
     setLoading(true);
     const payload: any = {
       key: editing.key,
@@ -119,7 +111,7 @@ const AdminGrowthSystemsCatalog = () => {
       primary_objective: editing.primary_objective ?? null,
       suitable_offer_tiers: editing.suitable_offer_tiers ?? [],
       recommended_stages: editing.recommended_stages ?? [],
-      architecture,
+      seed_template_id: editing.seed_template_id ?? null,
       icon: editing.icon ?? null,
       sort_order: editing.sort_order ?? 100,
       is_active: editing.is_active ?? true,
@@ -229,6 +221,11 @@ const AdminGrowthSystemsCatalog = () => {
                   <Badge key={s} variant="outline" className="text-[10px]">{s}</Badge>
                 ))}
                 <Badge variant="outline" className="text-[10px]">{(compatBySystem.get(r.id)?.size ?? 0)} channels</Badge>
+                {r.is_active && !r.seed_template_id && (
+                  <Badge variant="destructive" className="text-[10px] gap-1">
+                    <AlertTriangle className="w-3 h-3" /> No seed template — Start Building will fail
+                  </Badge>
+                )}
                 {!r.is_active && <Badge variant="destructive" className="text-[10px]">Inactive</Badge>}
               </div>
               {r.primary_objective && <div className="text-xs font-medium mt-1">Objective: {r.primary_objective}</div>}
@@ -307,10 +304,29 @@ const AdminGrowthSystemsCatalog = () => {
 
 
             <div>
-              <Label>Architecture (JSON)</Label>
-              <Textarea value={archText} onChange={(e) => { setArchText(e.target.value); setArchError(null); }}
-                rows={8} className="font-mono text-xs" placeholder='{"stages":[]}' />
-              {archError && <div className="text-xs text-destructive mt-1">JSON error: {archError}</div>}
+              <Label>Seed Template</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                The Funnel Builder template that will be cloned when a user clicks Start Building. Manage templates in Admin → Funnel Builder → Templates.
+              </p>
+              <Select
+                value={editing?.seed_template_id ?? "__none__"}
+                onValueChange={(v) => setEditing({ ...editing!, seed_template_id: v === "__none__" ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="— None —" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {seedTemplates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}{t.template_type ? ` · ${t.template_type}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editing?.is_active && !editing?.seed_template_id && (
+                <div className="text-xs text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> Active systems without a seed template will break Start Building.
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-3">
