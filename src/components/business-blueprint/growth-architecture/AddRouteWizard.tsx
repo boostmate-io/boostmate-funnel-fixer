@@ -178,86 +178,61 @@ const AddRouteWizard = ({
     return channels.filter((c) => compatChannelIds.has(c.id));
   }, [channels, compatChannelIds, isAdmin]);
 
-  // ---- Auto-skip predicates -------------------------------------------------
+  // ---- Auto-lock predicates -------------------------------------------------
   // Only for external routes; offer-to-offer never needs channels.
   const isExternal = state.sourceKind === "external";
 
-  // Advance from a step: apply auto-skip forward until we hit a step needing input.
-  const advanceFrom = useCallback(
-    (from: StepId) => {
-      let next: StepId = (from + 1) as StepId;
-      while (next <= 5) {
-        // Step 5 is always shown
-        if (next === 5) break;
+  // When a step has exactly one valid option, preselect it and mark the step
+  // as "auto-locked" so it renders with an explanation and disabled controls.
+  // The user still clicks Continue — transparency over hidden skips.
+  const step2AutoLock = incomingRels.length === 0 && !state.unlocked[2];
+  const step3AutoLock =
+    !!targetOffer &&
+    selectableSystems.length === 1 &&
+    !state.unlocked[3] &&
+    // If Roadmap preselected an incompatible system, keep Step 3 open for context.
+    !(preselectedSystemId && !selectableSystems.some((s) => s.system.id === preselectedSystemId));
+  const step4AutoLock =
+    isExternal &&
+    compatChannelIds.size > 0 &&
+    availableChannels.length === 1 &&
+    !state.unlocked[4];
 
-        // If user manually unlocked this step, always render.
-        if (state.unlocked[next]) break;
+  // Apply preselection + autoSkipped flag when the wizard lands on a locked step.
+  useEffect(() => {
+    if (!open) return;
+    if (step === 2 && step2AutoLock) {
+      setState((s) =>
+        s.sourceKind === "external" && s.autoSkipped[2]
+          ? s
+          : { ...s, sourceKind: "external", sourceOfferId: null, autoSkipped: { ...s.autoSkipped, 2: true } },
+      );
+    }
+    if (step === 3 && step3AutoLock) {
+      const only = selectableSystems[0];
+      setState((s) =>
+        s.systemId === only.system.id && s.autoSkipped[3]
+          ? s
+          : { ...s, systemId: only.system.id, autoSkipped: { ...s.autoSkipped, 3: true } },
+      );
+    }
+    if (step === 4 && step4AutoLock) {
+      const only = availableChannels[0];
+      setState((s) =>
+        s.primaryChannelId === only.id && s.autoSkipped[4]
+          ? s
+          : { ...s, primaryChannelId: only.id, autoSkipped: { ...s.autoSkipped, 4: true } },
+      );
+    }
+  }, [open, step, step2AutoLock, step3AutoLock, step4AutoLock, selectableSystems, availableChannels]);
 
-        if (next === 2) {
-          // Skip if no incoming relationships → force external
-          if (incomingRels.length === 0) {
-            setState((s) => ({
-              ...s,
-              sourceKind: "external",
-              sourceOfferId: null,
-              autoSkipped: { ...s.autoSkipped, 2: true },
-            }));
-            next = 3;
-            continue;
-          }
-          break;
-        }
-        if (next === 3) {
-          // Only one selectable system → auto-skip
-          if (selectableSystems.length === 1) {
-            const only = selectableSystems[0];
-            setState((s) => ({
-              ...s,
-              systemId: only.system.id,
-              autoSkipped: { ...s.autoSkipped, 3: true },
-            }));
-            next = 4;
-            continue;
-          }
-          break;
-        }
-        if (next === 4) {
-          // Offer-to-offer: skip channel step
-          if (!isExternal) {
-            setState((s) => ({ ...s, autoSkipped: { ...s.autoSkipped, 4: true } }));
-            next = 5;
-            continue;
-          }
-          // Empty compat: cannot auto-skip; render warning
-          if (compatChannelIds.size === 0) break;
-          // Only one compat channel → auto-skip
-          if (availableChannels.length === 1) {
-            setState((s) => ({
-              ...s,
-              primaryChannelId: availableChannels[0].id,
-              autoSkipped: { ...s.autoSkipped, 4: true },
-            }));
-            next = 5;
-            continue;
-          }
-          break;
-        }
-      }
-      setStep(next);
-    },
-    [state.unlocked, incomingRels.length, selectableSystems, isExternal, compatChannelIds.size, availableChannels],
-  );
+  const advanceFrom = useCallback((from: StepId) => {
+    setStep(Math.min(5, (from + 1)) as StepId);
+  }, []);
 
   const goBack = useCallback(() => {
-    // Move to the nearest previous step that wasn't auto-skipped OR is Step 1.
-    let prev: StepId = (step - 1) as StepId;
-    while (prev >= 1) {
-      if (prev === 1) break;
-      if (!state.autoSkipped[prev]) break;
-      prev = (prev - 1) as StepId;
-    }
-    setStep(Math.max(1, prev) as StepId);
-  }, [step, state.autoSkipped]);
+    setStep(Math.max(1, (step - 1)) as StepId);
+  }, [step]);
 
   const unlockAndGo = useCallback((s: StepId) => {
     setState((prev) => ({
@@ -354,6 +329,8 @@ const AddRouteWizard = ({
               onKindChange={(k) => patch({ sourceKind: k, sourceOfferId: k === "external" ? null : state.sourceOfferId, systemId: null })}
               onSourceOfferChange={(id) => patch({ sourceOfferId: id, systemId: null })}
               hasRelationships={incomingRels.length > 0}
+              autoLocked={step2AutoLock}
+              targetOfferName={targetOffer?.name ?? null}
             />
           )}
           {step === 3 && (
@@ -364,6 +341,8 @@ const AddRouteWizard = ({
               onChange={(id) => patch({ systemId: id, primaryChannelId: null, additionalChannelIds: [] })}
               preselectedSystemId={preselectedSystemId ?? null}
               isAdmin={isAdmin}
+              autoLocked={step3AutoLock}
+              autoLockedSystemLabel={step3AutoLock ? selectableSystems[0]?.system.label ?? null : null}
             />
           )}
           {step === 4 && (
@@ -384,6 +363,7 @@ const AddRouteWizard = ({
               }
               isAdmin={isAdmin}
               hasAnyCompat={compatChannelIds.size > 0}
+              autoLocked={step4AutoLock}
             />
           )}
           {step === 5 && (
@@ -479,13 +459,15 @@ function Step1Target({ offers, existingRoutes, value, onChange }: {
 }
 
 // ---------- Step 2 ----------------------------------------------------------
-function Step2Source({ value, sourceOfferId, sourceOptions, onKindChange, onSourceOfferChange, hasRelationships }: {
+function Step2Source({ value, sourceOfferId, sourceOptions, onKindChange, onSourceOfferChange, hasRelationships, autoLocked, targetOfferName }: {
   value: "external" | "offer";
   sourceOfferId: string | null;
   sourceOptions: EcosystemOfferRow[];
   onKindChange: (k: "external" | "offer") => void;
   onSourceOfferChange: (id: string) => void;
   hasRelationships: boolean;
+  autoLocked: boolean;
+  targetOfferName: string | null;
 }) {
   return (
     <div className="space-y-4">
@@ -493,16 +475,28 @@ function Step2Source({ value, sourceOfferId, sourceOptions, onKindChange, onSour
         <Label className="text-sm font-semibold">How will people reach this offer?</Label>
         <p className="text-xs text-muted-foreground mt-1">External acquisition brings new leads in from outside your ecosystem; ascension routes convert existing customers.</p>
       </div>
+      {autoLocked && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-xs">
+          <Wand2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-foreground mb-0.5">External acquisition auto-selected</div>
+            <div className="text-muted-foreground">
+              {targetOfferName ? <><strong>{targetOfferName}</strong> has </> : "This offer has "}
+              no incoming offer relationships, so external acquisition is the only valid source. Click Continue to proceed.
+            </div>
+          </div>
+        </div>
+      )}
       <RadioGroup value={value} onValueChange={(v) => onKindChange(v as any)} className="grid gap-2">
-        <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${value === "external" ? "border-primary bg-primary/5" : "border-border"}`}>
-          <RadioGroupItem value="external" id="src-ext" className="mt-1" />
+        <label className={`flex items-start gap-3 p-3 border rounded-lg ${autoLocked ? "cursor-not-allowed" : "cursor-pointer"} ${value === "external" ? "border-primary bg-primary/5" : "border-border"}`}>
+          <RadioGroupItem value="external" id="src-ext" className="mt-1" disabled={autoLocked} />
           <div>
             <div className="text-sm font-semibold">From an acquisition channel</div>
             <div className="text-xs text-muted-foreground">External traffic — cold outreach, ads, organic content, etc.</div>
           </div>
         </label>
-        <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${value === "offer" ? "border-primary bg-primary/5" : "border-border"} ${!hasRelationships ? "opacity-60" : ""}`}>
-          <RadioGroupItem value="offer" id="src-offer" className="mt-1" disabled={!hasRelationships} />
+        <label className={`flex items-start gap-3 p-3 border rounded-lg ${(!hasRelationships || autoLocked) ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${value === "offer" ? "border-primary bg-primary/5" : "border-border"}`}>
+          <RadioGroupItem value="offer" id="src-offer" className="mt-1" disabled={!hasRelationships || autoLocked} />
           <div>
             <div className="text-sm font-semibold">From another offer</div>
             <div className="text-xs text-muted-foreground">
@@ -536,13 +530,15 @@ function Step2Source({ value, sourceOfferId, sourceOptions, onKindChange, onSour
 }
 
 // ---------- Step 3 ----------------------------------------------------------
-function Step3System({ suggestions, stage, value, onChange, preselectedSystemId, isAdmin }: {
+function Step3System({ suggestions, stage, value, onChange, preselectedSystemId, isAdmin, autoLocked, autoLockedSystemLabel }: {
   suggestions: SystemSuggestion[];
   stage: string | null;
   value: string | null;
   onChange: (id: string) => void;
   preselectedSystemId: string | null;
   isAdmin: boolean;
+  autoLocked: boolean;
+  autoLockedSystemLabel: string | null;
 }) {
   const roadmapPre = preselectedSystemId ? suggestions.find((s) => s.system.id === preselectedSystemId) : null;
   const [showOther, setShowOther] = useState(false);
@@ -579,39 +575,65 @@ function Step3System({ suggestions, stage, value, onChange, preselectedSystemId,
         </div>
       )}
 
-      {stage && best.length > 0 && (
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Best fit</div>
-          <div className="space-y-2">
-            {best.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} highlighted />)}
+      {autoLocked && autoLockedSystemLabel && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-xs">
+          <Wand2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-foreground mb-0.5">{autoLockedSystemLabel} auto-selected</div>
+            <div className="text-muted-foreground">
+              It is the only compatible Growth System for this offer{stage ? ` at your ${stage} stage` : ""}. Click Continue to proceed.
+            </div>
           </div>
         </div>
       )}
 
-      {stage && rec.length > 0 && (
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Also recommended</div>
-          <div className="space-y-2">
-            {rec.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} />)}
-          </div>
-        </div>
-      )}
-
-      {(other.length > 0) && (
-        <div>
-          {stage ? (
-            <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowOther((v) => !v)}>
-              {showOther ? "Hide" : "Show"} other compatible systems ({other.length})
-            </button>
-          ) : (
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Compatible systems</div>
-          )}
-          {(showOther || !stage) && (
-            <div className="space-y-2 mt-2">
-              {other.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} />)}
+      {autoLocked ? (
+        (() => {
+          const only = suggestions.find((s) => s.compatible && (s.buildable || isAdmin));
+          if (!only) return null;
+          return (
+            <div className="space-y-2">
+              <SystemCard sug={only} selected={value === only.system.id} onSelect={() => onChange(only.system.id)} isAdmin={isAdmin} highlighted />
+            </div>
+          );
+        })()
+      ) : (
+        <>
+          {stage && best.length > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Best fit</div>
+              <div className="space-y-2">
+                {best.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} highlighted />)}
+              </div>
             </div>
           )}
-        </div>
+
+          {stage && rec.length > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Also recommended</div>
+              <div className="space-y-2">
+                {rec.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} />)}
+              </div>
+            </div>
+          )}
+
+          {(other.length > 0) && (
+            <div>
+              {stage ? (
+                <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowOther((v) => !v)}>
+                  {showOther ? "Hide" : "Show"} other compatible systems ({other.length})
+                </button>
+              ) : (
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Compatible systems</div>
+              )}
+              {(showOther || !stage) && (
+                <div className="space-y-2 mt-2">
+                  {other.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} />)}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -653,7 +675,7 @@ function SystemCard({ sug, selected, onSelect, isAdmin, highlighted }: {
 }
 
 // ---------- Step 4 ----------------------------------------------------------
-function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, primary, additional, onPrimaryChange, onAdditionalToggle, isAdmin, hasAnyCompat }: {
+function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, primary, additional, onPrimaryChange, onAdditionalToggle, isAdmin, hasAnyCompat, autoLocked }: {
   isExternal: boolean;
   compatChannelIds: Set<string>;
   suggestions: ReturnType<typeof rankChannelsForSystem>;
@@ -664,6 +686,7 @@ function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, pr
   onAdditionalToggle: (id: string) => void;
   isAdmin: boolean;
   hasAnyCompat: boolean;
+  autoLocked: boolean;
 }) {
   if (!isExternal) {
     return (
@@ -682,12 +705,25 @@ function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, pr
   }
 
   const list = hasAnyCompat ? suggestions : channels.map((c) => ({ channel: c, compatible: false, isSuggestedDefault: false, why: "Admin override — no compatibility configured." }));
+  const autoLockedChannelLabel = autoLocked ? list[0]?.channel.label ?? null : null;
 
   return (
     <div className="space-y-4">
       {!hasAnyCompat && isAdmin && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
           Admin override: no compatibility configured for this system. Any channel may be picked, but non-admins would be blocked here.
+        </div>
+      )}
+
+      {autoLocked && autoLockedChannelLabel && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-xs">
+          <Wand2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-foreground mb-0.5">{autoLockedChannelLabel} auto-selected</div>
+            <div className="text-muted-foreground">
+              It is the only compatible acquisition channel for this Growth System. Click Continue to proceed.
+            </div>
+          </div>
         </div>
       )}
 
@@ -699,8 +735,9 @@ function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, pr
             <button
               key={s.channel.id}
               type="button"
+              disabled={autoLocked}
               onClick={() => onPrimaryChange(s.channel.id)}
-              className={`text-left p-3 rounded-lg border ${primary === s.channel.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
+              className={`text-left p-3 rounded-lg border ${primary === s.channel.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"} ${autoLocked ? "opacity-70 cursor-not-allowed" : ""}`}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
