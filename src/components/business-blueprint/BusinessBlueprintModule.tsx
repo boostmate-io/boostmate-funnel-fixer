@@ -39,6 +39,7 @@ type Mode = "overview" | "edit" | "view";
 const BusinessBlueprintModule = () => {
   const [mode, setMode] = useState<Mode>("overview");
   const [activeSection, setActiveSection] = useState<SectionId>("customer-clarity");
+  const [pendingOpenOfferId, setPendingOpenOfferId] = useState<string | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const { blueprint, offerDesign, proofAuthority, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, updateProofAuthority, updateBrandStrategy, setShareToken } = useBlueprint();
