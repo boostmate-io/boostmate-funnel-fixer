@@ -3,7 +3,7 @@
 // Read-only Growth Map + Routes list with per-route channel management.
 // =============================================================================
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Workflow, Plus, Trash2, Loader2, Map as MapIcon, List, Rocket, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,8 @@ import {
 } from "@/lib/growth-architecture/hooks";
 import { deriveRouteState, ROUTE_STATE_STYLES } from "@/lib/growth-architecture/deriveStatus";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
-import AddRouteDialog from "./AddRouteDialog";
+import AddRouteWizard from "./AddRouteWizard";
+import DeleteRouteDialog from "./DeleteRouteDialog";
 import GrowthMap from "./GrowthMap";
 import RouteChannelsManager from "./RouteChannelsManager";
 
@@ -44,6 +45,20 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
 
   const [addOpen, setAddOpen] = useState(false);
   const [startingId, setStartingId] = useState<string | null>(null);
+  const [preselectedSystemId, setPreselectedSystemId] = useState<string | null>(null);
+  const [preselectedOfferId, setPreselectedOfferId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string; hasFunnel: boolean } | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { systemId?: string | null; offerId?: string | null } | undefined;
+      setPreselectedSystemId(detail?.systemId ?? null);
+      setPreselectedOfferId(detail?.offerId ?? null);
+      setAddOpen(true);
+    };
+    window.addEventListener("boostmate:open-add-growth-route", handler);
+    return () => window.removeEventListener("boostmate:open-add-growth-route", handler);
+  }, []);
 
   const offerById = useMemo(() => new Map(offers.map((o) => [o.id, o])), [offers]);
 
@@ -180,7 +195,11 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => remove(r.id)}
+                          onClick={() => setDeleteTarget({
+                            id: r.id,
+                            label: `${sys?.label ?? "System"} → ${tgt?.name ?? "Unknown offer"}`,
+                            hasFunnel: !!r.funnel_id,
+                          })}
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -205,13 +224,28 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
         </Tabs>
       </div>
 
-      <AddRouteDialog
+      <AddRouteWizard
         open={addOpen}
-        onOpenChange={setAddOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open);
+          if (!open) { setPreselectedSystemId(null); setPreselectedOfferId(null); }
+        }}
         offers={offers}
         relationships={relationships}
+        existingRoutes={routes}
+        preselectedSystemId={preselectedSystemId}
+        preselectedOfferId={preselectedOfferId}
         onCreate={async (payload) => await add(payload)}
         onCreated={() => { void reloadRoutes(); void routeChannels.reload(); }}
+      />
+
+      <DeleteRouteDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        routeId={deleteTarget?.id ?? null}
+        routeLabel={deleteTarget?.label ?? ""}
+        hasFunnel={deleteTarget?.hasFunnel ?? false}
+        onDeleted={() => { setDeleteTarget(null); void reloadRoutes(); void routeChannels.reload(); }}
       />
     </div>
   );
