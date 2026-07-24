@@ -329,6 +329,8 @@ const AddRouteWizard = ({
               onKindChange={(k) => patch({ sourceKind: k, sourceOfferId: k === "external" ? null : state.sourceOfferId, systemId: null })}
               onSourceOfferChange={(id) => patch({ sourceOfferId: id, systemId: null })}
               hasRelationships={incomingRels.length > 0}
+              autoLocked={step2AutoLock}
+              targetOfferName={targetOffer?.name ?? null}
             />
           )}
           {step === 3 && (
@@ -339,6 +341,8 @@ const AddRouteWizard = ({
               onChange={(id) => patch({ systemId: id, primaryChannelId: null, additionalChannelIds: [] })}
               preselectedSystemId={preselectedSystemId ?? null}
               isAdmin={isAdmin}
+              autoLocked={step3AutoLock}
+              autoLockedSystemLabel={step3AutoLock ? selectableSystems[0]?.system.label ?? null : null}
             />
           )}
           {step === 4 && (
