@@ -12,6 +12,7 @@ import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SectionShell from "./SectionShell";
+import SectionHelpCoach from "../SectionHelpCoach";
 import BuilderCard from "./BuilderCard";
 import CoachIconButton from "./CoachIconButton";
 import { useOfferCoach } from "./useOfferCoach";
@@ -134,11 +135,10 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
       icon={DollarSign}
       title="Pricing"
       description="Monetize your offer with confidence — anchored, flexible and risk-reversed."
-      insight="Smart pricing creates options. Anchor with premium, give a flexible plan, and reverse risk so buying is the safe choice."
       progress={progress}
       saving={saving}
-      feedback={feedback}
       embedded={embedded}
+      helpButton={<SectionHelpCoach sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />}
     >
       <div className="space-y-5">
         {/* Core Price */}

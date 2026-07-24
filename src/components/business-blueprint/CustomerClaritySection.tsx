@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, TrendingUp, Info } from "lucide-react";
+import { Check } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -8,9 +8,10 @@ import {
   type ClaritySubBlock,
   type CustomerClarityData,
 } from "./types";
-import { getClarityConfig, getFeedbackMessage, type FieldDef } from "./clarityConfig";
+import { getClarityConfig, type FieldDef } from "./clarityConfig";
 import CoachPanel from "@/components/coach/CoachPanel";
 import FieldCard from "./FieldCard";
+import SectionHelpCoach from "./SectionHelpCoach";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { buildBlueprintFieldContext } from "@/lib/coach/buildContext";
 import type { BlueprintRow } from "./types";
@@ -34,7 +35,6 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
   const fields = CLARITY_FIELDS[active];
   const filledCount = fields.filter((f) => (data[f] || "").toString().trim().length > 0).length;
   const progress = calculateSubBlockProgress(data, active);
-  const feedback = getFeedbackMessage(config, progress);
 
   const coachContext = useMemo(() => {
     if (!coachField || !activeSubAccountId) return null;
@@ -101,24 +101,15 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
               <div className="flex items-center gap-2 mb-1">
                 <Icon className="w-5 h-5 text-primary" />
                 <h2 className="text-2xl font-display font-bold text-foreground">{config.label}</h2>
+                <SectionHelpCoach
+                  sectionId={`customer_clarity.${active}`}
+                  sectionLabel={`Customer Clarity — ${config.label}`}
+                />
               </div>
               <p className="text-sm text-muted-foreground">{config.description}</p>
             </div>
             <div className="flex items-center gap-2">
               {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
-            </div>
-          </div>
-
-          {/* Insight box */}
-          <div className="mb-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-4 flex gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Info className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs font-bold uppercase tracking-wide text-primary mb-1">
-                Why this matters
-              </div>
-              <p className="text-sm text-foreground/80 leading-relaxed">{config.insight}</p>
             </div>
           </div>
 
@@ -149,16 +140,8 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
             ))}
           </div>
 
-          {/* Feedback strip */}
-          {feedback && (
-            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
-              <p className="text-sm text-primary font-medium">{feedback}</p>
-            </div>
-          )}
-
           {/* Sub-block progress bar */}
-          <div className="mt-4 px-1">
+          <div className="mt-6 px-1">
             <Progress value={progress} className="h-1" />
           </div>
         </div>

@@ -8,13 +8,9 @@
 import { useState } from "react";
 import {
   Award, Users2, BookOpen, Plus, Trash2, Link as LinkIcon,
-  Sparkles, Shield, Star, BadgeCheck, BarChart3, Quote, Trophy, Lightbulb, Check, Info,
-  MessageSquare,
+  Sparkles, Shield, Star, BadgeCheck, BarChart3, Quote, Trophy, Lightbulb, Check,
 } from "lucide-react";
-import CoachPanel from "@/components/coach/CoachPanel";
-import { buildBlueprintSectionContext } from "@/lib/coach/buildContext";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import type { BlueprintRow } from "./types";
+import SectionHelpCoach from "./SectionHelpCoach";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,27 +51,24 @@ const newId = () => crypto.randomUUID();
 
 type TabId = "authority" | "social" | "stories";
 
-const TABS: { id: TabId; label: string; icon: typeof Award; description: string; insight: string }[] = [
+const TABS: { id: TabId; label: string; icon: typeof Award; description: string }[] = [
   {
     id: "authority",
     label: "Authority Positioning",
     icon: BadgeCheck,
     description: "Define how your authority should be perceived in the market.",
-    insight: "Strong positioning is the foundation. Without clarity on your authority type and credibility, all other proof feels generic.",
   },
   {
     id: "social",
     label: "Social Proof Library",
     icon: Users2,
     description: "Reusable proof assets — metrics, results, testimonials and authority signals.",
-    insight: "AI copy is only as persuasive as the proof you feed it. Specific numbers, named clients and structured outcomes outperform vague claims every time.",
   },
   {
     id: "stories",
     label: "Stories & Lessons",
     icon: BookOpen,
     description: "Reusable narrative arcs and value lessons for nurture, VSLs, webinars and content.",
-    insight: "Stories and lessons are the raw material of every great campaign. Capture them once, reuse them everywhere.",
   },
 ];
 
@@ -598,8 +591,6 @@ const StoriesTab = ({
 
 const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
   const [active, setActive] = useState<TabId>("authority");
-  const [coachOpen, setCoachOpen] = useState(false);
-  const { activeSubAccountId } = useWorkspace();
   const tab = TABS.find((t) => t.id === active)!;
   const Icon = tab.icon;
   const overallProgress = calcProofAuthorityProgress(data);
@@ -668,33 +659,15 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
               <div className="flex items-center gap-2 mb-1">
                 <Icon className="w-5 h-5 text-primary" />
                 <h2 className="text-2xl font-display font-bold text-foreground">{tab.label}</h2>
+                <SectionHelpCoach
+                  sectionId={`proof_authority.${active}`}
+                  sectionLabel={`Authority & Content — ${tab.label}`}
+                />
               </div>
               <p className="text-sm text-muted-foreground">{tab.description}</p>
             </div>
             <div className="flex items-center gap-2">
               {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCoachOpen(true)}
-                className="gap-1.5 h-8"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                Coach
-              </Button>
-            </div>
-          </div>
-
-          {/* Insight box */}
-          <div className="mb-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-4 flex gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Info className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs font-bold uppercase tracking-wide text-primary mb-1">
-                Why this matters
-              </div>
-              <p className="text-sm text-foreground/80 leading-relaxed">{tab.insight}</p>
             </div>
           </div>
 
@@ -714,29 +687,6 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
           </div>
         </div>
       </div>
-
-      <CoachPanel
-        open={coachOpen}
-        onOpenChange={setCoachOpen}
-        context={
-          activeSubAccountId
-            ? buildBlueprintSectionContext(
-                "proof_authority",
-                "Authority & Content",
-                { proof_authority: data } as unknown as BlueprintRow,
-                activeSubAccountId,
-              )
-            : null
-        }
-        onApplyBlueprintWrites={async (writes) => {
-          if (!activeSubAccountId) return;
-          const { applyBlueprintWrites } = await import("@/lib/coach/applyBlueprintWrites");
-          const { toast } = await import("sonner");
-          const res = await applyBlueprintWrites(activeSubAccountId, writes);
-          if (res.error) toast.error(`Kon Blueprint niet bijwerken: ${res.error}`);
-          else toast.success(`${res.applied} veld(en) bijgewerkt — herlaad de sectie om ze te zien`);
-        }}
-      />
     </div>
   );
 };

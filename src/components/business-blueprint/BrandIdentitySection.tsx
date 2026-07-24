@@ -1,44 +1,31 @@
 // =============================================================================
-// BrandIdentitySection — V3 Blueprint section.
-// Three sub-blocks: Brand Positioning · Brand Voice · Visual Direction.
-// Persists to business_blueprints.brand_strategy (jsonb).
+// BrandIdentitySection — Blueprint "Brand Strategy" section.
+// Mirrors the Customer Clarity pattern: tabbed layout, per-tab progress,
+// FieldCard-based fields with per-field AI Coach, and a section-level Coach
+// help button in the header. No static "Why this matters" or feedback blocks.
 // =============================================================================
 
-import { Palette, Compass, Mic, Eye } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { AutoTextarea } from "@/components/ui/auto-textarea";
-import { Input } from "@/components/ui/input";
+import { useMemo, useState } from "react";
+import { Check, Palette } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import CoachPanel from "@/components/coach/CoachPanel";
+import FieldCard from "./FieldCard";
+import SectionHelpCoach from "./SectionHelpCoach";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { buildBlueprintFieldContext } from "@/lib/coach/buildContext";
+import type { BlueprintRow } from "./types";
+import type { FieldDef } from "./clarityConfig";
+import {
+  BRAND_STRATEGY_TABS,
+  calcBrandTabProgress,
+  calcBrandIdentityProgress,
+  type BrandTabId,
+  type BrandIdentityData,
+} from "./brandStrategyConfig";
 
-export interface BrandIdentityData {
-  positioning_statement?: string;
-  positioning_promise?: string;
-  positioning_differentiators?: string;
-  voice_tone?: string;
-  voice_do?: string;
-  voice_dont?: string;
-  visual_style?: string;
-  visual_colors?: string;
-  visual_references?: string;
-}
-
-const FIELDS: (keyof BrandIdentityData)[] = [
-  "positioning_statement",
-  "positioning_promise",
-  "positioning_differentiators",
-  "voice_tone",
-  "voice_do",
-  "voice_dont",
-  "visual_style",
-  "visual_colors",
-  "visual_references",
-];
-
-export function calcBrandIdentityProgress(d?: BrandIdentityData | null): number {
-  if (!d) return 0;
-  const filled = FIELDS.filter((k) => (d[k] || "").toString().trim().length > 0).length;
-  return Math.round((filled / FIELDS.length) * 100);
-}
+export { calcBrandIdentityProgress };
+export type { BrandIdentityData };
 
 interface Props {
   data: BrandIdentityData;
@@ -46,143 +33,134 @@ interface Props {
   saving?: boolean;
 }
 
-const Card = ({ icon: Icon, title, description, children }: { icon: any; title: string; description: string; children: React.ReactNode }) => (
-  <div className="rounded-xl border border-border bg-card overflow-hidden">
-    <div className="flex items-start gap-3 px-5 py-4 border-b border-border">
-      <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-        <Icon className="w-4 h-4" />
-      </div>
-      <div>
-        <h3 className="text-lg font-display font-bold text-foreground">{title}</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </div>
-    </div>
-    <div className="p-5 space-y-4">{children}</div>
-  </div>
-);
+const BrandIdentitySection = ({ data, onChange, saving }: Props) => {
+  const [active, setActive] = useState<BrandTabId>("positioning");
+  const [coachField, setCoachField] = useState<{ key: string; label: string; helper?: string; placeholder?: string } | null>(null);
+  const { activeSubAccountId } = useWorkspace();
 
-const Field = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
-  <div>
-    <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{label}</Label>
-    {children}
-    {hint && <p className="text-[11px] text-muted-foreground/70 mt-1">{hint}</p>}
-  </div>
-);
+  const tab = BRAND_STRATEGY_TABS.find((t) => t.id === active)!;
+  const TabIcon = tab.icon;
+  const progress = calcBrandTabProgress(data, active);
 
-const BrandIdentitySection = ({ data, onChange }: Props) => {
-  const progress = calcBrandIdentityProgress(data);
+  const coachContext = useMemo(() => {
+    if (!coachField || !activeSubAccountId) return null;
+    const snapshot = { brand_strategy: data } as unknown as BlueprintRow;
+    return buildBlueprintFieldContext(
+      {
+        id: `brand_strategy.${coachField.key}`,
+        label: coachField.label,
+        helper: coachField.helper,
+        placeholder: coachField.placeholder,
+        currentValue: (data?.[coachField.key] as string) || "",
+        kind: "text",
+      },
+      snapshot,
+      activeSubAccountId,
+    );
+  }, [coachField, activeSubAccountId, data]);
+
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-3xl mx-auto p-8 space-y-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Palette className="w-5 h-5 text-primary" />
-              <h2 className="text-2xl font-display font-bold text-foreground">Brand Strategy</h2>
+    <div className="h-full flex flex-col">
+      {/* Sticky sub-tab navigation */}
+      <div className="border-b border-border bg-card px-8 shrink-0">
+        <div className="max-w-6xl mx-auto flex gap-1 -mb-px overflow-x-auto">
+          {BRAND_STRATEGY_TABS.map((t) => {
+            const tp = calcBrandTabProgress(data, t.id);
+            const isActive = active === t.id;
+            const TIcon = t.icon;
+            const complete = tp === 100;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActive(t.id)}
+                className={`group relative flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                  isActive
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                }`}
+              >
+                <TIcon className="w-4 h-4" />
+                <span>{t.label}</span>
+                {complete ? (
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                ) : (
+                  <span
+                    className={`text-[10px] tabular-nums ${
+                      isActive ? "text-primary/70" : "text-muted-foreground/70"
+                    }`}
+                  >
+                    {tp}%
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-8">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <TabIcon className="w-5 h-5 text-primary" />
+                <h2 className="text-2xl font-display font-bold text-foreground">{tab.label}</h2>
+                <SectionHelpCoach
+                  sectionId={`brand_strategy.${tab.id}`}
+                  sectionLabel={`Brand Strategy — ${tab.label}`}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">{tab.description}</p>
             </div>
-            <p className="text-sm text-muted-foreground max-w-2xl">
-              Make your brand unmistakable — how it stands, how it sounds, and how it looks.
-            </p>
+            <div className="flex items-center gap-2">
+              {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
+            </div>
           </div>
-          <div className="min-w-[180px]">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-muted-foreground">Section progress</span>
-              <span className="text-[11px] font-semibold tabular-nums text-foreground">{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-1.5" />
+
+          {/* Field cards */}
+          <div className="space-y-4">
+            {tab.fields.map((field) => (
+              <FieldCard
+                key={field.key}
+                field={field as unknown as FieldDef}
+                value={((data?.[field.key] as string) || "").toString()}
+                onChange={(v) => onChange({ [field.key]: v })}
+                onCoach={() =>
+                  setCoachField({
+                    key: field.key,
+                    label: field.label,
+                    helper: field.helper,
+                    placeholder: field.placeholder,
+                  })
+                }
+              />
+            ))}
+          </div>
+
+          {/* Tab progress bar */}
+          <div className="mt-6 px-1">
+            <Progress value={progress} className="h-1" />
           </div>
         </div>
-
-        <Card icon={Compass} title="Brand Positioning" description="The one-line strategic claim your business owns in the market.">
-          <Field label="Positioning statement" hint="For {audience}, we are the {category} that {differentiator}, so they can {outcome}.">
-            <AutoTextarea
-              value={data.positioning_statement ?? ""}
-              onChange={(e) => onChange({ positioning_statement: e.target.value })}
-              placeholder="For B2B coaches, we are the growth OS that operationalizes the whole business — so they can scale without burnout."
-              rows={3}
-              className="text-sm resize-none"
-            />
-          </Field>
-          <Field label="Core promise">
-            <AutoTextarea
-              value={data.positioning_promise ?? ""}
-              onChange={(e) => onChange({ positioning_promise: e.target.value })}
-              placeholder="The transformation you consistently deliver, in one sentence."
-              rows={2}
-              className="text-sm resize-none"
-            />
-          </Field>
-          <Field label="Key differentiators" hint="Comma-separated or a few short lines.">
-            <AutoTextarea
-              value={data.positioning_differentiators ?? ""}
-              onChange={(e) => onChange({ positioning_differentiators: e.target.value })}
-              placeholder="Built by operators · Roadmap-driven · Coach-in-the-loop"
-              rows={2}
-              className="text-sm resize-none"
-            />
-          </Field>
-        </Card>
-
-        <Card icon={Mic} title="Brand Voice" description="How your brand sounds when it writes, teaches and sells.">
-          <Field label="Tone">
-            <Input
-              value={data.voice_tone ?? ""}
-              onChange={(e) => onChange({ voice_tone: e.target.value })}
-              placeholder="Direct · warm · expert · no fluff"
-              className="h-9 text-sm"
-            />
-          </Field>
-          <Field label="We DO">
-            <AutoTextarea
-              value={data.voice_do ?? ""}
-              onChange={(e) => onChange({ voice_do: e.target.value })}
-              placeholder="Speak plainly. Show numbers. Address objections head-on."
-              rows={3}
-              className="text-sm resize-none"
-            />
-          </Field>
-          <Field label="We DON'T">
-            <AutoTextarea
-              value={data.voice_dont ?? ""}
-              onChange={(e) => onChange({ voice_dont: e.target.value })}
-              placeholder="Hype. Empty jargon. Fake scarcity."
-              rows={3}
-              className="text-sm resize-none"
-            />
-          </Field>
-        </Card>
-
-        <Card icon={Eye} title="Visual Direction" description="How your brand looks — style, color, references.">
-          <Field label="Visual style">
-            <AutoTextarea
-              value={data.visual_style ?? ""}
-              onChange={(e) => onChange({ visual_style: e.target.value })}
-              placeholder="Clean · modern · confident. Generous whitespace. Bold display type."
-              rows={2}
-              className="text-sm resize-none"
-            />
-          </Field>
-          <Field label="Colors" hint="Primary + accents. Hex values or plain names.">
-            <Input
-              value={data.visual_colors ?? ""}
-              onChange={(e) => onChange({ visual_colors: e.target.value })}
-              placeholder="#6246ff · off-white · charcoal"
-              className="h-9 text-sm"
-            />
-          </Field>
-          <Field label="Visual references / inspiration" hint="Links, brand names, or short descriptions.">
-            <AutoTextarea
-              value={data.visual_references ?? ""}
-              onChange={(e) => onChange({ visual_references: e.target.value })}
-              placeholder="Linear · Attio · Framer. Product-first, no stock photography."
-              rows={2}
-              className="text-sm resize-none"
-            />
-          </Field>
-        </Card>
       </div>
+
+      {/* Field-level AI Coach */}
+      <CoachPanel
+        open={!!coachField}
+        onOpenChange={(o) => {
+          if (!o) setCoachField(null);
+        }}
+        context={coachContext}
+        onApply={(value) => {
+          if (coachField) onChange({ [coachField.key]: value });
+        }}
+      />
     </div>
   );
 };
 
+// Re-export Palette icon for parity with older imports.
+export { Palette };
 export default BrandIdentitySection;

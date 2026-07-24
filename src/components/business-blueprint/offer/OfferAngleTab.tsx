@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
 import SectionShell from "./SectionShell";
+import SectionHelpCoach from "../SectionHelpCoach";
 import AngleField from "./AngleField";
 import TimeframePicker from "./TimeframePicker";
 import FrameworkSection from "./FrameworkSection";
@@ -121,11 +122,10 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
       icon={Lightbulb}
       title="Offer Angle"
       description={`Craft a compelling angle that makes your offer impossible to ignore for ${noun}.`}
-      insight={`${noun.charAt(0).toUpperCase() + noun.slice(1)} buy from the offer that feels uniquely built for their problem. A strong angle = a stronger close.`}
       progress={progress}
       saving={saving}
-      feedback={feedback}
       embedded={embedded}
+      helpButton={<SectionHelpCoach sectionId="offer_design.angle" sectionLabel="Offer Design — Angle" />}
     >
       {/* 1. Main Offer Name */}
       <div className="rounded-xl border border-border bg-card p-5 mb-4">
