@@ -587,39 +587,53 @@ function Step3System({ suggestions, stage, value, onChange, preselectedSystemId,
         </div>
       )}
 
-      {stage && best.length > 0 && (
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Best fit</div>
-          <div className="space-y-2">
-            {best.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} highlighted />)}
-          </div>
-        </div>
-      )}
-
-      {stage && rec.length > 0 && (
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Also recommended</div>
-          <div className="space-y-2">
-            {rec.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} />)}
-          </div>
-        </div>
-      )}
-
-      {(other.length > 0) && (
-        <div>
-          {stage ? (
-            <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowOther((v) => !v)}>
-              {showOther ? "Hide" : "Show"} other compatible systems ({other.length})
-            </button>
-          ) : (
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Compatible systems</div>
-          )}
-          {(showOther || !stage) && (
-            <div className="space-y-2 mt-2">
-              {other.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} />)}
+      {autoLocked ? (
+        (() => {
+          const only = suggestions.find((s) => s.compatible && (s.buildable || isAdmin));
+          if (!only) return null;
+          return (
+            <div className="space-y-2">
+              <SystemCard sug={only} selected={value === only.system.id} onSelect={() => onChange(only.system.id)} isAdmin={isAdmin} highlighted />
+            </div>
+          );
+        })()
+      ) : (
+        <>
+          {stage && best.length > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Best fit</div>
+              <div className="space-y-2">
+                {best.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} highlighted />)}
+              </div>
             </div>
           )}
-        </div>
+
+          {stage && rec.length > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Also recommended</div>
+              <div className="space-y-2">
+                {rec.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} />)}
+              </div>
+            </div>
+          )}
+
+          {(other.length > 0) && (
+            <div>
+              {stage ? (
+                <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowOther((v) => !v)}>
+                  {showOther ? "Hide" : "Show"} other compatible systems ({other.length})
+                </button>
+              ) : (
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Compatible systems</div>
+              )}
+              {(showOther || !stage) && (
+                <div className="space-y-2 mt-2">
+                  {other.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} />)}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
