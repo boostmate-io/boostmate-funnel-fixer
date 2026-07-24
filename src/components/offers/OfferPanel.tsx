@@ -145,7 +145,8 @@ const OfferPanel = ({ funnelId, linkedOfferId, onLinkedOfferChange, onNavigateTo
           <>
             {(() => {
               const d = (linkedOffer.data ?? {}) as Record<string, any>;
-              const tierLabel = linkedOffer.tier ? TIER_LABELS[linkedOffer.tier] ?? linkedOffer.tier : null;
+              const tier = (linkedOffer as any).tier as string | undefined;
+              const tierLabel = tier ? TIER_LABELS[tier] ?? tier : null;
               const price = (d.primary_price || d.price || "").toString().trim();
               const offerType = (d.offer_type || "").toString().trim();
               const delivery = (d.delivery_timeline || "").toString().trim();
