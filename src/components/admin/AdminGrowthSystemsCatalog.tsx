@@ -50,24 +50,25 @@ const AdminGrowthSystemsCatalog = () => {
   const [compat, setCompat] = useState<CompatRow[]>([]);
   const [guides, setGuides] = useState<GuideRow[]>([]);
   const [systemGuides, setSystemGuides] = useState<SystemGuideRow[]>([]);
+  const [seedTemplates, setSeedTemplates] = useState<SeedTemplate[]>([]);
   const [editing, setEditing] = useState<Partial<System> | null>(null);
-  const [archText, setArchText] = useState("");
-  const [archError, setArchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [sys, ch, cp, gd, sg] = await Promise.all([
-      supabase.from("growth_systems_catalog").select("*").order("sort_order", { ascending: true }),
+    const [sys, ch, cp, gd, sg, st] = await Promise.all([
+      supabase.from("growth_systems_catalog").select("id,key,label,description,primary_objective,suitable_offer_tiers,recommended_stages,seed_template_id,icon,sort_order,is_active").order("sort_order", { ascending: true }),
       supabase.from("acquisition_channels").select("id,key,label").eq("is_active", true).order("sort_order"),
       supabase.from("growth_system_channel_compat").select("growth_system_id,acquisition_channel_id"),
       supabase.from("build_guides").select("id,name").eq("is_active", true).order("sort_order"),
       supabase.from("growth_system_build_guides").select("growth_system_id,build_guide_id"),
+      supabase.from("seed_templates").select("id,name,template_type").eq("is_active", true).order("name"),
     ]);
     if (sys.data) setRows(sys.data as any);
     if (ch.data) setChannels(ch.data as any);
     if (cp.data) setCompat(cp.data as any);
     if (gd.data) setGuides(gd.data as any);
     if (sg.data) setSystemGuides(sg.data as any);
+    if (st.data) setSeedTemplates(st.data as any);
   }, []);
   useEffect(() => { load(); }, [load]);
 
