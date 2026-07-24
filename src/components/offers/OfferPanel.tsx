@@ -9,6 +9,20 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Offer, STATUS_LABELS, STATUS_COLORS, OfferStatus } from "./offerFramework";
 
+const TIER_LABELS: Record<string, string> = {
+  free: "Free",
+  low_ticket: "Low Ticket",
+  mid_ticket: "Mid Ticket",
+  core: "Core",
+  premium: "Premium",
+  continuity: "Continuity",
+};
+
+function truncate(s: string, n = 140) {
+  const t = s.trim();
+  return t.length > n ? t.slice(0, n - 1) + "…" : t;
+}
+
 interface OfferPanelProps {
   funnelId: string | null;
   linkedOfferId: string | null;
@@ -129,15 +143,34 @@ const OfferPanel = ({ funnelId, linkedOfferId, onLinkedOfferChange, onNavigateTo
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {linkedOffer ? (
           <>
-            {/* Linked offer summary */}
-            <div className="p-4 rounded-lg border border-border bg-muted/20 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <h4 className="text-sm font-display font-bold text-foreground leading-tight">{linkedOffer.name}</h4>
-                <Badge variant="secondary" className={`text-[10px] shrink-0 ${STATUS_COLORS[linkedOffer.status as OfferStatus]}`}>
-                  {STATUS_LABELS[linkedOffer.status as OfferStatus]}
-                </Badge>
-              </div>
-            </div>
+            {(() => {
+              const d = (linkedOffer.data ?? {}) as Record<string, any>;
+              const tier = (linkedOffer as any).tier as string | undefined;
+              const tierLabel = tier ? TIER_LABELS[tier] ?? tier : null;
+              const price = (d.primary_price || d.price || "").toString().trim();
+              const offerType = (d.offer_type || "").toString().trim();
+              const delivery = (d.delivery_timeline || "").toString().trim();
+              const outcome = (d.specific_outcome || d.dream_state || "").toString().trim();
+              const metaChips = [tierLabel, offerType, price, delivery].filter(Boolean) as string[];
+              return (
+                <div className="p-4 rounded-lg border border-border bg-muted/20 space-y-2">
+                  <h4 className="text-sm font-display font-bold text-foreground leading-tight">{linkedOffer.name}</h4>
+                  {metaChips.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {metaChips.map((chip, i) => (
+                        <Badge key={i} variant="secondary" className="text-[10px] font-normal">{chip}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  {outcome && (
+                    <p className="text-xs text-muted-foreground leading-relaxed pt-1">{truncate(outcome, 160)}</p>
+                  )}
+                  {metaChips.length === 0 && !outcome && (
+                    <p className="text-xs text-muted-foreground italic">No offer details yet. Open in Offer Module to fill it in.</p>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="space-y-2">
               <Button

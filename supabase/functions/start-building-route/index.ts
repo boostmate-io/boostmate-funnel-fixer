@@ -155,12 +155,12 @@ Deno.serve(async (req) => {
     });
   }
 
-  // 6. Descriptive funnel name
+  // 6. Descriptive funnel name (include all selected channels, primary first)
   const offerName = targetOffer?.name?.trim() || "Untitled Offer";
-  const primaryLabel = primaryChannel?.label ?? null;
+  const channelLabels = channels.map((c: any) => c.label).filter(Boolean);
   const funnelName = (
-    primaryLabel
-      ? `${system.label} – ${offerName} (${primaryLabel})`
+    channelLabels.length > 0
+      ? `${system.label} – ${offerName} (${channelLabels.join(", ")})`
       : `${system.label} – ${offerName}`
   ).slice(0, 160);
 
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
     guideInserts.push({
       funnel_id: funnelId,
       build_guide_id: gid,
-      source: "growth_system",
+      source: "system",
       source_ref_id: system.id,
       sort_order: (g as any).sort_order ?? 0,
     });
@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
       guideInserts.push({
         funnel_id: funnelId,
         build_guide_id: gid,
-        source: "acquisition_channel",
+        source: "channel",
         source_ref_id: (ch as any).id,
         sort_order: (g as any).sort_order ?? 0,
       });
