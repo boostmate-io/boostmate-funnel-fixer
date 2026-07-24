@@ -213,6 +213,8 @@ const BusinessBlueprintModule = () => {
             onChange={updateOfferDesign}
             saving={saving}
             businessType={settings.business_type}
+            pendingOpenOfferId={pendingOpenOfferId}
+            onOpenedOffer={() => setPendingOpenOfferId(null)}
           />
         );
       case "growth-system":
