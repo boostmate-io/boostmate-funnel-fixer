@@ -66,7 +66,7 @@ interface Props {
     status: GrowthArchStatus;
     notes: string | null;
   }) => Promise<string | null>;
-  onCreated?: () => void;
+  onCreated?: (newRouteId: string) => void | Promise<void>;
 }
 
 interface WizardState {
