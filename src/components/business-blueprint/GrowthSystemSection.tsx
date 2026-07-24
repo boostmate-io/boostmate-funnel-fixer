@@ -44,8 +44,6 @@ const GrowthSystemSection = ({
   businessType,
 }: Props) => {
   const [active, setActive] = useState<GrowthTab>("acquisition");
-  const [coachOpen, setCoachOpen] = useState(false);
-  const { activeSubAccountId } = useWorkspace();
   const bt = getBusinessType(businessType);
   const { mappings, addMapping, updateMapping, deleteMapping } = useFunnelMappings(blueprintId);
 
@@ -114,40 +112,15 @@ const GrowthSystemSection = ({
               <div className="flex items-center gap-2 mb-1">
                 <Icon className="w-5 h-5 text-primary" />
                 <h2 className="text-2xl font-display font-bold text-foreground">{tabConfig.label}</h2>
+                <SectionHelpCoach
+                  sectionId={`growth_system.${active}`}
+                  sectionLabel={`Growth System — ${tabConfig.label}`}
+                />
               </div>
               <p className="text-sm text-muted-foreground">{tabConfig.description}</p>
             </div>
             <div className="flex items-center gap-2">
               {saving && <Badge variant="secondary" className="text-xs">Saving…</Badge>}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCoachOpen(true)}
-                className="gap-1.5 h-8"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                Coach
-              </Button>
-            </div>
-          </div>
-
-          {/* Sequencing hint */}
-          <div className="mb-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-4 flex gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs font-bold uppercase tracking-wide text-primary mb-1">
-                Why this matters
-              </div>
-              <p className="text-sm text-foreground/80 leading-relaxed">
-                {active === "acquisition" &&
-                  "Acquisition defines how strangers enter your ecosystem. Without a clear traffic source + entry offer, the rest of your growth system has no fuel."}
-                {active === "architecture" &&
-                  "Funnel Architecture is where strategy becomes execution. Map every offer to its selling funnel — this becomes the blueprint your Funnel Builder will load."}
-                {active === "ascension" &&
-                  "Ascension turns one-time buyers into long-term clients. The biggest LTV gains come from systematic upgrades, retention and reactivation."}
-              </p>
             </div>
           </div>
 
@@ -178,31 +151,9 @@ const GrowthSystemSection = ({
           )}
         </div>
       </div>
-
-      <CoachPanel
-        open={coachOpen}
-        onOpenChange={setCoachOpen}
-        context={
-          activeSubAccountId
-            ? buildBlueprintSectionContext(
-                "growth_system",
-                "Growth System",
-                { growth_system: data } as unknown as BlueprintRow,
-                activeSubAccountId,
-              )
-            : null
-        }
-        onApplyBlueprintWrites={async (writes) => {
-          if (!activeSubAccountId) return;
-          const { applyBlueprintWrites } = await import("@/lib/coach/applyBlueprintWrites");
-          const { toast } = await import("sonner");
-          const res = await applyBlueprintWrites(activeSubAccountId, writes);
-          if (res.error) toast.error(`Kon Blueprint niet bijwerken: ${res.error}`);
-          else toast.success(`${res.applied} veld(en) bijgewerkt — herlaad de sectie om ze te zien`);
-        }}
-      />
     </div>
   );
 };
+
 
 export default GrowthSystemSection;
