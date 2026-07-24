@@ -92,9 +92,7 @@ const AdminGrowthSystemsCatalog = () => {
 
 
   const openEdit = (r?: System) => {
-    setEditing(r ?? { is_active: true, sort_order: rows.length * 10, suitable_offer_tiers: [], recommended_stages: [], architecture: {} });
-    setArchText(JSON.stringify(r?.architecture ?? {}, null, 2));
-    setArchError(null);
+    setEditing(r ?? { is_active: true, sort_order: rows.length * 10, suitable_offer_tiers: [], recommended_stages: [], seed_template_id: null });
   };
 
   const toggleArr = (arr: string[] | null | undefined, val: string) => {
@@ -105,15 +103,6 @@ const AdminGrowthSystemsCatalog = () => {
 
   const save = async () => {
     if (!editing?.key || !editing?.label) { toast.error("Key and label required"); return; }
-    let architecture: any = {};
-    try {
-      architecture = archText.trim() ? JSON.parse(archText) : {};
-      setArchError(null);
-    } catch (e: any) {
-      setArchError(e.message);
-      toast.error("Invalid JSON in architecture");
-      return;
-    }
     setLoading(true);
     const payload: any = {
       key: editing.key,
@@ -122,7 +111,7 @@ const AdminGrowthSystemsCatalog = () => {
       primary_objective: editing.primary_objective ?? null,
       suitable_offer_tiers: editing.suitable_offer_tiers ?? [],
       recommended_stages: editing.recommended_stages ?? [],
-      architecture,
+      seed_template_id: editing.seed_template_id ?? null,
       icon: editing.icon ?? null,
       sort_order: editing.sort_order ?? 100,
       is_active: editing.is_active ?? true,
