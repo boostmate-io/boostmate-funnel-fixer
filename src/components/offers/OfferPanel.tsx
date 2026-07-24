@@ -9,6 +9,20 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Offer, STATUS_LABELS, STATUS_COLORS, OfferStatus } from "./offerFramework";
 
+const TIER_LABELS: Record<string, string> = {
+  free: "Free",
+  low_ticket: "Low Ticket",
+  mid_ticket: "Mid Ticket",
+  core: "Core",
+  premium: "Premium",
+  continuity: "Continuity",
+};
+
+function truncate(s: string, n = 140) {
+  const t = s.trim();
+  return t.length > n ? t.slice(0, n - 1) + "…" : t;
+}
+
 interface OfferPanelProps {
   funnelId: string | null;
   linkedOfferId: string | null;
