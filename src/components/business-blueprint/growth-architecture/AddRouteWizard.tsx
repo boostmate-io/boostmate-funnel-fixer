@@ -530,13 +530,15 @@ function Step2Source({ value, sourceOfferId, sourceOptions, onKindChange, onSour
 }
 
 // ---------- Step 3 ----------------------------------------------------------
-function Step3System({ suggestions, stage, value, onChange, preselectedSystemId, isAdmin }: {
+function Step3System({ suggestions, stage, value, onChange, preselectedSystemId, isAdmin, autoLocked, autoLockedSystemLabel }: {
   suggestions: SystemSuggestion[];
   stage: string | null;
   value: string | null;
   onChange: (id: string) => void;
   preselectedSystemId: string | null;
   isAdmin: boolean;
+  autoLocked: boolean;
+  autoLockedSystemLabel: string | null;
 }) {
   const roadmapPre = preselectedSystemId ? suggestions.find((s) => s.system.id === preselectedSystemId) : null;
   const [showOther, setShowOther] = useState(false);
