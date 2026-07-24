@@ -19,6 +19,7 @@ import {
 export function useBlueprint() {
   const { activeSubAccountId } = useWorkspace();
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [blueprint, setBlueprint] = useState<BlueprintRow | null>(null);
   const [offerDesign, setOfferDesign] = useState<OfferDesignData>(emptyOfferDesign());
   const [proofAuthority, setProofAuthority] = useState<ProofAuthorityData>(emptyProofAuthority());
@@ -29,9 +30,10 @@ export function useBlueprint() {
   const growthSaveTimer = useRef<number | null>(null);
   const proofSaveTimer = useRef<number | null>(null);
   const brandSaveTimer = useRef<number | null>(null);
+  const loadedForKeyRef = useRef<string | null>(null);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
-    if (!activeSubAccountId || !user) return;
+    if (!activeSubAccountId || !userId) return;
     const silent = opts?.silent === true;
     if (!silent) setLoading(true);
     const { data, error } = await supabase
@@ -50,7 +52,7 @@ export function useBlueprint() {
     if (!data) {
       const { data: created, error: createErr } = await supabase
         .from("business_blueprints")
-        .insert({ sub_account_id: activeSubAccountId, user_id: user.id })
+        .insert({ sub_account_id: activeSubAccountId, user_id: userId })
         .select()
         .single();
       if (createErr) {
@@ -70,11 +72,20 @@ export function useBlueprint() {
     setProofAuthority(normalizeProofAuthority(row.proof_authority));
     setBlueprint(row);
     if (!silent) setLoading(false);
-  }, [activeSubAccountId, user]);
+  }, [activeSubAccountId, userId]);
 
   useEffect(() => {
+    if (!activeSubAccountId || !userId) return;
+    const key = `${userId}:${activeSubAccountId}`;
+    // Skip reload when the auth user reference changes but the identity
+    // (userId + workspace) is unchanged — e.g. after a Supabase token refresh
+    // fired by the tab regaining visibility. Reloading here would flip
+    // `loading` to true and unmount the Blueprint tree, resetting the active
+    // sub-tab and any in-progress form focus.
+    if (loadedForKeyRef.current === key) return;
+    loadedForKeyRef.current = key;
     void load();
-  }, [load]);
+  }, [activeSubAccountId, userId, load]);
 
   // Reload when Coach (or any other flow) writes to the blueprint so fields
   // update live without a manual refresh.
