@@ -239,6 +239,15 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
 
   const [editing, setEditing] = useState<{ id: string; isPrimary: boolean } | null>(null);
 
+  // Deep-link: open a specific offer's editor once the row is available in state
+  useEffect(() => {
+    if (!pendingOpenOfferId) return;
+    const row = offers.find((o) => o.id === pendingOpenOfferId);
+    if (!row) return;
+    setEditing({ id: row.id, isPrimary: false });
+    onOpenedOffer?.();
+  }, [pendingOpenOfferId, offers, onOpenedOffer]);
+
   const handleGenerateIdeas = (tier: EcosystemTier) => {
     toast.info(`Generate ${tier.replace("_", " ")} ideas — AI coming soon`);
   };
