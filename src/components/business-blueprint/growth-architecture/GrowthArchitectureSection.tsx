@@ -61,7 +61,7 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
   const [preselectedSystemId, setPreselectedSystemId] = useState<string | null>(null);
   const [preselectedOfferId, setPreselectedOfferId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string; hasFunnel: boolean } | null>(null);
-  const [editTarget, setEditTarget] = useState<{ id: string; label: string; notes: string | null } | null>(null);
+  const [editRouteId, setEditRouteId] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
