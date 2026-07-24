@@ -4,7 +4,14 @@ import { getBusinessType, type BusinessTypeId } from "./businessTypes";
 import { getFieldCopy } from "./clarityCopy";
 import { getBlueprintFieldByKey } from "@shared/blueprintSchema";
 
-export type FieldType = "textarea" | "chips-single" | "chips-multi" | "tags";
+export type FieldType =
+  | "textarea"
+  | "chips-single"
+  | "chips-multi"
+  | "tags"
+  | "suggested-tags"
+  | "bullet-list"
+  | "colors";
 
 export interface FieldDef {
   key: keyof CustomerClarityData;
@@ -13,6 +20,7 @@ export interface FieldDef {
   placeholder?: string;
   type: FieldType;
   options?: { value: string; label: string }[];
+  suggestions?: string[];
   fullWidth?: boolean;
   rows?: number;
 }
