@@ -23,7 +23,7 @@ interface System {
   primary_objective: string | null;
   suitable_offer_tiers: string[] | null;
   recommended_stages: string[] | null;
-  architecture: any;
+  seed_template_id: string | null;
   icon: string | null;
   sort_order: number;
   is_active: boolean;
@@ -42,6 +42,7 @@ interface CompatRow {
 
 interface GuideRow { id: string; name: string; }
 interface SystemGuideRow { growth_system_id: string; build_guide_id: string; }
+interface SeedTemplate { id: string; name: string; template_type: string | null; }
 
 const AdminGrowthSystemsCatalog = () => {
   const [rows, setRows] = useState<System[]>([]);
