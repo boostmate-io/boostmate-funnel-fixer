@@ -8,13 +8,9 @@
 import { useState } from "react";
 import {
   Award, Users2, BookOpen, Plus, Trash2, Link as LinkIcon,
-  Sparkles, Shield, Star, BadgeCheck, BarChart3, Quote, Trophy, Lightbulb, Check, Info,
-  MessageSquare,
+  Sparkles, Shield, Star, BadgeCheck, BarChart3, Quote, Trophy, Lightbulb, Check,
 } from "lucide-react";
-import CoachPanel from "@/components/coach/CoachPanel";
-import { buildBlueprintSectionContext } from "@/lib/coach/buildContext";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import type { BlueprintRow } from "./types";
+import SectionHelpCoach from "./SectionHelpCoach";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,27 +51,24 @@ const newId = () => crypto.randomUUID();
 
 type TabId = "authority" | "social" | "stories";
 
-const TABS: { id: TabId; label: string; icon: typeof Award; description: string; insight: string }[] = [
+const TABS: { id: TabId; label: string; icon: typeof Award; description: string }[] = [
   {
     id: "authority",
     label: "Authority Positioning",
     icon: BadgeCheck,
     description: "Define how your authority should be perceived in the market.",
-    insight: "Strong positioning is the foundation. Without clarity on your authority type and credibility, all other proof feels generic.",
   },
   {
     id: "social",
     label: "Social Proof Library",
     icon: Users2,
     description: "Reusable proof assets — metrics, results, testimonials and authority signals.",
-    insight: "AI copy is only as persuasive as the proof you feed it. Specific numbers, named clients and structured outcomes outperform vague claims every time.",
   },
   {
     id: "stories",
     label: "Stories & Lessons",
     icon: BookOpen,
     description: "Reusable narrative arcs and value lessons for nurture, VSLs, webinars and content.",
-    insight: "Stories and lessons are the raw material of every great campaign. Capture them once, reuse them everywhere.",
   },
 ];
 
