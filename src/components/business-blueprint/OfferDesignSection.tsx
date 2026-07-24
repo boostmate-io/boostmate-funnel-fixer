@@ -2,7 +2,7 @@
 // OfferDesignSection — orchestrator with tab navigation across the 4 tabs.
 // =============================================================================
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import {
   OFFER_TABS,
