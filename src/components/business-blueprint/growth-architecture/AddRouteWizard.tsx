@@ -575,6 +575,18 @@ function Step3System({ suggestions, stage, value, onChange, preselectedSystemId,
         </div>
       )}
 
+      {autoLocked && autoLockedSystemLabel && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-xs">
+          <Wand2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-foreground mb-0.5">{autoLockedSystemLabel} auto-selected</div>
+            <div className="text-muted-foreground">
+              It is the only compatible Growth System for this offer{stage ? ` at your ${stage} stage` : ""}. Click Continue to proceed.
+            </div>
+          </div>
+        </div>
+      )}
+
       {stage && best.length > 0 && (
         <div>
           <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Best fit</div>
