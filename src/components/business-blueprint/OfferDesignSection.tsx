@@ -28,10 +28,16 @@ interface Props {
   onChange: (patch: Partial<OfferDesignData>) => void;
   saving: boolean;
   businessType?: string;
+  pendingOpenOfferId?: string | null;
+  onOpenedOffer?: () => void;
 }
 
-const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType }: Props) => {
+const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType, pendingOpenOfferId, onOpenedOffer }: Props) => {
   const [active, setActive] = useState<OfferTab>("angle");
+
+  useEffect(() => {
+    if (pendingOpenOfferId) setActive("ecosystem");
+  }, [pendingOpenOfferId]);
 
   // We piggyback on useEcosystemOffers here so the sub-tab nav can show ecosystem
   // progress even when the user is not on the ecosystem tab.
