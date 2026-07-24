@@ -221,6 +221,11 @@ const AdminGrowthSystemsCatalog = () => {
                   <Badge key={s} variant="outline" className="text-[10px]">{s}</Badge>
                 ))}
                 <Badge variant="outline" className="text-[10px]">{(compatBySystem.get(r.id)?.size ?? 0)} channels</Badge>
+                {r.is_active && !r.seed_template_id && (
+                  <Badge variant="destructive" className="text-[10px] gap-1">
+                    <AlertTriangle className="w-3 h-3" /> No seed template — Start Building will fail
+                  </Badge>
+                )}
                 {!r.is_active && <Badge variant="destructive" className="text-[10px]">Inactive</Badge>}
               </div>
               {r.primary_objective && <div className="text-xs font-medium mt-1">Objective: {r.primary_objective}</div>}
