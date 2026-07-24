@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
       guideInserts.push({
         funnel_id: funnelId,
         build_guide_id: gid,
-        source: "acquisition_channel",
+        source: "channel",
         source_ref_id: (ch as any).id,
         sort_order: (g as any).sort_order ?? 0,
       });
