@@ -3,7 +3,7 @@
 // Read-only Growth Map + Routes list with per-route channel management.
 // =============================================================================
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Workflow, Plus, Trash2, Loader2, Map as MapIcon, List, Rocket, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,8 @@ import {
 } from "@/lib/growth-architecture/hooks";
 import { deriveRouteState, ROUTE_STATE_STYLES } from "@/lib/growth-architecture/deriveStatus";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
-import AddRouteDialog from "./AddRouteDialog";
+import AddRouteWizard from "./AddRouteWizard";
+import DeleteRouteDialog from "./DeleteRouteDialog";
 import GrowthMap from "./GrowthMap";
 import RouteChannelsManager from "./RouteChannelsManager";
 
