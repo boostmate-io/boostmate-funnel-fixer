@@ -304,10 +304,29 @@ const AdminGrowthSystemsCatalog = () => {
 
 
             <div>
-              <Label>Architecture (JSON)</Label>
-              <Textarea value={archText} onChange={(e) => { setArchText(e.target.value); setArchError(null); }}
-                rows={8} className="font-mono text-xs" placeholder='{"stages":[]}' />
-              {archError && <div className="text-xs text-destructive mt-1">JSON error: {archError}</div>}
+              <Label>Seed Template</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                The Funnel Builder template that will be cloned when a user clicks Start Building. Manage templates in Admin → Funnel Builder → Templates.
+              </p>
+              <Select
+                value={editing?.seed_template_id ?? "__none__"}
+                onValueChange={(v) => setEditing({ ...editing!, seed_template_id: v === "__none__" ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="— None —" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {seedTemplates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}{t.template_type ? ` · ${t.template_type}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editing?.is_active && !editing?.seed_template_id && (
+                <div className="text-xs text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> Active systems without a seed template will break Start Building.
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-3">
