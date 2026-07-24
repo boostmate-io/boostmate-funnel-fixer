@@ -15,6 +15,7 @@ import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import SectionShell from "./SectionShell";
+import SectionHelpCoach from "../SectionHelpCoach";
 import CoreOfferDialog from "./CoreOfferDialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import DeliveryTypePicker from "./DeliveryTypePicker";
@@ -325,10 +326,9 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
       icon={Network}
       title="Offer Ecosystem"
       description="Build your full monetization ecosystem — from free entry to premium retention."
-      insight="Most buyers aren't ready for the core offer immediately. A clear ladder lets them ascend at their pace and lifts your LTV dramatically."
       progress={progress}
       saving={saving}
-      feedback={feedback}
+      helpButton={<SectionHelpCoach sectionId="offer_design.ecosystem" sectionLabel="Offer Design — Ecosystem" />}
     >
       <div className="space-y-5">
         {ECOSYSTEM_TIERS.map((tier) => {

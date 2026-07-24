@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SectionShell from "./SectionShell";
+import SectionHelpCoach from "../SectionHelpCoach";
 import BuilderCard from "./BuilderCard";
 import TimeframePicker from "./TimeframePicker";
 import DeliveryTypePicker from "./DeliveryTypePicker";
@@ -290,11 +291,10 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
       icon={Layers}
       title="Offer Stack"
       description="Define exactly what people receive when they buy."
-      insight={`A clear stack removes confusion. ${noun.charAt(0).toUpperCase() + noun.slice(1)} need to instantly see what's included and why it's worth more than the price.`}
       progress={progress}
       saving={saving}
-      feedback={feedback}
       embedded={embedded}
+      helpButton={<SectionHelpCoach sectionId="offer_design.stack" sectionLabel="Offer Design — Stack" />}
     >
       <div className="space-y-5">
         {/* Core Deliverables */}
