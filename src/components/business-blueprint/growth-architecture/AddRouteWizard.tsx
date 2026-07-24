@@ -675,7 +675,7 @@ function SystemCard({ sug, selected, onSelect, isAdmin, highlighted }: {
 }
 
 // ---------- Step 4 ----------------------------------------------------------
-function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, primary, additional, onPrimaryChange, onAdditionalToggle, isAdmin, hasAnyCompat }: {
+function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, primary, additional, onPrimaryChange, onAdditionalToggle, isAdmin, hasAnyCompat, autoLocked }: {
   isExternal: boolean;
   compatChannelIds: Set<string>;
   suggestions: ReturnType<typeof rankChannelsForSystem>;
