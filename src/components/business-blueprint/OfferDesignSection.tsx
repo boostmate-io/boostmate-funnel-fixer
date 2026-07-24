@@ -129,6 +129,8 @@ const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType,
             onChangeOfferDesign={onChange}
             saving={saving}
             businessType={businessType}
+            pendingOpenOfferId={pendingOpenOfferId ?? null}
+            onOpenedOffer={onOpenedOffer}
           />
         )}
       </div>
