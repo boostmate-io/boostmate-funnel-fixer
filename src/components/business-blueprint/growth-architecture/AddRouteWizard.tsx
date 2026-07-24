@@ -66,7 +66,7 @@ interface Props {
     status: GrowthArchStatus;
     notes: string | null;
   }) => Promise<string | null>;
-  onCreated?: () => void;
+  onCreated?: (newRouteId: string) => void | Promise<void>;
 }
 
 interface WizardState {
@@ -277,7 +277,7 @@ const AddRouteWizard = ({
       if (error) toast.error("Route created, but some channels could not be attached.");
     }
     setSaving(false);
-    onCreated?.();
+    await onCreated?.(id);
     onOpenChange(false);
     toast.success("Route created.");
   };

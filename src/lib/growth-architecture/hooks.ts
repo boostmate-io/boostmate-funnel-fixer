@@ -338,7 +338,24 @@ export function useRouteChannels(routeIds: string[]) {
     await load();
   }, [rows, addChannel, load]);
 
-  return { rows, byRoute, loading, addChannel, removeChannel, setPrimary, reload: load };
+  // Targeted fetch for a specific route — merges its channels into local state
+  // without depending on the current routeIds closure. Used right after route
+  // creation, when the parent's routes state hasn't flushed yet.
+  const fetchAndMerge = useCallback(async (routeId: string) => {
+    const { data, error } = await supabase
+      .from("growth_architecture_channels")
+      .select("id,architecture_system_id,channel_id,is_primary,sort_order")
+      .eq("architecture_system_id", routeId)
+      .order("is_primary", { ascending: false })
+      .order("sort_order", { ascending: true });
+    if (error) return;
+    setRows((prev) => [
+      ...prev.filter((r) => r.architecture_system_id !== routeId),
+      ...((data ?? []) as RouteChannelRow[]),
+    ]);
+  }, []);
+
+  return { rows, byRoute, loading, addChannel, removeChannel, setPrimary, reload: load, fetchAndMerge };
 }
 
 

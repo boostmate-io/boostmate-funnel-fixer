@@ -224,7 +224,13 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
         preselectedSystemId={preselectedSystemId}
         preselectedOfferId={preselectedOfferId}
         onCreate={async (payload) => await add(payload)}
-        onCreated={() => { void reloadRoutes(); void routeChannels.reload(); }}
+        onCreated={async (newRouteId) => {
+          // Fetch the new route's channels directly (routeIds state hasn't
+          // flushed yet, so a generic reload would miss them), then refresh
+          // routes so derived state + map pick everything up.
+          await routeChannels.fetchAndMerge(newRouteId);
+          await reloadRoutes();
+        }}
       />
 
       <EditRouteDialog
