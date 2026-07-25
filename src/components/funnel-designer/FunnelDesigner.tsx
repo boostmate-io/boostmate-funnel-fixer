@@ -1437,7 +1437,30 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
                 {(currentFunnel || editingSeedTemplate || editingTemplate) && <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
               </h2>
             )}
+            {currentFunnel && !currentFunnel.is_template && (
+              <Select
+                value={(currentFunnel.status ?? "building") as FunnelStatus}
+                onValueChange={async (v) => {
+                  const next = v as FunnelStatus;
+                  setCurrentFunnel({ ...currentFunnel, status: next });
+                  const { error } = await supabase.from("funnels").update({ status: next }).eq("id", currentFunnel.id);
+                  if (error) toast.error("Could not update status");
+                  else toast.success(`Status set to ${next}`);
+                }}
+              >
+                <SelectTrigger className="h-7 w-[110px] text-xs ml-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="building">Building</SelectItem>
+                  <SelectItem value="live">Live</SelectItem>
+                  <SelectItem value="paused">Paused</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
+
           <div className="flex items-center gap-1.5">
             <Tooltip><TooltipTrigger asChild>
               <Button variant="outline" size="sm" onClick={() => { setShowNewFunnel(true); setFunnelName(""); setNodes([]); setEdges([]); }}>
