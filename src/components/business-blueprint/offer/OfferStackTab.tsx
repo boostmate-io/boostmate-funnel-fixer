@@ -584,20 +584,15 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                 {data.support_channels.map((s, idx) => (
                   <CollapsibleItem
                     key={s.id}
-                    summary={s.name || `Support Channel ${idx + 1}`}
+                    title={s.name}
+                    fallbackTitle={`Support Channel ${idx + 1}`}
                     defaultOpen={!s.name}
                     onDelete={() => removeSupport(s.id)}
                   >
-                    <div className="flex items-start gap-2">
-                      <Input
-                        value={s.name}
-                        onChange={(e) => updateSupport(s.id, { name: e.target.value })}
-                        placeholder="Channel name (e.g. Slack)"
-                        className="h-9 font-medium"
-                      />
-                      <CoachIconButton
-                        compact
-                        onClick={() =>
+                    <div>
+                      <LabelRow
+                        label="Channel Name"
+                        onCoach={() =>
                           openCoach({
                             id: `offer_stack.stack.support_channels.${s.id}.name`,
                             label: `Support Channel ${idx + 1} — Name`,
@@ -606,6 +601,12 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                             apply: (v) => updateSupport(s.id, { name: v }),
                           })
                         }
+                      />
+                      <Input
+                        value={s.name}
+                        onChange={(e) => updateSupport(s.id, { name: e.target.value })}
+                        placeholder="Channel name (e.g. Slack)"
+                        className="h-9 font-medium"
                       />
                     </div>
                     <div>
