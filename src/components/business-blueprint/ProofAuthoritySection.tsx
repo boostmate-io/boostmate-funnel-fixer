@@ -2,13 +2,14 @@
 // AuthorityContentSection (file: ProofAuthoritySection.tsx) — "Authority & Content".
 // V3: 3 tabs — Authority Positioning · Social Proof · Stories & Lessons.
 // Objections & Beliefs moved to the offer level (see OfferEditor "Objections / FAQ").
-// Text-first. No file uploads. Optional external links only.
+// UX refinements: single-column entries + accordion collapse for repeatable items.
 // =============================================================================
 
 import { useState } from "react";
 import {
   Award, Users2, BookOpen, Plus, Trash2, Link as LinkIcon,
   Sparkles, Shield, Star, BadgeCheck, BarChart3, Quote, Trophy, Lightbulb, Check,
+  ChevronDown, ChevronRight,
 } from "lucide-react";
 import SectionHelpCoach from "./SectionHelpCoach";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,6 @@ import {
   type ProofAuthorityData,
   type AuthorityPositioningData,
   type SocialProofData,
-  type ObjectionsBeliefsData,
   type EducationalMessagingData,
   type FounderStory,
   type CredibilityMetric,
@@ -34,10 +34,7 @@ import {
   type ValueLesson,
   AUTHORITY_TYPE_OPTIONS,
   CREDIBILITY_FOUNDATION_OPTIONS,
-  EMOTIONAL_THEME_OPTIONS,
   PROOF_TYPE_OPTIONS,
-  TONE_OPTIONS,
-  CTA_GOAL_OPTIONS,
   calcProofAuthorityProgress,
 } from "./proofAuthorityTypes";
 
@@ -116,34 +113,60 @@ const EmptyHint = ({ text }: { text: string }) => (
   </div>
 );
 
-const EntryShell = ({
-  index, onDelete, children, badge,
+/**
+ * Collapsible entry row — matches the accordion pattern used in Offer Ecosystem.
+ * Shows a compact summary line when collapsed; expands to reveal full editor.
+ */
+const CollapsibleEntry = ({
+  index, summary, subSummary, onDelete, defaultOpen, children,
 }: {
-  index?: number;
+  index: number;
+  summary: string;
+  subSummary?: string;
   onDelete: () => void;
+  defaultOpen?: boolean;
   children: React.ReactNode;
-  badge?: React.ReactNode;
-}) => (
-  <div className="rounded-lg border border-border bg-background p-4 space-y-3">
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex items-center gap-2">
-        {typeof index === "number" && (
-          <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">
-            {index + 1}
-          </span>
-        )}
-        {badge}
+}) => {
+  const [open, setOpen] = useState(!!defaultOpen);
+  return (
+    <div className="rounded-lg border border-border bg-background overflow-hidden">
+      <div className="flex items-center gap-2 p-3">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="text-muted-foreground hover:text-foreground p-0.5 shrink-0"
+          aria-label="Toggle details"
+        >
+          {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </button>
+        <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center shrink-0">
+          {index + 1}
+        </span>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex-1 min-w-0 text-left"
+        >
+          <div className="text-sm font-medium text-foreground truncate">
+            {summary || <span className="text-muted-foreground italic">Untitled</span>}
+          </div>
+          {subSummary && (
+            <div className="text-xs text-muted-foreground truncate">{subSummary}</div>
+          )}
+        </button>
+        <Button
+          size="icon" variant="ghost" onClick={onDelete}
+          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
       </div>
-      <Button
-        size="icon" variant="ghost" onClick={onDelete}
-        className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-      >
-        <Trash2 className="w-4 h-4" />
-      </Button>
+      {open && (
+        <div className="px-4 pb-4 pt-1 border-t border-border/50 space-y-3">
+          {children}
+        </div>
+      )}
     </div>
-    {children}
-  </div>
-);
+  );
+};
 
 const Field = ({
   label, hint, children,
@@ -175,6 +198,30 @@ const LinkField = ({
       placeholder="https://… (Loom, YouTube, article, etc.)"
       className="h-9 text-sm"
     />
+  </div>
+);
+
+// Simple non-collapsible shell — used for Credibility Metrics (compact grid).
+const InlineEntry = ({
+  index, onDelete, children,
+}: {
+  index: number;
+  onDelete: () => void;
+  children: React.ReactNode;
+}) => (
+  <div className="rounded-lg border border-border bg-background p-4 space-y-3">
+    <div className="flex items-center justify-between gap-2">
+      <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">
+        {index + 1}
+      </span>
+      <Button
+        size="icon" variant="ghost" onClick={onDelete}
+        className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+      >
+        <Trash2 className="w-4 h-4" />
+      </Button>
+    </div>
+    {children}
   </div>
 );
 
@@ -273,13 +320,13 @@ const SocialProofTab = ({
           <EmptyHint text="e.g. years in business, clients helped, revenue generated, audience size, retention rate…" />
         ) : (
           data.metrics.map((m, i) => (
-            <EntryShell key={m.id} index={i} onDelete={() => removeMetric(m.id)}>
+            <InlineEntry key={m.id} index={i} onDelete={() => removeMetric(m.id)}>
               <div className="grid md:grid-cols-3 gap-3">
                 <Field label="Metric"><Input value={m.metric ?? ""} onChange={(e) => updateMetric(m.id, { metric: e.target.value })} placeholder="Clients helped" className="h-9 text-sm" /></Field>
                 <Field label="Value"><Input value={m.value ?? ""} onChange={(e) => updateMetric(m.id, { value: e.target.value })} placeholder="312" className="h-9 text-sm" /></Field>
                 <Field label="Short Context"><Input value={m.context ?? ""} onChange={(e) => updateMetric(m.id, { context: e.target.value })} placeholder="…in the last 24 months" className="h-9 text-sm" /></Field>
               </div>
-            </EntryShell>
+            </InlineEntry>
           ))
         )}
       </SectionCard>
@@ -296,42 +343,45 @@ const SocialProofTab = ({
           <EmptyHint text="Add the wins you reach for in sales calls. The more specific, the more usable." />
         ) : (
           data.client_results.map((r, i) => (
-            <EntryShell key={r.id} index={i} onDelete={() => removeResult(r.id)}>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Client Type"><Input value={r.client_type ?? ""} onChange={(e) => updateResult(r.id, { client_type: e.target.value })} placeholder="SaaS founder, $0–$10K MRR" className="h-9 text-sm" /></Field>
-                <Field label="Timeframe"><Input value={r.timeframe ?? ""} onChange={(e) => updateResult(r.id, { timeframe: e.target.value })} placeholder="90 days" className="h-9 text-sm" /></Field>
-                <Field label="Problem">
-                  <AutoTextarea value={r.problem ?? ""} onChange={(e) => updateResult(r.id, { problem: e.target.value })} placeholder="Stuck under $5K MRR, no consistent acquisition channel…" rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="Result Achieved">
-                  <AutoTextarea value={r.result_achieved ?? ""} onChange={(e) => updateResult(r.id, { result_achieved: e.target.value })} placeholder="Hit $32K MRR with one repeatable channel" rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="Short Explanation">
-                  <AutoTextarea value={r.explanation ?? ""} onChange={(e) => updateResult(r.id, { explanation: e.target.value })} placeholder="We rebuilt their ICP, redesigned the offer and installed an outbound system." rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="Measurable Outcome">
-                  <Input value={r.measurable_outcome ?? ""} onChange={(e) => updateResult(r.id, { measurable_outcome: e.target.value })} placeholder="+540% MRR in 12 weeks" className="h-9 text-sm" />
-                </Field>
-              </div>
+            <CollapsibleEntry
+              key={r.id}
+              index={i}
+              summary={r.client_type || r.result_achieved || "Client result"}
+              subSummary={r.measurable_outcome || r.result_achieved}
+              onDelete={() => removeResult(r.id)}
+            >
+              <Field label="Client Type">
+                <Input value={r.client_type ?? ""} onChange={(e) => updateResult(r.id, { client_type: e.target.value })} placeholder="SaaS founder, $0–$10K MRR" className="h-9 text-sm" />
+              </Field>
+              <Field label="Problem">
+                <AutoTextarea value={r.problem ?? ""} onChange={(e) => updateResult(r.id, { problem: e.target.value })} placeholder="Stuck under $5K MRR, no consistent acquisition channel…" rows={2} className="text-sm resize-none" />
+              </Field>
+              <Field label="Our Approach">
+                <AutoTextarea value={r.explanation ?? ""} onChange={(e) => updateResult(r.id, { explanation: e.target.value })} placeholder="We rebuilt their ICP, redesigned the offer and installed an outbound system." rows={2} className="text-sm resize-none" />
+              </Field>
+              <Field label="Result Achieved">
+                <AutoTextarea value={r.result_achieved ?? ""} onChange={(e) => updateResult(r.id, { result_achieved: e.target.value })} placeholder="Hit $32K MRR with one repeatable channel" rows={2} className="text-sm resize-none" />
+              </Field>
+              <Field label="Measurable Outcome">
+                <Input value={r.measurable_outcome ?? ""} onChange={(e) => updateResult(r.id, { measurable_outcome: e.target.value })} placeholder="+540% MRR in 12 weeks" className="h-9 text-sm" />
+              </Field>
               <Field label="Quote / Testimonial">
                 <AutoTextarea value={r.quote ?? ""} onChange={(e) => updateResult(r.id, { quote: e.target.value })} placeholder={`"This was the first system that actually moved the needle for us."`} rows={2} className="text-sm resize-none" />
               </Field>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Proof Type">
-                  <Select value={r.proof_type ?? ""} onValueChange={(v) => updateResult(r.id, { proof_type: v })}>
-                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select…" /></SelectTrigger>
-                    <SelectContent>
-                      {PROOF_TYPE_OPTIONS.map((p) => (<SelectItem key={p} value={p}>{p}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <LinkField value={r.external_link} onChange={(v) => updateResult(r.id, { external_link: v })} />
-              </div>
+              <Field label="Proof Type">
+                <Select value={r.proof_type ?? ""} onValueChange={(v) => updateResult(r.id, { proof_type: v })}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    {PROOF_TYPE_OPTIONS.map((p) => (<SelectItem key={p} value={p}>{p}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <LinkField value={r.external_link} onChange={(v) => updateResult(r.id, { external_link: v })} />
               <OfferAssociationPicker
                 value={(r as any).offer_ids}
                 onChange={(offer_ids) => updateResult(r.id, { offer_ids } as any)}
               />
-            </EntryShell>
+            </CollapsibleEntry>
           ))
         )}
       </SectionCard>
@@ -339,7 +389,7 @@ const SocialProofTab = ({
       <SectionCard
         icon={Quote}
         title="Testimonials"
-        description="Reusable quotes — categorized by tone and main outcome."
+        description="Reusable quotes to plug into ads, sales pages and emails."
         count={data.testimonials.length}
         onAdd={addTesti}
         addLabel="Add Testimonial"
@@ -348,33 +398,28 @@ const SocialProofTab = ({
           <EmptyHint text="Add quotes you can plug into ads, sales pages and emails." />
         ) : (
           data.testimonials.map((t, i) => (
-            <EntryShell key={t.id} index={i} onDelete={() => removeTesti(t.id)}>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Client Name"><Input value={t.client_name ?? ""} onChange={(e) => updateTesti(t.id, { client_name: e.target.value })} placeholder="Sarah K." className="h-9 text-sm" /></Field>
-                <Field label="Client Type"><Input value={t.client_type ?? ""} onChange={(e) => updateTesti(t.id, { client_type: e.target.value })} placeholder="Health coach, 2 yrs in" className="h-9 text-sm" /></Field>
-              </div>
+            <CollapsibleEntry
+              key={t.id}
+              index={i}
+              summary={t.client_name || (t.quote ? `"${t.quote.slice(0, 60)}${t.quote.length > 60 ? "…" : ""}"` : "Testimonial")}
+              subSummary={t.client_type}
+              onDelete={() => removeTesti(t.id)}
+            >
+              <Field label="Client Name">
+                <Input value={t.client_name ?? ""} onChange={(e) => updateTesti(t.id, { client_name: e.target.value })} placeholder="Sarah K." className="h-9 text-sm" />
+              </Field>
+              <Field label="Client Type">
+                <Input value={t.client_type ?? ""} onChange={(e) => updateTesti(t.id, { client_type: e.target.value })} placeholder="Health coach, 2 yrs in" className="h-9 text-sm" />
+              </Field>
               <Field label="Testimonial Quote">
                 <AutoTextarea value={t.quote ?? ""} onChange={(e) => updateTesti(t.id, { quote: e.target.value })} placeholder={`"I went from chasing leads on Instagram to a fully booked calendar in under 60 days."`} rows={3} className="text-sm resize-none" />
               </Field>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Main Outcome">
-                  <Input value={t.main_outcome ?? ""} onChange={(e) => updateTesti(t.id, { main_outcome: e.target.value })} placeholder="Booked-out calendar in 60 days" className="h-9 text-sm" />
-                </Field>
-                <Field label="Tone">
-                  <Select value={t.tone ?? ""} onValueChange={(v) => updateTesti(t.id, { tone: v })}>
-                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select tone…" /></SelectTrigger>
-                    <SelectContent>
-                      {TONE_OPTIONS.map((p) => (<SelectItem key={p} value={p}>{p}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              </div>
               <LinkField value={t.external_link} onChange={(v) => updateTesti(t.id, { external_link: v })} />
               <OfferAssociationPicker
                 value={(t as any).offer_ids}
                 onChange={(offer_ids) => updateTesti(t.id, { offer_ids } as any)}
               />
-            </EntryShell>
+            </CollapsibleEntry>
           ))
         )}
       </SectionCard>
@@ -391,7 +436,13 @@ const SocialProofTab = ({
           <EmptyHint text="Add anything that signals expertise and recognition." />
         ) : (
           data.authority_assets.map((a, i) => (
-            <EntryShell key={a.id} index={i} onDelete={() => removeAsset(a.id)}>
+            <CollapsibleEntry
+              key={a.id}
+              index={i}
+              summary={a.name || "Authority asset"}
+              subSummary={a.description}
+              onDelete={() => removeAsset(a.id)}
+            >
               <Field label="Asset Name">
                 <Input value={a.name ?? ""} onChange={(e) => updateAsset(a.id, { name: e.target.value })} placeholder="Guest on My First Million podcast" className="h-9 text-sm" />
               </Field>
@@ -406,7 +457,7 @@ const SocialProofTab = ({
                 value={(a as any).offer_ids}
                 onChange={(offer_ids) => updateAsset(a.id, { offer_ids } as any)}
               />
-            </EntryShell>
+            </CollapsibleEntry>
           ))
         )}
       </SectionCard>
@@ -414,10 +465,8 @@ const SocialProofTab = ({
   );
 };
 
-// (Objections & Beliefs tab removed in V3 — objections live at the offer level.)
-
 // ============================================================================
-// Tab 4 — Stories & Educational Assets
+// Tab 3 — Stories & Educational Assets
 // ============================================================================
 
 const StoriesTab = ({
@@ -454,7 +503,13 @@ const StoriesTab = ({
           <EmptyHint text="Add the most defining moments of your journey — each becomes raw material for AI copy." />
         ) : (
           stories.map((s, i) => (
-            <EntryShell key={s.id} index={i} onDelete={() => removeStory(s.id)}>
+            <CollapsibleEntry
+              key={s.id}
+              index={i}
+              summary={s.title || "Story"}
+              subSummary={s.core_lesson || s.after}
+              onDelete={() => removeStory(s.id)}
+            >
               <Field label="Story Title">
                 <Input
                   value={s.title ?? ""}
@@ -463,65 +518,56 @@ const StoriesTab = ({
                   className="h-9 text-sm"
                 />
               </Field>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="My before situation was">
-                  <AutoTextarea
-                    value={s.before ?? ""}
-                    onChange={(e) => updateStory(s.id, { before: e.target.value })}
-                    placeholder="Struggling to get clients consistently despite posting content every day…"
-                    rows={3} className="text-sm resize-none"
-                  />
-                </Field>
-                <Field label="The challenge I was having is">
-                  <AutoTextarea
-                    value={s.challenge ?? ""}
-                    onChange={(e) => updateStory(s.id, { challenge: e.target.value })}
-                    placeholder="I was trading time for money, working nights and weekends with no real growth."
-                    rows={3} className="text-sm resize-none"
-                  />
-                </Field>
-                <Field label="Eventually what happened that allowed me to overcome it was">
-                  <AutoTextarea
-                    value={s.breakthrough ?? ""}
-                    onChange={(e) => updateStory(s.id, { breakthrough: e.target.value })}
-                    placeholder="I rebuilt my offer around a single outcome and installed one acquisition system."
-                    rows={3} className="text-sm resize-none"
-                  />
-                </Field>
-                <Field label="In the process of the breakthrough I learned">
-                  <AutoTextarea
-                    value={s.learned ?? ""}
-                    onChange={(e) => updateStory(s.id, { learned: e.target.value })}
-                    placeholder="That clarity beats hustle — and that the offer is the marketing."
-                    rows={3} className="text-sm resize-none"
-                  />
-                </Field>
-                <Field label="My after situation was">
-                  <AutoTextarea
-                    value={s.after ?? ""}
-                    onChange={(e) => updateStory(s.id, { after: e.target.value })}
-                    placeholder="Predictable $40K/month, 4-day work week, fully booked with dream clients."
-                    rows={3} className="text-sm resize-none"
-                  />
-                </Field>
-                <Field label="Core Lesson (optional)">
-                  <AutoTextarea
-                    value={s.core_lesson ?? ""}
-                    onChange={(e) => updateStory(s.id, { core_lesson: e.target.value })}
-                    placeholder="You don't need more content. You need a clearer offer."
-                    rows={3} className="text-sm resize-none"
-                  />
-                </Field>
-              </div>
-              <Field label="Emotional Theme (optional)">
-                <MultiSelectChips
-                  options={EMOTIONAL_THEME_OPTIONS}
-                  value={s.emotional_theme ? [s.emotional_theme] : []}
-                  onChange={(v) => updateStory(s.id, { emotional_theme: v[v.length - 1] ?? "" })}
+              <Field label="My before situation was">
+                <AutoTextarea
+                  value={s.before ?? ""}
+                  onChange={(e) => updateStory(s.id, { before: e.target.value })}
+                  placeholder="Struggling to get clients consistently despite posting content every day…"
+                  rows={3} className="text-sm resize-none"
+                />
+              </Field>
+              <Field label="The challenge I was having is">
+                <AutoTextarea
+                  value={s.challenge ?? ""}
+                  onChange={(e) => updateStory(s.id, { challenge: e.target.value })}
+                  placeholder="I was trading time for money, working nights and weekends with no real growth."
+                  rows={3} className="text-sm resize-none"
+                />
+              </Field>
+              <Field label="Eventually what happened that allowed me to overcome it was">
+                <AutoTextarea
+                  value={s.breakthrough ?? ""}
+                  onChange={(e) => updateStory(s.id, { breakthrough: e.target.value })}
+                  placeholder="I rebuilt my offer around a single outcome and installed one acquisition system."
+                  rows={3} className="text-sm resize-none"
+                />
+              </Field>
+              <Field label="In the process of the breakthrough I learned">
+                <AutoTextarea
+                  value={s.learned ?? ""}
+                  onChange={(e) => updateStory(s.id, { learned: e.target.value })}
+                  placeholder="That clarity beats hustle — and that the offer is the marketing."
+                  rows={3} className="text-sm resize-none"
+                />
+              </Field>
+              <Field label="My after situation was">
+                <AutoTextarea
+                  value={s.after ?? ""}
+                  onChange={(e) => updateStory(s.id, { after: e.target.value })}
+                  placeholder="Predictable $40K/month, 4-day work week, fully booked with dream clients."
+                  rows={3} className="text-sm resize-none"
+                />
+              </Field>
+              <Field label="Core Lesson (optional)">
+                <AutoTextarea
+                  value={s.core_lesson ?? ""}
+                  onChange={(e) => updateStory(s.id, { core_lesson: e.target.value })}
+                  placeholder="You don't need more content. You need a clearer offer."
+                  rows={3} className="text-sm resize-none"
                 />
               </Field>
               <LinkField value={s.external_link} onChange={(v) => updateStory(s.id, { external_link: v })} />
-            </EntryShell>
+            </CollapsibleEntry>
           ))
         )}
       </SectionCard>
@@ -538,7 +584,13 @@ const StoriesTab = ({
           <EmptyHint text="Each lesson becomes raw material for emails, posts, VSLs and ads." />
         ) : (
           lessons.map((l, i) => (
-            <EntryShell key={l.id} index={i} onDelete={() => removeLesson(l.id)}>
+            <CollapsibleEntry
+              key={l.id}
+              index={i}
+              summary={l.title || "Value lesson"}
+              subSummary={l.main_topic || l.core_insight}
+              onDelete={() => removeLesson(l.id)}
+            >
               <Field label="Lesson Title">
                 <Input
                   value={l.title ?? ""}
@@ -547,37 +599,27 @@ const StoriesTab = ({
                   className="h-9 text-sm"
                 />
               </Field>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="The main topic is">
-                  <AutoTextarea value={l.main_topic ?? ""} onChange={(e) => updateLesson(l.id, { main_topic: e.target.value })} placeholder="Pricing and offer positioning." rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="The challenge people have is">
-                  <AutoTextarea value={l.common_challenge ?? ""} onChange={(e) => updateLesson(l.id, { common_challenge: e.target.value })} placeholder="They charge by the hour and undercharge for transformations." rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="The awesome lesson about that is">
-                  <AutoTextarea value={l.core_insight ?? ""} onChange={(e) => updateLesson(l.id, { core_insight: e.target.value })} placeholder="Pricing for outcome — not time — instantly repositions you as a premium expert." rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="It's especially cool because">
-                  <AutoTextarea value={l.why_matters ?? ""} onChange={(e) => updateLesson(l.id, { why_matters: e.target.value })} placeholder="It removes the income ceiling without adding any hours." rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="The main breakthrough I learned was">
-                  <AutoTextarea value={l.breakthrough_lesson ?? ""} onChange={(e) => updateLesson(l.id, { breakthrough_lesson: e.target.value })} placeholder="When I stopped selling sessions and started selling outcomes, my close rate doubled." rows={2} className="text-sm resize-none" />
-                </Field>
-                <Field label="CTA Goal (optional)">
-                  <Select value={l.cta_goal ?? ""} onValueChange={(v) => updateLesson(l.id, { cta_goal: v })}>
-                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select goal…" /></SelectTrigger>
-                    <SelectContent>
-                      {CTA_GOAL_OPTIONS.map((p) => (<SelectItem key={p} value={p}>{p}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              </div>
+              <Field label="The main topic is">
+                <AutoTextarea value={l.main_topic ?? ""} onChange={(e) => updateLesson(l.id, { main_topic: e.target.value })} placeholder="Pricing and offer positioning." rows={2} className="text-sm resize-none" />
+              </Field>
+              <Field label="The challenge people have is">
+                <AutoTextarea value={l.common_challenge ?? ""} onChange={(e) => updateLesson(l.id, { common_challenge: e.target.value })} placeholder="They charge by the hour and undercharge for transformations." rows={2} className="text-sm resize-none" />
+              </Field>
+              <Field label="The awesome lesson about this is">
+                <AutoTextarea value={l.core_insight ?? ""} onChange={(e) => updateLesson(l.id, { core_insight: e.target.value })} placeholder="Pricing for outcome — not time — instantly repositions you as a premium expert." rows={2} className="text-sm resize-none" />
+              </Field>
+              <Field label="It's especially cool because">
+                <AutoTextarea value={l.why_matters ?? ""} onChange={(e) => updateLesson(l.id, { why_matters: e.target.value })} placeholder="It removes the income ceiling without adding any hours." rows={2} className="text-sm resize-none" />
+              </Field>
+              <Field label="The main breakthrough I learned was">
+                <AutoTextarea value={l.breakthrough_lesson ?? ""} onChange={(e) => updateLesson(l.id, { breakthrough_lesson: e.target.value })} placeholder="When I stopped selling sessions and started selling outcomes, my close rate doubled." rows={2} className="text-sm resize-none" />
+              </Field>
               <LinkField value={l.external_link} onChange={(v) => updateLesson(l.id, { external_link: v })} />
               <OfferAssociationPicker
                 value={(l as any).offer_ids}
                 onChange={(offer_ids) => updateLesson(l.id, { offer_ids } as any)}
               />
-            </EntryShell>
+            </CollapsibleEntry>
           ))
         )}
       </SectionCard>
@@ -599,11 +641,9 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
     onChange({ authority: { ...data.authority, ...patch } });
   const updateSocial = (patch: Partial<SocialProofData>) =>
     onChange({ social_proof: { ...data.social_proof, ...patch } });
-  // Objections handler removed — objections moved to the offer level.
   const updateEdu = (patch: Partial<EducationalMessagingData>) =>
     onChange({ educational: { ...data.educational, ...patch } });
 
-  // Per-tab completion signal (used in sub-tabs)
   const tabComplete = (id: TabId): boolean => {
     if (id === "authority") {
       return data.authority.authority_types.length > 0
@@ -625,7 +665,6 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Sticky sub-tab navigation (matches Customer Clarity / Offer Design) */}
       <div className="border-b border-border bg-card px-8 shrink-0">
         <div className="max-w-6xl mx-auto flex gap-1 -mb-px overflow-x-auto">
           {TABS.map((t) => {
@@ -651,7 +690,6 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
         </div>
       </div>
 
-      {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto p-8">
           <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
