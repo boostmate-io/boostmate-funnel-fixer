@@ -32,7 +32,6 @@ const TimeframePicker = ({ value, customValue, onChange, placeholder = "Choose t
     </Select>
     {value === "custom" && (
       <Input
-        autoFocus
         value={customValue ?? ""}
         onChange={(e) => onChange("custom", e.target.value)}
         placeholder="e.g. 14 weeks, 2 quarters…"

@@ -269,6 +269,9 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
             nodes={nodes}
             edges={edges}
             fitView
+            fitViewOptions={{ padding: 0.25, includeHiddenNodes: false, minZoom: 0.4, maxZoom: 1 }}
+            minZoom={0.2}
+            maxZoom={1.5}
             nodesDraggable={false}
             nodesConnectable={false}
             elementsSelectable={false}
