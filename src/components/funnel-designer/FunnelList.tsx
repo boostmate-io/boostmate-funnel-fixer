@@ -17,10 +17,18 @@ interface Funnel {
   nodes: any[];
   edges: any[];
   is_template: boolean;
+  status?: string;
   created_at: string;
   updated_at: string;
   share_token?: string | null;
 }
+
+const STATUS_STYLES: Record<string, { label: string; dot: string; text: string; bg: string }> = {
+  building: { label: "Building", dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-300", bg: "bg-amber-500/10" },
+  live:     { label: "Live",     dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300", bg: "bg-emerald-500/10" },
+  paused:   { label: "Paused",   dot: "bg-muted-foreground", text: "text-muted-foreground", bg: "bg-muted" },
+  archived: { label: "Archived", dot: "bg-muted-foreground", text: "text-muted-foreground", bg: "bg-muted" },
+};
 
 interface FunnelListProps {
   onOpenFunnel: (funnel: Funnel) => void;
@@ -123,10 +131,19 @@ const FunnelList = ({ onOpenFunnel, onCreateNew }: FunnelListProps) => {
                 className="group bg-card border border-border rounded-xl p-5 hover:shadow-card-hover transition-all cursor-pointer"
                 onClick={() => onOpenFunnel(funnel)}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-display font-bold text-foreground text-sm leading-tight line-clamp-2 flex-1 mr-2">
+                <div className="flex items-start justify-between mb-3 gap-2">
+                  <h3 className="font-display font-bold text-foreground text-sm leading-tight line-clamp-2 flex-1">
                     {funnel.name}
                   </h3>
+                  {(() => {
+                    const s = STATUS_STYLES[funnel.status ?? "building"] ?? STATUS_STYLES.building;
+                    return (
+                      <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-medium shrink-0 ${s.bg} ${s.text}`}>
+                        <span className={`w-1 h-1 rounded-full ${s.dot}`} />
+                        {s.label}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <div className="mb-3">
