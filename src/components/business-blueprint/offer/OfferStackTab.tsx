@@ -686,9 +686,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           emptyText="No bonuses yet. Add 1–3 high-value bonuses to anchor perceived value."
         >
           {data.bonuses.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {data.bonuses.map((b, idx) => (
-                <div key={b.id} className="rounded-lg border border-border bg-background p-4 space-y-3">
+                <CollapsibleItem
+                  key={b.id}
+                  summary={b.name || `Bonus ${idx + 1}`}
+                  defaultOpen={!b.name}
+                  onDelete={() => removeBonus(b.id)}
+                >
                   <div className="flex items-start gap-2">
                     <Input
                       value={b.name}
@@ -708,14 +713,6 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         })
                       }
                     />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => removeBonus(b.id)}
-                      className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                   <div>
                     <LabelRow
@@ -758,7 +755,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       className="h-9 text-sm"
                     />
                   </div>
-                </div>
+                </CollapsibleItem>
               ))}
             </div>
           )}
