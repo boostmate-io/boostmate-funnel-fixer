@@ -329,20 +329,15 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
               {data.deliverables.map((d, idx) => (
                 <CollapsibleItem
                   key={d.id}
-                  summary={d.name || `Deliverable ${idx + 1}`}
+                  title={d.name}
+                  fallbackTitle={`Deliverable ${idx + 1}`}
                   defaultOpen={!d.name}
                   onDelete={() => removeDeliverable(d.id)}
                 >
-                  <div className="flex items-start gap-2">
-                    <Input
-                      value={d.name}
-                      onChange={(e) => updateDeliverable(d.id, { name: e.target.value })}
-                      placeholder="Deliverable name (e.g. Weekly 1:1 Coaching Calls)"
-                      className="h-9 font-medium"
-                    />
-                    <CoachIconButton
-                      compact
-                      onClick={() =>
+                  <div>
+                    <LabelRow
+                      label="Deliverable Name"
+                      onCoach={() =>
                         openCoach({
                           id: `offer_stack.stack.deliverables.${d.id}.name`,
                           label: `Deliverable ${idx + 1} — Name`,
@@ -352,6 +347,12 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                           apply: (v) => updateDeliverable(d.id, { name: v }),
                         })
                       }
+                    />
+                    <Input
+                      value={d.name}
+                      onChange={(e) => updateDeliverable(d.id, { name: e.target.value })}
+                      placeholder="Deliverable name (e.g. Weekly 1:1 Coaching Calls)"
+                      className="h-9 font-medium"
                     />
                   </div>
                   <div>
