@@ -57,44 +57,30 @@ export interface RouteBuildInfo {
 
 export function deriveRouteState(
   route: GrowthArchitectureRow,
-  relationships: OfferRelationshipRow[],
+  _relationships: OfferRelationshipRow[], // deprecated — kept for signature compatibility
   primaryChannelId?: string | null,
   buildInfo?: RouteBuildInfo,
+  upstreamFunnelCount?: number,
 ): DerivedRouteMeta {
-  // Prerequisite check
-  let prereqOk = false;
-  let prereqReason = "";
+  // Prerequisite: at least one traffic source — either an external primary
+  // channel or an upstream funnel (persisted or pending).
+  const pendingUpstream = (route.pending_upstream_funnel_ids ?? []).length;
+  const totalUpstream = (upstreamFunnelCount ?? 0) + pendingUpstream;
+  const hasChannel = !!primaryChannelId;
 
-  if (route.source_offer_id) {
-    const relExists = relationships.some(
-      (r) =>
-        r.source_offer_id === route.source_offer_id &&
-        r.target_offer_id === route.target_offer_id,
-    );
-    if (!relExists) {
-      return {
-        state: "planned",
-        label: LABELS.planned,
-        reason: "Missing offer relationship — add one on the source offer.",
-      };
-    }
-    prereqOk = true;
-    prereqReason = "Offer relationship in place.";
-  } else {
-    if (!primaryChannelId) {
-      return {
-        state: "planned",
-        label: LABELS.planned,
-        reason: "Pick a primary acquisition channel to move forward.",
-      };
-    }
-    prereqOk = true;
-    prereqReason = "Primary channel selected.";
+  if (!hasChannel && totalUpstream === 0) {
+    return {
+      state: "planned",
+      label: LABELS.planned,
+      reason: "Add at least one traffic source — an external channel or an upstream funnel.",
+    };
   }
 
-  if (!prereqOk) {
-    return { state: "planned", label: LABELS.planned, reason: prereqReason };
-  }
+  const prereqReason = hasChannel
+    ? (totalUpstream > 0
+        ? `Primary channel selected · ${totalUpstream} upstream funnel${totalUpstream > 1 ? "s" : ""}.`
+        : "Primary channel selected.")
+    : `${totalUpstream} upstream funnel${totalUpstream > 1 ? "s" : ""} selected.`;
 
   // No funnel yet
   if (!route.funnel_id) {
