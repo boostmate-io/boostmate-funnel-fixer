@@ -1,16 +1,13 @@
 // =============================================================================
-// AddRouteWizard — offer-driven 5-step flow with auto-skip.
+// AddRouteWizard — V2.1 engine in the restored V5 shell.
 //
-// Steps:
-//  1. Target Offer
-//  2. Source (external / from another offer)
-//  3. Growth System
-//  4. Channels (external-only; primary required)
-//  5. Review
-//
-// Auto-skip rule: a step is skipped and the sole option preselected whenever
-// only one valid option exists. Step 5 always renders and each auto-selected
-// value has a Change link that unlocks the underlying step for the session.
+// 4 steps: Target Offer → Traffic Sources → Growth System → Review.
+// Traffic Sources is one unified picker:
+//   - External Channels     → persisted in growth_architecture_channels
+//   - Existing Built Funnels → persisted as pending_upstream_funnel_ids on the
+//                              route (materialized into funnel_connections when
+//                              Start Building creates the target funnel)
+// The old Source (offer-relationships) step is removed entirely.
 // =============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -25,9 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, Lock, Sparkles, Wand2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Lock, Sparkles, Star, Workflow } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
@@ -38,25 +34,23 @@ import {
   type GrowthArchitectureRow,
   type GrowthArchStatus,
 } from "@/lib/growth-architecture/hooks";
+import type { WorkspaceFunnelRow } from "@/lib/growth-architecture/funnelConnections";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
-  useGrowthSystemChannelCompat,
   useCurrentGrowthStage,
   useIsAppAdmin,
 } from "@/lib/growth-architecture/useGrowthAuxHooks";
-import {
-  rankSystemsForOffer,
-  rankChannelsForSystem,
-  type SystemSuggestion,
-} from "@/lib/growth-architecture/recommendations";
+import { rankSystemsForOffer, type SystemSuggestion } from "@/lib/growth-architecture/recommendations";
 
-type StepId = 1 | 2 | 3 | 4 | 5;
+type StepId = 1 | 2 | 3 | 4;
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   offers: EcosystemOfferRow[];
-  relationships: OfferRelationshipRow[];
+  relationships: OfferRelationshipRow[]; // kept for signature; not used
   existingRoutes: GrowthArchitectureRow[];
+  workspaceFunnels: WorkspaceFunnelRow[];
   preselectedSystemId?: string | null;
   preselectedOfferId?: string | null;
   onCreate: (payload: {
@@ -65,40 +59,35 @@ interface Props {
     target_offer_id: string;
     status: GrowthArchStatus;
     notes: string | null;
+    pending_upstream_funnel_ids: string[];
   }) => Promise<string | null>;
   onCreated?: (newRouteId: string) => void | Promise<void>;
 }
 
 interface WizardState {
   targetOfferId: string | null;
-  sourceKind: "external" | "offer";
-  sourceOfferId: string | null;
-  systemId: string | null;
+  selectedChannelIds: string[];
   primaryChannelId: string | null;
-  additionalChannelIds: string[];
+  selectedFunnelIds: string[];
+  systemId: string | null;
   notes: string;
-  autoSkipped: Record<StepId, boolean>;
-  unlocked: Record<StepId, boolean>; // when the user clicked "Change"
 }
 
 const empty = (preselectOffer: string | null): WizardState => ({
   targetOfferId: preselectOffer,
-  sourceKind: "external",
-  sourceOfferId: null,
-  systemId: null,
+  selectedChannelIds: [],
   primaryChannelId: null,
-  additionalChannelIds: [],
+  selectedFunnelIds: [],
+  systemId: null,
   notes: "",
-  autoSkipped: { 1: false, 2: false, 3: false, 4: false, 5: false },
-  unlocked: { 1: false, 2: false, 3: false, 4: false, 5: false },
 });
 
 const AddRouteWizard = ({
   open,
   onOpenChange,
   offers,
-  relationships,
   existingRoutes,
+  workspaceFunnels,
   preselectedSystemId,
   preselectedOfferId,
   onCreate,
@@ -106,8 +95,7 @@ const AddRouteWizard = ({
 }: Props) => {
   const { rows: systems } = useGrowthSystemsCatalog();
   const { rows: channels } = useAcquisitionChannels();
-  const { bySystem: compatBySystem } = useGrowthSystemChannelCompat();
-  const { activeSubAccountId } = useActiveSubAccount();
+  const { activeSubAccountId } = useWorkspace();
   const { stage } = useCurrentGrowthStage(activeSubAccountId);
   const { isAdmin } = useIsAppAdmin();
 
@@ -115,7 +103,6 @@ const AddRouteWizard = ({
   const [step, setStep] = useState<StepId>(1);
   const [saving, setSaving] = useState(false);
 
-  // Reset when dialog opens
   useEffect(() => {
     if (open) {
       setState(empty(preselectedOfferId ?? null));
@@ -125,192 +112,117 @@ const AddRouteWizard = ({
 
   const patch = useCallback((p: Partial<WizardState>) => setState((s) => ({ ...s, ...p })), []);
 
-  // ---- Derived option sets --------------------------------------------------
   const targetOffer = useMemo(
     () => offers.find((o) => o.id === state.targetOfferId) ?? null,
     [offers, state.targetOfferId],
   );
 
-  const incomingRels = useMemo(
-    () => relationships.filter((r) => r.target_offer_id === state.targetOfferId),
-    [relationships, state.targetOfferId],
-  );
-
-  const sourceOfferOptions = useMemo(
-    () =>
-      offers.filter((o) =>
-        incomingRels.some((r) => r.source_offer_id === o.id) && o.id !== state.targetOfferId,
-      ),
-    [offers, incomingRels, state.targetOfferId],
-  );
-
   const systemSuggestions: SystemSuggestion[] = useMemo(
-    () =>
-      rankSystemsForOffer(
-        systems,
-        targetOffer,
-        stage,
-        existingRoutes,
-        state.sourceKind === "offer" ? state.sourceOfferId : null,
-      ),
-    [systems, targetOffer, stage, existingRoutes, state.sourceKind, state.sourceOfferId],
+    () => rankSystemsForOffer(systems, targetOffer, stage, existingRoutes, null),
+    [systems, targetOffer, stage, existingRoutes],
   );
-
-  // A system is user-selectable when compatible + buildable (or admin override).
   const selectableSystems = useMemo(
     () => systemSuggestions.filter((s) => s.compatible && (s.buildable || isAdmin)),
     [systemSuggestions, isAdmin],
   );
 
-  const compatChannelIds = useMemo(() => {
-    if (!state.systemId) return new Set<string>();
-    return compatBySystem.get(state.systemId) ?? new Set<string>();
-  }, [state.systemId, compatBySystem]);
+  // Only funnels that already exist (have been built) are pickable as upstream.
+  const availableFunnels = useMemo(
+    () => workspaceFunnels.filter((f) => f.status !== "archived"),
+    [workspaceFunnels],
+  );
 
-  const channelSuggestions = useMemo(() => {
-    if (!state.systemId) return [];
-    const sys = systems.find((s) => s.id === state.systemId);
-    return rankChannelsForSystem(channels, compatChannelIds, sys?.label ?? "this system");
-  }, [state.systemId, systems, channels, compatChannelIds]);
-
-  const availableChannels = useMemo(() => {
-    if (compatChannelIds.size === 0) return isAdmin ? channels : [];
-    return channels.filter((c) => compatChannelIds.has(c.id));
-  }, [channels, compatChannelIds, isAdmin]);
-
-  // ---- Auto-lock predicates -------------------------------------------------
-  // Only for external routes; offer-to-offer never needs channels.
-  const isExternal = state.sourceKind === "external";
-
-  // When a step has exactly one valid option, preselect it and mark the step
-  // as "auto-locked" so it renders with an explanation and disabled controls.
-  // The user still clicks Continue — transparency over hidden skips.
-  const step2AutoLock = incomingRels.length === 0 && !state.unlocked[2];
-  const step3AutoLock =
-    !!targetOffer &&
-    selectableSystems.length === 1 &&
-    !state.unlocked[3] &&
-    // If Roadmap preselected an incompatible system, keep Step 3 open for context.
-    !(preselectedSystemId && !selectableSystems.some((s) => s.system.id === preselectedSystemId));
-  const step4AutoLock =
-    isExternal &&
-    compatChannelIds.size > 0 &&
-    availableChannels.length === 1 &&
-    !state.unlocked[4];
-
-  // Apply preselection + autoSkipped flag when the wizard lands on a locked step.
   useEffect(() => {
-    if (!open) return;
-    if (step === 2 && step2AutoLock) {
-      setState((s) =>
-        s.sourceKind === "external" && s.autoSkipped[2]
-          ? s
-          : { ...s, sourceKind: "external", sourceOfferId: null, autoSkipped: { ...s.autoSkipped, 2: true } },
-      );
+    if (!open || !preselectedSystemId || state.systemId) return;
+    if (targetOffer && selectableSystems.some((s) => s.system.id === preselectedSystemId)) {
+      patch({ systemId: preselectedSystemId });
     }
-    if (step === 3 && step3AutoLock) {
-      const only = selectableSystems[0];
-      setState((s) =>
-        s.systemId === only.system.id && s.autoSkipped[3]
-          ? s
-          : { ...s, systemId: only.system.id, autoSkipped: { ...s.autoSkipped, 3: true } },
-      );
+  }, [open, preselectedSystemId, targetOffer, selectableSystems, state.systemId, patch]);
+
+  // Auto-adjust primary when channel selection changes.
+  useEffect(() => {
+    if (state.selectedChannelIds.length === 0) {
+      if (state.primaryChannelId !== null) patch({ primaryChannelId: null });
+      return;
     }
-    if (step === 4 && step4AutoLock) {
-      const only = availableChannels[0];
-      setState((s) =>
-        s.primaryChannelId === only.id && s.autoSkipped[4]
-          ? s
-          : { ...s, primaryChannelId: only.id, autoSkipped: { ...s.autoSkipped, 4: true } },
-      );
+    if (!state.primaryChannelId || !state.selectedChannelIds.includes(state.primaryChannelId)) {
+      patch({ primaryChannelId: state.selectedChannelIds[0] });
     }
-  }, [open, step, step2AutoLock, step3AutoLock, step4AutoLock, selectableSystems, availableChannels]);
+  }, [state.selectedChannelIds, state.primaryChannelId, patch]);
 
-  const advanceFrom = useCallback((from: StepId) => {
-    setStep(Math.min(5, (from + 1)) as StepId);
-  }, []);
+  const canGoNext = useMemo(() => {
+    if (step === 1) return !!state.targetOfferId;
+    if (step === 2) return state.selectedChannelIds.length > 0 || state.selectedFunnelIds.length > 0;
+    if (step === 3) return !!state.systemId;
+    return true;
+  }, [step, state]);
 
-  const goBack = useCallback(() => {
-    setStep(Math.max(1, (step - 1)) as StepId);
-  }, [step]);
-
-  const unlockAndGo = useCallback((s: StepId) => {
-    setState((prev) => ({
-      ...prev,
-      unlocked: { ...prev.unlocked, [s]: true },
-      autoSkipped: { ...prev.autoSkipped, [s]: false },
-    }));
-    setStep(s);
-  }, []);
-
-  // ---- Save -----------------------------------------------------------------
   const canSave = useMemo(() => {
     if (!state.targetOfferId || !state.systemId) return false;
-    if (isExternal && !state.primaryChannelId) return false;
-    if (state.sourceKind === "offer" && !state.sourceOfferId) return false;
+    if (state.selectedChannelIds.length === 0 && state.selectedFunnelIds.length === 0) return false;
+    if (state.selectedChannelIds.length > 0 && !state.primaryChannelId) return false;
     return true;
-  }, [state, isExternal]);
+  }, [state]);
 
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
-    const id = await onCreate({
-      system_catalog_id: state.systemId!,
-      source_offer_id: state.sourceKind === "offer" ? state.sourceOfferId : null,
-      target_offer_id: state.targetOfferId!,
-      status: "planned" as GrowthArchStatus,
-      notes: state.notes.trim() ? state.notes.trim() : null,
-    });
-    if (!id) { setSaving(false); return; }
+    try {
+      const id = await onCreate({
+        system_catalog_id: state.systemId!,
+        source_offer_id: null,
+        target_offer_id: state.targetOfferId!,
+        status: "planned" as GrowthArchStatus,
+        notes: state.notes.trim() ? state.notes.trim() : null,
+        pending_upstream_funnel_ids: state.selectedFunnelIds,
+      });
+      if (!id) { setSaving(false); return; }
 
-    // Insert primary channel + additional channels
-    const rows: any[] = [];
-    if (isExternal && state.primaryChannelId) {
-      rows.push({ architecture_system_id: id, channel_id: state.primaryChannelId, is_primary: true, sort_order: 0 });
+      // Persist channels
+      const rows: any[] = [];
+      state.selectedChannelIds.forEach((cid, i) => {
+        rows.push({
+          architecture_system_id: id,
+          channel_id: cid,
+          is_primary: cid === state.primaryChannelId,
+          sort_order: i,
+        });
+      });
+      if (rows.length > 0) {
+        const { error } = await supabase.from("growth_architecture_channels").insert(rows);
+        if (error) toast.error("Route created, but some channels could not be attached.");
+      }
+      await onCreated?.(id);
+      onOpenChange(false);
+      toast.success("Funnel added.");
+    } finally {
+      setSaving(false);
     }
-    state.additionalChannelIds.forEach((cid, i) => {
-      if (cid === state.primaryChannelId) return;
-      rows.push({ architecture_system_id: id, channel_id: cid, is_primary: false, sort_order: i + 1 });
-    });
-    if (rows.length > 0) {
-      const { error } = await supabase.from("growth_architecture_channels").insert(rows);
-      if (error) toast.error("Route created, but some channels could not be attached.");
-    }
-    setSaving(false);
-    await onCreated?.(id);
-    onOpenChange(false);
-    toast.success("Route created.");
   };
 
-  // Preselect from Roadmap on Step 3 arrival
-  useEffect(() => {
-    if (!open || !preselectedSystemId || state.systemId) return;
-    // If offer already picked and preselected system is selectable, preselect it
-    if (targetOffer) {
-      const found = selectableSystems.find((s) => s.system.id === preselectedSystemId);
-      if (found) patch({ systemId: preselectedSystemId });
-    }
-  }, [open, preselectedSystemId, targetOffer, selectableSystems, state.systemId, patch]);
+  const stepLabels: Record<StepId, string> = {
+    1: "Target offer",
+    2: "Traffic sources",
+    3: "Growth system",
+    4: "Review",
+  };
 
-  // ---- Render ---------------------------------------------------------------
-  const stepLabels: Record<StepId, string> = { 1: "Target offer", 2: "Source", 3: "Growth system", 4: "Channels", 5: "Review" };
-
-  const canGoNext = useMemo(() => {
-    if (step === 1) return !!state.targetOfferId;
-    if (step === 2) return state.sourceKind === "external" || !!state.sourceOfferId;
-    if (step === 3) return !!state.systemId;
-    if (step === 4) return !isExternal || !!state.primaryChannelId;
-    return false;
-  }, [step, state, isExternal]);
+  const advance = () => setStep(Math.min(4, (step + 1)) as StepId);
+  const goBack = () => setStep(Math.max(1, (step - 1)) as StepId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add Growth Route</DialogTitle>
+          <DialogTitle>Add Funnel</DialogTitle>
           <div className="flex items-center gap-2 mt-2">
-            {([1, 2, 3, 4, 5] as StepId[]).map((s) => (
-              <div key={s} className={`text-[11px] px-2 py-0.5 rounded-full ${step === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+            {([1, 2, 3, 4] as StepId[]).map((s) => (
+              <div
+                key={s}
+                className={`text-[11px] px-2 py-0.5 rounded-full ${
+                  step === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                }`}
+              >
                 {s}. {stepLabels[s]}
               </div>
             ))}
@@ -319,18 +231,31 @@ const AddRouteWizard = ({
 
         <ScrollArea className="max-h-[60vh] pr-3">
           {step === 1 && (
-            <Step1Target offers={offers} existingRoutes={existingRoutes} value={state.targetOfferId} onChange={(id) => patch({ targetOfferId: id, systemId: null, primaryChannelId: null })} />
+            <Step1Target
+              offers={offers}
+              existingRoutes={existingRoutes}
+              value={state.targetOfferId}
+              onChange={(id) => patch({ targetOfferId: id, systemId: null })}
+            />
           )}
           {step === 2 && (
-            <Step2Source
-              value={state.sourceKind}
-              sourceOfferId={state.sourceOfferId}
-              sourceOptions={sourceOfferOptions}
-              onKindChange={(k) => patch({ sourceKind: k, sourceOfferId: k === "external" ? null : state.sourceOfferId, systemId: null })}
-              onSourceOfferChange={(id) => patch({ sourceOfferId: id, systemId: null })}
-              hasRelationships={incomingRels.length > 0}
-              autoLocked={step2AutoLock}
-              targetOfferName={targetOffer?.name ?? null}
+            <Step2TrafficSources
+              channels={channels}
+              funnels={availableFunnels}
+              selectedChannelIds={state.selectedChannelIds}
+              primaryChannelId={state.primaryChannelId}
+              selectedFunnelIds={state.selectedFunnelIds}
+              onToggleChannel={(id) => patch({
+                selectedChannelIds: state.selectedChannelIds.includes(id)
+                  ? state.selectedChannelIds.filter((c) => c !== id)
+                  : [...state.selectedChannelIds, id],
+              })}
+              onSetPrimary={(id) => patch({ primaryChannelId: id })}
+              onToggleFunnel={(id) => patch({
+                selectedFunnelIds: state.selectedFunnelIds.includes(id)
+                  ? state.selectedFunnelIds.filter((f) => f !== id)
+                  : [...state.selectedFunnelIds, id],
+              })}
             />
           )}
           {step === 3 && (
@@ -338,44 +263,19 @@ const AddRouteWizard = ({
               suggestions={systemSuggestions}
               stage={stage}
               value={state.systemId}
-              onChange={(id) => patch({ systemId: id, primaryChannelId: null, additionalChannelIds: [] })}
-              preselectedSystemId={preselectedSystemId ?? null}
+              onChange={(id) => patch({ systemId: id })}
               isAdmin={isAdmin}
-              autoLocked={step3AutoLock}
-              autoLockedSystemLabel={step3AutoLock ? selectableSystems[0]?.system.label ?? null : null}
             />
           )}
           {step === 4 && (
-            <Step4Channels
-              isExternal={isExternal}
-              compatChannelIds={compatChannelIds}
-              suggestions={channelSuggestions}
-              channels={availableChannels}
-              primary={state.primaryChannelId}
-              additional={state.additionalChannelIds}
-              onPrimaryChange={(id) => patch({ primaryChannelId: id })}
-              onAdditionalToggle={(id) =>
-                patch({
-                  additionalChannelIds: state.additionalChannelIds.includes(id)
-                    ? state.additionalChannelIds.filter((c) => c !== id)
-                    : [...state.additionalChannelIds, id],
-                })
-              }
-              isAdmin={isAdmin}
-              hasAnyCompat={compatChannelIds.size > 0}
-              autoLocked={step4AutoLock}
-            />
-          )}
-          {step === 5 && (
-            <Step5Review
+            <Step4Review
               state={state}
               offers={offers}
               systems={systems}
               channels={channels}
-              stage={stage}
-              onChange={unlockAndGo}
+              funnels={availableFunnels}
               onNotes={(v) => patch({ notes: v })}
-              isExternal={isExternal}
+              onJump={(s) => setStep(s)}
             />
           )}
         </ScrollArea>
@@ -390,13 +290,13 @@ const AddRouteWizard = ({
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
-            {step < 5 ? (
-              <Button size="sm" disabled={!canGoNext} onClick={() => advanceFrom(step)}>
+            {step < 4 ? (
+              <Button size="sm" disabled={!canGoNext} onClick={advance}>
                 Continue <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             ) : (
               <Button size="sm" disabled={!canSave || saving} onClick={handleSave}>
-                {saving ? "Adding…" : "Add Growth Route"}
+                {saving ? "Adding…" : "Add Funnel"}
               </Button>
             )}
           </div>
@@ -416,15 +316,15 @@ function Step1Target({ offers, existingRoutes, value, onChange }: {
   if (offers.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-        Add at least one offer in Offer Ecosystem before creating a growth route.
+        Add at least one offer in Offer Ecosystem before adding a funnel.
       </div>
     );
   }
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-sm font-semibold">Which offer are you building a growth route for?</Label>
-        <p className="text-xs text-muted-foreground mt-1">Pick the offer you want customers to reach through this route.</p>
+        <Label className="text-sm font-semibold">Which offer does this funnel sell?</Label>
+        <p className="text-xs text-muted-foreground mt-1">The end destination — the offer customers reach through this funnel.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {offers.map((o) => {
@@ -435,20 +335,26 @@ function Step1Target({ offers, existingRoutes, value, onChange }: {
               key={o.id}
               type="button"
               onClick={() => onChange(o.id)}
-              className={`text-left p-3 rounded-lg border transition-colors ${selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+              className={`text-left p-3 rounded-lg border transition-colors ${
+                selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+              }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{o.tier.replace("_", " ")}</div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {o.tier.replace("_", " ")}
+                  </div>
                   <div className="text-sm font-semibold truncate">{o.name}</div>
                   {typeof o.data?.price === "number" && o.data.price > 0 && (
-                    <div className="text-[11px] text-muted-foreground tabular-nums">${o.data.price.toLocaleString()}</div>
+                    <div className="text-[11px] text-muted-foreground tabular-nums">
+                      ${o.data.price.toLocaleString()}
+                    </div>
                   )}
                 </div>
                 {selected && <Check className="w-4 h-4 text-primary shrink-0" />}
               </div>
               <div className="mt-1.5 text-[11px] text-muted-foreground">
-                {routeCount === 0 ? "No routes yet" : `${routeCount} route${routeCount > 1 ? "s" : ""}`}
+                {routeCount === 0 ? "No funnels yet" : `${routeCount} funnel${routeCount > 1 ? "s" : ""}`}
               </div>
             </button>
           );
@@ -459,400 +365,260 @@ function Step1Target({ offers, existingRoutes, value, onChange }: {
 }
 
 // ---------- Step 2 ----------------------------------------------------------
-function Step2Source({ value, sourceOfferId, sourceOptions, onKindChange, onSourceOfferChange, hasRelationships, autoLocked, targetOfferName }: {
-  value: "external" | "offer";
-  sourceOfferId: string | null;
-  sourceOptions: EcosystemOfferRow[];
-  onKindChange: (k: "external" | "offer") => void;
-  onSourceOfferChange: (id: string) => void;
-  hasRelationships: boolean;
-  autoLocked: boolean;
-  targetOfferName: string | null;
+function Step2TrafficSources({
+  channels,
+  funnels,
+  selectedChannelIds,
+  primaryChannelId,
+  selectedFunnelIds,
+  onToggleChannel,
+  onSetPrimary,
+  onToggleFunnel,
+}: {
+  channels: ReturnType<typeof useAcquisitionChannels>["rows"];
+  funnels: WorkspaceFunnelRow[];
+  selectedChannelIds: string[];
+  primaryChannelId: string | null;
+  selectedFunnelIds: string[];
+  onToggleChannel: (id: string) => void;
+  onSetPrimary: (id: string) => void;
+  onToggleFunnel: (id: string) => void;
 }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
-        <Label className="text-sm font-semibold">How will people reach this offer?</Label>
-        <p className="text-xs text-muted-foreground mt-1">External acquisition brings new leads in from outside your ecosystem; ascension routes convert existing customers.</p>
+        <Label className="text-sm font-semibold">Where does traffic come from?</Label>
+        <p className="text-xs text-muted-foreground mt-1">
+          Pick any combination of external acquisition channels and existing funnels that feed into this one.
+          At least one source is required.
+        </p>
       </div>
-      {autoLocked && (
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-xs">
-          <Wand2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-          <div>
-            <div className="font-semibold text-foreground mb-0.5">External acquisition auto-selected</div>
-            <div className="text-muted-foreground">
-              {targetOfferName ? <><strong>{targetOfferName}</strong> has </> : "This offer has "}
-              no incoming offer relationships, so external acquisition is the only valid source. Click Continue to proceed.
-            </div>
-          </div>
+
+      {/* External Channels */}
+      <div>
+        <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1">
+          <Sparkles className="w-3 h-3" /> External channels
         </div>
-      )}
-      <RadioGroup value={value} onValueChange={(v) => onKindChange(v as any)} className="grid gap-2">
-        <label className={`flex items-start gap-3 p-3 border rounded-lg ${autoLocked ? "cursor-not-allowed" : "cursor-pointer"} ${value === "external" ? "border-primary bg-primary/5" : "border-border"}`}>
-          <RadioGroupItem value="external" id="src-ext" className="mt-1" disabled={autoLocked} />
-          <div>
-            <div className="text-sm font-semibold">From an acquisition channel</div>
-            <div className="text-xs text-muted-foreground">External traffic — cold outreach, ads, organic content, etc.</div>
-          </div>
-        </label>
-        <label className={`flex items-start gap-3 p-3 border rounded-lg ${(!hasRelationships || autoLocked) ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${value === "offer" ? "border-primary bg-primary/5" : "border-border"}`}>
-          <RadioGroupItem value="offer" id="src-offer" className="mt-1" disabled={!hasRelationships || autoLocked} />
-          <div>
-            <div className="text-sm font-semibold">From another offer</div>
-            <div className="text-xs text-muted-foreground">
-              {hasRelationships
-                ? "Ascension route — customers of another offer move up to this one."
-                : "No offer relationships lead into this offer yet. Add a Next Offer on the source offer first."}
-            </div>
-          </div>
-        </label>
-      </RadioGroup>
-      {value === "offer" && (
-        <div>
-          <Label className="text-xs font-medium mb-1.5 block">Source offer</Label>
+        {channels.length === 0 ? (
+          <div className="text-xs text-muted-foreground italic">No channels available.</div>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {sourceOptions.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => onSourceOfferChange(o.id)}
-                className={`text-left p-2.5 rounded-lg border ${sourceOfferId === o.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-              >
-                <div className="text-[10px] uppercase text-muted-foreground">{o.tier.replace("_", " ")}</div>
-                <div className="text-sm font-semibold truncate">{o.name}</div>
-              </button>
-            ))}
+            {channels.map((c) => {
+              const on = selectedChannelIds.includes(c.id);
+              const isPrimary = primaryChannelId === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => onToggleChannel(c.id)}
+                  className={`text-left p-3 rounded-lg border transition-colors ${
+                    on ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold truncate" style={c.color ? { color: on ? c.color : undefined } : undefined}>
+                        {c.label}
+                      </div>
+                      {c.description && (
+                        <div className="text-[11px] text-muted-foreground truncate">{c.description}</div>
+                      )}
+                    </div>
+                    {on && <Check className="w-4 h-4 text-primary shrink-0" />}
+                  </div>
+                  {on && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onSetPrimary(c.id); }}
+                        className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                          isPrimary
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <Star className={`w-2.5 h-2.5 mr-1 inline ${isPrimary ? "fill-current" : ""}`} />
+                        {isPrimary ? "Primary" : "Set as primary"}
+                      </button>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
+        )}
+      </div>
+
+      {/* Existing Funnels */}
+      <div>
+        <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1">
+          <Workflow className="w-3 h-3" /> Existing funnels
         </div>
+        {funnels.length === 0 ? (
+          <div className="text-xs text-muted-foreground italic rounded-lg border border-dashed border-border p-3">
+            No built funnels yet in this workspace. Add external channels for now — you can wire upstream funnels once they exist.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {funnels.map((f) => {
+              const on = selectedFunnelIds.includes(f.id);
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => onToggleFunnel(f.id)}
+                  className={`text-left p-3 rounded-lg border transition-colors ${
+                    on ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold truncate">{f.name}</div>
+                      <div className="text-[11px] text-muted-foreground capitalize">{f.status}</div>
+                    </div>
+                    {on && <Check className="w-4 h-4 text-primary shrink-0" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selectedChannelIds.length > 0 && !primaryChannelId && (
+        <div className="text-[11px] text-amber-600">Pick a primary channel to continue.</div>
       )}
     </div>
   );
 }
 
 // ---------- Step 3 ----------------------------------------------------------
-function Step3System({ suggestions, stage, value, onChange, preselectedSystemId, isAdmin, autoLocked, autoLockedSystemLabel }: {
+function Step3System({ suggestions, stage, value, onChange, isAdmin }: {
   suggestions: SystemSuggestion[];
   stage: string | null;
   value: string | null;
   onChange: (id: string) => void;
-  preselectedSystemId: string | null;
   isAdmin: boolean;
-  autoLocked: boolean;
-  autoLockedSystemLabel: string | null;
 }) {
-  const roadmapPre = preselectedSystemId ? suggestions.find((s) => s.system.id === preselectedSystemId) : null;
-  const [showOther, setShowOther] = useState(false);
-
-  const best = suggestions.filter((s) => s.group === "best_fit");
-  const rec = suggestions.filter((s) => s.group === "recommended");
-  const other = suggestions.filter((s) => s.group === "other_compatible");
-
-  const noneSelectable = suggestions.every((s) => !s.compatible || (!s.buildable && !isAdmin));
-
+  const list = suggestions.filter((s) => s.compatible && (s.buildable || isAdmin));
   return (
     <div className="space-y-4">
       <div>
         <Label className="text-sm font-semibold">Choose a growth system</Label>
         <p className="text-xs text-muted-foreground mt-1">
-          {stage
-            ? `Recommendations reflect your current growth stage: ${stage}.`
-            : "Growth stage unknown — showing all compatible systems ranked by admin priority. Complete your Growth Assessment for stage-aware recommendations."}
+          {stage ? `Recommendations reflect your current growth stage: ${stage}.` : "Complete your Growth Assessment for stage-aware ranking."}
         </p>
       </div>
-
-      {roadmapPre && !roadmapPre.compatible && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 flex gap-2 text-xs">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            The Roadmap task pointed to <strong>{roadmapPre.system.label}</strong>, but it isn't compatible with this offer. Pick another compatible system or go back and choose a different offer.
-          </div>
-        </div>
-      )}
-
-      {noneSelectable && (
+      {list.length === 0 && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs">
-          No buildable growth systems are compatible with this offer. Admins can configure Seed Templates in Admin → Growth Systems.
+          No buildable growth systems are compatible with this offer.
         </div>
       )}
-
-      {autoLocked && autoLockedSystemLabel && (
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-xs">
-          <Wand2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-          <div>
-            <div className="font-semibold text-foreground mb-0.5">{autoLockedSystemLabel} auto-selected</div>
-            <div className="text-muted-foreground">
-              It is the only compatible Growth System for this offer{stage ? ` at your ${stage} stage` : ""}. Click Continue to proceed.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {autoLocked ? (
-        (() => {
-          const only = suggestions.find((s) => s.compatible && (s.buildable || isAdmin));
-          if (!only) return null;
+      <div className="space-y-2">
+        {list.map((sug) => {
+          const selected = value === sug.system.id;
           return (
-            <div className="space-y-2">
-              <SystemCard sug={only} selected={value === only.system.id} onSelect={() => onChange(only.system.id)} isAdmin={isAdmin} highlighted />
-            </div>
-          );
-        })()
-      ) : (
-        <>
-          {stage && best.length > 0 && (
-            <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Best fit</div>
-              <div className="space-y-2">
-                {best.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} highlighted />)}
-              </div>
-            </div>
-          )}
-
-          {stage && rec.length > 0 && (
-            <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Also recommended</div>
-              <div className="space-y-2">
-                {rec.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} />)}
-              </div>
-            </div>
-          )}
-
-          {(other.length > 0) && (
-            <div>
-              {stage ? (
-                <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowOther((v) => !v)}>
-                  {showOther ? "Hide" : "Show"} other compatible systems ({other.length})
-                </button>
-              ) : (
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Compatible systems</div>
-              )}
-              {(showOther || !stage) && (
-                <div className="space-y-2 mt-2">
-                  {other.map((s) => <SystemCard key={s.system.id} sug={s} selected={value === s.system.id} onSelect={() => onChange(s.system.id)} isAdmin={isAdmin} />)}
+            <button
+              key={sug.system.id}
+              type="button"
+              onClick={() => onChange(sug.system.id)}
+              className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                selected
+                  ? "border-primary bg-primary/10"
+                  : sug.group === "best_fit"
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-border hover:border-primary/40"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-semibold">{sug.system.label}</div>
+                    {!sug.buildable && (
+                      <Badge variant="destructive" className="text-[9px]">
+                        <Lock className="w-3 h-3 mr-0.5" /> No Seed Template
+                      </Badge>
+                    )}
+                  </div>
+                  {sug.system.primary_objective && (
+                    <div className="text-xs text-muted-foreground mt-0.5">{sug.system.primary_objective}</div>
+                  )}
+                  <div className="text-[11px] text-muted-foreground mt-1 italic">{sug.why}</div>
                 </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-function SystemCard({ sug, selected, onSelect, isAdmin, highlighted }: {
-  sug: SystemSuggestion;
-  selected: boolean;
-  onSelect: () => void;
-  isAdmin: boolean;
-  highlighted?: boolean;
-}) {
-  const disabled = !sug.compatible || (!sug.buildable && !isAdmin);
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onSelect}
-      className={`w-full text-left p-3 rounded-lg border transition-colors ${selected ? "border-primary bg-primary/10" : highlighted ? "border-primary/40 bg-primary/5" : "border-border hover:border-primary/40"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="text-sm font-semibold">{sug.system.label}</div>
-            {!sug.buildable && (
-              <Badge variant="destructive" className="text-[9px]"><Lock className="w-3 h-3 mr-0.5" /> No Seed Template</Badge>
-            )}
-            {sug.duplicate && <Badge variant="outline" className="text-[9px]">Duplicate</Badge>}
-          </div>
-          {sug.system.primary_objective && (
-            <div className="text-xs text-muted-foreground mt-0.5">{sug.system.primary_objective}</div>
-          )}
-          <div className="text-[11px] text-muted-foreground mt-1 italic">{sug.why}</div>
-        </div>
-        {selected && <Check className="w-4 h-4 text-primary shrink-0" />}
+                {selected && <Check className="w-4 h-4 text-primary shrink-0" />}
+              </div>
+            </button>
+          );
+        })}
       </div>
-    </button>
+    </div>
   );
 }
 
 // ---------- Step 4 ----------------------------------------------------------
-function Step4Channels({ isExternal, compatChannelIds, suggestions, channels, primary, additional, onPrimaryChange, onAdditionalToggle, isAdmin, hasAnyCompat, autoLocked }: {
-  isExternal: boolean;
-  compatChannelIds: Set<string>;
-  suggestions: ReturnType<typeof rankChannelsForSystem>;
-  channels: ReturnType<typeof useAcquisitionChannels>["rows"];
-  primary: string | null;
-  additional: string[];
-  onPrimaryChange: (id: string) => void;
-  onAdditionalToggle: (id: string) => void;
-  isAdmin: boolean;
-  hasAnyCompat: boolean;
-  autoLocked: boolean;
-}) {
-  if (!isExternal) {
-    return (
-      <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-        This route uses your existing offer relationship. No acquisition channel is needed.
-      </div>
-    );
-  }
-
-  if (!hasAnyCompat && !isAdmin) {
-    return (
-      <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-xs">
-        No compatible channels are configured for this growth system yet. Ask an admin to add compatible channels in Admin → Growth Systems before continuing.
-      </div>
-    );
-  }
-
-  const list = hasAnyCompat ? suggestions : channels.map((c) => ({ channel: c, compatible: false, isSuggestedDefault: false, why: "Admin override — no compatibility configured." }));
-  const autoLockedChannelLabel = autoLocked ? list[0]?.channel.label ?? null : null;
-
-  return (
-    <div className="space-y-4">
-      {!hasAnyCompat && isAdmin && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
-          Admin override: no compatibility configured for this system. Any channel may be picked, but non-admins would be blocked here.
-        </div>
-      )}
-
-      {autoLocked && autoLockedChannelLabel && (
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-xs">
-          <Wand2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-          <div>
-            <div className="font-semibold text-foreground mb-0.5">{autoLockedChannelLabel} auto-selected</div>
-            <div className="text-muted-foreground">
-              It is the only compatible acquisition channel for this Growth System. Click Continue to proceed.
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div>
-        <Label className="text-sm font-semibold">Primary acquisition channel</Label>
-        <p className="text-xs text-muted-foreground mt-1">The main way people enter this route.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-          {list.map((s) => (
-            <button
-              key={s.channel.id}
-              type="button"
-              disabled={autoLocked}
-              onClick={() => onPrimaryChange(s.channel.id)}
-              className={`text-left p-3 rounded-lg border ${primary === s.channel.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"} ${autoLocked ? "opacity-70 cursor-not-allowed" : ""}`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold flex items-center gap-1.5">
-                    {s.channel.label}
-                    {s.isSuggestedDefault && <Badge variant="secondary" className="text-[9px]">Suggested default</Badge>}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">{s.why}</div>
-                </div>
-                {primary === s.channel.id && <Check className="w-4 h-4 text-primary shrink-0" />}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {list.length > 1 && (
-        <div>
-          <Label className="text-sm font-semibold">Additional channels (optional)</Label>
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {list.filter((s) => s.channel.id !== primary).map((s) => {
-              const on = additional.includes(s.channel.id);
-              return (
-                <button
-                  key={s.channel.id}
-                  type="button"
-                  onClick={() => onAdditionalToggle(s.channel.id)}
-                  className={`text-[11px] px-2 py-1 rounded-md border ${on ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
-                >
-                  {on ? "✓ " : "+ "}{s.channel.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------- Step 5 ----------------------------------------------------------
-function Step5Review({ state, offers, systems, channels, stage, onChange, onNotes, isExternal }: {
+function Step4Review({ state, offers, systems, channels, funnels, onNotes, onJump }: {
   state: WizardState;
   offers: EcosystemOfferRow[];
   systems: ReturnType<typeof useGrowthSystemsCatalog>["rows"];
   channels: ReturnType<typeof useAcquisitionChannels>["rows"];
-  stage: string | null;
-  onChange: (s: StepId) => void;
+  funnels: WorkspaceFunnelRow[];
   onNotes: (v: string) => void;
-  isExternal: boolean;
+  onJump: (s: StepId) => void;
 }) {
   const target = offers.find((o) => o.id === state.targetOfferId);
-  const source = state.sourceKind === "offer" ? offers.find((o) => o.id === state.sourceOfferId) : null;
   const sys = systems.find((s) => s.id === state.systemId);
   const primary = channels.find((c) => c.id === state.primaryChannelId);
-  const addChannels = channels.filter((c) => state.additionalChannelIds.includes(c.id));
+  const additional = channels.filter((c) => state.selectedChannelIds.includes(c.id) && c.id !== state.primaryChannelId);
+  const funnelsPicked = funnels.filter((f) => state.selectedFunnelIds.includes(f.id));
 
   const Row = ({ label, value, stepId }: { label: string; value: React.ReactNode; stepId: StepId }) => (
-    <div className="flex items-center justify-between gap-3 py-2 border-b border-border/60 last:border-0">
+    <div className="flex items-start justify-between gap-3 py-2 border-b border-border/60 last:border-0">
       <div className="min-w-0">
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className="text-sm font-semibold truncate">{value}</div>
+        <div className="text-sm font-semibold">{value}</div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {state.autoSkipped[stepId] && (
-          <Badge variant="secondary" className="text-[9px] gap-1"><Wand2 className="w-3 h-3" /> Auto-selected</Badge>
-        )}
-        <Button variant="ghost" size="sm" className="h-7 text-[11px]" onClick={() => onChange(stepId)}>Change</Button>
-      </div>
+      <Button variant="ghost" size="sm" className="h-7 text-[11px]" onClick={() => onJump(stepId)}>Change</Button>
     </div>
   );
 
   return (
     <div className="space-y-4">
       <div>
-        <Label className="text-sm font-semibold">Review your route</Label>
-        {stage && <p className="text-xs text-muted-foreground mt-1">Growth stage: {stage}</p>}
+        <Label className="text-sm font-semibold">Review</Label>
       </div>
-
       <div className="rounded-lg border border-border p-3">
         <Row label="Target offer" value={target?.name ?? "—"} stepId={1} />
-        <Row label="Source" value={source ? `From: ${source.name}` : "External acquisition"} stepId={2} />
+        <Row
+          label="Traffic sources"
+          stepId={2}
+          value={
+            <div className="flex flex-wrap gap-1 mt-1">
+              {primary && (
+                <Badge variant="secondary" className="gap-1"><Star className="w-3 h-3 fill-current" />{primary.label}</Badge>
+              )}
+              {additional.map((c) => <Badge key={c.id} variant="outline">{c.label}</Badge>)}
+              {funnelsPicked.map((f) => (
+                <Badge key={f.id} variant="outline" className="gap-1"><Workflow className="w-3 h-3" />{f.name}</Badge>
+              ))}
+              {!primary && additional.length === 0 && funnelsPicked.length === 0 && <span className="text-muted-foreground">—</span>}
+            </div>
+          }
+        />
         <Row label="Growth system" value={sys?.label ?? "—"} stepId={3} />
-        {isExternal && <Row label="Primary channel" value={primary?.label ?? "—"} stepId={4} />}
-        {isExternal && addChannels.length > 0 && (
-          <div className="pt-2">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Additional channels</div>
-            <div className="flex flex-wrap gap-1 mt-1">{addChannels.map((c) => <Badge key={c.id} variant="outline" className="text-[10px]">{c.label}</Badge>)}</div>
-          </div>
-        )}
       </div>
-
-      <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-        <div className="text-[10px] uppercase tracking-wide mb-1">Route summary</div>
-        <div className="text-sm font-mono">
-          {source ? source.name : primary?.label ?? "—"} → {sys?.label ?? "—"} → {target?.name ?? "—"}
-        </div>
-      </div>
-
       <div>
-        <Label className="text-xs font-medium mb-1.5 block">Notes (optional)</Label>
-        <Textarea rows={2} value={state.notes} onChange={(e) => onNotes(e.target.value)} placeholder="Any specifics about this route…" />
+        <Label htmlFor="wiz-notes" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notes (optional)</Label>
+        <Textarea
+          id="wiz-notes"
+          value={state.notes}
+          onChange={(e) => onNotes(e.target.value)}
+          placeholder="Internal notes about this funnel…"
+          rows={3}
+          className="mt-1.5"
+        />
       </div>
-
-      <p className="text-[11px] text-muted-foreground border-t border-border pt-3">
-        Adding the route does not build the funnel. Use <strong>Start Building</strong> on the route card when you're ready.
-      </p>
     </div>
   );
-}
-
-import { useWorkspace as _useWorkspace } from "@/contexts/WorkspaceContext";
-function useActiveSubAccount(): { activeSubAccountId: string | null } {
-  const w = _useWorkspace();
-  return { activeSubAccountId: w.activeSubAccountId ?? null };
 }
 
 export default AddRouteWizard;
