@@ -1,12 +1,12 @@
 // =============================================================================
 // GrowthArchitectureSection — V3/V5 Blueprint section.
-// Read-only Growth Map + Routes list (RouteCard) with per-route channel management.
+// Read-only Growth Map + Funnels list (RouteCard) with per-route channel management.
+// Uses the same top white sub-tab bar as the rest of the Blueprint.
 // =============================================================================
 
 import { useEffect, useMemo, useState } from "react";
 import { Workflow, Plus, Loader2, Map as MapIcon, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -31,6 +31,8 @@ interface Props {
   saving?: boolean;
 }
 
+type GrowthTab = "map" | "funnels";
+
 const GrowthArchitectureSection = ({ offers }: Props) => {
   const { activeSubAccountId } = useWorkspace();
   const { rows: routes, loading: loadingRoutes, add, update, reload: reloadRoutes } = useGrowthArchitecture(activeSubAccountId ?? null);
@@ -42,7 +44,7 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
   const funnelIds = useMemo(() => routes.map((r) => r.funnel_id), [routes]);
   const { byFunnel: buildProgress, reload: reloadProgress } = useRoutesBuildProgress(funnelIds);
 
-  // Lightweight funnel-name lookup for RouteCard display.
+  const [active, setActive] = useState<GrowthTab>("map");
   const [funnelNames, setFunnelNames] = useState<Map<string, string>>(new Map());
   useEffect(() => {
     const ids = funnelIds.filter((v): v is string => !!v);
@@ -79,7 +81,6 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
   const openFunnel = (funnelId: string | null) => {
     window.dispatchEvent(new CustomEvent("boostmate:navigate-module", { detail: "funnels" }));
     if (funnelId) {
-      // Fire on next tick so FunnelModule has mounted and its listener is live.
       setTimeout(() => {
         window.dispatchEvent(
           new CustomEvent("boostmate:open-funnel", { detail: { funnelId } }),
@@ -106,59 +107,85 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
     }
   };
 
+  const tabs: { id: GrowthTab; label: string; icon: typeof MapIcon; count?: number }[] = [
+    { id: "map", label: "Growth Map", icon: MapIcon },
+    { id: "funnels", label: `Funnels (${routes.length})`, icon: List },
+  ];
+
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-6xl mx-auto p-8 space-y-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Workflow className="w-5 h-5 text-primary" />
-              <h2 className="text-2xl font-display font-bold text-foreground">Growth Architecture</h2>
-            </div>
-            <p className="text-sm text-muted-foreground max-w-2xl">
-              How buyers actually flow through your business — from acquisition to ascension.
-              Each route connects a growth system to a target offer, and can use one primary
-              acquisition channel plus additional supporting channels.
-            </p>
-          </div>
-          <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 shrink-0">
-            <Plus className="w-4 h-4" /> Add Route
-          </Button>
+    <div className="h-full flex flex-col">
+      {/* Sub-tab navigation — matches Offer Design / Brand Strategy */}
+      <div className="border-b border-border bg-card px-8">
+        <div className="max-w-6xl mx-auto flex gap-1 -mb-px overflow-x-auto">
+          {tabs.map((tab) => {
+            const isActive = active === tab.id;
+            const TabIcon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActive(tab.id)}
+                className={`group relative flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                  isActive
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                }`}
+              >
+                <TabIcon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
+      </div>
 
-        <Tabs defaultValue="map">
-          <TabsList>
-            <TabsTrigger value="map" className="gap-1.5"><MapIcon className="w-4 h-4" /> Growth Map</TabsTrigger>
-            <TabsTrigger value="routes" className="gap-1.5"><List className="w-4 h-4" /> Routes ({routes.length})</TabsTrigger>
-          </TabsList>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-8 space-y-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Workflow className="w-5 h-5 text-primary" />
+                <h2 className="text-2xl font-display font-bold text-foreground">Growth Architecture</h2>
+              </div>
+              <p className="text-sm text-muted-foreground max-w-2xl">
+                How buyers actually flow through your business — from acquisition to ascension.
+                Each funnel connects a growth system to a target offer, and can use one primary
+                acquisition channel plus additional supporting channels.
+              </p>
+            </div>
+            <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 shrink-0">
+              <Plus className="w-4 h-4" /> Add Funnel
+            </Button>
+          </div>
 
-          <TabsContent value="map" className="mt-4">
-            <GrowthMap
-              offers={offers}
-              relationships={relationships}
-              routes={routes}
-              channels={channels}
-              systems={systems}
-              routeChannelsByRoute={routeChannels.byRoute}
-            />
-            <p className="text-[11px] text-muted-foreground mt-2">
-              Read-only view. Dashed edges = planned routes. Solid = active. Only route-participating
-              offers appear on the graph; unrouted offers are listed below.
-            </p>
-          </TabsContent>
+          {active === "map" && (
+            <div>
+              <GrowthMap
+                offers={offers}
+                relationships={relationships}
+                routes={routes}
+                channels={channels}
+                systems={systems}
+                routeChannelsByRoute={routeChannels.byRoute}
+              />
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Read-only view. Dashed edges = planned funnels. Solid = active. Only funnel-participating
+                offers appear on the graph; unrouted offers are listed below.
+              </p>
+            </div>
+          )}
 
-          <TabsContent value="routes" className="mt-4">
-            {loadingRoutes ? (
+          {active === "funnels" && (
+            loadingRoutes ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
               </div>
             ) : routes.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-12 text-center">
                 <p className="text-sm text-muted-foreground mb-3">
-                  No routes yet. Add your first growth route to describe how customers reach your offers.
+                  No funnels yet. Add your first funnel to describe how customers reach your offers.
                 </p>
                 <Button size="sm" variant="outline" onClick={() => setAddOpen(true)} className="gap-1.5">
-                  <Plus className="w-4 h-4" /> Add Route
+                  <Plus className="w-4 h-4" /> Add Funnel
                 </Button>
               </div>
             ) : (
@@ -212,9 +239,9 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
                   );
                 })}
               </div>
-            )}
-          </TabsContent>
-        </Tabs>
+            )
+          )}
+        </div>
       </div>
 
       <AddRouteWizard
@@ -230,9 +257,6 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
         preselectedOfferId={preselectedOfferId}
         onCreate={async (payload) => await add(payload)}
         onCreated={async (newRouteId) => {
-          // Fetch the new route's channels directly (routeIds state hasn't
-          // flushed yet, so a generic reload would miss them), then refresh
-          // routes so derived state + map pick everything up.
           await routeChannels.fetchAndMerge(newRouteId);
           await reloadRoutes();
         }}

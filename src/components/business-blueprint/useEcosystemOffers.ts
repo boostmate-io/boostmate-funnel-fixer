@@ -60,6 +60,24 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
     void load();
   }, [load]);
 
+  // Cross-instance sync: reload when another hook instance mutates offers.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { blueprintId?: string } | undefined;
+      if (!detail?.blueprintId || detail.blueprintId !== blueprintId) return;
+      void load();
+    };
+    window.addEventListener("boostmate:ecosystem-offers-changed", handler);
+    return () => window.removeEventListener("boostmate:ecosystem-offers-changed", handler);
+  }, [blueprintId, load]);
+
+  const emitChange = useCallback(() => {
+    if (!blueprintId) return;
+    window.dispatchEvent(
+      new CustomEvent("boostmate:ecosystem-offers-changed", { detail: { blueprintId } }),
+    );
+  }, [blueprintId]);
+
   // ---- Auto-sync the Core offer from blueprint Angle + Stack + Pricing ------
   useEffect(() => {
     if (!blueprintId || !user || !activeSubAccountId) return;
