@@ -31,8 +31,8 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Capture the dream scenario, emotional shift, lifestyle, identity and freedom — all in one rich picture.",
     },
     transformation_process: {
-      placeholder: "Example: Heal old wounds → rebuild self-trust → set healthy boundaries → step into the confident new identity.",
-      helper: "The journey, method or step-by-step process you guide them through.",
+      placeholder: "Example: Old emotional wounds must be processed → self-trust needs rebuilding → healthy boundaries must be set → a new confident identity has to take root.",
+      helper: "The key shifts, milestones, or problems that need to be solved between their current and desired state.",
     },
     avatar_niche: {
       placeholder: "Example: Transformational coaching for women rebuilding self-worth after heartbreak.",
@@ -116,8 +116,8 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "The full picture: business outcome, emotional relief, leadership identity and the lifestyle that comes with it.",
     },
     transformation_process: {
-      placeholder: "Example: Audit & strategy → creative & funnel build → launch & test → scale winners → ongoing optimization.",
-      helper: "The roadmap, framework or delivery process that takes them from A to B.",
+      placeholder: "Example: Tracking must be fixed → offer & messaging need to be repositioned → the funnel has to be rebuilt → spend must shift to winning channels → a clear reporting cadence has to be established.",
+      helper: "The key shifts, milestones, or problems that need to be solved between their current and desired state.",
     },
     avatar_niche: {
       placeholder: "Example: Paid acquisition for B2B SaaS in the $50–250k MRR range.",
@@ -197,8 +197,8 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Strategic outcome, emotional confidence, identity shift and lifestyle of recognized expertise.",
     },
     transformation_process: {
-      placeholder: "Example: Diagnostic → roadmap → align leadership → operating cadence → quarterly review and iteration.",
-      helper: "The advisory framework or engagement structure that delivers the outcome.",
+      placeholder: "Example: Leadership has to align on priorities → the operating model must be clarified → an accountability cadence needs installing → the top 3 bottlenecks have to be resolved → quarterly progress must become measurable.",
+      helper: "The key shifts, milestones, or problems that need to be solved between their current and desired state.",
     },
     avatar_niche: {
       placeholder: "Example: Growth strategy for B2B SaaS between $5–30M ARR.",
@@ -276,8 +276,8 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Outcome + emotional pride + lifestyle + new identity, captured in one vivid picture.",
     },
     transformation_process: {
-      placeholder: "Example: Foundations → first project → portfolio → outreach playbook → first paying client → repeat & raise rates.",
-      helper: "The step-by-step path through your program that produces the outcome.",
+      placeholder: "Example: Foundations must be locked in → a portfolio piece has to be built → outreach fundamentals need to be learned → the first paying client has to be landed → rates must be raised with confidence.",
+      helper: "The key shifts, milestones, or problems that need to be solved between their current and desired state.",
     },
     avatar_niche: {
       placeholder: "Example: Step-by-step program for aspiring freelance designers landing their first paying clients.",
@@ -355,8 +355,8 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Visible product result + emotional confidence + lifestyle fit + brand identity.",
     },
     transformation_process: {
-      placeholder: "Example: Skin quiz → starter routine → 30-day glow result → upgrade to full system → repeat & refer.",
-      helper: "The customer journey from first purchase to loyal repeat buyer.",
+      placeholder: "Example: The right products must be discovered → the starter routine has to be completed correctly → visible first results need to be experienced → the full system has to be adopted → the customer becomes a repeat buyer.",
+      helper: "The key shifts, milestones, or problems that need to be solved between their current and desired state.",
     },
     avatar_niche: {
       placeholder: "Example: Premium clean skincare for women 28–45 in the DACH region.",
@@ -434,8 +434,8 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Practical service result + emotional relief + lifestyle ease + loyalty identity.",
     },
     transformation_process: {
-      placeholder: "Example: Friendly first call → fast on-site quote → quality install → follow-up check-in → annual maintenance plan.",
-      helper: "Your end-to-end customer experience that turns first-timers into loyal locals.",
+      placeholder: "Example: Trust must be built on the first call → a fair, clear quote has to be delivered → a quality install must be completed → a reliable follow-up has to happen → the customer commits to yearly maintenance.",
+      helper: "The key shifts, milestones, or problems that need to be solved between their current and desired state.",
     },
     avatar_niche: {
       placeholder: "Example: Reliable residential HVAC service for homeowners in [your city].",
@@ -513,8 +513,8 @@ export const CLARITY_COPY: Record<BusinessTypeId, ClarityFieldCopy> = {
       helper: "Combine outcome, emotion, lifestyle and identity into one vivid picture.",
     },
     transformation_process: {
-      placeholder: "Example: Step 1 → Step 2 → Step 3 → outcome. The clear journey you guide them through.",
-      helper: "The method, framework or process that bridges current state and desired state.",
+      placeholder: "Example: The main problem blocking them must be solved → the key skill or system has to be built → a critical decision or shift needs to happen → the desired outcome becomes reachable.",
+      helper: "The key shifts, milestones, or problems that need to be solved between their current and desired state.",
     },
     avatar_niche: {
       placeholder: "Example: Be specific — who you serve and the result you deliver.",

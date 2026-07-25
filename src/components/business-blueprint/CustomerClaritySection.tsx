@@ -33,7 +33,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
   const config = clarityConfig.find((c) => c.id === active)!;
   const Icon = config.icon;
   const fields = CLARITY_FIELDS[active];
-  const filledCount = fields.filter((f) => (data[f] || "").toString().trim().length > 0).length;
+  
   const progress = calculateSubBlockProgress(data, active);
 
   const coachContext = useMemo(() => {
@@ -113,15 +113,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
             </div>
           </div>
 
-          {/* Stats strip */}
-          <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground px-1">
-            <span className="font-semibold tabular-nums text-foreground">
-              {filledCount} / {fields.length}
-            </span>
-            <span>fields completed</span>
-            <span className="text-muted-foreground/50">•</span>
-            <span className="tabular-nums">{progress}%</span>
-          </div>
+
 
           {/* Modular field cards grid */}
           <div className="space-y-4">

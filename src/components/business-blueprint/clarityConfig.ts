@@ -184,7 +184,7 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
       fields: [
         f({ key: "transformation_point_a", label: "Where are they now?", type: "textarea", rows: 4 }),
         f({ key: "transformation_point_b", label: "Where do they want to be?", type: "textarea", rows: 4 }),
-        f({ key: "transformation_process", label: "What needs to change for them to get there?", helper: "The core shifts — mindset, skills, systems, or decisions — that unlock the transformation. Keep it plain-language.", type: "textarea", fullWidth: true, rows: 4 }),
+        f({ key: "transformation_process", label: "What needs to change for them to get there?", helper: "The key shifts, milestones, or problems that need to be solved between their current and desired state.", type: "textarea", fullWidth: true, rows: 4 }),
       ],
       coachQuestions: [
         "Where are they today, exactly?",

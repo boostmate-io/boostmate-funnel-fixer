@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import SectionShell from "./SectionShell";
 import SectionHelpCoach from "../SectionHelpCoach";
 import BuilderCard from "./BuilderCard";
+import CollapsibleItem from "./CollapsibleItem";
 import TimeframePicker from "./TimeframePicker";
 import DeliveryTypePicker from "./DeliveryTypePicker";
 import CoachIconButton from "./CoachIconButton";
@@ -324,9 +325,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           emptyText="No deliverables yet. Start with your most valuable component."
         >
           {data.deliverables.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {data.deliverables.map((d, idx) => (
-                <div key={d.id} className="rounded-lg border border-border bg-background p-4 space-y-3">
+                <CollapsibleItem
+                  key={d.id}
+                  summary={d.name || `Deliverable ${idx + 1}`}
+                  defaultOpen={!d.name}
+                  onDelete={() => removeDeliverable(d.id)}
+                >
                   <div className="flex items-start gap-2">
                     <Input
                       value={d.name}
@@ -347,14 +353,6 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         })
                       }
                     />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => removeDeliverable(d.id)}
-                      className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                   <div>
                     <LabelRow
@@ -408,7 +406,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       </Select>
                     </div>
                   </div>
-                </div>
+                </CollapsibleItem>
               ))}
             </div>
           )}
@@ -457,9 +455,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         >
           {data.resources.length > 0 && (
             <div className="space-y-3">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {data.resources.map((r, idx) => (
-                  <div key={r.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
+                  <CollapsibleItem
+                    key={r.id}
+                    summary={r.name || `Resource ${idx + 1}`}
+                    defaultOpen={!r.name}
+                    onDelete={() => removeResource(r.id)}
+                  >
                     <div className="flex items-start gap-2">
                       <Input
                         value={r.name}
@@ -479,14 +482,6 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                           })
                         }
                       />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeResource(r.id)}
-                        className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
                     <div>
                       <LabelRow
@@ -529,7 +524,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         className="resize-none text-sm"
                       />
                     </div>
-                  </div>
+                  </CollapsibleItem>
                 ))}
               </div>
               <div className="pt-2 border-t border-border/50">
@@ -583,9 +578,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         >
           {data.support_channels.length > 0 && (
             <div className="space-y-3">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {data.support_channels.map((s, idx) => (
-                  <div key={s.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
+                  <CollapsibleItem
+                    key={s.id}
+                    summary={s.name || `Support Channel ${idx + 1}`}
+                    defaultOpen={!s.name}
+                    onDelete={() => removeSupport(s.id)}
+                  >
                     <div className="flex items-start gap-2">
                       <Input
                         value={s.name}
@@ -605,14 +605,6 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                           })
                         }
                       />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeSupport(s.id)}
-                        className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
                     <div>
                       <LabelRow
@@ -655,7 +647,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         className="resize-none text-sm"
                       />
                     </div>
-                  </div>
+                  </CollapsibleItem>
                 ))}
               </div>
               <div className="pt-2 border-t border-border/50">
@@ -694,9 +686,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           emptyText="No bonuses yet. Add 1–3 high-value bonuses to anchor perceived value."
         >
           {data.bonuses.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {data.bonuses.map((b, idx) => (
-                <div key={b.id} className="rounded-lg border border-border bg-background p-4 space-y-3">
+                <CollapsibleItem
+                  key={b.id}
+                  summary={b.name || `Bonus ${idx + 1}`}
+                  defaultOpen={!b.name}
+                  onDelete={() => removeBonus(b.id)}
+                >
                   <div className="flex items-start gap-2">
                     <Input
                       value={b.name}
@@ -716,14 +713,6 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         })
                       }
                     />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => removeBonus(b.id)}
-                      className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                   <div>
                     <LabelRow
@@ -766,7 +755,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       className="h-9 text-sm"
                     />
                   </div>
-                </div>
+                </CollapsibleItem>
               ))}
             </div>
           )}

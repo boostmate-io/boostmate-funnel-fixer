@@ -60,6 +60,24 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
     void load();
   }, [load]);
 
+  // Cross-instance sync: reload when another hook instance mutates offers.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { blueprintId?: string } | undefined;
+      if (!detail?.blueprintId || detail.blueprintId !== blueprintId) return;
+      void load();
+    };
+    window.addEventListener("boostmate:ecosystem-offers-changed", handler);
+    return () => window.removeEventListener("boostmate:ecosystem-offers-changed", handler);
+  }, [blueprintId, load]);
+
+  const emitChange = useCallback(() => {
+    if (!blueprintId) return;
+    window.dispatchEvent(
+      new CustomEvent("boostmate:ecosystem-offers-changed", { detail: { blueprintId } }),
+    );
+  }, [blueprintId]);
+
   // ---- Auto-sync the Core offer from blueprint Angle + Stack + Pricing ------
   useEffect(() => {
     if (!blueprintId || !user || !activeSubAccountId) return;
@@ -132,6 +150,7 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
                   : o,
               );
             });
+            emitChange();
           }
         } else {
           const { data, error } = await supabase
@@ -146,6 +165,7 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
                 ? prev
                 : [...prev, data as unknown as EcosystemOfferRow],
             );
+            emitChange();
           } else if (error) {
             // Likely unique-index conflict — reload to pick up the existing row.
             await load();
@@ -191,9 +211,10 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
         return null;
       }
       setOffers((prev) => [...prev, data as unknown as EcosystemOfferRow]);
+      emitChange();
       return data?.id as string;
     },
-    [blueprintId, user, activeSubAccountId, offers],
+    [blueprintId, user, activeSubAccountId, offers, emitChange],
   );
 
   const updateOffer = useCallback(
@@ -201,8 +222,9 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
       setOffers((prev) => prev.map((o) => (o.id === id ? { ...o, ...patch, data: { ...o.data, ...(patch.data || {}) } } : o)));
       const { error } = await supabase.from("offers").update(patch as any).eq("id", id);
       if (error) toast.error("Save failed");
+      else emitChange();
     },
-    [],
+    [emitChange],
   );
 
   const deleteOffer = useCallback(
@@ -218,9 +240,11 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
       if (error) {
         toast.error("Could not delete offer");
         await load();
+      } else {
+        emitChange();
       }
     },
-    [offers, load],
+    [offers, load, emitChange],
   );
 
   const tierCounts = offers.reduce((acc, o) => {
