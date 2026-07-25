@@ -1,6 +1,7 @@
 // =============================================================================
-// RouteCard — V5 redesigned route summary card.
-// Presentational component; no backend logic.
+// RouteCard — V5 route summary card, wired to the V2.1 data model.
+// Presentational; visual layout preserved. "Traffic sources" now lists both
+// external acquisition channels and upstream funnels selected as sources.
 // =============================================================================
 
 import { useState } from "react";
@@ -14,6 +15,7 @@ import {
   Trash2,
   ArrowRight,
   Star,
+  Workflow,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,15 +29,20 @@ import type {
   RouteChannelRow,
 } from "@/lib/growth-architecture/hooks";
 
+interface UpstreamFunnelInfo {
+  routeId: string;
+  funnelName: string;
+}
+
 interface Props {
   routeId: string;
   systemLabel: string;
-  sourceLabel: string; // "External acquisition" or offer name
   targetLabel: string;
   derived: DerivedRouteMeta;
   primary: RouteChannelRow | null;
   additional: RouteChannelRow[];
   channels: AcquisitionChannelRow[];
+  upstreamFunnels: UpstreamFunnelInfo[];
   funnelName: string | null;
   hasFunnel: boolean;
   buildProgress: { active: number; completed: number; guideCount: number } | null;
@@ -54,12 +61,12 @@ interface Props {
 const RouteCard = ({
   routeId,
   systemLabel,
-  sourceLabel,
   targetLabel,
   derived,
   primary,
   additional,
   channels,
+  upstreamFunnels,
   funnelName,
   hasFunnel,
   buildProgress,
@@ -78,18 +85,22 @@ const RouteCard = ({
 
   const primaryChannel = primary ? channels.find((c) => c.id === primary.channel_id) : null;
   const additionalCount = additional.length;
+  const upstreamCount = upstreamFunnels.length;
   const pct = buildProgress && buildProgress.active > 0
     ? Math.round((buildProgress.completed / buildProgress.active) * 100)
     : null;
 
+  const sourceSummary = (() => {
+    if (primaryChannel) return primaryChannel.label;
+    if (upstreamCount > 0) return `${upstreamCount} upstream funnel${upstreamCount > 1 ? "s" : ""}`;
+    return "No traffic source";
+  })();
+
   return (
     <div className="rounded-lg border border-border bg-background hover:border-border/80 transition-colors">
-      {/* Header row */}
       <div className="p-4">
         <div className="flex items-start gap-3">
-          {/* Summary */}
           <div className="flex-1 min-w-0 space-y-2">
-            {/* State + system title */}
             <div className="flex items-center gap-2 flex-wrap">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -99,19 +110,21 @@ const RouteCard = ({
                 </TooltipTrigger>
                 <TooltipContent>{derived.reason}</TooltipContent>
               </Tooltip>
-              <span className="text-sm font-semibold truncate">{systemLabel}</span>
+              <span className="text-sm font-semibold truncate">
+                {funnelName ?? `${systemLabel} funnel`}
+              </span>
             </div>
 
-            {/* Source -> System -> Target chain */}
+            {/* Traffic sources → System → Target */}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
-              <span className="truncate max-w-[180px]">{sourceLabel}</span>
+              <span className="truncate max-w-[180px]">{sourceSummary}</span>
               <ArrowRight className="w-3 h-3 shrink-0" />
               <span className="truncate max-w-[180px] text-foreground/80">{systemLabel}</span>
               <ArrowRight className="w-3 h-3 shrink-0" />
               <span className="truncate max-w-[180px] text-foreground font-medium">{targetLabel}</span>
             </div>
 
-            {/* Channels + funnel meta */}
+            {/* Traffic source chips (channels + upstream funnels) */}
             <div className="flex items-center gap-3 flex-wrap text-[11px]">
               {primaryChannel ? (
                 <span
@@ -121,21 +134,23 @@ const RouteCard = ({
                   <Star className="w-3 h-3 fill-current" />
                   <span className="font-medium">{primaryChannel.label}</span>
                 </span>
-              ) : (
-                <span className="text-muted-foreground italic">No primary channel</span>
-              )}
+              ) : upstreamCount === 0 ? (
+                <span className="text-muted-foreground italic">No traffic source</span>
+              ) : null}
               {additionalCount > 0 && (
-                <span className="text-muted-foreground">+{additionalCount} additional</span>
+                <span className="text-muted-foreground">+{additionalCount} channel{additionalCount > 1 ? "s" : ""}</span>
               )}
-              {hasFunnel && (
+              {upstreamCount > 0 && (
                 <span className="inline-flex items-center gap-1 text-muted-foreground">
-                  <span className="w-1 h-1 rounded-full bg-muted-foreground/60" />
-                  <span className="truncate max-w-[220px]">Funnel: <span className="text-foreground">{funnelName ?? "Untitled"}</span></span>
+                  <Workflow className="w-3 h-3" />
+                  <span>
+                    {upstreamCount} upstream funnel{upstreamCount > 1 ? "s" : ""}
+                    {upstreamFunnels[0] ? `: ${upstreamFunnels.slice(0, 2).map(u => u.funnelName).join(", ")}${upstreamCount > 2 ? "…" : ""}` : ""}
+                  </span>
                 </span>
               )}
             </div>
 
-            {/* Build progress */}
             {hasFunnel && buildProgress && buildProgress.active > 0 && (
               <div className="flex items-center gap-2 pt-1">
                 <Progress value={pct ?? 0} className="h-1.5 flex-1 max-w-[240px]" />
@@ -148,7 +163,6 @@ const RouteCard = ({
             {notes && <div className="text-[11px] text-muted-foreground italic pt-1">{notes}</div>}
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-1 shrink-0">
             {hasFunnel ? (
               <Button size="sm" variant="outline" onClick={onOpenFunnel} className="gap-1.5">
@@ -179,7 +193,6 @@ const RouteCard = ({
           </div>
         </div>
 
-        {/* Collapsible channels section */}
         <Collapsible open={channelsOpen} onOpenChange={setChannelsOpen} className="mt-2">
           <CollapsibleTrigger asChild>
             <Button
