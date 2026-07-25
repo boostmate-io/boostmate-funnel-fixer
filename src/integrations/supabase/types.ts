@@ -1336,6 +1336,58 @@ export type Database = {
           },
         ]
       }
+      funnel_connections: {
+        Row: {
+          created_at: string
+          id: string
+          sort_order: number
+          source_funnel_id: string
+          sub_account_id: string
+          target_funnel_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sort_order?: number
+          source_funnel_id: string
+          sub_account_id: string
+          target_funnel_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sort_order?: number
+          source_funnel_id?: string
+          sub_account_id?: string
+          target_funnel_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_connections_source_funnel_id_fkey"
+            columns: ["source_funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_connections_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_connections_target_funnel_id_fkey"
+            columns: ["target_funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funnel_step_metrics: {
         Row: {
           created_at: string
@@ -1388,6 +1440,7 @@ export type Database = {
           seed_template_id: string | null
           share_token: string | null
           shared_view_id: string | null
+          status: string
           sub_account_id: string | null
           template_id: string | null
           template_type: string | null
@@ -1407,6 +1460,7 @@ export type Database = {
           seed_template_id?: string | null
           share_token?: string | null
           shared_view_id?: string | null
+          status?: string
           sub_account_id?: string | null
           template_id?: string | null
           template_type?: string | null
@@ -1426,6 +1480,7 @@ export type Database = {
           seed_template_id?: string | null
           share_token?: string | null
           shared_view_id?: string | null
+          status?: string
           sub_account_id?: string | null
           template_id?: string | null
           template_type?: string | null
@@ -1519,7 +1574,7 @@ export type Database = {
           status: string
           sub_account_id: string
           system_catalog_id: string
-          target_offer_id: string
+          target_offer_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1532,7 +1587,7 @@ export type Database = {
           status?: string
           sub_account_id: string
           system_catalog_id: string
-          target_offer_id: string
+          target_offer_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1545,7 +1600,7 @@ export type Database = {
           status?: string
           sub_account_id?: string
           system_catalog_id?: string
-          target_offer_id?: string
+          target_offer_id?: string | null
           updated_at?: string
         }
         Relationships: [
