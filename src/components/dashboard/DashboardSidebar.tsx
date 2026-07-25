@@ -22,6 +22,15 @@ const adminSubItems = [
   { id: "admin-growth", label: "Growth Roadmap", icon: Milestone },
 ];
 
+const blueprintSubItems: { id: "overview" | "customer-clarity" | "offer-design" | "growth-system" | "brand-strategy" | "proof-authority"; label: string; icon: typeof Users }[] = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "customer-clarity", label: "Customer Clarity", icon: Users },
+  { id: "offer-design", label: "Offer Design", icon: Package },
+  { id: "growth-system", label: "Growth Architecture", icon: Workflow },
+  { id: "brand-strategy", label: "Brand Strategy", icon: Palette },
+  { id: "proof-authority", label: "Authority & Content", icon: Award },
+];
+
 
 const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProps) => {
   const { t } = useTranslation();
