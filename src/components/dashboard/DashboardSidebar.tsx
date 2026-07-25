@@ -39,6 +39,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
   const { isAgency, isAppAdmin, subAccounts, activeSubAccountId, switchSubAccount, activeSubAccount, mainAccount, allMainAccounts, switchMainAccount } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
   const [adminOpen, setAdminOpen] = useState(activeModule.startsWith("admin"));
+  const [blueprintOpen, setBlueprintOpen] = useState(activeModule === "business-blueprint");
 
   const isAdminActive = activeModule.startsWith("admin");
 
