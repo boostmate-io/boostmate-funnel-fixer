@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import SectionShell from "./SectionShell";
 import SectionHelpCoach from "../SectionHelpCoach";
 import BuilderCard from "./BuilderCard";
+import CollapsibleItem from "./CollapsibleItem";
 import TimeframePicker from "./TimeframePicker";
 import DeliveryTypePicker from "./DeliveryTypePicker";
 import CoachIconButton from "./CoachIconButton";
@@ -324,9 +325,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           emptyText="No deliverables yet. Start with your most valuable component."
         >
           {data.deliverables.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {data.deliverables.map((d, idx) => (
-                <div key={d.id} className="rounded-lg border border-border bg-background p-4 space-y-3">
+                <CollapsibleItem
+                  key={d.id}
+                  summary={d.name || `Deliverable ${idx + 1}`}
+                  defaultOpen={!d.name}
+                  onDelete={() => removeDeliverable(d.id)}
+                >
                   <div className="flex items-start gap-2">
                     <Input
                       value={d.name}
@@ -347,14 +353,6 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         })
                       }
                     />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => removeDeliverable(d.id)}
-                      className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                   <div>
                     <LabelRow
@@ -408,7 +406,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       </Select>
                     </div>
                   </div>
-                </div>
+                </CollapsibleItem>
               ))}
             </div>
           )}
