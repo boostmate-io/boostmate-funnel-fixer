@@ -1569,6 +1569,7 @@ export type Database = {
           funnel_id: string | null
           id: string
           notes: string | null
+          pending_upstream_funnel_ids: string[]
           sort_order: number
           source_offer_id: string | null
           status: string
@@ -1582,6 +1583,7 @@ export type Database = {
           funnel_id?: string | null
           id?: string
           notes?: string | null
+          pending_upstream_funnel_ids?: string[]
           sort_order?: number
           source_offer_id?: string | null
           status?: string
@@ -1595,6 +1597,7 @@ export type Database = {
           funnel_id?: string | null
           id?: string
           notes?: string | null
+          pending_upstream_funnel_ids?: string[]
           sort_order?: number
           source_offer_id?: string | null
           status?: string
