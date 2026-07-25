@@ -7,7 +7,6 @@
 
 import { type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 
 interface Props {
   icon: LucideIcon;
@@ -15,7 +14,8 @@ interface Props {
   description: string;
   /** @deprecated retained for API compat — no longer rendered. */
   insight?: string;
-  progress: number;
+  /** @deprecated retained for API compat — bottom progress bar removed. */
+  progress?: number;
   saving?: boolean;
   /** @deprecated retained for API compat — no longer rendered. */
   feedback?: string | null;
@@ -30,7 +30,6 @@ const SectionShell = ({
   icon: Icon,
   title,
   description,
-  progress,
   saving,
   rightBadge,
   helpButton,
@@ -55,10 +54,6 @@ const SectionShell = ({
       </div>
 
       {children}
-
-      <div className="mt-4 px-1">
-        <Progress value={progress} className="h-1" />
-      </div>
     </div>
   </div>
 );

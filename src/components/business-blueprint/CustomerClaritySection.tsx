@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
   calculateSubBlockProgress,
@@ -130,11 +129,6 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
                 />
               </div>
             ))}
-          </div>
-
-          {/* Sub-block progress bar */}
-          <div className="mt-6 px-1">
-            <Progress value={progress} className="h-1" />
           </div>
         </div>
       </div>
