@@ -578,9 +578,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         >
           {data.support_channels.length > 0 && (
             <div className="space-y-3">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {data.support_channels.map((s, idx) => (
-                  <div key={s.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
+                  <CollapsibleItem
+                    key={s.id}
+                    summary={s.name || `Support Channel ${idx + 1}`}
+                    defaultOpen={!s.name}
+                    onDelete={() => removeSupport(s.id)}
+                  >
                     <div className="flex items-start gap-2">
                       <Input
                         value={s.name}
@@ -600,14 +605,6 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                           })
                         }
                       />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeSupport(s.id)}
-                        className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
                     <div>
                       <LabelRow
@@ -650,7 +647,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                         className="resize-none text-sm"
                       />
                     </div>
-                  </div>
+                  </CollapsibleItem>
                 ))}
               </div>
               <div className="pt-2 border-t border-border/50">
