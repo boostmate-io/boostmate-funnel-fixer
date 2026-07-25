@@ -73,6 +73,23 @@ const BusinessBlueprintModule = () => {
     return () => window.removeEventListener("boostmate:open-offer-design", handler);
   }, []);
 
+  // Deep-link: jump to a specific Blueprint section from the sidebar submenu.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const section = detail?.section as SectionId | "overview" | undefined;
+      if (!section) return;
+      if (section === "overview") {
+        setMode("overview");
+        return;
+      }
+      setActiveSection(section);
+      setMode("edit");
+    };
+    window.addEventListener("boostmate:blueprint-navigate-section", handler);
+    return () => window.removeEventListener("boostmate:blueprint-navigate-section", handler);
+  }, []);
+
   if (loading || loadingSettings || !blueprint || !settings) {
     return (
       <div className="flex items-center justify-center h-full">

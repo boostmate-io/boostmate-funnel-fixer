@@ -70,39 +70,26 @@ const OfferCardRow = ({
   const [open, setOpen] = useState(false);
   const coachId = (field: string) => `offer_stack.ecosystem.${offer.id}.${field}`;
   const canCoach = !isCore;
+  const hasName = !!(offer.name || "").trim();
 
   return (
     <div className="rounded-lg border border-border bg-background overflow-hidden">
-      {/* Header row */}
+      {/* Read-only header — mirrors the Name field live */}
       <div className="flex items-center gap-2 p-3">
         <button
           onClick={() => setOpen((o) => !o)}
-          className="text-muted-foreground hover:text-foreground p-0.5"
+          className="flex-1 min-w-0 flex items-center gap-2 text-left"
           aria-label="Toggle details"
         >
-          {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          {open ? <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />}
+          <span
+            className={`min-w-0 truncate text-sm font-medium ${
+              hasName ? "text-foreground" : "text-muted-foreground italic"
+            }`}
+          >
+            {hasName ? offer.name : "Untitled Offer"}
+          </span>
         </button>
-        <Input
-          value={offer.name}
-          onChange={(e) => onUpdate({ name: e.target.value })}
-          placeholder="Offer name"
-          className="h-9 font-medium border-0 bg-transparent px-2 focus-visible:ring-1"
-          disabled={isCore}
-        />
-        {canCoach && (
-          <CoachIconButton
-            compact
-            onClick={() =>
-              openCoach({
-                id: coachId("name"),
-                label: `${tierLabel} — Offer Name`,
-                helper: "Short, evocative name for this offer.",
-                currentValue: offer.name ?? "",
-                apply: (v) => onUpdate({ name: v }),
-              })
-            }
-          />
-        )}
         {typeof offer.data?.price === "number" && offer.data.price > 0 && (
           <Badge variant="secondary" className="text-xs tabular-nums shrink-0">
             {cur}{offer.data.price.toLocaleString()}
@@ -133,6 +120,32 @@ const OfferCardRow = ({
               Core offer is auto-generated from tabs 1–3. Edit those tabs to update it.
             </p>
           )}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-xs font-medium text-muted-foreground block">Offer Name</Label>
+              {canCoach && (
+                <CoachIconButton
+                  compact
+                  onClick={() =>
+                    openCoach({
+                      id: coachId("name"),
+                      label: `${tierLabel} — Offer Name`,
+                      helper: "Short, evocative name for this offer.",
+                      currentValue: offer.name ?? "",
+                      apply: (v) => onUpdate({ name: v }),
+                    })
+                  }
+                />
+              )}
+            </div>
+            <Input
+              value={offer.name}
+              onChange={(e) => onUpdate({ name: e.target.value })}
+              placeholder="Offer name"
+              className="h-9 font-medium text-sm"
+              disabled={isCore}
+            />
+          </div>
           <div>
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Price</Label>
             <div className="flex items-center gap-1 max-w-xs">

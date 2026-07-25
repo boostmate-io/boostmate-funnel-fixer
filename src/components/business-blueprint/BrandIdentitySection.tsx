@@ -139,10 +139,6 @@ const BrandIdentitySection = ({ data, onChange, saving }: Props) => {
             ))}
           </div>
 
-          {/* Tab progress bar */}
-          <div className="mt-6 px-1">
-            <Progress value={progress} className="h-1" />
-          </div>
         </div>
       </div>
 

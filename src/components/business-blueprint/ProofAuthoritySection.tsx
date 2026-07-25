@@ -720,9 +720,6 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
             />
           )}
 
-          <div className="mt-6 px-1">
-            <Progress value={overallProgress} className="h-1" />
-          </div>
         </div>
       </div>
     </div>

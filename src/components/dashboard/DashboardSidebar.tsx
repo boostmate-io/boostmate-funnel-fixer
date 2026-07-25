@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, TrendingUp, Users, ChevronsLeft, ChevronsRight, Sparkles, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, Milestone, ChevronDown, ChevronRight } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, TrendingUp, Users, ChevronsLeft, ChevronsRight, Sparkles, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, Milestone, ChevronDown, ChevronRight, Package, Workflow, Palette, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -22,6 +22,15 @@ const adminSubItems = [
   { id: "admin-growth", label: "Growth Roadmap", icon: Milestone },
 ];
 
+const blueprintSubItems: { id: "overview" | "customer-clarity" | "offer-design" | "growth-system" | "brand-strategy" | "proof-authority"; label: string; icon: typeof Users }[] = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "customer-clarity", label: "Customer Clarity", icon: Users },
+  { id: "offer-design", label: "Offer Design", icon: Package },
+  { id: "growth-system", label: "Growth Architecture", icon: Workflow },
+  { id: "brand-strategy", label: "Brand Strategy", icon: Palette },
+  { id: "proof-authority", label: "Authority & Content", icon: Award },
+];
+
 
 const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProps) => {
   const { t } = useTranslation();
@@ -30,6 +39,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
   const { isAgency, isAppAdmin, subAccounts, activeSubAccountId, switchSubAccount, activeSubAccount, mainAccount, allMainAccounts, switchMainAccount } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
   const [adminOpen, setAdminOpen] = useState(activeModule.startsWith("admin"));
+  const [blueprintOpen, setBlueprintOpen] = useState(activeModule === "business-blueprint");
 
   const isAdminActive = activeModule.startsWith("admin");
 
@@ -162,9 +172,34 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
       )}
 
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
-          <NavButton key={item.id} item={item} />
-        ))}
+        {navItems.map((item) => {
+          const isBlueprint = item.id === "business-blueprint";
+          return (
+            <div key={item.id}>
+              <NavButton item={item} />
+              {isBlueprint && !collapsed && activeModule === "business-blueprint" && (
+                <div className="ml-4 mt-1 space-y-0.5">
+                  {blueprintSubItems.map((sub) => (
+                    <button
+                      key={sub.id}
+                      onClick={() => {
+                        window.dispatchEvent(
+                          new CustomEvent("boostmate:blueprint-navigate-section", {
+                            detail: { section: sub.id },
+                          }),
+                        );
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent/30 transition-colors"
+                    >
+                      <sub.icon className="w-3.5 h-3.5 shrink-0" />
+                      {sub.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         {/* Admin with submenu */}
         {isAppAdmin && (
