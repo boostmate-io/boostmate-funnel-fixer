@@ -166,50 +166,50 @@ const FrameworkSection = ({ value, onChange, onCoach, onCoachPillars }: Props) =
               {pillars.map((p, idx) => (
                 <CollapsibleItem
                   key={p.id}
-                  summary={
-                    <span className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-[10px] shrink-0">
-                        {idx + 1}
-                      </span>
-                      <span className="truncate">{p.name || `Pillar ${idx + 1}`}</span>
+                  title={p.name}
+                  fallbackTitle={`Pillar ${idx + 1}`}
+                  leading={
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-[10px] shrink-0">
+                      {idx + 1}
                     </span>
                   }
                   defaultOpen={!p.name}
                   onDelete={() => removePillar(p.id)}
                 >
-                  <div className="flex items-start gap-2">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground block">
+                        Pillar Name
+                      </Label>
+                      {onCoach && (
+                        <CoachIconButton
+                          compact
+                          onClick={() =>
+                            onCoach({
+                              id: `offer_stack.angle.framework.pillars.${p.id}.name`,
+                              label: `Pillar ${idx + 1} — Name`,
+                              helper: `The name of pillar ${idx + 1} in your framework. Short and evocative.`,
+                              placeholder: `Pillar ${idx + 1} name`,
+                              currentValue: p.name ?? "",
+                              apply: (v) => updatePillar(p.id, { name: v }),
+                            })
+                          }
+                        />
+                      )}
+                    </div>
                     <Input
                       value={p.name}
                       onChange={(e) => updatePillar(p.id, { name: e.target.value })}
                       placeholder={`Pillar ${idx + 1} name`}
                       className="h-9 font-medium"
                     />
-                    {onCoach && (
-                      <CoachIconButton
-                        compact
-                        onClick={() =>
-                          onCoach({
-                            id: `offer_stack.angle.framework.pillars.${p.id}.name`,
-                            label: `Pillar ${idx + 1} — Name`,
-                            helper: `The name of pillar ${idx + 1} in your framework. Short and evocative.`,
-                            placeholder: `Pillar ${idx + 1} name`,
-                            currentValue: p.name ?? "",
-                            apply: (v) => updatePillar(p.id, { name: v }),
-                          })
-                        }
-                      />
-                    )}
                   </div>
-                  <div className="relative">
-                    <AutoTextarea
-                      value={p.description ?? ""}
-                      onChange={(e) => updatePillar(p.id, { description: e.target.value })}
-                      placeholder="What happens in this pillar?"
-                      rows={2}
-                      className="resize-none text-sm pr-10"
-                    />
-                    {onCoach && (
-                      <div className="absolute top-1.5 right-1.5">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground block">
+                        Description
+                      </Label>
+                      {onCoach && (
                         <CoachIconButton
                           compact
                           onClick={() =>
@@ -223,8 +223,15 @@ const FrameworkSection = ({ value, onChange, onCoach, onCoachPillars }: Props) =
                             })
                           }
                         />
-                      </div>
-                    )}
+                      )}
+                    </div>
+                    <AutoTextarea
+                      value={p.description ?? ""}
+                      onChange={(e) => updatePillar(p.id, { description: e.target.value })}
+                      placeholder="What happens in this pillar?"
+                      rows={2}
+                      className="resize-none text-sm"
+                    />
                   </div>
                 </CollapsibleItem>
               ))}
