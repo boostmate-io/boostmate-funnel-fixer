@@ -693,20 +693,15 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
               {data.bonuses.map((b, idx) => (
                 <CollapsibleItem
                   key={b.id}
-                  summary={b.name || `Bonus ${idx + 1}`}
+                  title={b.name}
+                  fallbackTitle={`Bonus ${idx + 1}`}
                   defaultOpen={!b.name}
                   onDelete={() => removeBonus(b.id)}
                 >
-                  <div className="flex items-start gap-2">
-                    <Input
-                      value={b.name}
-                      onChange={(e) => updateBonus(b.id, { name: e.target.value })}
-                      placeholder="Bonus name"
-                      className="h-9 font-medium"
-                    />
-                    <CoachIconButton
-                      compact
-                      onClick={() =>
+                  <div>
+                    <LabelRow
+                      label="Bonus Title"
+                      onCoach={() =>
                         openCoach({
                           id: `offer_stack.stack.bonuses.${b.id}.name`,
                           label: `Bonus ${idx + 1} — Name`,
@@ -715,6 +710,22 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                           apply: (v) => updateBonus(b.id, { name: v }),
                         })
                       }
+                    />
+                    <Input
+                      value={b.name}
+                      onChange={(e) => updateBonus(b.id, { name: e.target.value })}
+                      placeholder="Bonus name"
+                      className="h-9 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                      Type
+                    </Label>
+                    <DeliveryTypePicker
+                      value={b.delivery_types ?? []}
+                      onChange={(v) => updateBonus(b.id, { delivery_types: v })}
+                      placeholder="Pick the bonus type…"
                     />
                   </div>
                   <div>
@@ -791,14 +802,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         {/* Milestones */}
         <BuilderCard
           icon={Map}
-          title="Milestones / Roadmap"
+          title="Milestones"
           description="The step-by-step journey through your offer."
           addLabel="Add Milestone"
           onAdd={addMilestone}
           onCoach={() =>
             openListCoach({
               id: "stack_milestones",
-              label: "Milestones / Roadmap",
+              label: "Milestones",
               helper: "The phases clients move through in your offer.",
               basePath: "offer_stack.stack.milestones",
               itemFields: [
@@ -816,89 +827,83 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
           emptyText="Map out the phases your clients move through. Most great programs have 3–5."
         >
           {data.milestones.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {data.milestones.map((m, idx) => (
-                <div key={m.id} className="rounded-lg border border-border bg-background p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-sm shrink-0">
+                <CollapsibleItem
+                  key={m.id}
+                  title={m.phase_name}
+                  fallbackTitle={`Milestone ${idx + 1}`}
+                  leading={
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-[10px] shrink-0">
                       {idx + 1}
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-start gap-2">
-                        <Input
-                          value={m.phase_name}
-                          onChange={(e) => updateMilestone(m.id, { phase_name: e.target.value })}
-                          placeholder="Phase name (e.g. Awareness)"
-                          className="h-9 font-medium"
-                        />
-                        <CoachIconButton
-                          compact
-                          onClick={() =>
-                            openCoach({
-                              id: `offer_stack.stack.milestones.${m.id}.phase_name`,
-                              label: `Milestone ${idx + 1} — Phase Name`,
-                              helper: "Short, evocative name for this phase.",
-                              currentValue: m.phase_name ?? "",
-                              apply: (v) => updateMilestone(m.id, { phase_name: v }),
-                            })
-                          }
-                        />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => removeMilestone(m.id)}
-                          className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        <div>
-                          <LabelRow
-                            label="Description"
-                            onCoach={() =>
-                              openCoach({
-                                id: `offer_stack.stack.milestones.${m.id}.description`,
-                                label: `Milestone ${idx + 1} — Description`,
-                                helper: "What happens during this phase?",
-                                currentValue: m.description ?? "",
-                                apply: (v) => updateMilestone(m.id, { description: v }),
-                              })
-                            }
-                          />
-                          <AutoTextarea
-                            value={m.description ?? ""}
-                            onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
-                            placeholder="Description"
-                            rows={2}
-                            className="resize-none text-sm"
-                          />
-                        </div>
-                        <div>
-                          <LabelRow
-                            label="Expected Outcome"
-                            onCoach={() =>
-                              openCoach({
-                                id: `offer_stack.stack.milestones.${m.id}.expected_outcome`,
-                                label: `Milestone ${idx + 1} — Expected Outcome`,
-                                helper: "The concrete result the client walks away with after this phase.",
-                                currentValue: m.expected_outcome ?? "",
-                                apply: (v) => updateMilestone(m.id, { expected_outcome: v }),
-                              })
-                            }
-                          />
-                          <AutoTextarea
-                            value={m.expected_outcome ?? ""}
-                            onChange={(e) => updateMilestone(m.id, { expected_outcome: e.target.value })}
-                            placeholder="Expected outcome"
-                            rows={2}
-                            className="resize-none text-sm"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    </span>
+                  }
+                  defaultOpen={!m.phase_name}
+                  onDelete={() => removeMilestone(m.id)}
+                >
+                  <div>
+                    <LabelRow
+                      label="Phase Name"
+                      onCoach={() =>
+                        openCoach({
+                          id: `offer_stack.stack.milestones.${m.id}.phase_name`,
+                          label: `Milestone ${idx + 1} — Phase Name`,
+                          helper: "Short, evocative name for this phase.",
+                          currentValue: m.phase_name ?? "",
+                          apply: (v) => updateMilestone(m.id, { phase_name: v }),
+                        })
+                      }
+                    />
+                    <Input
+                      value={m.phase_name}
+                      onChange={(e) => updateMilestone(m.id, { phase_name: e.target.value })}
+                      placeholder="Phase name (e.g. Awareness)"
+                      className="h-9 font-medium"
+                    />
                   </div>
-                </div>
+                  <div>
+                    <LabelRow
+                      label="Description"
+                      onCoach={() =>
+                        openCoach({
+                          id: `offer_stack.stack.milestones.${m.id}.description`,
+                          label: `Milestone ${idx + 1} — Description`,
+                          helper: "What happens during this phase?",
+                          currentValue: m.description ?? "",
+                          apply: (v) => updateMilestone(m.id, { description: v }),
+                        })
+                      }
+                    />
+                    <AutoTextarea
+                      value={m.description ?? ""}
+                      onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
+                      placeholder="Description"
+                      rows={2}
+                      className="resize-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <LabelRow
+                      label="Expected Outcome"
+                      onCoach={() =>
+                        openCoach({
+                          id: `offer_stack.stack.milestones.${m.id}.expected_outcome`,
+                          label: `Milestone ${idx + 1} — Expected Outcome`,
+                          helper: "The concrete result the client walks away with after this phase.",
+                          currentValue: m.expected_outcome ?? "",
+                          apply: (v) => updateMilestone(m.id, { expected_outcome: v }),
+                        })
+                      }
+                    />
+                    <AutoTextarea
+                      value={m.expected_outcome ?? ""}
+                      onChange={(e) => updateMilestone(m.id, { expected_outcome: e.target.value })}
+                      placeholder="Expected outcome"
+                      rows={2}
+                      className="resize-none text-sm"
+                    />
+                  </div>
+                </CollapsibleItem>
               ))}
             </div>
           )}
