@@ -1,10 +1,15 @@
 // =============================================================================
-// GrowthMap — read-only React Flow view of the Growth Architecture.
+// GrowthMap — V5 shell (React Flow, dagre, same controls/styling) but new
+// V2.1 data composition:
 //
-// V5 layout: nodes and edges are constructed logically (channels, canonical
-// offer nodes, route + relationship edges) and then positioned by dagre in a
-// top-to-bottom layered graph. Dagre handles multi-route separation so shared
-// offer nodes remain canonical while distinct routes never overlap.
+//   - One Funnel Container node per route (planned or built).
+//     Container renders: funnel name, target offer chip, status badge (when a
+//     funnel exists), and external acquisition channel chips.
+//   - Acquisition channels are NEVER separate canvas nodes — they render
+//     inside the container.
+//   - Funnel-to-funnel edges are derived from funnel_connections (post-build)
+//     and from pending_upstream_funnel_ids (pre-build). Upstream funnels do
+//     NOT appear as chips inside a container.
 // =============================================================================
 
 import { useMemo } from "react";
@@ -19,6 +24,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { Star, Workflow } from "lucide-react";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
 import type {
   OfferRelationshipRow,
@@ -27,213 +33,181 @@ import type {
   GrowthSystemCatalogRow,
   RouteChannelRow,
 } from "@/lib/growth-architecture/hooks";
+import type { FunnelConnectionRow, WorkspaceFunnelRow } from "@/lib/growth-architecture/funnelConnections";
 import { deriveRouteState } from "@/lib/growth-architecture/deriveStatus";
 
 interface Props {
   offers: EcosystemOfferRow[];
-  relationships: OfferRelationshipRow[];
+  relationships: OfferRelationshipRow[]; // kept for signature compatibility
   routes: GrowthArchitectureRow[];
   channels: AcquisitionChannelRow[];
   systems: GrowthSystemCatalogRow[];
   routeChannelsByRoute: Map<string, { primary: RouteChannelRow | null; additional: RouteChannelRow[] }>;
+  workspaceFunnels: WorkspaceFunnelRow[];
+  funnelConnections: FunnelConnectionRow[];
 }
 
-const REL_COLOR: Record<string, string> = {
-  ascends_to: "hsl(var(--primary))",
-  leads_into: "hsl(220 70% 55%)",
-  retention: "hsl(160 60% 45%)",
-  downsell: "hsl(30 80% 55%)",
+const CONTAINER_WIDTH = 300;
+const STATUS_STYLES: Record<string, string> = {
+  building: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  live: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  paused: "bg-muted text-muted-foreground",
+  archived: "bg-muted text-muted-foreground line-through",
 };
 
-const NODE_WIDTH = 220;
-const OFFER_HEIGHT = 78;
-const CHANNEL_HEIGHT = 60;
+const GrowthMap = ({
+  offers,
+  routes,
+  channels,
+  systems,
+  routeChannelsByRoute,
+  workspaceFunnels,
+  funnelConnections,
+}: Props) => {
+  const orphanOffers = useMemo(() => {
+    const targeted = new Set(routes.map((r) => r.target_offer_id));
+    return offers.filter((o) => !targeted.has(o.id));
+  }, [offers, routes]);
 
-const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChannelsByRoute }: Props) => {
-  const routedOfferIds = useMemo(() => {
-    const set = new Set<string>();
-    routes.forEach((r) => {
-      if (r.source_offer_id) set.add(r.source_offer_id);
-      set.add(r.target_offer_id);
-    });
-    return set;
+  // Map funnel_id → route_id so upstream funnels can resolve to containers.
+  const funnelIdToRouteId = useMemo(() => {
+    const m = new Map<string, string>();
+    routes.forEach((r) => { if (r.funnel_id) m.set(r.funnel_id, r.id); });
+    return m;
   }, [routes]);
 
-  const graphOffers = useMemo(
-    () => offers.filter((o) => routedOfferIds.has(o.id)),
-    [offers, routedOfferIds],
-  );
-  const orphanOffers = useMemo(
-    () => offers.filter((o) => !routedOfferIds.has(o.id)),
-    [offers, routedOfferIds],
+  const funnelById = useMemo(
+    () => new Map(workspaceFunnels.map((f) => [f.id, f] as const)),
+    [workspaceFunnels],
   );
 
   const { nodes, edges } = useMemo(() => {
-    // Nodes built without positions; dagre assigns them below.
     const rawNodes: Array<{ id: string; width: number; height: number; render: Node }> = [];
     const edges: Edge[] = [];
 
-    // Canonical offer nodes
-    graphOffers.forEach((o) => {
+    routes.forEach((r) => {
+      const sys = systems.find((s) => s.id === r.system_catalog_id);
+      const bucket = routeChannelsByRoute.get(r.id) ?? { primary: null, additional: [] };
+      const derived = deriveRouteState(r, [], bucket.primary?.channel_id ?? null);
+      const target = offers.find((o) => o.id === r.target_offer_id);
+      const funnel = r.funnel_id ? funnelById.get(r.funnel_id) : null;
+
+      const primaryCh = bucket.primary ? channels.find((c) => c.id === bucket.primary!.channel_id) : null;
+      const additionalChs = bucket.additional
+        .map((a) => channels.find((c) => c.id === a.channel_id))
+        .filter((c): c is AcquisitionChannelRow => !!c);
+
+      const channelChipCount = (primaryCh ? 1 : 0) + additionalChs.length;
+      const height = 128 + Math.ceil((channelChipCount || 1) / 2) * 26;
+
+      const isActive = derived.state !== "planned";
+      const borderColor = isActive ? "hsl(var(--primary))" : "hsl(var(--border))";
+
       rawNodes.push({
-        id: `offer-${o.id}`,
-        width: NODE_WIDTH,
-        height: OFFER_HEIGHT,
+        id: `route-${r.id}`,
+        width: CONTAINER_WIDTH,
+        height,
         render: {
-          id: `offer-${o.id}`,
+          id: `route-${r.id}`,
           position: { x: 0, y: 0 },
+          sourcePosition: Position.Bottom,
+          targetPosition: Position.Top,
           data: {
             label: (
-              <div className="text-left">
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  {o.tier.replace("_", " ")}
-                </div>
-                <div className="text-sm font-semibold text-foreground truncate max-w-[200px]">
-                  {o.name}
-                </div>
-                {typeof o.data?.price === "number" && o.data.price > 0 && (
-                  <div className="text-[11px] text-muted-foreground tabular-nums">
-                    ${o.data.price.toLocaleString()}
+              <div className="text-left w-full">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+                    {sys?.label ?? "System"}
                   </div>
-                )}
+                  {funnel && (
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full capitalize ${STATUS_STYLES[funnel.status] ?? "bg-muted text-muted-foreground"}`}>
+                      {funnel.status}
+                    </span>
+                  )}
+                  {!funnel && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                      planned
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm font-semibold text-foreground truncate mb-1.5">
+                  {funnel?.name ?? `${sys?.label ?? "Funnel"} (planned)`}
+                </div>
+                <div className="rounded-md border border-border/70 bg-muted/40 px-2 py-1 mb-2">
+                  <div className="text-[9px] uppercase tracking-wide text-muted-foreground">
+                    Target · {target?.tier.replace("_", " ") ?? "offer"}
+                  </div>
+                  <div className="text-[12px] font-medium truncate">{target?.name ?? "Unknown offer"}</div>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {primaryCh && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border"
+                      style={{ borderColor: primaryCh.color ?? "hsl(var(--border))", color: primaryCh.color ?? undefined }}
+                    >
+                      <Star className="w-2.5 h-2.5 fill-current" />
+                      {primaryCh.label}
+                    </span>
+                  )}
+                  {additionalChs.map((c) => (
+                    <span
+                      key={c.id}
+                      className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border border-dashed"
+                      style={{ borderColor: c.color ?? "hsl(var(--border))", color: c.color ?? undefined }}
+                    >
+                      {c.label}
+                    </span>
+                  ))}
+                  {channelChipCount === 0 && (
+                    <span className="text-[10px] text-muted-foreground italic">No external channels</span>
+                  )}
+                </div>
               </div>
             ) as any,
           },
-          sourcePosition: Position.Bottom,
-          targetPosition: Position.Top,
           style: {
             background: "hsl(var(--card))",
-            border: "1px solid hsl(var(--border))",
-            borderRadius: 10,
-            padding: 10,
-            width: NODE_WIDTH,
+            border: `1.5px solid ${borderColor}`,
+            borderRadius: 12,
+            padding: 12,
+            width: CONTAINER_WIDTH,
           },
         },
       });
     });
 
-    // Explicit channel nodes, one per (route, channel) junction for external routes
-    type Junction = { key: string; channelId: string; routeId: string; isPrimary: boolean };
-    const junctionsByRoute = new Map<string, Junction[]>();
-    routes.forEach((r) => {
-      if (r.source_offer_id != null) return; // ascension routes: no channel node
-      const bucket = routeChannelsByRoute.get(r.id);
-      const list: Junction[] = [];
-      if (bucket?.primary) {
-        list.push({ key: `ch-${r.id}-${bucket.primary.channel_id}`, channelId: bucket.primary.channel_id, routeId: r.id, isPrimary: true });
-      }
-      (bucket?.additional ?? []).forEach((a) => {
-        list.push({ key: `ch-${r.id}-${a.channel_id}`, channelId: a.channel_id, routeId: r.id, isPrimary: false });
-      });
-      junctionsByRoute.set(r.id, list);
-      list.forEach((j) => {
-        const ch = channels.find((c) => c.id === j.channelId);
-        rawNodes.push({
-          id: j.key,
-          width: NODE_WIDTH,
-          height: CHANNEL_HEIGHT,
-          render: {
-            id: j.key,
-            position: { x: 0, y: 0 },
-            data: {
-              label: (
-                <div className="text-left">
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {j.isPrimary ? "Primary channel" : "Channel"}
-                  </div>
-                  <div className="text-sm font-semibold truncate max-w-[190px]">{ch?.label ?? "Unknown"}</div>
-                </div>
-              ) as any,
-            },
-            sourcePosition: Position.Bottom,
-            targetPosition: Position.Top,
-            style: {
-              background: "hsl(var(--muted))",
-              border: `1px ${j.isPrimary ? "solid" : "dashed"} ${ch?.color ?? "hsl(var(--border))"}`,
-              borderRadius: 10,
-              padding: 8,
-              width: NODE_WIDTH,
-            },
-          },
-        });
-      });
-    });
-
-    // Relationship edges (between routed offers only) — soft, thin
-    relationships.forEach((r) => {
-      if (!routedOfferIds.has(r.source_offer_id) || !routedOfferIds.has(r.target_offer_id)) return;
+    // Funnel-to-funnel edges: persisted connections (built targets)
+    funnelConnections.forEach((c) => {
+      const sourceRouteId = funnelIdToRouteId.get(c.source_funnel_id);
+      const targetRouteId = funnelIdToRouteId.get(c.target_funnel_id);
+      if (!sourceRouteId || !targetRouteId) return;
       edges.push({
-        id: `rel-${r.id}`,
-        source: `offer-${r.source_offer_id}`,
-        target: `offer-${r.target_offer_id}`,
-        label: r.relationship_type.replace("_", " "),
-        style: {
-          stroke: REL_COLOR[r.relationship_type] ?? "hsl(var(--border))",
-          strokeWidth: 1,
-          opacity: 0.4,
-        },
-        labelStyle: { fontSize: 10, fill: "hsl(var(--muted-foreground))" },
+        id: `fc-${c.id}`,
+        source: `route-${sourceRouteId}`,
+        target: `route-${targetRouteId}`,
+        style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
         markerEnd: { type: MarkerType.ArrowClosed },
       });
     });
 
-    // Route edges
+    // Pending upstream (planned targets) — dashed
     routes.forEach((r) => {
-      const sys = systems.find((s) => s.id === r.system_catalog_id);
-      const bucket = routeChannelsByRoute.get(r.id);
-      const primaryCid = bucket?.primary?.channel_id ?? null;
-      const derived = deriveRouteState(r, relationships, primaryCid);
-      const isActive = derived.state !== "planned";
-      const stroke = isActive ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))";
-      const strokeWidth = isActive ? 2.5 : 1.5;
-      const dash = derived.state === "planned" ? "4 4" : undefined;
-
-      if (r.source_offer_id == null) {
-        const junctions = junctionsByRoute.get(r.id) ?? [];
-        if (junctions.length === 0) return;
-        junctions.forEach((j) => {
-          edges.push({
-            id: `route-${r.id}-${j.channelId}`,
-            source: j.key,
-            target: `offer-${r.target_offer_id}`,
-            label: j.isPrimary ? `${sys?.label ?? "System"} · ${derived.label}` : undefined,
-            style: {
-              stroke,
-              strokeWidth: j.isPrimary ? strokeWidth : 1.25,
-              strokeDasharray: dash,
-              opacity: j.isPrimary ? 1 : 0.55,
-            },
-            labelStyle: { fontSize: 11, fontWeight: 600 },
-            labelBgStyle: { fill: "hsl(var(--background))" },
-            labelBgPadding: [6, 4],
-            labelBgBorderRadius: 4,
-            markerEnd: { type: MarkerType.ArrowClosed },
-          });
-        });
-      } else {
-        const additionalCount = bucket?.additional.length ?? 0;
-        const label = additionalCount > 0
-          ? `${sys?.label ?? "System"} · ${derived.label} · +${additionalCount}`
-          : `${sys?.label ?? "System"} · ${derived.label}`;
+      (r.pending_upstream_funnel_ids ?? []).forEach((sourceFunnelId) => {
+        const sourceRouteId = funnelIdToRouteId.get(sourceFunnelId);
+        if (!sourceRouteId) return;
         edges.push({
-          id: `route-${r.id}`,
-          source: `offer-${r.source_offer_id}`,
-          target: `offer-${r.target_offer_id}`,
-          label,
-          style: { stroke, strokeWidth, strokeDasharray: dash },
-          labelStyle: { fontSize: 11, fontWeight: 600 },
-          labelBgStyle: { fill: "hsl(var(--background))" },
-          labelBgPadding: [6, 4],
-          labelBgBorderRadius: 4,
+          id: `pend-${r.id}-${sourceFunnelId}`,
+          source: `route-${sourceRouteId}`,
+          target: `route-${r.id}`,
+          style: { stroke: "hsl(var(--muted-foreground))", strokeWidth: 1.5, strokeDasharray: "4 4" },
           markerEnd: { type: MarkerType.ArrowClosed },
         });
-      }
+      });
     });
 
-    // Dagre layout — top→bottom, with generous spacing so routes never overlap.
     const g = new dagre.graphlib.Graph({ multigraph: true });
     g.setDefaultEdgeLabel(() => ({}));
-    g.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 90, marginx: 20, marginy: 20 });
+    g.setGraph({ rankdir: "TB", nodesep: 70, ranksep: 100, marginx: 20, marginy: 20 });
     rawNodes.forEach((n) => g.setNode(n.id, { width: n.width, height: n.height }));
     edges.forEach((e) => g.setEdge(e.source, e.target, {}, e.id));
     dagre.layout(g);
@@ -247,7 +221,7 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
     });
 
     return { nodes, edges };
-  }, [graphOffers, relationships, routes, channels, systems, routeChannelsByRoute, routedOfferIds]);
+  }, [routes, systems, offers, channels, routeChannelsByRoute, funnelById, funnelConnections, funnelIdToRouteId]);
 
   if (offers.length === 0) {
     return (
@@ -260,9 +234,9 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
   return (
     <div className="space-y-4">
       <div className="h-[600px] rounded-lg border border-border bg-background">
-        {graphOffers.length === 0 ? (
+        {routes.length === 0 ? (
           <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-6">
-            No routes yet. Add a growth route to populate your map.
+            No funnels yet. Add a funnel to populate your map.
           </div>
         ) : (
           <ReactFlow
@@ -289,9 +263,9 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
         <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-sm font-semibold text-foreground">Offers without a growth route</div>
+              <div className="text-sm font-semibold text-foreground">Offers without a funnel</div>
               <div className="text-[11px] text-muted-foreground">
-                These offers exist in your ecosystem but aren't yet connected to a route.
+                These offers exist in your ecosystem but aren't yet the target of any funnel.
               </div>
             </div>
             <div className="text-[11px] text-muted-foreground">{orphanOffers.length}</div>
@@ -302,7 +276,9 @@ const GrowthMap = ({ offers, relationships, routes, channels, systems, routeChan
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                   {o.tier.replace("_", " ")}
                 </div>
-                <div className="text-sm font-medium text-foreground truncate">{o.name}</div>
+                <div className="text-sm font-medium text-foreground truncate flex items-center gap-1">
+                  <Workflow className="w-3 h-3 text-muted-foreground" /> {o.name}
+                </div>
               </div>
             ))}
           </div>
