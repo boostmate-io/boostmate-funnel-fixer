@@ -460,20 +460,15 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                 {data.resources.map((r, idx) => (
                   <CollapsibleItem
                     key={r.id}
-                    summary={r.name || `Resource ${idx + 1}`}
+                    title={r.name}
+                    fallbackTitle={`Resource ${idx + 1}`}
                     defaultOpen={!r.name}
                     onDelete={() => removeResource(r.id)}
                   >
-                    <div className="flex items-start gap-2">
-                      <Input
-                        value={r.name}
-                        onChange={(e) => updateResource(r.id, { name: e.target.value })}
-                        placeholder="Resource name"
-                        className="h-9 font-medium"
-                      />
-                      <CoachIconButton
-                        compact
-                        onClick={() =>
+                    <div>
+                      <LabelRow
+                        label="Resource Name"
+                        onCoach={() =>
                           openCoach({
                             id: `offer_stack.stack.resources.${r.id}.name`,
                             label: `Resource ${idx + 1} — Name`,
@@ -482,6 +477,12 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                             apply: (v) => updateResource(r.id, { name: v }),
                           })
                         }
+                      />
+                      <Input
+                        value={r.name}
+                        onChange={(e) => updateResource(r.id, { name: e.target.value })}
+                        placeholder="Resource name"
+                        className="h-9 font-medium"
                       />
                     </div>
                     <div>
