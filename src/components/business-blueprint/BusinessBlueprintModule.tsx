@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users, Package, Workflow, Palette, Award, Loader2, Sparkles, ArrowLeft, LayoutDashboard } from "lucide-react";
+import { Users, Package, Palette, Award, Loader2, Sparkles, ArrowLeft, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useBlueprint } from "./useBlueprint";
@@ -13,11 +13,9 @@ import {
   normalizeGrowthSystem,
   type GrowthSystemData,
 } from "./growthSystemTypes";
-import { useGrowthArchitecture } from "@/lib/growth-architecture/hooks";
 import { getBusinessType } from "./businessTypes";
 import CustomerClaritySection from "./CustomerClaritySection";
 import OfferDesignSection from "./OfferDesignSection";
-import GrowthArchitectureSection from "./growth-architecture/GrowthArchitectureSection";
 import BrandIdentitySection, { calcBrandIdentityProgress, type BrandIdentityData } from "./BrandIdentitySection";
 import BlueprintOverview from "./BlueprintOverview";
 import BlueprintSetupWizard from "./BlueprintSetupWizard";
@@ -29,7 +27,6 @@ import { calcProofAuthorityProgress } from "./proofAuthorityTypes";
 const sections: { id: SectionId; label: string; icon: typeof Users }[] = [
   { id: "customer-clarity", label: "Customer Clarity", icon: Users },
   { id: "offer-design", label: "Offer Design", icon: Package },
-  { id: "growth-system", label: "Growth Architecture", icon: Workflow },
   { id: "brand-strategy", label: "Brand Strategy", icon: Palette },
   { id: "proof-authority", label: "Authority & Content", icon: Award },
 ];
@@ -51,7 +48,6 @@ const BusinessBlueprintModule = () => {
     offerDesign: offerDesign,
   });
   const { mappings } = useFunnelMappings(blueprint?.id ?? null);
-  const { rows: growthRoutes } = useGrowthArchitecture(activeSubAccountId ?? null);
 
   useEffect(() => {
     if (!loadingSettings && settings && settings.setup_status === "pending") {
@@ -104,13 +100,11 @@ const BusinessBlueprintModule = () => {
   const brandIdentity = (blueprint.brand_strategy || {}) as BrandIdentityData;
   const clarityProgress = calculateClarityProgress(blueprint.customer_clarity);
   const offerProgress = calculateOfferDesignProgress(offerData, tierCounts);
-  const growthProgress = growthRoutes.length >= 1 ? 100 : 0;
   const brandProgress = calcBrandIdentityProgress(brandIdentity);
   const proofProgress = calcProofAuthorityProgress(proofAuthority);
   const sectionProgress: Record<SectionId, number> = {
     "customer-clarity": clarityProgress,
     "offer-design": offerProgress,
-    "growth-system": growthProgress,
     "brand-strategy": brandProgress,
     "proof-authority": proofProgress,
   };
@@ -154,7 +148,7 @@ const BusinessBlueprintModule = () => {
   }
 
   const overallProgress = Math.round(
-    (clarityProgress + offerProgress + growthProgress + brandProgress + proofProgress) / 5,
+    (clarityProgress + offerProgress + brandProgress + proofProgress) / 4,
   );
   const isEmptyBlueprint = overallProgress === 0;
 
@@ -233,13 +227,6 @@ const BusinessBlueprintModule = () => {
             businessType={settings.business_type}
             pendingOpenOfferId={pendingOpenOfferId}
             onOpenedOffer={() => setPendingOpenOfferId(null)}
-          />
-        );
-      case "growth-system":
-        return (
-          <GrowthArchitectureSection
-            offers={offers}
-            saving={saving}
           />
         );
       case "brand-strategy":

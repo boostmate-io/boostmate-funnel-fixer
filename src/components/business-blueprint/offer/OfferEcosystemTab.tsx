@@ -30,7 +30,7 @@ import {
 } from "../offerDesignTypes";
 import { useEcosystemOffers, type EcosystemOfferRow } from "../useEcosystemOffers";
 import { getBusinessType } from "../businessTypes";
-import OfferRelationshipsSelector from "./OfferRelationshipsSelector";
+
 
 interface Props {
   blueprintId: string | null;
@@ -222,7 +222,7 @@ const OfferCardRow = ({
               placeholder="How is it delivered?"
             />
           </div>
-          <OfferRelationshipsSelector offer={offer} offers={allOffers} />
+          
         </div>
       )}
     </div>
