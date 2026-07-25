@@ -60,6 +60,7 @@ export interface GrowthArchitectureRow {
   notes: string | null;
   sort_order: number;
   funnel_id: string | null;
+  pending_upstream_funnel_ids: string[];
 }
 
 // ---------- useOfferRelationships ------------------------------------------
