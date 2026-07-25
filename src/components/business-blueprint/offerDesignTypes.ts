@@ -67,6 +67,7 @@ export interface BonusCard {
   name: string;
   description?: string;
   perceived_value?: string;
+  delivery_types?: string[]; // 🆕 Type selector (matches Deliverables/Ecosystem)
 }
 
 export interface MilestoneCard {

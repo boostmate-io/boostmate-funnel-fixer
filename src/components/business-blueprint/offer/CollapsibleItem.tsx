@@ -1,7 +1,7 @@
 // =============================================================================
 // CollapsibleItem — accordion wrapper for repeatable Blueprint entries.
-// Header shows a compact summary; body renders children when expanded.
-// New/empty items should pass `defaultOpen`; filled items collapse by default.
+// Header is read-only and mirrors the item's Title/Name field live.
+// The Title/Name field itself lives INSIDE the accordion body.
 // =============================================================================
 
 import { useState } from "react";
@@ -9,14 +9,20 @@ import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Props {
-  summary: React.ReactNode;
+  /** Live title mirrored in the header (read-only). */
+  title: string;
+  /** Shown when `title` is empty (e.g. "Deliverable 3"). */
+  fallbackTitle: string;
+  /** Optional leading badge/number rendered inside the header. */
+  leading?: React.ReactNode;
   defaultOpen?: boolean;
   onDelete?: () => void;
   children: React.ReactNode;
 }
 
-const CollapsibleItem = ({ summary, defaultOpen, onDelete, children }: Props) => {
+const CollapsibleItem = ({ title, fallbackTitle, leading, defaultOpen, onDelete, children }: Props) => {
   const [open, setOpen] = useState(defaultOpen ?? true);
+  const hasTitle = !!title.trim();
   return (
     <div className="rounded-lg border border-border bg-background overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-2">
@@ -31,8 +37,13 @@ const CollapsibleItem = ({ summary, defaultOpen, onDelete, children }: Props) =>
           ) : (
             <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
           )}
-          <div className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">
-            {summary}
+          {leading}
+          <div
+            className={`flex-1 min-w-0 text-sm font-medium truncate ${
+              hasTitle ? "text-foreground" : "text-muted-foreground italic"
+            }`}
+          >
+            {hasTitle ? title : fallbackTitle}
           </div>
         </button>
         {onDelete && (
