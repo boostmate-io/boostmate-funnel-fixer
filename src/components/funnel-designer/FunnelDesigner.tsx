@@ -89,6 +89,8 @@ const defaultEdgeOptions = {
   animated: true,
 };
 
+type FunnelStatus = "building" | "live" | "paused" | "archived";
+
 interface Funnel {
   id: string;
   name: string;
@@ -98,6 +100,7 @@ interface Funnel {
   template_type?: string | null;
   created_at: string;
   share_token?: string | null;
+  status?: FunnelStatus;
 }
 
 /* ── Undo/Redo History ── */
