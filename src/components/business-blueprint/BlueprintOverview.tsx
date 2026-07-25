@@ -1,4 +1,4 @@
-import { Users, Package, Workflow, Palette, Award, Sparkles, Pencil, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2 } from "lucide-react";
+import { Users, Package, Palette, Award, Sparkles, Pencil, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -10,9 +10,6 @@ import { type GrowthSystemData, type FunnelMappingRow } from "./growthSystemType
 import { calcBrandIdentityProgress, type BrandIdentityData } from "./BrandIdentitySection";
 import { calcProofAuthorityProgress, type ProofAuthorityData } from "./proofAuthorityTypes";
 import { getBusinessType } from "./businessTypes";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useGrowthArchitecture, useOfferRelationships } from "@/lib/growth-architecture/hooks";
-import { deriveRouteState } from "@/lib/growth-architecture/deriveStatus";
 
 interface OfferLite { id: string; name: string; tier?: string }
 
@@ -44,20 +41,12 @@ interface Props {
 const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, brandIdentity, proofAuthority, businessType, onEdit, onView, onShare, onOpenSetup, setupCompleted }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
-  const { activeSubAccountId } = useWorkspace();
-  const { rows: routes } = useGrowthArchitecture(activeSubAccountId ?? null);
-  const { rows: relationships } = useOfferRelationships(activeSubAccountId ?? null);
 
   const clarityProgress = calculateClarityProgress(clarity);
   const offerProgress = calculateOfferDesignProgress(offer);
-  const growthProgress = routes.length >= 1 ? 100 : 0;
   const brandProgress = calcBrandIdentityProgress(brandIdentity);
   const proofProgress = proofAuthority ? calcProofAuthorityProgress(proofAuthority) : 0;
   const offerName = (id?: string | null) => (id ? offers.find((o) => o.id === id)?.name : undefined);
-  const activeRoutes = routes.filter((r) => {
-    const s = deriveRouteState(r, relationships).state;
-    return s !== "planned";
-  });
 
   const sections: SectionSummary[] = [
     {
@@ -84,18 +73,6 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, brandIden
         { label: "Core promise", value: buildPromisePreview(offer.angle?.core_promise) },
         { label: "Core price", value: typeof offer.pricing?.core_price === "number" ? `${cur}${offer.pricing.core_price.toLocaleString()}` : undefined },
         { label: "Deliverables", value: offer.stack?.deliverables?.length ? `${offer.stack.deliverables.length} defined` : undefined },
-      ],
-    },
-    {
-      id: "growth-system",
-      label: "Growth Architecture",
-      icon: Workflow,
-      description: "Systems, routes & offer progression.",
-      progress: growthProgress,
-      items: [
-        { label: "Routes configured", value: routes.length ? `${routes.length}` : undefined },
-        { label: "Active routes", value: activeRoutes.length ? `${activeRoutes.length}` : undefined },
-        { label: "Offer relationships", value: relationships.length ? `${relationships.length}` : undefined },
       ],
     },
     {

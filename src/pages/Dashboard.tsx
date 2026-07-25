@@ -19,6 +19,7 @@ import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
 import AdminPanel from "@/components/admin/AdminPanel";
 import OutreachModule from "@/components/outreach/OutreachModule";
 import BusinessBlueprintModule from "@/components/business-blueprint/BusinessBlueprintModule";
+import GrowthArchitectureModule from "@/components/growth-architecture/GrowthArchitectureModule";
 import GlobalCoachBubble from "@/components/coach/GlobalCoachBubble";
 import GrowthRoadmapOverview from "@/components/growth/GrowthRoadmapOverview";
 import GrowthRoadmapModule from "@/components/growth/GrowthRoadmapModule";
@@ -53,7 +54,7 @@ const Dashboard = () => {
     return () => window.removeEventListener("boostmate:navigate-module", handler);
   }, []);
 
-  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "admin-accounts", "admin-ai", "admin-copy", "admin-growth", "outreach", "growth-roadmap"];
+  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "growth-architecture", "admin-accounts", "admin-ai", "admin-copy", "admin-growth", "outreach", "growth-roadmap"];
 
   usePendingGrowthClaim();
 
@@ -102,6 +103,11 @@ const Dashboard = () => {
           {activeModule === "business-blueprint" && (
             <div className="h-full">
               <BusinessBlueprintModule />
+            </div>
+          )}
+          {activeModule === "growth-architecture" && (
+            <div className="h-full">
+              <GrowthArchitectureModule />
             </div>
           )}
           {activeModule === "funnels" && (
