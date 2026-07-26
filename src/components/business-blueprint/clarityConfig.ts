@@ -112,16 +112,9 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
     },
     {
       id: "pain",
-      label: "Pain & Friction",
-      icon: AlertTriangle,
-      description: `Capture exactly what your ${nounSingular} is struggling with right now.`,
+      ...meta("pain"),
       insight: `${Noun} buy to escape pain. The deeper you understand their friction, the more your offer will feel like the obvious solution.`,
-      fields: [
-        f({ key: "pain_main_problem", label: "What is the main problem they are dealing with?", type: "textarea", fullWidth: true, rows: 2 }),
-        f({ key: "pain_daily_frustrations", label: "What frustrations do they experience because of this?", type: "textarea", rows: 3 }),
-        f({ key: "pain_already_tried", label: "What have they already tried?", type: "textarea", rows: 3 }),
-        f({ key: "pain_consequences", label: "What happens if they don't solve this?", type: "textarea", fullWidth: true, rows: 2 }),
-      ],
+
       coachQuestions: [
         `What do your ${noun} complain about most?`,
         "What keeps them up at night?",
