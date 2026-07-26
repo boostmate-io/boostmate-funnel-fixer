@@ -22,8 +22,7 @@ const adminSubItems = [
   { id: "admin-growth", label: "Growth Roadmap", icon: Milestone },
 ];
 
-const blueprintSubItems: { id: "overview" | "customer-clarity" | "offer-design" | "brand-strategy" | "proof-authority"; label: string; icon: typeof Users }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
+const blueprintSubItems: { id: "customer-clarity" | "offer-design" | "brand-strategy" | "proof-authority"; label: string; icon: typeof Users }[] = [
   { id: "customer-clarity", label: "Customer Clarity", icon: Users },
   { id: "offer-design", label: "Offer Design", icon: Package },
   { id: "brand-strategy", label: "Brand Strategy", icon: Palette },
