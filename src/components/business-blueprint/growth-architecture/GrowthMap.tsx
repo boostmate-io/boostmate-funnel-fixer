@@ -98,7 +98,7 @@ const GrowthMap = ({
         .filter((c): c is AcquisitionChannelRow => !!c);
 
       const channelChipCount = (primaryCh ? 1 : 0) + additionalChs.length;
-      const height = 128 + Math.ceil((channelChipCount || 1) / 2) * 26;
+      const height = 250 + Math.ceil((channelChipCount || 1) / 2) * 26;
 
       const isActive = derived.state !== "planned";
       const borderColor = isActive ? "hsl(var(--primary))" : "hsl(var(--border))";
@@ -115,52 +115,80 @@ const GrowthMap = ({
           data: {
             label: (
               <div className="text-left w-full">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
-                    {sys?.label ?? "System"}
+                {/* Funnel Container header */}
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  <div className="text-[9px] uppercase tracking-wide text-muted-foreground truncate">
+                    Funnel
                   </div>
-                  {funnel && (
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full capitalize ${STATUS_STYLES[funnel.status] ?? "bg-muted text-muted-foreground"}`}>
-                      {funnel.status}
-                    </span>
-                  )}
-                  {!funnel && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
-                      planned
-                    </span>
-                  )}
+                  <span
+                    className={`text-[9px] px-1.5 py-0.5 rounded-full capitalize ${
+                      funnel
+                        ? STATUS_STYLES[funnel.status] ?? "bg-muted text-muted-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {funnel?.status ?? "planned"}
+                  </span>
                 </div>
-                <div className="text-sm font-semibold text-foreground truncate mb-1.5">
+                <div className="text-sm font-semibold text-foreground truncate mb-2.5">
                   {funnel?.name ?? `${sys?.label ?? "Funnel"} (planned)`}
                 </div>
-                <div className="rounded-md border border-border/70 bg-muted/40 px-2 py-1 mb-2">
+
+                {/* Step 1 — Traffic Sources */}
+                <div className="rounded-md border border-dashed border-border bg-muted/30 px-2 py-1.5">
+                  <div className="text-[9px] uppercase tracking-wide text-muted-foreground mb-1">
+                    Traffic Sources
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {primaryCh && (
+                      <span
+                        className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-background"
+                        style={{ borderColor: primaryCh.color ?? "hsl(var(--border))", color: primaryCh.color ?? undefined }}
+                      >
+                        <Star className="w-2.5 h-2.5 fill-current" />
+                        {primaryCh.label}
+                      </span>
+                    )}
+                    {additionalChs.map((c) => (
+                      <span
+                        key={c.id}
+                        className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border border-dashed bg-background"
+                        style={{ borderColor: c.color ?? "hsl(var(--border))", color: c.color ?? undefined }}
+                      >
+                        {c.label}
+                      </span>
+                    ))}
+                    {channelChipCount === 0 && (
+                      <span className="text-[10px] text-muted-foreground italic">No external channels</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-center py-0.5">
+                  <ArrowDown className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
+
+                {/* Step 2 — Growth System */}
+                <div className="rounded-md border border-border bg-background px-2 py-1.5">
                   <div className="text-[9px] uppercase tracking-wide text-muted-foreground">
-                    Target · {target?.tier.replace("_", " ") ?? "offer"}
+                    Growth System
+                  </div>
+                  <div className="text-[12px] font-medium truncate flex items-center gap-1">
+                    <Workflow className="w-3 h-3 text-primary shrink-0" />
+                    {sys?.label ?? "System"}
+                  </div>
+                </div>
+
+                <div className="flex justify-center py-0.5">
+                  <ArrowDown className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
+
+                {/* Step 3 — Offer */}
+                <div className="rounded-md border border-primary/40 bg-primary/5 px-2 py-1.5">
+                  <div className="text-[9px] uppercase tracking-wide text-muted-foreground">
+                    Offer · {target?.tier.replace("_", " ") ?? "offer"}
                   </div>
                   <div className="text-[12px] font-medium truncate">{target?.name ?? "Unknown offer"}</div>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {primaryCh && (
-                    <span
-                      className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border"
-                      style={{ borderColor: primaryCh.color ?? "hsl(var(--border))", color: primaryCh.color ?? undefined }}
-                    >
-                      <Star className="w-2.5 h-2.5 fill-current" />
-                      {primaryCh.label}
-                    </span>
-                  )}
-                  {additionalChs.map((c) => (
-                    <span
-                      key={c.id}
-                      className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border border-dashed"
-                      style={{ borderColor: c.color ?? "hsl(var(--border))", color: c.color ?? undefined }}
-                    >
-                      {c.label}
-                    </span>
-                  ))}
-                  {channelChipCount === 0 && (
-                    <span className="text-[10px] text-muted-foreground italic">No external channels</span>
-                  )}
                 </div>
               </div>
             ) as any,
