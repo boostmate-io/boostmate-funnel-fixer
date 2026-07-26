@@ -109,7 +109,7 @@ const AdminPanel = ({ category = "accounts" }: AdminPanelProps) => {
 
         {config.tabs.map((tab) => (
           <TabsContent key={tab.value} value={tab.value}>
-            {tab.content}
+            {renderTabContent(tab)}
           </TabsContent>
         ))}
       </Tabs>
