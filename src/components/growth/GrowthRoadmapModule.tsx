@@ -86,6 +86,7 @@ export default function GrowthRoadmapModule({ onOpenModule }: Props) {
     <div className="h-full flex flex-col">
       <PageHeader
         title={t("growth.title")}
+        icon={TrendingUp}
         subtitle={t("growth.publicSubtitle")}
         actions={
           row && phase === "result" ? (

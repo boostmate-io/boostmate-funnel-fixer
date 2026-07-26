@@ -152,7 +152,7 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
       <PageHeader
         title="Growth Architecture"
         subtitle="Each funnel connects a growth system to a target offer. Traffic sources are the mix of external acquisition channels and upstream funnels that feed customers in."
-        divider={false}
+        icon={Network}
         actions={
           <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5">
             <Plus className="w-4 h-4" /> Add Funnel

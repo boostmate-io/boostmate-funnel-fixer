@@ -112,18 +112,19 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, brandIden
     <div className="h-full flex flex-col overflow-y-auto bg-background-dashboard">
       <PageHeader
         title="Business Blueprint"
+        icon={Sparkles}
         subtitle={`Strategic overview of your business, offers, ${bt.customerNoun}, and growth systems.`}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={onView} className="gap-1.5 h-8">
+            <Button variant="outline" size="sm" onClick={onView} className="gap-1.5">
               <Eye className="w-4 h-4" />
               View Blueprint
             </Button>
-            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8">
+            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5">
               <Share2 className="w-4 h-4" />
               Share
             </Button>
-            <Button size="sm" onClick={() => onEdit()} className="gap-1.5 h-8">
+            <Button size="sm" onClick={() => onEdit()} className="gap-1.5">
               <Pencil className="w-4 h-4" />
               Edit Blueprint
             </Button>

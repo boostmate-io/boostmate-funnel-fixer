@@ -82,8 +82,9 @@ const FunnelList = ({ onOpenFunnel, onCreateNew }: FunnelListProps) => {
       <PageHeader
         title="Funnels"
         subtitle="Design and manage your marketing funnels."
+        icon={GitBranch}
         actions={
-          <Button onClick={onCreateNew} className="gap-2">
+          <Button size="sm" onClick={onCreateNew} className="gap-1.5">
             <Plus className="w-4 h-4" /> New Funnel
           </Button>
         }
