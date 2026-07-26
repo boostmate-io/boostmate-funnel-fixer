@@ -159,13 +159,11 @@ const AnalyticsModule = ({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-foreground">{titleOverride ?? t("analytics.title")}</h1>
-            <p className="text-muted-foreground text-sm mt-1">{subtitleOverride ?? t("analytics.subtitle")}</p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
+      <PageHeader
+        title={titleOverride ?? t("analytics.title")}
+        subtitle={subtitleOverride ?? t("analytics.subtitle")}
+        actions={
+          <>
             {readOnly && selectedFunnel && (
               <AnalyticsPeriodFilter value={period} onChange={setPeriod} />
             )}
@@ -181,12 +179,14 @@ const AnalyticsModule = ({
                 {t("analytics.share") || "Share"}
               </Button>
             )}
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {selectedFunnel ? (
-        <div className="flex-1 overflow-auto p-6 space-y-8">
+        <div className={`flex-1 overflow-auto`}>
+        <div className={`${PAGE_CONTAINER} py-8 space-y-8`}>
+
           {!readOnly && (
             <div className="flex items-center justify-end gap-2 flex-wrap">
               <AnalyticsPeriodFilter value={period} onChange={setPeriod} />
