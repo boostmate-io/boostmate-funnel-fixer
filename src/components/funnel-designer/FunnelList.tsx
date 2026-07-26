@@ -168,7 +168,9 @@ const FunnelList = ({ onOpenFunnel, onCreateNew }: FunnelListProps) => {
             ))}
           </div>
         )}
+        </div>
       </div>
+
 
       <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
         <AlertDialogContent>
