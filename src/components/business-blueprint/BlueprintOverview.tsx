@@ -5,7 +5,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
 import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
 import { type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
