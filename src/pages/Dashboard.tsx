@@ -24,6 +24,8 @@ import GlobalCoachBubble from "@/components/coach/GlobalCoachBubble";
 import GrowthRoadmapOverview from "@/components/growth/GrowthRoadmapOverview";
 import GrowthRoadmapModule from "@/components/growth/GrowthRoadmapModule";
 import { usePendingGrowthClaim } from "@/hooks/usePendingGrowthClaim";
+import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
+
 
 const Dashboard = () => {
   const { t } = useTranslation();
