@@ -11,7 +11,7 @@ import AuditModule from "@/components/audit/AuditModule";
 
 import ClientManagement from "@/components/agency/ClientManagement";
 import AgencySettings from "@/components/agency/AgencySettings";
-import { BarChart3, GitBranch, FileText, TrendingUp, Sparkles } from "lucide-react";
+import { BarChart3, GitBranch, FileText, TrendingUp, Sparkles, LayoutDashboard, Settings } from "lucide-react";
 import FunnelModule from "@/components/funnel-designer/FunnelModule";
 import CopyDocumentsModule from "@/components/copy/CopyDocumentsModule";
 import AnalyticsModule from "@/components/analytics/AnalyticsModule";
