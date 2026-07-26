@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
 import AssessmentWizard from "@/components/growth/AssessmentWizard";
 import AssessmentResult from "@/components/growth/AssessmentResult";
 import GrowthPlanPanel from "@/components/growth/GrowthPlanPanel";
@@ -122,6 +123,7 @@ export default function GrowthRoadmapModule({ onOpenModule }: Props) {
           />
         </div>
       )}
+      </div>
     </div>
   );
 }
