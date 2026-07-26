@@ -575,18 +575,29 @@ function buildSystemPrompt(
   }
 
 
-  // Admin-curated knowledge blocks (any instruction block linked to the
-  // coach-chat AI action whose name is NOT one of the four reserved prompt
-  // slots). Use these as expert reference material — e.g. how to build a
-  // high-ticket offer, webinar funnel playbook, VSL scripting, etc.
-  if (prompts.knowledgeBlocks && prompts.knowledgeBlocks.length > 0) {
-    const kb = prompts.knowledgeBlocks
+  // Admin-curated knowledge blocks, SCOPED to the active Blueprint context
+  // (Phase 2). Blocks declare their scopes in `blueprint_scopes`; unscoped
+  // blocks stay global for backwards compatibility.
+  const scopedKnowledge = selectKnowledgeBlocks(prompts.knowledgeBlocks ?? [], context);
+  if (scopedKnowledge.length > 0) {
+    const kb = scopedKnowledge
       .map((b) => `## ${b.name}\n${b.content}`)
       .join("\n\n");
     parts.push(
       `# Knowledge base (reference material)\nUse the material below as expert reference whenever the user's question relates to its topic. Apply it as strategic guidance — do not quote it verbatim, do not mention that you are consulting a knowledge base.\n\n${kb}`,
     );
   }
+  console.log(
+    "[coach-chat] knowledge scope:",
+    JSON.stringify({
+      scope: context?.scope ?? null,
+      target: context?.target?.id ?? null,
+      activeScopes: [...activeKnowledgeScopes(context)],
+      loaded: scopedKnowledge.map((b) => b.name),
+      knowledgeChars: scopedKnowledge.reduce((n, b) => n + b.content.length, 0),
+    }),
+  );
+
 
 
   if (context?.target) {
