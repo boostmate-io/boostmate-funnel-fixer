@@ -103,7 +103,7 @@ const AdminInstructionBlocks = ({ filterActionId = null, onFilterActionChange }:
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-display font-bold">Instruction Blocks</h2>
-        <Button onClick={() => setEditing({ name: "", content: "" })} size="sm">
+        <Button onClick={() => setEditing({ name: "", content: "", blueprint_scopes: [] })} size="sm">
           <Plus className="w-4 h-4 mr-1" /> New Block
         </Button>
       </div>
