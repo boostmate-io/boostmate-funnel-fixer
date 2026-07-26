@@ -171,7 +171,7 @@ const BLUEPRINT_STRUCTURE = renderBlueprintStructurePrompt();
 
 
 // In-memory cache for admin-editable prompts (per edge instance, 60s TTL).
-type KnowledgeBlock = { name: string; content: string };
+type KnowledgeBlock = { name: string; content: string; scopes: string[] };
 type PromptSet = {
   base: string;
   field: string;
