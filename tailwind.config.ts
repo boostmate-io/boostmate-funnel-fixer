@@ -58,6 +58,13 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        stage: {
+          validate: "hsl(var(--stage-validate))",
+          attract: "hsl(var(--stage-attract))",
+          optimize: "hsl(var(--stage-optimize))",
+          scale: "hsl(var(--stage-scale))",
+          systemize: "hsl(var(--stage-systemize))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

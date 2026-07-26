@@ -495,31 +495,56 @@
         "label": "Valideren",
         "bottleneck": "Geen herhaalbaar bewijs dat het aanbod levert.",
         "objective": "5+ betalende klanten met het beloofde resultaat.",
-        "milestone": "Resultaat wordt consistent geleverd; verkoop is herhaalbaar."
+        "milestone": "Resultaat wordt consistent geleverd; verkoop is herhaalbaar.",
+        "summary": "Je zit hier omdat het aanbod nog geen herhaalbaar bewijs heeft: resultaten zijn wisselend of het verkoopproces is nog niet betrouwbaar.",
+        "typical": "Een handvol klanten, vooral via referrals of je netwerk. Levering is handmatig en elke verkoop voelt anders.",
+        "unlock": "Dit is de eerste fase — die staat vanaf het begin open. Je verlaat hem zodra je het beloofde resultaat consistent levert en verkoop herhaalbaar is.",
+        "focus": "Bewijs dat het aanbod werkt: lever het beloofde resultaat aan een kleine groep betalende klanten en verzamel bewijs.",
+        "success": "5+ betalende klanten met resultaat, plus testimonials — vóór je geld aan traffic besteedt."
       },
       "attract": {
         "label": "Aantrekken",
         "bottleneck": "Leads zijn inconsistent of enkel via referrals.",
         "objective": "Eén primair leadkanaal met wekelijkse gekwalificeerde leads.",
-        "milestone": "Gekend leadvolume en lead-naar-klant conversie."
+        "milestone": "Gekend leadvolume en lead-naar-klant conversie.",
+        "summary": "Je aanbod levert, maar leadflow hangt af van referrals of losse acties in plaats van één betrouwbare bron.",
+        "typical": "Omzet schommelt per maand. Leads komen onvoorspelbaar binnen en je weet niet hoeveel je nodig hebt voor een klant.",
+        "unlock": "Ontgrendelt zodra het aanbod gevalideerd is: het resultaat wordt consistent geleverd en verkoop is herhaalbaar.",
+        "focus": "Bouw één primair acquisitiekanaal dat elke week gekwalificeerde leads oplevert — en leg ze goed vast.",
+        "success": "Een voorspelbaar weekvolume aan leads uit één kanaal en een bekende lead-naar-klant ratio."
       },
       "optimize": {
         "label": "Optimaliseren",
         "bottleneck": "Lekkende journey; drop-offs niet gemeten.",
         "objective": "Betere conversie per stap en hogere omzet per klant.",
-        "milestone": "Meetbare stijging in conversie of LTV."
+        "milestone": "Meetbare stijging in conversie of LTV.",
+        "summary": "Er komen leads binnen, maar de reis lekt: uitval wordt niet gemeten en omzet per klant blijft liggen.",
+        "typical": "Een werkend kanaal en funnel, maar conversie wordt geschat in plaats van gemeten en opvolging is wisselend.",
+        "unlock": "Ontgrendelt zodra je een betrouwbare leadbron hebt met bekend leadvolume en bekende lead-naar-klant ratio.",
+        "focus": "Meet elke stap, los de grootste uitval op en verhoog de omzet per klant.",
+        "success": "Een meetbare stijging in conversie of klantwaarde bij hetzelfde verkeer."
       },
       "scale": {
         "label": "Schalen",
         "bottleneck": "Unit economics of leveringscapaciteit blokkeren groei.",
         "objective": "Voorspelbare acquisitie met gezonde CAC/LTV en levering die volume aankan.",
-        "milestone": "Winstgevend schaalkanaal + leveringscapaciteit."
+        "milestone": "Winstgevend schaalkanaal + leveringscapaciteit.",
+        "summary": "De reis converteert, maar groei wordt beperkt door unit economics of leveringscapaciteit in plaats van vraag.",
+        "typical": "De cijfers zijn bekend en de funnel werkt, maar meer budget levert niet betrouwbaar meer winst — of levering komt onder druk.",
+        "unlock": "Ontgrendelt zodra je een meetbare verbetering in conversie of klantwaarde kunt aantonen.",
+        "focus": "Zet budget om in voorspelbare acquisitie met gezonde CAC/LTV, en maak levering schaalbaar.",
+        "success": "Één winstgevend acquisitiekanaal waarin je kunt opschalen, met levering die kwaliteit behoudt."
       },
       "systemize": {
         "label": "Systematiseren",
         "bottleneck": "Bedrijf leunt op de founder voor dagelijkse uitvoering.",
         "objective": "Terugkerende processen gedocumenteerd en gedelegeerd.",
-        "milestone": "Eén volledige week zonder tussenkomst van de eigenaar."
+        "milestone": "Eén volledige week zonder tussenkomst van de eigenaar.",
+        "summary": "Groei werkt, maar het bedrijf leunt nog dagelijks op jou.",
+        "typical": "Winstgevende en voorspelbare acquisitie, maar processen zitten in het hoofd van de oprichter.",
+        "unlock": "Ontgrendelt zodra je een winstgevend schaalkanaal hebt en levering die volume aankan.",
+        "focus": "Documenteer, delegeer en automatiseer terugkerend werk zodat het bedrijf zonder jou loopt.",
+        "success": "Een volledige week normale bedrijfsvoering zonder tussenkomst van de eigenaar."
       }
     },
     "q": {
@@ -638,6 +663,21 @@
         "opt67": "De meeste kernprocessen",
         "opt100": "Alle sleutelprocessen gedocumenteerd & eigenaarschap"
       }
+    },
+    "ladder": {
+      "about": "Over deze fase",
+      "current": "Huidige fase",
+      "completed": "Afgerond",
+      "locked": "Vergrendeld",
+      "lockedHint": "Ontgrendelt na de vorige fase",
+      "whatIsIt": "Wat deze fase is",
+      "typical": "Hoe een bedrijf in deze fase eruitziet",
+      "unlock": "Wat er nodig is om te ontgrendelen"
+    },
+    "stageSummary": {
+      "why": "Waarom je hier bent",
+      "focus": "Focus van deze fase",
+      "success": "Hoe succes eruitziet"
     }
   }
 }

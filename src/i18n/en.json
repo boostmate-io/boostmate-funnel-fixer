@@ -495,31 +495,56 @@
         "label": "Validate",
         "bottleneck": "No repeatable proof that the offer delivers.",
         "objective": "5+ paying clients who received the promised outcome.",
-        "milestone": "Outcome is delivered consistently; sales are repeatable."
+        "milestone": "Outcome is delivered consistently; sales are repeatable.",
+        "summary": "You're here because the offer doesn't yet have repeatable proof: results are inconsistent or the sales process isn't reliable enough to build on.",
+        "typical": "A handful of clients, mostly from referrals or personal network. Delivery is hands-on and improvised, and every sale feels different.",
+        "unlock": "This is the first stage — it's open from the start. You leave it once you consistently deliver the promised outcome and sales are repeatable.",
+        "focus": "Prove the offer works: deliver the promised outcome to a small group of paying clients and capture proof.",
+        "success": "5+ paying clients who got the result, plus testimonials — before you spend anything on traffic."
       },
       "attract": {
         "label": "Attract",
         "bottleneck": "Leads are inconsistent or referral-only.",
         "objective": "One primary lead source producing qualified leads weekly.",
-        "milestone": "Known lead volume and lead-to-customer rate."
+        "milestone": "Known lead volume and lead-to-customer rate.",
+        "summary": "Your offer delivers, but lead flow depends on referrals or bursts of activity instead of one reliable source.",
+        "typical": "Revenue swings month to month. Leads arrive unpredictably and there's no clear picture of how many are needed to land a client.",
+        "unlock": "Unlocks once the offer is validated: the outcome is delivered consistently and sales are repeatable.",
+        "focus": "Build one primary acquisition channel that produces qualified leads every week — and start capturing them properly.",
+        "success": "A predictable weekly lead volume from one channel and a known lead-to-customer rate."
       },
       "optimize": {
         "label": "Optimize",
         "bottleneck": "Leaky journey; drop-offs are unmeasured.",
         "objective": "Improved conversion at each step and higher revenue per customer.",
-        "milestone": "Measurable lift in conversion or LTV."
+        "milestone": "Measurable lift in conversion or LTV.",
+        "summary": "Leads come in, but the journey leaks: drop-offs aren't measured and revenue per customer is left on the table.",
+        "typical": "A working channel and a funnel in place, yet conversion is guessed rather than tracked, and follow-up is inconsistent.",
+        "unlock": "Unlocks once you have a reliable lead source with known lead volume and a known lead-to-customer rate.",
+        "focus": "Measure each step, fix the biggest drop-off, and increase revenue per customer.",
+        "success": "A measurable lift in conversion or lifetime value from the same amount of traffic."
       },
       "scale": {
         "label": "Scale",
         "bottleneck": "Unit economics or delivery capacity blocks growth.",
         "objective": "Predictable acquisition with healthy CAC/LTV and delivery that holds under volume.",
-        "milestone": "Profitable scaling channel + fulfillment capacity."
+        "milestone": "Profitable scaling channel + fulfillment capacity.",
+        "summary": "The journey converts, but growth is capped by unit economics or delivery capacity rather than demand.",
+        "typical": "Numbers are known and the funnel works, yet spending more doesn't reliably produce more profit — or delivery starts to strain.",
+        "unlock": "Unlocks once you can show a measurable improvement in conversion or lifetime value across the journey.",
+        "focus": "Turn spend into predictable acquisition with healthy CAC/LTV, and make delivery hold at higher volume.",
+        "success": "One profitable acquisition channel you can increase spend on, with fulfilment that keeps quality intact."
       },
       "systemize": {
         "label": "Systemize",
         "bottleneck": "Business relies on the founder for daily execution.",
         "objective": "Recurring processes documented and delegated.",
-        "milestone": "One full week without owner intervention."
+        "milestone": "One full week without owner intervention.",
+        "summary": "Growth works, but the business still depends on you for daily execution.",
+        "typical": "Profitable and predictable acquisition, yet key processes live in the founder's head and nothing runs long without them.",
+        "unlock": "Unlocks once you have a profitable scaling channel and delivery capacity that holds under volume.",
+        "focus": "Document, delegate and automate the recurring work so the business runs without you.",
+        "success": "A full week of normal operations without owner intervention."
       }
     },
     "q": {
@@ -638,6 +663,21 @@
         "opt67": "Most core processes",
         "opt100": "All key processes documented & owned"
       }
+    },
+    "ladder": {
+      "about": "About this stage",
+      "current": "Current stage",
+      "completed": "Completed",
+      "locked": "Locked",
+      "lockedHint": "Unlocks after the previous stage",
+      "whatIsIt": "What this stage is",
+      "typical": "What a business in this stage looks like",
+      "unlock": "What must be achieved to unlock it"
+    },
+    "stageSummary": {
+      "why": "Why you're here",
+      "focus": "Focus of this stage",
+      "success": "What success looks like"
     }
   }
 }

@@ -199,17 +199,18 @@ function PlanRow({
   const isCompleted = status === "completed";
 
   const containerClass = [
-    "flex gap-3 p-3 rounded-lg border bg-background/40 transition-colors",
+    "flex gap-3 p-3 rounded-lg border transition-colors",
     isFocus
       ? "border-primary/60 bg-primary/5 shadow-sm ring-1 ring-primary/20"
-      : "border-border",
-    isLocked ? "opacity-60" : "",
+      : isLocked
+        ? "border-dashed border-border bg-muted/20"
+        : "border-border bg-background/40",
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <li className={containerClass}>
+    <li className={containerClass} aria-disabled={isLocked || undefined}>
       <div
         className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold mt-0.5 ${
           isCompleted
@@ -229,15 +230,26 @@ function PlanRow({
       } />
 
       <div className="flex-1 min-w-0">
-        <div className={`font-medium text-foreground ${status === "completed" ? "line-through opacity-70" : ""}`}>
+        <div
+          className={`font-medium ${
+            status === "completed"
+              ? "text-foreground line-through opacity-70"
+              : isLocked
+                ? "text-muted-foreground"
+                : "text-foreground"
+          }`}
+        >
           {task.title}
         </div>
         {task.description && (
-          <div className="text-sm text-muted-foreground mt-0.5">{task.description}</div>
+          <div className={`text-sm mt-0.5 ${isLocked ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+            {task.description}
+          </div>
         )}
         {isLocked && (
-          <div className="text-xs text-muted-foreground mt-1 italic">
-            Complete the previous step to unlock this.
+          <div className="mt-2 inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground">
+            <Lock className="w-3 h-3" />
+            Becomes available after you complete the previous step
           </div>
         )}
 
@@ -255,6 +267,23 @@ function PlanRow({
           const buildGuideUrl = normalizeExternalUrl(task.build_guide_ref);
           const hasCoachPrompt = Boolean(task.coach_prompt_ref);
           if (resolved.length === 0 && !buildGuideUrl && !hasCoachPrompt) return null;
+
+          // Locked tasks show their resources as inert, non-clickable chips so
+          // the user can see what's coming without being able to act on it.
+          if (isLocked) {
+            return (
+              <div className="flex flex-wrap gap-2 mt-2 items-center">
+                {resolved.map((r, i) => (
+                  <DisabledChip key={i}>{r.label ?? r.ref}</DisabledChip>
+                ))}
+                {buildGuideUrl && (
+                  <DisabledChip icon={BookOpen}>Open Build Guide</DisabledChip>
+                )}
+                {hasCoachPrompt && <DisabledChip icon={MessageCircle}>Ask Coach</DisabledChip>}
+              </div>
+            );
+          }
+
           return (
             <div className="flex flex-wrap gap-2 mt-2 items-center">
               {resolved.map((r, i) => (
@@ -310,6 +339,7 @@ function PlanRow({
           );
         })()}
 
+
         {!isLocked && (
           <RowActions
             status={status}
@@ -324,6 +354,26 @@ function PlanRow({
   );
 }
 
+
+/** Inert, non-clickable version of a task action chip (locked tasks). */
+function DisabledChip({
+  icon: Icon,
+  children,
+}: {
+  icon?: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      aria-disabled="true"
+      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-dashed border-border bg-muted/40 text-muted-foreground/70 cursor-not-allowed select-none"
+    >
+      {Icon && <Icon className="w-3 h-3" />}
+      {children}
+      <Lock className="w-3 h-3 opacity-70" />
+    </span>
+  );
+}
 
 function StatusIcon({
   status,

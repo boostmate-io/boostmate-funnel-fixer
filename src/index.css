@@ -38,6 +38,13 @@
     --input: 220 13% 91%;
     --ring: 252 100% 64%;
 
+    /* Growth Roadmap stage identities */
+    --stage-validate: 24 90% 52%;
+    --stage-attract: 199 89% 48%;
+    --stage-optimize: 262 83% 58%;
+    --stage-scale: 160 84% 39%;
+    --stage-systemize: 221 39% 30%;
+
     --radius: 0.75rem;
 
     --sidebar-background: 0 0% 100%;
