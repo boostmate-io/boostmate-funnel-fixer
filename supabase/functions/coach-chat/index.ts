@@ -8,8 +8,10 @@ import {
   BLUEPRINT_FIELDS,
   BLUEPRINT_SUB_BLOCKS,
   renderBlueprintFieldPathsPrompt,
+  renderBlueprintStructurePrompt,
   type BlueprintFieldKind,
-} from "../_shared/blueprintSchema.ts";
+} from "../_shared/blueprintRegistry.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -160,10 +162,13 @@ ${GUIDED_WALKTHROUGH}`;
 
 
 
-// The prompt fragment listing every writable field path is generated from the
-// shared blueprint schema. To add a field, edit
-// supabase/functions/_shared/blueprintSchema.ts — this string updates itself.
+// Prompt fragments generated from the Business Blueprint Registry. To add,
+// rename or remove a Blueprint field, edit
+// supabase/functions/_shared/blueprintRegistry.ts — these strings update
+// themselves and the UI reads the same definitions.
 const BLUEPRINT_FIELD_PATHS = renderBlueprintFieldPathsPrompt();
+const BLUEPRINT_STRUCTURE = renderBlueprintStructurePrompt();
+
 
 // In-memory cache for admin-editable prompts (per edge instance, 60s TTL).
 type KnowledgeBlock = { name: string; content: string };
@@ -435,13 +440,17 @@ function buildSystemPrompt(
 
   if (context?.scope === "blueprint.field") {
     parts.push(prompts.field);
+    parts.push(BLUEPRINT_STRUCTURE);
   } else if (context?.scope === "blueprint.section") {
     parts.push(prompts.section);
+    parts.push(BLUEPRINT_STRUCTURE);
     parts.push(BLUEPRINT_FIELD_PATHS);
   } else if (context?.scope === "global") {
     parts.push(prompts.global);
+    parts.push(BLUEPRINT_STRUCTURE);
     parts.push(BLUEPRINT_FIELD_PATHS);
   }
+
 
   // Admin-curated knowledge blocks (any instruction block linked to the
   // coach-chat AI action whose name is NOT one of the four reserved prompt
@@ -1596,6 +1605,24 @@ Deno.serve(async (req) => {
     if (conv.user_id !== userId) return jsonResponse({ error: "Forbidden" }, 403);
 
     const subAccountId = conv.sub_account_id as string;
+
+    // ---------------------------------------------------------------------
+    // Authoritative Blueprint context.
+    // The client may send a partial (field- or section-scoped) snapshot. The
+    // Coach must always reason over the COMPLETE current Blueprint for this
+    // account, so we load the full row server-side and override the snapshot.
+    // Write scope is unchanged — it stays limited to the active field/section.
+    // ---------------------------------------------------------------------
+    const { data: blueprintRow } = await supabase
+      .from("business_blueprints")
+      .select("*")
+      .eq("sub_account_id", subAccountId)
+      .maybeSingle();
+
+    if (blueprintRow && context?.businessContext) {
+      context.businessContext.blueprintSnapshot = blueprintRow;
+    }
+
 
     // Load memory facts + previously handled Blueprint paths + active Growth assessment
     const [{ data: memoryRows }, { data: decisionRows }, { data: growthRow }] = await Promise.all([

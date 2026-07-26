@@ -6,6 +6,11 @@
 // =============================================================================
 
 import { supabase } from "@/integrations/supabase/client";
+import {
+  BLUEPRINT_COLUMNS,
+  BLUEPRINT_FIELD_BY_PATH,
+  BLUEPRINT_LISTS,
+} from "@shared/blueprintRegistry";
 
 export interface BlueprintWrite {
   /** Dot-path relative to the blueprint row, e.g. "customer_clarity.avatar_who"
@@ -17,19 +22,24 @@ export interface BlueprintWrite {
   value: string;
 }
 
-type BlueprintPatch = {
-  customer_clarity?: Record<string, any>;
-  offer_stack?: Record<string, any>;
-  growth_system?: Record<string, any>;
-  proof_authority?: Record<string, any>;
-};
+type BlueprintPatch = Record<string, Record<string, any>>;
 
-const ROOT_COLUMNS = new Set([
-  "customer_clarity",
-  "offer_stack",
-  "growth_system",
-  "proof_authority",
-]);
+// Columns the registry owns, plus the legacy `growth_system` column that is
+// still present on the row.
+const ROOT_COLUMNS = new Set<string>([...BLUEPRINT_COLUMNS, "growth_system"]);
+
+const WRITABLE_LIST_PREFIXES = BLUEPRINT_LISTS.filter((l) => l.aiWritable).map((l) => l.basePath);
+
+/**
+ * A write is accepted when the registry knows the exact path, or when it
+ * targets an item of a registry-declared repeatable list at ANY index
+ * (the registry only enumerates the first N indices for the prompt).
+ */
+function isWritablePath(path: string): boolean {
+  const field = BLUEPRINT_FIELD_BY_PATH[path];
+  if (field) return field.aiWritable;
+  return WRITABLE_LIST_PREFIXES.some((prefix) => /^\d+\./.test(path.slice(prefix.length + 1)) && path.startsWith(`${prefix}.`));
+}
 
 const isIndex = (segment: string) => /^\d+$/.test(segment);
 
@@ -38,6 +48,7 @@ const BOOLEAN_PATHS = new Set([
   "offer_stack.pricing.recurring_enabled",
   "offer_stack.pricing.premium_enabled",
 ]);
+
 
 function coerceForPath(path: string, value: any): any {
   if (BOOLEAN_PATHS.has(path)) {
@@ -328,10 +339,11 @@ export async function applyBlueprintWrites(
     return { applied: ecoApplied };
   }
 
-  // 1) Load current row
+  // 1) Load current row — every registry column plus legacy growth_system.
+  const selectColumns = ["id", ...ROOT_COLUMNS].join(", ");
   const { data: row, error: loadErr } = await supabase
     .from("business_blueprints")
-    .select("id, customer_clarity, offer_stack, growth_system, proof_authority")
+    .select(selectColumns)
     .eq("sub_account_id", subAccountId)
     .maybeSingle();
 
@@ -340,12 +352,10 @@ export async function applyBlueprintWrites(
   }
 
   // 2) Build patch column-by-column
-  const patch: BlueprintPatch = {
-    customer_clarity: { ...(row.customer_clarity as any) },
-    offer_stack: { ...(row.offer_stack as any) },
-    growth_system: { ...(row.growth_system as any) },
-    proof_authority: { ...(row.proof_authority as any) },
-  };
+  const patch: BlueprintPatch = {};
+  for (const column of ROOT_COLUMNS) {
+    patch[column] = { ...(((row as any)[column] as any) ?? {}) };
+  }
 
   let applied = 0;
   for (const w of rest) {
@@ -353,9 +363,15 @@ export async function applyBlueprintWrites(
     if (segments.length < 2) continue;
     const [root, ...tail] = segments;
     if (!ROOT_COLUMNS.has(root)) continue;
-    setDeep((patch as any)[root], tail, coerceForPath(w.path, w.value));
+    // Registry is the source of truth for what the Coach may write.
+    if (root !== "growth_system" && !isWritablePath(w.path)) {
+      console.warn(`[applyBlueprintWrites] rejected unknown path "${w.path}"`);
+      continue;
+    }
+    setDeep(patch[root], tail, coerceForPath(w.path, w.value));
     applied++;
   }
+
 
   normalizeFrameworkPillars(patch);
   normalizeOfferStackLists(patch);
@@ -366,7 +382,7 @@ export async function applyBlueprintWrites(
   const { error: updErr } = await supabase
     .from("business_blueprints")
     .update(patch as any)
-    .eq("id", row.id);
+    .eq("id", (row as any).id);
 
   if (updErr) return { applied: ecoApplied, error: updErr.message };
 

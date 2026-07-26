@@ -1,174 +1,79 @@
-# Growth Architecture V2.1 — Final Implementation Plan (r3)
+## Business Blueprint Context Engine V2 — one registry, two consumers
 
-Final locked scope. Funnel Containers are the canvas primitive, external channels + upstream funnels are unified under one **Traffic Sources** configuration on the funnel itself, and the funnel owns its own status.
+Scope: the Business Blueprint module only (Customer Clarity, Offer Design, Brand Strategy, Authority & Content). Growth Roadmap, Growth Architecture, Funnels, Copy Documents and Analytics stay untouched. No instruction-block or coaching-behaviour changes.
 
----
+Approved safeguards, now part of the plan:
+- **Zero visible change.** Tab structure, field order, labels, helper text, accordions, input widgets and every progress percentage must stay identical. The only intentional behaviour change is the confirmed bug fix below (Brand Strategy Coach writes were silently dropped).
+- **Full data, scoped writes.** Field- and section-scope Coach conversations receive the *complete* current Blueprint for the account, while the write scope stays limited to the active field/section exactly as today.
 
-## 1. Data model
+### Verified current state (why this is needed)
 
-### 1a. `funnels` gains a `status` column (single source of truth)
+- `supabase/functions/_shared/blueprintSchema.ts` is the only definition the Coach can write to, but only `clarityConfig.ts` derives from it. `brandStrategyConfig.ts`, the Offer Design tab configs, `proofAuthorityTypes.ts` and `growthSystemTypes.ts` are independent hardcoded definitions.
+- Brand Strategy has no fields in the shared schema and `applyBlueprintWrites` doesn't even select the `brand_strategy` column — Coach proposals there can never be applied (the confirmed bug).
+- The schema still exposes `proof_authority.objections.*` and `growth_system.*`, which the V3/V2.1 passes removed from the UI.
+- Snapshots are partial: `CustomerClaritySection` sends only `{ customer_clarity }`, `BrandIdentitySection` only `{ brand_strategy }`, `SectionHelpCoach` sends `null`.
+- Progress is computed by four separate bespoke functions.
 
+### 1. The Registry (one shared module, no code generation)
+
+`supabase/functions/_shared/blueprintRegistry.ts`. The `@shared/*` alias already exists in `vite.config.ts`, `tsconfig.json` and `tsconfig.app.json`, so the **same file** is imported by the UI (`@shared/blueprintRegistry`) and by the `coach-chat` edge function. This is simpler and safer than the generator + CI staleness check in the earlier draft: there is literally one file, so drift is impossible.
+
+Shape:
+
+```text
+BlueprintRegistry
+  tabs[]        id, label, column, iconKey, progressAggregate
+    subBlocks[] id, label, description, aliases[], iconKey, progress rule
+      fields[]  path, key, label, labelTemplate, helper, placeholder,
+                kind (text | textarea | tags | suggested-tags | chips-single |
+                      chips-multi | bullet-list | colors),
+                options[], suggestions[], fullWidth, rows,
+                aliases[], aiWritable, countsTowardProgress
+      lists[]   basePath, label, itemLabel, itemFields[], aiIndexedCount,
+                suggestedCount, aiWritable, countsTowardProgress
 ```
-status  text  NOT NULL  DEFAULT 'building'
-        CHECK (status IN ('building','live','paused','archived'))
-```
-Backfill: all existing funnels → `'building'`. Analytics, Growth Architecture, and the Funnel list all read this column.
 
-### 1b. New table — `funnel_connections`
+Pure data only (no React, no icons, no Supabase) so Deno can import it; icons are `iconKey` strings resolved in the UI. Business-type-dependent Customer Clarity labels are stored as `labelTemplate` with `{noun}`, `{nounSingular}`, `{Noun}`, `{NounSingular}`, `{notFitSuffix}` tokens, so personalization stays identical without duplicating labels.
 
-Represents "target funnel receives traffic from source funnel". No type, no metadata beyond ordering.
+Derived exports: `BLUEPRINT_FIELDS` (flat + expanded list item paths), `BLUEPRINT_FIELD_BY_PATH/KEY`, `BLUEPRINT_SUB_BLOCKS`, `BLUEPRINT_COLUMNS`, `renderBlueprintFieldPathsPrompt()`, `renderBlueprintStructurePrompt()`, and the progress helpers.
 
-```
-id                uuid PK
-sub_account_id    uuid FK sub_accounts (cascade)  NOT NULL
-source_funnel_id  uuid FK funnels (cascade)       NOT NULL
-target_funnel_id  uuid FK funnels (cascade)       NOT NULL
-sort_order        int DEFAULT 0
-created_at, updated_at timestamptz
-CHECK (source_funnel_id <> target_funnel_id)
-UNIQUE (source_funnel_id, target_funnel_id)
-```
-Standard GRANTs, RLS via `is_sub_account_member(auth.uid(), sub_account_id)`.
+### 2. Progress — identical numbers
 
-### 1c. `growth_architecture_systems` becomes a thin route → funnel record
+Registry declares *which* rule applies per sub-block:
+- `units` — every field/list flagged `countsTowardProgress` is one equally-weighted unit. Reproduces Customer Clarity (4/4/3/3), Brand Strategy (4/3/3/3) and Authority & Content (4 + 4 + 2 pooled units) exactly.
+- `custom` + `ruleId` — the four weighted Offer Design rules (`calcAngleProgress`, `calcStackProgress`, `calcPricingProgress`, `calcEcosystemProgress`) stay as implementations in the UI layer and are referenced by id, because their weighting cannot be expressed as equal units without changing the displayed percentages.
+Tab totals use the declared `progressAggregate` (`average` for Clarity/Offer/Brand, `pooled` for Authority & Content) to match today's math.
 
-- `funnel_id` remains the primary identity of a V2.1 row.
-- Relax `NOT NULL` on `target_offer_id` (offer flows from `funnels.linked_offer_id`).
-- The DB `status` column and `source_offer_id` are kept but ignored by the UI.
-- Drop trigger `validate_growth_architecture_route` (offer-relationship prerequisite is gone).
+### 3. UI consumes the Registry
 
-### 1d. Deprecate, don't drop
+- `clarityConfig.ts` and `brandStrategyConfig.ts` become thin adapters that read the registry and layer on icons and business-type copy.
+- `types.ts` (`CLARITY_FIELDS`, `calculateSubBlockProgress`, `calculateClarityProgress`), `calcBrandTabProgress`, `calcBrandIdentityProgress` and `calcProofAuthorityProgress` are re-implemented on top of the registry helpers, keeping their existing exported signatures so no component needs restructuring.
+- Offer Design and Authority & Content editors keep their bespoke accordion components unchanged; the registry supplies their field/list metadata for the Coach, write validation and progress.
 
-`offer_relationships` — no UI writes; retained one release for rollback. `OfferRelationshipsSelector` removed.
+### 4. Coach context
 
-### 1e. Backfill
+- `coach-chat` imports the registry directly and loads the **full `business_blueprints` row** for the conversation's sub-account server-side, using it as the Blueprint snapshot for every scope (field, section, global). Partial/null client snapshots are no longer trusted.
+- The system prompt gains the registry-generated structure map plus the existing field-path catalogue, so the Coach always knows both the current structure and the user's data.
+- Write scoping is unchanged: the existing `targetRootPrefix` tab guard, sub-block scoping, `allowedPaths` and handled-path rules continue to limit writes to the active field/section.
+- Instruction blocks (`coach:base`, `coach:blueprint-field`, `coach:blueprint-section`, `coach:global`, knowledge blocks, task blocks) load exactly as today; none are rewritten.
+- Client-side context builders stop assembling partial snapshots.
 
-For each `growth_architecture_channels` row on a route that already has a `funnel_id`, keep it in place — `growth_architecture_channels` continues to be the store for a funnel's external channels (see §2). No data migration needed for external channels.
+### 5. Write-path parity
 
-For each existing `offer_relationships` row where both endpoints resolve to built funnels in the same workspace, insert a `funnel_connections` row (source → target). Unmappable rows are skipped; source data is preserved.
+`applyBlueprintWrites` derives its root columns and writable paths from the registry and adds the missing `brand_strategy` column. Stale writable paths (`proof_authority.objections.*`, `growth_system.*`) disappear because the registry no longer declares them. `blueprintSchema.ts` is retired and replaced by a thin derived facade (or removed once imports are updated), so no second definition remains.
 
-Single non-destructive migration.
+### Sequencing
 
----
+1. Registry module encoding today's real fields for all four tabs (including Brand Strategy).
+2. UI adapters + registry-driven progress.
+3. `coach-chat` on the registry + server-side full-Blueprint loading; simplify client context builders.
+4. Write-path parity and retirement of the old schema file.
 
-## 2. Traffic Sources — one config per funnel
+### Verification and reporting
 
-A funnel's traffic configuration is a single UI concept with two groups:
+Typecheck, then for each of the four tabs: confirm identical fields, labels, inputs, accordions and progress percentages, and apply one AI Coach write (including Brand Strategy). Final report lists files added/changed/retired, any behaviour that could not remain identical, per-tab verification results, and the four Coach write results.
 
-- **External** — checkboxes of acquisition channels from `acquisition_channels` (Facebook, Google, LinkedIn, Organic, Referral, …). Persisted through the existing `growth_architecture_channels` table, scoped to the funnel's route row. Primary vs additional is preserved (first checked = primary, rest = additional, in selection order) but not surfaced as a separate step — it's implicit.
-- **Funnels** — checkboxes of other funnels in the same workspace. Persisted as `funnel_connections` rows where `target_funnel_id = this funnel` and `source_funnel_id = each checked funnel`.
+### Technical notes
 
-Consequences:
-- No standalone "Connects to…" / "Next Funnels" UI anywhere. Funnel-to-funnel edges are derived entirely from what a downstream funnel selects as its upstream funnels.
-- Editing Traffic Sources is the only way to add or remove funnel-to-funnel connections.
-- Selecting a funnel here immediately creates the `funnel_connections` row (and the corresponding canvas edge); unchecking removes it.
-
-Two entry points, same shared component:
-
-- **Growth Architecture** → funnel card "Edit Traffic Sources" opens the config dialog.
-- **Funnel Builder** → toolbar "Traffic Sources" opens the same dialog.
-
-Component: `FunnelTrafficSourcesDialog.tsx` with two accordion groups (External, Funnels). Backed by a new hook `useFunnelTrafficSources(funnelId)` that reads/writes both `growth_architecture_channels` and `funnel_connections` transactionally from the client (parallel mutations, single toast, single invalidation).
-
----
-
-## 3. Growth Map — Funnel Containers
-
-The map renders exactly one node per funnel: a **Funnel Container**.
-
-Container contents (top → bottom):
-
-- Header: funnel name.
-- Status pill: `Building / Live / Paused / Archived` (from `funnels.status`), color-coded.
-- Linked offer: tier chip + offer name (from `funnels.linked_offer_id` joined to `offers`).
-- External traffic sources: list of channels for this funnel (primary marked, additional listed below). Empty state: "No external channels".
-
-Internal funnel-to-funnel relationships are **never** rendered inside a container — they're only edges between containers.
-
-**Edges**: exactly one edge per `funnel_connections` row, from source container's bottom handle to target container's top handle. Uniform styling (primary stroke, arrow marker). Color/dash reserved for later analytics overlay.
-
-**Layout**: existing dagre TB layout, with container size estimated from channel count (`height ≈ 120 + channels * 20`) so edge routing stays correct.
-
-**Interactivity**: read-only. No drag-to-connect on the canvas (traffic sources are the only editor). Clicking a container opens its funnel card action drawer (existing pattern).
-
-**Orphans**: containers without incoming or outgoing connections still render inline on the map — the separate "orphan offers" grid is removed.
-
-File impact: `GrowthMap.tsx` largely rewritten; new `FunnelContainerNode.tsx` custom node type.
-
----
-
-## 4. Funnel status — funnel is the source of truth
-
-- On successful `start-building-route`, the created funnel's `status = 'building'`.
-- Funnel Builder toolbar adds a **Status** dropdown (`Building / Live / Paused / Archived`) that writes directly to `funnels.status`. RLS scoped by `sub_account_id`.
-- Growth Architecture container pill and Funnel List badge both read the same column — no local override, no derived state override.
-- `deriveRouteState` is retired; wherever we currently compute a route state, we read `funnels.status`. Routes without a funnel display "Not built" as the sole non-status label.
-
----
-
-## 5. Offer Ecosystem cleanup
-
-- Remove `<OfferRelationshipsSelector>` from `OfferEcosystemTab.tsx`.
-- Delete `OfferRelationshipsSelector.tsx`.
-- Keep `useOfferRelationships` unused for one release; drop with the follow-up `offer_relationships` migration.
-
----
-
-## 6. Navigation — Growth Architecture as a top-level module
-
-- `DashboardSidebar.tsx`: add top-level `Growth Architecture` entry after Business Blueprint; remove `growth-system` from Blueprint submenu.
-- `BusinessBlueprintModule.tsx`: drop the `growth-system` section mount.
-- `BlueprintOverview.tsx`: drop `growthProgress`.
-- `Dashboard.tsx`: register `"growth-architecture"` module case → new `GrowthArchitectureModule.tsx` wrapper that mounts the section full-width.
-- Existing custom events (`boostmate:open-funnel`, etc.) reused.
-
----
-
-## 7. Existing users
-
-- Migration + backfill run in one transaction.
-- Every existing funnel gets `status='building'` and stays visible.
-- Existing `growth_architecture_channels` rows continue to define each funnel's External traffic sources unchanged.
-- Any inferable funnel-to-funnel connections from `offer_relationships` are seeded into `funnel_connections`; the rest are silently skipped and the source table is retained one release.
-- Funnel Builder, build guides, task progress, analytics entries are untouched.
-
----
-
-## 8. Future compatibility (Analytics)
-
-The Funnel Container is the natural attribution surface:
-- Container id === `funnels.id` — same id already used by `funnel_analytics_entries` / `funnel_step_metrics`.
-- Overlay revenue / spend / conversion into the container header; overlay channel-level metrics next to each External row.
-- Overlay ascension / cross-funnel conversion onto `funnel_connections` edges.
-- No new canvas concepts required.
-
----
-
-## 9. Risks
-
-**Technical**
-- Variable container height must feed accurate dimensions to dagre — mitigated by size estimator + post-render measurement.
-- `useFunnelTrafficSources` performs two parallel writes (channels + connections) client-side; must handle partial failure with rollback toast and re-invalidation.
-- Nullable `target_offer_id` needs an audit of every `select("target_offer_id")` in hooks/UI.
-
-**UX**
-- Users familiar with seeing channel nodes on the map need to discover them inside containers — mitigated by an inline first-load hint.
-- Blueprint no longer shows Growth Architecture progress — acknowledged in release notes.
-
-**Architectural**
-- `growth_architecture_systems` briefly holds two identities (pre-funnel routes vs V2.1 rows). UI filters to `funnel_id IS NOT NULL`; older rows continue to power "Start Building".
-- `offer_relationships` and `funnel_connections` coexist one release; drop scheduled in a follow-up migration.
-
----
-
-## Technical notes
-
-- New: `src/lib/growth-architecture/useFunnelConnections.ts`, `useFunnelTrafficSources.ts`.
-- New: `src/components/growth-architecture/FunnelContainerNode.tsx`, `FunnelTrafficSourcesDialog.tsx`, `GrowthArchitectureModule.tsx`.
-- Move: `src/components/business-blueprint/growth-architecture/*` → `src/components/growth-architecture/*`; update imports.
-- Rewrite: `GrowthMap.tsx` — one node type (`FunnelContainerNode`), edges from `funnel_connections` only.
-- Edit: `FunnelDesigner.tsx` toolbar (Status dropdown + Traffic Sources button), `RouteCard.tsx` (Edit Traffic Sources, remove old "Connects to…"), `OfferEcosystemTab.tsx` (remove relationships selector), `DashboardSidebar.tsx` (nav), `BusinessBlueprintModule.tsx` (drop section), `BlueprintOverview.tsx` (drop progress), `Dashboard.tsx` (new module case), `FunnelList.tsx` (status badge from column).
-- Delete: `OfferRelationshipsSelector.tsx`, `EditRouteDialog.tsx` (replaced by Traffic Sources dialog), `deriveStatus.ts`.
-- Migration: add `funnels.status`; create `funnel_connections` + GRANTs + RLS; backfill from `offer_relationships`; drop `validate_growth_architecture_route` trigger; relax `target_offer_id` NOT NULL.
-- Edge function: `start-building-route` sets funnel `status='building'` on insert; no other contract change.
-- Follow-up (later): drop `offer_relationships`, `useOfferRelationships`, `growth_architecture_systems.source_offer_id` and unused `status`.
+- No database migration; existing Blueprint JSON and stored conversations remain valid because field paths are unchanged.
+- Edge functions never import from `src/`; the shared direction is `_shared/` → both runtimes.

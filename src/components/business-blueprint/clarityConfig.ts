@@ -1,8 +1,9 @@
-import { User, AlertTriangle, Target, ArrowRightLeft, type LucideIcon } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 import type { ClaritySubBlock, CustomerClarityData } from "./types";
 import { getBusinessType, type BusinessTypeId } from "./businessTypes";
 import { getFieldCopy } from "./clarityCopy";
-import { getBlueprintFieldByKey } from "@shared/blueprintSchema";
+import { getRegistrySubBlock, renderLabel, type LabelTokens } from "@shared/blueprintRegistry";
+import { resolveIcon, toFieldDef } from "./registryUi";
 
 export type FieldType =
   | "textarea"
@@ -41,9 +42,9 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const pickAvatar = (arr: string[], i: number) => arr[i % arr.length] || arr[0];
 
 /**
- * Build the Customer Clarity config dynamically based on the workspace's business type.
- * Personalizes labels, placeholders, helper text, chips, examples and AI prompts
- * for ALL 22 fields across all 4 sub-blocks. Never auto-fills user content.
+ * Build the Customer Clarity config from the Blueprint Registry (single source
+ * of truth) and personalize labels, placeholders and helper text for the
+ * workspace's business type. Never auto-fills user content.
  */
 export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null): SubBlockConfig[] {
   const bt = getBusinessType(businessTypeId);
@@ -51,52 +52,45 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
   const nounSingular = bt.customerNounSingular;
   const Noun = cap(noun);
   const NounSingular = cap(nounSingular);
-  const typeLabel = bt.label.toLowerCase();
 
-  /**
-   * Build a field definition merged with niche-specific copy AND cross-checked
-   * against the shared blueprint schema (single source of truth). If a key or
-   * kind drifts from the schema, we log a warning in development so the
-   * mismatch surfaces immediately.
-   */
-  const f = (
-    base: Omit<FieldDef, "placeholder" | "helper"> & { placeholder?: string; helper?: string },
-  ): FieldDef => {
-    const schema = getBlueprintFieldByKey(base.key);
-    if (import.meta.env?.DEV) {
-      if (!schema) {
-        console.warn(`[blueprint] clarityConfig: unknown field "${base.key}" — add it to supabase/functions/_shared/blueprintSchema.ts`);
-      } else if (schema.kind !== base.type) {
-        console.warn(`[blueprint] clarityConfig: kind mismatch for "${base.key}" (UI="${base.type}", schema="${schema.kind}")`);
-      }
-    }
-    const copy = getFieldCopy(bt.id, base.key);
-    return {
-      ...base,
-      placeholder: copy.placeholder ?? base.placeholder,
-      helper: copy.helper ?? base.helper ?? schema?.helper,
-    };
+  const tokens: LabelTokens = {
+    noun,
+    nounSingular,
+    Noun,
+    NounSingular,
+    notFitSuffix: noun === "customers" ? "as a customer" : `to be your ${nounSingular}`,
   };
 
+  /** Registry field → UI FieldDef, with niche-specific copy layered on top. */
+  const fieldsOf = (subBlockId: ClaritySubBlock): FieldDef[] => {
+    const sb = getRegistrySubBlock("customer_clarity", subBlockId);
+    return (sb?.fields ?? []).map((field) => {
+      const base = toFieldDef(field, tokens);
+      const copy = getFieldCopy(bt.id, field.key as keyof CustomerClarityData);
+      return {
+        ...base,
+        placeholder: copy.placeholder ?? base.placeholder,
+        helper: copy.helper ?? base.helper,
+      } as FieldDef;
+    });
+  };
+
+  const meta = (subBlockId: ClaritySubBlock) => {
+    const sb = getRegistrySubBlock("customer_clarity", subBlockId);
+    return {
+      label: renderLabel(sb?.label ?? subBlockId, tokens),
+      icon: resolveIcon(sb?.iconKey ?? "Sparkles"),
+      description: renderLabel(sb?.description ?? "", tokens),
+      fields: fieldsOf(subBlockId),
+    };
+  };
 
   return [
     {
       id: "avatar",
-      label: `Ideal ${NounSingular} Avatar`,
-      icon: User,
-      description: `Define exactly who your ideal ${nounSingular} is — the clearer, the better.`,
+      ...meta("avatar"),
       insight: `The clearer your ${nounSingular} is, the better your copy, ads, funnels, and offers will perform. Vague audiences create weak marketing.`,
-      fields: [
-        f({ key: "avatar_who", label: `Who is your ideal ${nounSingular}?`, type: "textarea", fullWidth: true, rows: 3 }),
-        f({ key: "avatar_stage", label: "What stage or situation are they currently in?", type: "textarea", fullWidth: true, rows: 3 }),
-        f({ key: "avatar_traits", label: "Traits or mindset that define them", type: "tags" }),
-        f({
-          key: "avatar_not_fit",
-          label: `Who is NOT a good fit ${noun === "customers" ? "as a customer" : `to be your ${nounSingular}`}?`,
-          type: "textarea",
-          rows: 3,
-        }),
-      ],
+
       coachQuestions: [
         `Who do you most enjoy serving as ${noun}?`,
         `Which ${noun} get the fastest results with you?`,
@@ -118,16 +112,9 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
     },
     {
       id: "pain",
-      label: "Pain & Friction",
-      icon: AlertTriangle,
-      description: `Capture exactly what your ${nounSingular} is struggling with right now.`,
+      ...meta("pain"),
       insight: `${Noun} buy to escape pain. The deeper you understand their friction, the more your offer will feel like the obvious solution.`,
-      fields: [
-        f({ key: "pain_main_problem", label: "What is the main problem they are dealing with?", type: "textarea", fullWidth: true, rows: 2 }),
-        f({ key: "pain_daily_frustrations", label: "What frustrations do they experience because of this?", type: "textarea", rows: 3 }),
-        f({ key: "pain_already_tried", label: "What have they already tried?", type: "textarea", rows: 3 }),
-        f({ key: "pain_consequences", label: "What happens if they don't solve this?", type: "textarea", fullWidth: true, rows: 2 }),
-      ],
+
       coachQuestions: [
         `What do your ${noun} complain about most?`,
         "What keeps them up at night?",
@@ -148,15 +135,9 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
     },
     {
       id: "desire",
-      label: "Desire & Goals",
-      icon: Target,
-      description: `Map what your ${noun} want, externally and internally.`,
+      ...meta("desire"),
       insight: `${Noun} don't buy products — they buy a better version of themselves. Mapping desire is what makes your offer irresistible.`,
-      fields: [
-        f({ key: "desire_main_result", label: "What result do they want most?", type: "textarea", fullWidth: true, rows: 2 }),
-        f({ key: "desire_success_vision", label: "What would success look and feel like?", type: "textarea", rows: 4 }),
-        f({ key: "desire_why_badly", label: "Why do they want this so badly?", type: "textarea", rows: 4 }),
-      ],
+
       coachQuestions: [
         "What outcome do they want most?",
         "What does success look like in 12 months?",
@@ -177,15 +158,9 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
     },
     {
       id: "transformation",
-      label: "Transformation",
-      icon: ArrowRightLeft,
-      description: "The change your work creates: where they start, where they end up, and what has to change for them to get there.",
+      ...meta("transformation"),
       insight: `Your offer is a bridge from Point A to Point B. The clearer that bridge, the more obvious the value of working with you.`,
-      fields: [
-        f({ key: "transformation_point_a", label: "Where are they now?", type: "textarea", rows: 4 }),
-        f({ key: "transformation_point_b", label: "Where do they want to be?", type: "textarea", rows: 4 }),
-        f({ key: "transformation_process", label: "What needs to change for them to get there?", helper: "The key shifts, milestones, or problems that need to be solved between their current and desired state.", type: "textarea", fullWidth: true, rows: 4 }),
-      ],
+
       coachQuestions: [
         "Where are they today, exactly?",
         "Where do they want to be in 12 months?",

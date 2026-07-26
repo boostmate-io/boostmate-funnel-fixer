@@ -3,6 +3,10 @@
 // Stored in business_blueprints.proof_authority (jsonb).
 // =============================================================================
 
+import { getRegistryTab, calcTabPooledUnitsProgress } from "@shared/blueprintRegistry";
+
+
+
 export interface FounderStory {
   id: string;
   title?: string;
@@ -241,27 +245,14 @@ export function normalizeProofAuthority(raw: any): ProofAuthorityData {
   };
 }
 
-const hasText = (v?: string) => !!(v && v.trim().length > 0);
-
+/**
+ * Progress is derived from the Business Blueprint Registry: every field and
+ * repeatable list in this tab flagged `countsTowardProgress` is one pooled
+ * unit (currently 4 authority + 4 social proof lists + 2 story/lesson lists).
+ */
 export function calcProofAuthorityProgress(d: ProofAuthorityData): number {
-  let score = 0;
-  let total = 0;
-  // Authority
-  total += 4;
-  if (d.authority.authority_types.length > 0) score++;
-  if (d.authority.credibility_foundations.length > 0) score++;
-  if (hasText(d.authority.trust_reason)) score++;
-  if (hasText(d.authority.signature_proof)) score++;
-  // Social proof
-  total += 4;
-  if (d.social_proof.metrics.length > 0) score++;
-  if (d.social_proof.client_results.length > 0) score++;
-  if (d.social_proof.testimonials.length > 0) score++;
-  if (d.social_proof.authority_assets.length > 0) score++;
-  // V3: Objections & Beliefs removed from this section (moved to offer level).
-  // Stories & Lessons
-  total += 2;
-  if (d.authority.founder_stories.length > 0) score++;
-  if (d.educational.lessons.length > 0) score++;
-  return Math.round((score / total) * 100);
+  const tab = getRegistryTab("proof_authority");
+  if (!tab) return 0;
+  return calcTabPooledUnitsProgress(d, tab, "proof_authority");
 }
+
