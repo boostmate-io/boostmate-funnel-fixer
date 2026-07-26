@@ -382,7 +382,7 @@ export async function applyBlueprintWrites(
   const { error: updErr } = await supabase
     .from("business_blueprints")
     .update(patch as any)
-    .eq("id", row.id);
+    .eq("id", (row as any).id);
 
   if (updErr) return { applied: ecoApplied, error: updErr.message };
 
