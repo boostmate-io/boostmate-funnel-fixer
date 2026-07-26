@@ -1597,6 +1597,24 @@ Deno.serve(async (req) => {
 
     const subAccountId = conv.sub_account_id as string;
 
+    // ---------------------------------------------------------------------
+    // Authoritative Blueprint context.
+    // The client may send a partial (field- or section-scoped) snapshot. The
+    // Coach must always reason over the COMPLETE current Blueprint for this
+    // account, so we load the full row server-side and override the snapshot.
+    // Write scope is unchanged — it stays limited to the active field/section.
+    // ---------------------------------------------------------------------
+    const { data: blueprintRow } = await supabase
+      .from("business_blueprints")
+      .select("*")
+      .eq("sub_account_id", subAccountId)
+      .maybeSingle();
+
+    if (blueprintRow && context?.businessContext) {
+      context.businessContext.blueprintSnapshot = blueprintRow;
+    }
+
+
     // Load memory facts + previously handled Blueprint paths + active Growth assessment
     const [{ data: memoryRows }, { data: decisionRows }, { data: growthRow }] = await Promise.all([
       supabase
