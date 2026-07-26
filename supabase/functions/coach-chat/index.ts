@@ -160,10 +160,13 @@ ${GUIDED_WALKTHROUGH}`;
 
 
 
-// The prompt fragment listing every writable field path is generated from the
-// shared blueprint schema. To add a field, edit
-// supabase/functions/_shared/blueprintSchema.ts — this string updates itself.
+// Prompt fragments generated from the Business Blueprint Registry. To add,
+// rename or remove a Blueprint field, edit
+// supabase/functions/_shared/blueprintRegistry.ts — these strings update
+// themselves and the UI reads the same definitions.
 const BLUEPRINT_FIELD_PATHS = renderBlueprintFieldPathsPrompt();
+const BLUEPRINT_STRUCTURE = renderBlueprintStructurePrompt();
+
 
 // In-memory cache for admin-editable prompts (per edge instance, 60s TTL).
 type KnowledgeBlock = { name: string; content: string };
