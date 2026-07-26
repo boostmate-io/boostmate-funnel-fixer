@@ -77,17 +77,18 @@ const FunnelList = ({ onOpenFunnel, onCreateNew }: FunnelListProps) => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-8 py-6 border-b border-border">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Funnels</h1>
-          <p className="text-sm text-muted-foreground mt-1">Design and manage your marketing funnels.</p>
-        </div>
-        <Button onClick={onCreateNew} className="gap-2">
-          <Plus className="w-4 h-4" /> New Funnel
-        </Button>
-      </div>
+      <PageHeader
+        title="Funnels"
+        subtitle="Design and manage your marketing funnels."
+        actions={
+          <Button onClick={onCreateNew} className="gap-2">
+            <Plus className="w-4 h-4" /> New Funnel
+          </Button>
+        }
+      />
 
-      <div className="px-8 py-4">
+      <div className="flex-1 overflow-auto">
+        <div className={`${PAGE_CONTAINER} py-8 space-y-6`}>
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -97,9 +98,7 @@ const FunnelList = ({ onOpenFunnel, onCreateNew }: FunnelListProps) => {
             className="pl-10"
           />
         </div>
-      </div>
 
-      <div className="flex-1 overflow-auto px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <p className="text-sm text-muted-foreground">Loading...</p>
