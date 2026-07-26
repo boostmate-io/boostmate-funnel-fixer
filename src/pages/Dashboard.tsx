@@ -56,7 +56,7 @@ const Dashboard = () => {
     return () => window.removeEventListener("boostmate:navigate-module", handler);
   }, []);
 
-  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "growth-architecture", "admin-accounts", "admin-ai", "admin-copy", "admin-growth", "outreach", "growth-roadmap", "clients", "funnel-audit", "overview", "settings"];
+  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "growth-architecture", "admin-accounts", "admin-ai", "admin-copy", "admin-growth", "outreach", "growth-roadmap", "overview", "settings"];
 
   usePendingGrowthClaim();
 
@@ -73,14 +73,7 @@ const Dashboard = () => {
       
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
-        <main className={`flex-1 overflow-auto ${fullHeightModules.includes(activeModule) ? "" : ""}`}>
-          {!fullHeightModules.includes(activeModule) && activeModule !== "overview" && (
-            <PageHeader
-              title={activeModule === "settings" ? t("dashboard.settings.title") : ""}
-              subtitle={t("dashboard.welcomeBack", { email: user?.email })}
-            />
-          )}
-
+        <main className="flex-1 overflow-auto">
           {activeModule === "overview" && (
             <>
               <PageHeader
@@ -95,7 +88,6 @@ const Dashboard = () => {
               </div>
             </>
           )}
-
 
           {activeModule === "growth-roadmap" && (
             <GrowthRoadmapModule onOpenModule={(m) => setActiveModule(m)} />
@@ -163,6 +155,11 @@ const Dashboard = () => {
             </div>
           )}
           {activeModule === "settings" && (
+            <>
+              <PageHeader
+                title={t("dashboard.settings.title")}
+                subtitle={t("dashboard.welcomeBack", { email: user?.email })}
+              />
             <div className={`${PAGE_CONTAINER} py-8 space-y-6`}>
 
               <div className="bg-card rounded-xl border border-border p-6 shadow-card">
@@ -181,6 +178,7 @@ const Dashboard = () => {
               <KnowledgeCenter />
               <DeleteAccountSection />
             </div>
+            </>
           )}
         </main>
       </div>
