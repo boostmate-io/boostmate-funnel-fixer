@@ -1,5 +1,7 @@
-import { Users, Package, Palette, Award, Sparkles, Pencil, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2 } from "lucide-react";
+import { Users, Package, Palette, Award, Sparkles, Pencil, ArrowRight, CheckCircle2, Settings2, Eye, Share2 } from "lucide-react";
+import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
 import { useCurrency } from "@/hooks/useCurrency";
+
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
