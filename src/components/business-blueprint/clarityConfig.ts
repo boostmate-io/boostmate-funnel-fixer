@@ -158,15 +158,9 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
     },
     {
       id: "transformation",
-      label: "Transformation",
-      icon: ArrowRightLeft,
-      description: "The change your work creates: where they start, where they end up, and what has to change for them to get there.",
+      ...meta("transformation"),
       insight: `Your offer is a bridge from Point A to Point B. The clearer that bridge, the more obvious the value of working with you.`,
-      fields: [
-        f({ key: "transformation_point_a", label: "Where are they now?", type: "textarea", rows: 4 }),
-        f({ key: "transformation_point_b", label: "Where do they want to be?", type: "textarea", rows: 4 }),
-        f({ key: "transformation_process", label: "What needs to change for them to get there?", helper: "The key shifts, milestones, or problems that need to be solved between their current and desired state.", type: "textarea", fullWidth: true, rows: 4 }),
-      ],
+
       coachQuestions: [
         "Where are they today, exactly?",
         "Where do they want to be in 12 months?",
