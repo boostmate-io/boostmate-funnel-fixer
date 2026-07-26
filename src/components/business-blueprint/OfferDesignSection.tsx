@@ -61,7 +61,7 @@ const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType,
     <div className="h-full flex flex-col">
       {/* Sub-tab navigation */}
       <div className="border-b border-border bg-card px-8">
-        <div className="max-w-6xl mx-auto flex gap-1 -mb-px overflow-x-auto">
+        <div className="max-w-[1200px] mx-auto flex gap-1 -mb-px overflow-x-auto">
           {OFFER_TABS.map((tab) => {
             const isActive = active === tab.id;
             const TabIcon = tab.icon;

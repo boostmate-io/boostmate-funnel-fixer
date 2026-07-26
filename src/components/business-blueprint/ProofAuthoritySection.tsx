@@ -666,7 +666,7 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
   return (
     <div className="h-full flex flex-col">
       <div className="border-b border-border bg-card px-8 shrink-0">
-        <div className="max-w-6xl mx-auto flex gap-1 -mb-px overflow-x-auto">
+        <div className="max-w-[1200px] mx-auto flex gap-1 -mb-px overflow-x-auto">
           {TABS.map((t) => {
             const isActive = active === t.id;
             const TIcon = t.icon;
@@ -691,7 +691,7 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto p-8">
+        <div className="max-w-[1200px] mx-auto p-8">
           <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-2 mb-1">
