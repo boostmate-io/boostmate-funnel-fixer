@@ -171,7 +171,7 @@ const BLUEPRINT_STRUCTURE = renderBlueprintStructurePrompt();
 
 
 // In-memory cache for admin-editable prompts (per edge instance, 60s TTL).
-type KnowledgeBlock = { name: string; content: string };
+type KnowledgeBlock = { name: string; content: string; scopes: string[] };
 type PromptSet = {
   base: string;
   field: string;
@@ -244,6 +244,115 @@ function renderTargetFieldMeta(path: string): string | null {
 }
 
 
+// -----------------------------------------------------------------------------
+// Scoped knowledge loading (Phase 2)
+// Knowledge blocks declare which Business Blueprint scopes they belong to via
+// `ai_instruction_blocks.blueprint_scopes`. A block with NO scopes stays global
+// (backwards compatible). Scope vocabulary:
+//   global | customer_clarity | offer_design | brand_strategy | proof_authority
+//   offer_tier:free | offer_tier:low_mid | offer_tier:high
+// -----------------------------------------------------------------------------
+export const BLUEPRINT_SCOPE_VALUES = [
+  "global",
+  "customer_clarity",
+  "offer_design",
+  "brand_strategy",
+  "proof_authority",
+  "offer_tier:free",
+  "offer_tier:low_mid",
+  "offer_tier:high",
+] as const;
+
+const TAB_BY_ROOT: Record<string, string> = {
+  customer_clarity: "customer_clarity",
+  offer_stack: "offer_design",
+  offer_ecosystem: "offer_design",
+  brand_strategy: "brand_strategy",
+  proof_authority: "proof_authority",
+};
+
+const SUB_BLOCK_TAB: Record<string, string> = Object.fromEntries(
+  BLUEPRINT_SUB_BLOCKS.map((s: any) => [s.id, s.tabId]),
+);
+
+/** Best-effort blueprint path for the current coach target. */
+function targetBlueprintPath(context: any): string {
+  const basePath = context?.target?.listSection?.basePath;
+  if (basePath && typeof basePath === "string") return basePath;
+  const rawId = context?.target?.id ? String(context.target.id) : "";
+  if (!rawId || rawId.startsWith("section:") || rawId.startsWith("list:")) return "";
+  return canonicalBlueprintPath(rawId);
+}
+
+/** Resolve the active Blueprint tab from the coach target. */
+function resolveBlueprintTab(context: any): string | null {
+  const rawId = context?.target?.id ? String(context.target.id) : "";
+  const path = targetBlueprintPath(context);
+  if (path) {
+    const tab = TAB_BY_ROOT[path.split(".")[0]];
+    if (tab) return tab;
+  }
+  if (rawId.startsWith("section:") || rawId.startsWith("list:")) {
+    const key = rawId.replace(/^(section|list):/, "");
+    if (SUB_BLOCK_TAB[key]) return SUB_BLOCK_TAB[key];
+    if (TAB_BY_ROOT[key]) return TAB_BY_ROOT[key];
+    // list ids are conventionally "<subBlockId>_<listKey>" — match the prefix.
+    const sub = Object.keys(SUB_BLOCK_TAB).find((id) => key === id || key.startsWith(`${id}_`));
+    if (sub) return SUB_BLOCK_TAB[sub];
+  }
+  return null;
+}
+
+/** Route to exactly ONE offer-tier knowledge block for Offer Design context. */
+function resolveOfferTierScope(context: any): string | null {
+  const rawId = `${context?.target?.id ?? ""} ${context?.target?.listSection?.basePath ?? ""}`;
+  const ecoMatch = /offer_ecosystem\.([a-z_]+)/.exec(rawId);
+  if (ecoMatch) {
+    const tier = ecoMatch[1];
+    if (tier === "free") return "offer_tier:free";
+    if (tier === "low_ticket" || tier === "mid_ticket") return "offer_tier:low_mid";
+    if (tier === "premium" || tier === "core" || tier === "continuity") return "offer_tier:high";
+  }
+  const bp = context?.businessContext?.blueprintSnapshot;
+  const raw = bp?.offer_stack?.pricing?.core_price;
+  const price = Number(String(raw ?? "").replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(price) || price <= 0) return null;
+  if (price < 500) return "offer_tier:free";
+  if (price < 2000) return "offer_tier:low_mid";
+  return "offer_tier:high";
+}
+
+/** The set of scopes whose knowledge blocks may be injected for this request. */
+function activeKnowledgeScopes(context: any): Set<string> {
+  const scopes = new Set<string>();
+  const scope = context?.scope;
+  if (scope === "global") {
+    scopes.add("global");
+    return scopes;
+  }
+  if (scope !== "blueprint.field" && scope !== "blueprint.section") {
+    // Non-blueprint touchpoints (copy, funnel node) keep their previous
+    // behaviour: only unscoped/global knowledge.
+    scopes.add("global");
+    return scopes;
+  }
+  const tab = resolveBlueprintTab(context);
+  if (tab) scopes.add(tab);
+  if (tab === "offer_design") {
+    const tier = resolveOfferTierScope(context);
+    if (tier) scopes.add(tier);
+  }
+  return scopes;
+}
+
+function selectKnowledgeBlocks(blocks: KnowledgeBlock[], context: any): KnowledgeBlock[] {
+  const active = activeKnowledgeScopes(context);
+  return blocks.filter((b) => {
+    if (!b.scopes || b.scopes.length === 0) return true; // unscoped = always
+    return b.scopes.some((s) => active.has(s));
+  });
+}
+
 const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = Object.fromEntries(
   BLUEPRINT_SUB_BLOCKS.map((s) => [s.id, s.fieldPaths]),
 );
@@ -272,13 +381,17 @@ async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
 
     const { data: blocks } = await supabase
       .from("ai_instruction_blocks")
-      .select("name, content")
+      .select("name, content, blueprint_scopes")
       .in("id", ids);
 
     const byName = new Map<string, string>((blocks ?? []).map((b: any) => [b.name, b.content]));
     const knowledgeBlocks: KnowledgeBlock[] = (blocks ?? [])
       .filter((b: any) => b?.name && !RESERVED_PROMPT_NAMES.has(b.name) && typeof b.content === "string" && b.content.trim().length > 0)
-      .map((b: any) => ({ name: b.name as string, content: b.content as string }));
+      .map((b: any) => ({
+        name: b.name as string,
+        content: b.content as string,
+        scopes: Array.isArray(b.blueprint_scopes) ? (b.blueprint_scopes as string[]) : [],
+      }));
     const prompts: PromptSet = {
       base: byName.get("coach:base") || PROMPT_FALLBACK.base,
       field: byName.get("coach:blueprint-field") || PROMPT_FALLBACK.field,
@@ -477,18 +590,29 @@ function buildSystemPrompt(
   }
 
 
-  // Admin-curated knowledge blocks (any instruction block linked to the
-  // coach-chat AI action whose name is NOT one of the four reserved prompt
-  // slots). Use these as expert reference material — e.g. how to build a
-  // high-ticket offer, webinar funnel playbook, VSL scripting, etc.
-  if (prompts.knowledgeBlocks && prompts.knowledgeBlocks.length > 0) {
-    const kb = prompts.knowledgeBlocks
+  // Admin-curated knowledge blocks, SCOPED to the active Blueprint context
+  // (Phase 2). Blocks declare their scopes in `blueprint_scopes`; unscoped
+  // blocks stay global for backwards compatibility.
+  const scopedKnowledge = selectKnowledgeBlocks(prompts.knowledgeBlocks ?? [], context);
+  if (scopedKnowledge.length > 0) {
+    const kb = scopedKnowledge
       .map((b) => `## ${b.name}\n${b.content}`)
       .join("\n\n");
     parts.push(
       `# Knowledge base (reference material)\nUse the material below as expert reference whenever the user's question relates to its topic. Apply it as strategic guidance — do not quote it verbatim, do not mention that you are consulting a knowledge base.\n\n${kb}`,
     );
   }
+  console.log(
+    "[coach-chat] knowledge scope:",
+    JSON.stringify({
+      scope: context?.scope ?? null,
+      target: context?.target?.id ?? null,
+      activeScopes: [...activeKnowledgeScopes(context)],
+      loaded: scopedKnowledge.map((b) => b.name),
+      knowledgeChars: scopedKnowledge.reduce((n, b) => n + b.content.length, 0),
+    }),
+  );
+
 
 
   if (context?.target) {

@@ -539,6 +539,7 @@ export type Database = {
       }
       ai_instruction_blocks: {
         Row: {
+          blueprint_scopes: string[]
           content: string
           created_at: string
           id: string
@@ -546,6 +547,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          blueprint_scopes?: string[]
           content?: string
           created_at?: string
           id?: string
@@ -553,6 +555,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          blueprint_scopes?: string[]
           content?: string
           created_at?: string
           id?: string

@@ -8,14 +8,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface InstructionBlock {
   id: string;
   name: string;
   content: string;
+  blueprint_scopes: string[] | null;
   created_at: string;
   updated_at: string;
 }
+
+/** Business Blueprint scopes a knowledge block can be assigned to. A block with
+ *  no scopes stays global (loaded in every Coach context). */
+const BLUEPRINT_SCOPES: { value: string; label: string }[] = [
+  { value: "global", label: "Business Blueprint (global)" },
+  { value: "customer_clarity", label: "Customer Clarity" },
+  { value: "offer_design", label: "Offer Design" },
+  { value: "brand_strategy", label: "Brand Strategy" },
+  { value: "proof_authority", label: "Authority & Content" },
+  { value: "offer_tier:free", label: "Offer tier — Free" },
+  { value: "offer_tier:low_mid", label: "Offer tier — Low / Mid ticket" },
+  { value: "offer_tier:high", label: "Offer tier — High ticket" },
+];
 
 interface AdminInstructionBlocksProps {
   filterActionId?: string | null;
@@ -52,6 +67,7 @@ const AdminInstructionBlocks = ({ filterActionId = null, onFilterActionChange }:
       const payload = {
         name: editing.name,
         content: editing.content || "",
+        blueprint_scopes: editing.blueprint_scopes ?? [],
       };
       if (editing.id) {
         const { error } = await supabase.from("ai_instruction_blocks").update(payload).eq("id", editing.id);
@@ -88,7 +104,7 @@ const AdminInstructionBlocks = ({ filterActionId = null, onFilterActionChange }:
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-display font-bold">Instruction Blocks</h2>
-        <Button onClick={() => setEditing({ name: "", content: "" })} size="sm">
+        <Button onClick={() => setEditing({ name: "", content: "", blueprint_scopes: [] })} size="sm">
           <Plus className="w-4 h-4 mr-1" /> New Block
         </Button>
       </div>
@@ -128,6 +144,15 @@ const AdminInstructionBlocks = ({ filterActionId = null, onFilterActionChange }:
               <BookOpen className="w-4 h-4 text-primary" />
               <div>
                 <span className="text-sm font-medium">{block.name}</span>
+                {(block.blueprint_scopes?.length ?? 0) > 0 && (
+                  <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                    {block.blueprint_scopes!.map(s => (
+                      <span key={s} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        {BLUEPRINT_SCOPES.find(o => o.value === s)?.label ?? s}
+                      </span>
+                    ))}
+                  </span>
+                )}
                 <p className="text-xs text-muted-foreground line-clamp-1 max-w-md">
                   {block.content.slice(0, 100)}{block.content.length > 100 ? "..." : ""}
                 </p>
@@ -167,6 +192,34 @@ const AdminInstructionBlocks = ({ filterActionId = null, onFilterActionChange }:
                   onChange={e => setEditing({ ...editing, content: e.target.value })}
                   className="min-h-[250px] text-sm"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Blueprint scopes</Label>
+                <p className="text-xs text-muted-foreground">
+                  Where the Coach loads this block. Leave empty to load it in every context.
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {BLUEPRINT_SCOPES.map(opt => {
+                    const selected = (editing.blueprint_scopes ?? []).includes(opt.value);
+                    return (
+                      <label key={opt.value} className="flex items-center gap-2 text-xs cursor-pointer">
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={() => {
+                            const cur = editing.blueprint_scopes ?? [];
+                            setEditing({
+                              ...editing,
+                              blueprint_scopes: selected
+                                ? cur.filter(s => s !== opt.value)
+                                : [...cur, opt.value],
+                            });
+                          }}
+                        />
+                        {opt.label}
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
               <div className="flex justify-end gap-2 pt-4 border-t border-border">
                 <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
