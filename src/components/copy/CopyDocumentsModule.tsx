@@ -250,26 +250,27 @@ const CopyDocumentsModule = () => {
   }
 
   return (
-    <div className="h-full flex flex-col p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-bold text-foreground">Copy Documents</h1>
-        <Button onClick={openPicker} size="sm" disabled={creating}>
-          <Plus className="w-4 h-4 mr-1" /> New Document
-        </Button>
-      </div>
+    <div className="h-full flex flex-col">
+      <PageHeader
+        title="Copy Documents"
+        subtitle="Create and manage your sales copy, email sequences, scripts and ads."
+        divider={false}
+        actions={
+          <Button onClick={openPicker} size="sm" disabled={creating}>
+            <Plus className="w-4 h-4 mr-1" /> New Document
+          </Button>
+        }
+      />
 
-      <Tabs value={activeType} onValueChange={setActiveType} className="flex-1 flex flex-col">
-        <TabsList className="mb-4 w-fit">
-          {DOCUMENT_TYPES.map((dt) => (
-            <TabsTrigger key={dt.type} value={dt.type} className="gap-2">
-              <dt.icon className="w-4 h-4" />
-              {dt.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <PageTabs
+        tabs={DOCUMENT_TYPES.map((dt) => ({ id: dt.type, label: dt.label, icon: dt.icon }))}
+        value={activeType}
+        onChange={setActiveType}
+      />
 
-        {DOCUMENT_TYPES.map((dt) => (
-          <TabsContent key={dt.type} value={dt.type} className="flex-1">
+      <PageBody>
+        {DOCUMENT_TYPES.filter((dt) => dt.type === activeType).map((dt) => (
+          <div key={dt.type}>
             {filtered.length === 0 ? (
               <div className="bg-card rounded-xl border border-border p-12 text-center">
                 <dt.icon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -295,9 +296,10 @@ const CopyDocumentsModule = () => {
                 gridClassName="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
               />
             )}
-          </TabsContent>
+          </div>
         ))}
-      </Tabs>
+      </PageBody>
+
 
       {/* Framework picker */}
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
