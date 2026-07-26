@@ -13,9 +13,23 @@ interface InstructionBlock {
   id: string;
   name: string;
   content: string;
+  blueprint_scopes: string[] | null;
   created_at: string;
   updated_at: string;
 }
+
+/** Business Blueprint scopes a knowledge block can be assigned to. A block with
+ *  no scopes stays global (loaded in every Coach context). */
+const BLUEPRINT_SCOPES: { value: string; label: string }[] = [
+  { value: "global", label: "Business Blueprint (global)" },
+  { value: "customer_clarity", label: "Customer Clarity" },
+  { value: "offer_design", label: "Offer Design" },
+  { value: "brand_strategy", label: "Brand Strategy" },
+  { value: "proof_authority", label: "Authority & Content" },
+  { value: "offer_tier:free", label: "Offer tier — Free" },
+  { value: "offer_tier:low_mid", label: "Offer tier — Low / Mid ticket" },
+  { value: "offer_tier:high", label: "Offer tier — High ticket" },
+];
 
 interface AdminInstructionBlocksProps {
   filterActionId?: string | null;
