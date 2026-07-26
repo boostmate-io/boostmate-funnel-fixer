@@ -1,79 +1,82 @@
-## Business Blueprint Context Engine V2 — one registry, two consumers
 
-Scope: the Business Blueprint module only (Customer Clarity, Offer Design, Brand Strategy, Authority & Content). Growth Roadmap, Growth Architecture, Funnels, Copy Documents and Analytics stay untouched. No instruction-block or coaching-behaviour changes.
+# Phase 1 — AI Coach Instruction Block Correctness Pass
 
-Approved safeguards, now part of the plan:
-- **Zero visible change.** Tab structure, field order, labels, helper text, accordions, input widgets and every progress percentage must stay identical. The only intentional behaviour change is the confirmed bug fix below (Brand Strategy Coach writes were silently dropped).
-- **Full data, scoped writes.** Field- and section-scope Coach conversations receive the *complete* current Blueprint for the account, while the write scope stays limited to the active field/section exactly as today.
+Only correctness fixes. No behaviour redesign, no new philosophy, no restructuring, no scoped loading, no new blocks.
 
-### Verified current state (why this is needed)
+## Verified current state (pre-plan reads)
 
-- `supabase/functions/_shared/blueprintSchema.ts` is the only definition the Coach can write to, but only `clarityConfig.ts` derives from it. `brandStrategyConfig.ts`, the Offer Design tab configs, `proofAuthorityTypes.ts` and `growthSystemTypes.ts` are independent hardcoded definitions.
-- Brand Strategy has no fields in the shared schema and `applyBlueprintWrites` doesn't even select the `brand_strategy` column — Coach proposals there can never be applied (the confirmed bug).
-- The schema still exposes `proof_authority.objections.*` and `growth_system.*`, which the V3/V2.1 passes removed from the UI.
-- Snapshots are partial: `CustomerClaritySection` sends only `{ customer_clarity }`, `BrandIdentitySection` only `{ brand_strategy }`, `SectionHelpCoach` sends `null`.
-- Progress is computed by four separate bespoke functions.
+- Registry field kinds are exactly: `text`, `textarea`, `tags`, `suggested-tags`, `chips-single`, `chips-multi`, `bullet-list`, `colors` (`blueprintRegistry.ts:27-35`).
+- `aiWritable` exists on registry fields, defaults to `true`, and is `false` for `brand_strategy.visual_colors`, `proof_authority.authority.authority_types`, `proof_authority.authority.credibility_foundations`.
+- `renderBlueprintFieldPathsPrompt()` already filters to `aiWritable` fields only, and is injected on **section** and **global** scope but **not** on field scope (`coach-chat/index.ts:441-452`).
+- `renderBlueprintStructurePrompt()` outputs tabs/sub-blocks only — no per-field kind, helper, options, suggestions or `aiWritable`.
+- On field scope the only field metadata reaching the prompt is `context.target` from the client (`buildContext.ts:30-34`): `id`, `label`, `kind` collapsed to `text|chips|tags|structured`, `helper`, `placeholder` — no `options`, `suggestions` or `aiWritable`.
+- The list-item write convention `<basePath>.new_N.<fieldKey>` currently exists only in the runtime "List section mode" block, not in `coach:blueprint-section`.
+- `coach:high-ticket-offer` contains no obsolete field paths, but does use "differentiation" phrasing (line ~119) and pricing guidance with no reference to the current `payment_plans` schema.
 
-### 1. The Registry (one shared module, no code generation)
+## Required supporting code change (minimal)
 
-`supabase/functions/_shared/blueprintRegistry.ts`. The `@shared/*` alias already exists in `vite.config.ts`, `tsconfig.json` and `tsconfig.app.json`, so the **same file** is imported by the UI (`@shared/blueprintRegistry`) and by the `coach-chat` edge function. This is simpler and safer than the generator + CI staleness check in the earlier draft: there is literally one file, so drift is impossible.
+`supabase/functions/coach-chat/index.ts`:
+- Add a `BLUEPRINT_FIELD_BY_PATH` map over the existing registry fields and a `renderTargetFieldMeta(path)` helper.
+- In the `scope === "blueprint.field"` branch, resolve `context.target.id` via the existing `canonicalBlueprintPath()` and push:
 
-Shape:
-
-```text
-BlueprintRegistry
-  tabs[]        id, label, column, iconKey, progressAggregate
-    subBlocks[] id, label, description, aliases[], iconKey, progress rule
-      fields[]  path, key, label, labelTemplate, helper, placeholder,
-                kind (text | textarea | tags | suggested-tags | chips-single |
-                      chips-multi | bullet-list | colors),
-                options[], suggestions[], fullWidth, rows,
-                aliases[], aiWritable, countsTowardProgress
-      lists[]   basePath, label, itemLabel, itemFields[], aiIndexedCount,
-                suggestedCount, aiWritable, countsTowardProgress
+```
+# Target field metadata (authoritative)
+path — kind — label
+helper: …
+placeholder: …
+options: value | value            (chips only)
+suggestions: item, item, item     (suggested-tags only)
+ai_writable: true | false
 ```
 
-Pure data only (no React, no icons, no Supabase) so Deno can import it; icons are `iconKey` strings resolved in the UI. Business-type-dependent Customer Clarity labels are stored as `labelTemplate` with `{noun}`, `{nounSingular}`, `{Noun}`, `{NounSingular}`, `{notFitSuffix}` tokens, so personalization stays identical without duplicating labels.
+- Also inject `BLUEPRINT_FIELD_PATHS` on field scope so the field prompt references the same authoritative path list.
 
-Derived exports: `BLUEPRINT_FIELDS` (flat + expanded list item paths), `BLUEPRINT_FIELD_BY_PATH/KEY`, `BLUEPRINT_SUB_BLOCKS`, `BLUEPRINT_COLUMNS`, `renderBlueprintFieldPathsPrompt()`, `renderBlueprintStructurePrompt()`, and the progress helpers.
+No client changes. This is required because otherwise `options`, `suggestions` and `aiWritable` never reach the model on field scope.
 
-### 2. Progress — identical numbers
+## Instruction block edits (`ai_instruction_blocks.content`)
 
-Registry declares *which* rule applies per sub-block:
-- `units` — every field/list flagged `countsTowardProgress` is one equally-weighted unit. Reproduces Customer Clarity (4/4/3/3), Brand Strategy (4/3/3/3) and Authority & Content (4 + 4 + 2 pooled units) exactly.
-- `custom` + `ruleId` — the four weighted Offer Design rules (`calcAngleProgress`, `calcStackProgress`, `calcPricingProgress`, `calcEcosystemProgress`) stay as implementations in the UI layer and are referenced by id, because their weighting cannot be expressed as equal units without changing the displayed percentages.
-Tab totals use the declared `progressAggregate` (`average` for Clarity/Offer/Brand, `pooled` for Authority & Content) to match today's math.
+### 1. `coach:base` — add a Blueprint Awareness section
+Appended; existing content untouched:
+- The complete current Business Blueprint is always injected and represents the **authoritative current state of the user's business** (described as such, not as "JSON").
+- Never ask the user for information that already exists in the injected Blueprint — read it, then build on it.
+- The injected Blueprint structure and field-path lists are authoritative for tab, sub-block and field names. Never rely on remembered or assumed field names, and never invent paths.
+- **Improve before replacing:** before proposing a replacement, first understand what already exists in the Blueprint and refine or sharpen it where possible, rather than generating a completely new alternative.
 
-### 3. UI consumes the Registry
+### 2. `coach:blueprint-field` — full kind coverage + non-writable rule
+Replace the current 3-kind rule list with all eight kinds (reasoning + draft format + when to propose):
 
-- `clarityConfig.ts` and `brandStrategyConfig.ts` become thin adapters that read the registry and layer on icons and business-type copy.
-- `types.ts` (`CLARITY_FIELDS`, `calculateSubBlockProgress`, `calculateClarityProgress`), `calcBrandTabProgress`, `calcBrandIdentityProgress` and `calcProofAuthorityProgress` are re-implemented on top of the registry helpers, keeping their existing exported signatures so no component needs restructuring.
-- Offer Design and Authority & Content editors keep their bespoke accordion components unchanged; the registry supplies their field/list metadata for the Coach, write validation and progress.
+| kind | draft format |
+|---|---|
+| `text` | one short line, no trailing punctuation |
+| `textarea` | 1–3 sentences of prose in the user's voice |
+| `tags` | comma-separated short items, no prose |
+| `suggested-tags` | comma-separated items; prefer relevant injected `suggestions`, add custom items only when they fit better |
+| `chips-single` | exactly one value from the injected `options` |
+| `chips-multi` | comma-separated subset of the injected `options`, values verbatim |
+| `bullet-list` | one short item per line, no bullet characters |
+| `colors` | never drafted (non-writable) |
 
-### 4. Coach context
+Plus:
+- Field metadata (kind, helper, placeholder, options, suggestions) comes only from the injected target-metadata block — never from memory.
+- If `ai_writable: false`: explain, brainstorm and advise in prose, name concrete candidate values, and tell the user to set it in the UI — never call the write/proposal tool for that field.
+- Propose a draft only when the user asks for one or confirms a direction; single-field scope discipline unchanged.
 
-- `coach-chat` imports the registry directly and loads the **full `business_blueprints` row** for the conversation's sub-account server-side, using it as the Blueprint snapshot for every scope (field, section, global). Partial/null client snapshots are no longer trusted.
-- The system prompt gains the registry-generated structure map plus the existing field-path catalogue, so the Coach always knows both the current structure and the user's data.
-- Write scoping is unchanged: the existing `targetRootPrefix` tab guard, sub-block scoping, `allowedPaths` and handled-path rules continue to limit writes to the active field/section.
-- Instruction blocks (`coach:base`, `coach:blueprint-field`, `coach:blueprint-section`, `coach:global`, knowledge blocks, task blocks) load exactly as today; none are rewritten.
-- Client-side context builders stop assembling partial snapshots.
+### 3. `coach:blueprint-section` — same kind table + path discipline
+- Same eight-kind value-format table.
+- Write paths may come **only** from `BLUEPRINT_FIELD_PATHS`; anything not listed is not writable and must never be invented or inferred from memory.
+- Document repeatable lists explicitly: `<basePath>.new_0.<fieldKey>`, `<basePath>.new_1.<fieldKey>`, … with every listed item field populated per item, labelled `Item <n> — <field label>`.
+- Guided-vs-direct-fill logic, confirmation-before-writes and already-handled rules stay exactly as they are.
 
-### 5. Write-path parity
+### 4. `coach:high-ticket-offer` — terminology alignment
+- Remove Premium/Differentiation-era vocabulary (rephrase the "differentiation" guidance as positioning/angle language matching the current Offer Angle fields).
+- Express pricing in current schema terms: `offer_stack.pricing.payment_plans` with plan types `full_pay | split_2 | split_3 | split_6 | monthly | custom`, plus `offer_stack.pricing.guarantee_details`.
+- Strategic content and tier positioning otherwise unchanged.
 
-`applyBlueprintWrites` derives its root columns and writable paths from the registry and adds the missing `brand_strategy` column. Stale writable paths (`proof_authority.objections.*`, `growth_system.*`) disappear because the registry no longer declares them. `blueprintSchema.ts` is retired and replaced by a thin derived facade (or removed once imports are updated), so no second definition remains.
+## Verification
+- Typecheck.
+- Deploy `coach-chat`.
+- Open Coach on: Brand Colors (`colors`, non-writable) and Authority Types (`chips-multi`, non-writable) → advice only, no write proposal; a `suggested-tags` field → suggestion-aware draft; a repeatable list section → `new_N` writes still apply.
+- Read the four blocks back from the database to confirm content.
 
-### Sequencing
-
-1. Registry module encoding today's real fields for all four tabs (including Brand Strategy).
-2. UI adapters + registry-driven progress.
-3. `coach-chat` on the registry + server-side full-Blueprint loading; simplify client context builders.
-4. Write-path parity and retirement of the old schema file.
-
-### Verification and reporting
-
-Typecheck, then for each of the four tabs: confirm identical fields, labels, inputs, accordions and progress percentages, and apply one AI Coach write (including Brand Strategy). Final report lists files added/changed/retired, any behaviour that could not remain identical, per-tab verification results, and the four Coach write results.
-
-### Technical notes
-
-- No database migration; existing Blueprint JSON and stored conversations remain valid because field paths are unchanged.
-- Edge functions never import from `src/`; the shared direction is `_shared/` → both runtimes.
+## Report after implementation
+Changed instruction blocks, verification results, and user-visible behaviour changes.

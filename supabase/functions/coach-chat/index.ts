@@ -224,6 +224,26 @@ const BLUEPRINT_FIELD_META: Record<string, CoachFieldMeta> = Object.fromEntries(
 
 const BLUEPRINT_KEY_TO_PATH = new Map(BLUEPRINT_FIELDS.map((f) => [f.key, f.path]));
 
+/** Full registry field records by path — renders authoritative target metadata
+ *  (kind, helper, placeholder, options, suggestions, aiWritable) on field scope. */
+const BLUEPRINT_FIELD_BY_PATH = new Map(BLUEPRINT_FIELDS.map((f) => [f.path, f]));
+
+function renderTargetFieldMeta(path: string): string | null {
+  const f = BLUEPRINT_FIELD_BY_PATH.get(path);
+  if (!f) return null;
+  const lines = [
+    "# Target field metadata (authoritative)",
+    `${f.path} — ${f.kind} — ${f.label}`,
+  ];
+  if (f.helper) lines.push(`helper: ${f.helper}`);
+  if (f.placeholder) lines.push(`placeholder: ${f.placeholder}`);
+  if (f.options?.length) lines.push(`options: ${f.options.map((o) => o.value).join(" | ")}`);
+  if (f.suggestions?.length) lines.push(`suggestions: ${f.suggestions.join(", ")}`);
+  lines.push(`ai_writable: ${f.aiWritable ? "true" : "false"}`);
+  return lines.join("\n");
+}
+
+
 const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = Object.fromEntries(
   BLUEPRINT_SUB_BLOCKS.map((s) => [s.id, s.fieldPaths]),
 );
@@ -441,7 +461,12 @@ function buildSystemPrompt(
   if (context?.scope === "blueprint.field") {
     parts.push(prompts.field);
     parts.push(BLUEPRINT_STRUCTURE);
+    parts.push(BLUEPRINT_FIELD_PATHS);
+    const targetId = context?.target?.id ? String(context.target.id) : "";
+    const targetMeta = targetId ? renderTargetFieldMeta(canonicalBlueprintPath(targetId)) : null;
+    if (targetMeta) parts.push(targetMeta);
   } else if (context?.scope === "blueprint.section") {
+
     parts.push(prompts.section);
     parts.push(BLUEPRINT_STRUCTURE);
     parts.push(BLUEPRINT_FIELD_PATHS);
