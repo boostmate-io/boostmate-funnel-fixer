@@ -261,8 +261,8 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
               </div>
             )
           )}
-        </div>
-      </div>
+      </PageBody>
+
 
       <AddRouteWizard
         open={addOpen}
