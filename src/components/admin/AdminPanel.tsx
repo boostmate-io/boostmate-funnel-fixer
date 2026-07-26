@@ -63,6 +63,29 @@ const categoryConfig = {
 const AdminPanel = ({ category = "accounts" }: AdminPanelProps) => {
   const config = categoryConfig[category];
   const [activeTab, setActiveTab] = useState(config.defaultTab);
+  const [blockFilterActionId, setBlockFilterActionId] = useState<string | null>(null);
+
+  const showBlocksForAction = (actionId: string) => {
+    setBlockFilterActionId(actionId);
+    setActiveTab("instruction-blocks");
+  };
+
+  const renderTabContent = (tab: { value: string; content: React.ReactNode }) => {
+    if (category === "ai") {
+      if (tab.value === "ai-actions") {
+        return <AdminAIActions onShowInstructionBlocks={showBlocksForAction} />;
+      }
+      if (tab.value === "instruction-blocks") {
+        return (
+          <AdminInstructionBlocks
+            filterActionId={blockFilterActionId}
+            onFilterActionChange={setBlockFilterActionId}
+          />
+        );
+      }
+    }
+    return tab.content;
+  };
 
   return (
     <div className="p-8 space-y-6 max-w-6xl">
@@ -86,7 +109,7 @@ const AdminPanel = ({ category = "accounts" }: AdminPanelProps) => {
 
         {config.tabs.map((tab) => (
           <TabsContent key={tab.value} value={tab.value}>
-            {tab.content}
+            {renderTabContent(tab)}
           </TabsContent>
         ))}
       </Tabs>
