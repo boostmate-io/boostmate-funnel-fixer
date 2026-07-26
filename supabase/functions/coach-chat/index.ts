@@ -461,7 +461,12 @@ function buildSystemPrompt(
   if (context?.scope === "blueprint.field") {
     parts.push(prompts.field);
     parts.push(BLUEPRINT_STRUCTURE);
+    parts.push(BLUEPRINT_FIELD_PATHS);
+    const targetId = context?.target?.id ? String(context.target.id) : "";
+    const targetMeta = targetId ? renderTargetFieldMeta(canonicalBlueprintPath(targetId)) : null;
+    if (targetMeta) parts.push(targetMeta);
   } else if (context?.scope === "blueprint.section") {
+
     parts.push(prompts.section);
     parts.push(BLUEPRINT_STRUCTURE);
     parts.push(BLUEPRINT_FIELD_PATHS);
