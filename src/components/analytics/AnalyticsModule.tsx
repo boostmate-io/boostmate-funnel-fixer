@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Share2 } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
+
 
 interface SelectedFunnel {
   id: string;
