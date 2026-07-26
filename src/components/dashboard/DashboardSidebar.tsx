@@ -173,29 +173,55 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isBlueprint = item.id === "business-blueprint";
+          if (isBlueprint && !collapsed) {
+            const isActive = activeModule === "business-blueprint";
+            return (
+              <div key={item.id}>
+                <button
+                  onClick={() => {
+                    if (!isActive) {
+                      onModuleChange(item.id);
+                      setBlueprintOpen(true);
+                      return;
+                    }
+                    setBlueprintOpen((o) => !o);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  }`}
+                >
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {blueprintOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+                {blueprintOpen && isActive && (
+                  <div className="ml-4 mt-1 space-y-0.5">
+                    {blueprintSubItems.map((sub) => (
+                      <button
+                        key={sub.id}
+                        onClick={() => {
+                          window.dispatchEvent(
+                            new CustomEvent("boostmate:blueprint-navigate-section", {
+                              detail: { section: sub.id },
+                            }),
+                          );
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent/30 transition-colors"
+                      >
+                        <sub.icon className="w-3.5 h-3.5 shrink-0" />
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
           return (
             <div key={item.id}>
               <NavButton item={item} />
-              {isBlueprint && !collapsed && activeModule === "business-blueprint" && (
-                <div className="ml-4 mt-1 space-y-0.5">
-                  {blueprintSubItems.map((sub) => (
-                    <button
-                      key={sub.id}
-                      onClick={() => {
-                        window.dispatchEvent(
-                          new CustomEvent("boostmate:blueprint-navigate-section", {
-                            detail: { section: sub.id },
-                          }),
-                        );
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent/30 transition-colors"
-                    >
-                      <sub.icon className="w-3.5 h-3.5 shrink-0" />
-                      {sub.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           );
         })}
