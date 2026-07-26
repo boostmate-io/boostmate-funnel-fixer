@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Plus, Search, Trash2, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
+
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
