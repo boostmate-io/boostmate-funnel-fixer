@@ -143,6 +143,15 @@ const AdminInstructionBlocks = ({ filterActionId = null, onFilterActionChange }:
               <BookOpen className="w-4 h-4 text-primary" />
               <div>
                 <span className="text-sm font-medium">{block.name}</span>
+                {(block.blueprint_scopes?.length ?? 0) > 0 && (
+                  <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                    {block.blueprint_scopes!.map(s => (
+                      <span key={s} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        {BLUEPRINT_SCOPES.find(o => o.value === s)?.label ?? s}
+                      </span>
+                    ))}
+                  </span>
+                )}
                 <p className="text-xs text-muted-foreground line-clamp-1 max-w-md">
                   {block.content.slice(0, 100)}{block.content.length > 100 ? "..." : ""}
                 </p>
