@@ -24,7 +24,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Star, Workflow } from "lucide-react";
+import { ArrowDown, Star, Workflow } from "lucide-react";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
 import type {
   OfferRelationshipRow,
