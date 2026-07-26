@@ -8,8 +8,10 @@
 // =============================================================================
 
 import { useEffect, useMemo, useState } from "react";
-import { Workflow, Plus, Loader2, Map as MapIcon, List } from "lucide-react";
+import { Plus, Loader2, Map as MapIcon, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader, PageTabs, PageBody } from "@/components/layout/PageLayout";
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
