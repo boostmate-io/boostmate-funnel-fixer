@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, Zap, Copy } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, Zap, Copy, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,7 +72,11 @@ const emptyAction: Omit<AIAction, "id" | "created_at" | "updated_at"> = {
   is_active: true,
 };
 
-const AdminAIActions = () => {
+interface AdminAIActionsProps {
+  onShowInstructionBlocks?: (actionId: string) => void;
+}
+
+const AdminAIActions = ({ onShowInstructionBlocks }: AdminAIActionsProps) => {
   const [actions, setActions] = useState<AIAction[]>([]);
   const [blocks, setBlocks] = useState<InstructionBlock[]>([]);
   const [editing, setEditing] = useState<Partial<AIAction> | null>(null);
@@ -244,6 +248,16 @@ const AdminAIActions = () => {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              {onShowInstructionBlocks && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-8 mr-1"
+                  onClick={() => onShowInstructionBlocks(action.id)}
+                >
+                  <BookOpen className="w-3.5 h-3.5 mr-1" /> Show Instruction Blocks
+                </Button>
+              )}
               <Button variant="ghost" size="icon" onClick={() => openEdit(action)}><Pencil className="w-4 h-4" /></Button>
               <Button variant="ghost" size="icon" onClick={() => deleteAction(action.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
             </div>
