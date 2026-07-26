@@ -155,7 +155,8 @@ const Dashboard = () => {
             </div>
           )}
           {activeModule === "settings" && (
-            <div className="space-y-6">
+            <div className={`${PAGE_CONTAINER} py-8 space-y-6`}>
+
               <div className="bg-card rounded-xl border border-border p-6 shadow-card">
                 <ProjectSettings />
               </div>
