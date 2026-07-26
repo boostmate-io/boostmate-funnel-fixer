@@ -78,6 +78,7 @@ const Dashboard = () => {
             <>
               <PageHeader
                 title={t("growth.title")}
+                icon={LayoutDashboard}
                 subtitle={t("dashboard.welcomeBack", { email: user?.email })}
               />
               <div className={`${PAGE_CONTAINER} py-8`}>
@@ -158,6 +159,7 @@ const Dashboard = () => {
             <>
               <PageHeader
                 title={t("dashboard.settings.title")}
+                icon={Settings}
                 subtitle={t("dashboard.welcomeBack", { email: user?.email })}
               />
             <div className={`${PAGE_CONTAINER} py-8 space-y-6`}>
