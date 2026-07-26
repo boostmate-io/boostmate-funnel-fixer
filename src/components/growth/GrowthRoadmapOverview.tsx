@@ -144,14 +144,9 @@ export default function GrowthRoadmapOverview({ onStartAssessment, onOpenModule 
   const meta = STAGE_META[stage];
   const currentIdx = STAGE_ORDER.indexOf(stage);
 
-  // Header block (always shown when an assessment exists).
-  const header = (
-    <div>
-      <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">
-        {t("growth.title")}
-      </h1>
-    </div>
-  );
+  // Header rendered by the page shell (Dashboard).
+  const header = null;
+
 
   const stageStrip = (
     <div className="grid grid-cols-5 gap-2">
