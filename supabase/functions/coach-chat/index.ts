@@ -275,22 +275,37 @@ const SUB_BLOCK_TAB: Record<string, string> = Object.fromEntries(
   BLUEPRINT_SUB_BLOCKS.map((s: any) => [s.id, s.tabId]),
 );
 
-/** Resolve the active Blueprint tab from the coach target id. */
+/** Best-effort blueprint path for the current coach target. */
+function targetBlueprintPath(context: any): string {
+  const basePath = context?.target?.listSection?.basePath;
+  if (basePath && typeof basePath === "string") return basePath;
+  const rawId = context?.target?.id ? String(context.target.id) : "";
+  if (!rawId || rawId.startsWith("section:") || rawId.startsWith("list:")) return "";
+  return canonicalBlueprintPath(rawId);
+}
+
+/** Resolve the active Blueprint tab from the coach target. */
 function resolveBlueprintTab(context: any): string | null {
   const rawId = context?.target?.id ? String(context.target.id) : "";
-  if (!rawId) return null;
-  if (rawId.startsWith("section:")) {
-    const sub = rawId.slice("section:".length);
-    return SUB_BLOCK_TAB[sub] ?? TAB_BY_ROOT[sub] ?? null;
+  const path = targetBlueprintPath(context);
+  if (path) {
+    const tab = TAB_BY_ROOT[path.split(".")[0]];
+    if (tab) return tab;
   }
-  const path = canonicalBlueprintPath(rawId.replace(/^list:/, ""));
-  const root = path.split(".")[0];
-  return TAB_BY_ROOT[root] ?? null;
+  if (rawId.startsWith("section:") || rawId.startsWith("list:")) {
+    const key = rawId.replace(/^(section|list):/, "");
+    if (SUB_BLOCK_TAB[key]) return SUB_BLOCK_TAB[key];
+    if (TAB_BY_ROOT[key]) return TAB_BY_ROOT[key];
+    // list ids are conventionally "<subBlockId>_<listKey>" — match the prefix.
+    const sub = Object.keys(SUB_BLOCK_TAB).find((id) => key === id || key.startsWith(`${id}_`));
+    if (sub) return SUB_BLOCK_TAB[sub];
+  }
+  return null;
 }
 
 /** Route to exactly ONE offer-tier knowledge block for Offer Design context. */
 function resolveOfferTierScope(context: any): string | null {
-  const rawId = context?.target?.id ? String(context.target.id) : "";
+  const rawId = `${context?.target?.id ?? ""} ${context?.target?.listSection?.basePath ?? ""}`;
   const ecoMatch = /offer_ecosystem\.([a-z_]+)/.exec(rawId);
   if (ecoMatch) {
     const tier = ecoMatch[1];
