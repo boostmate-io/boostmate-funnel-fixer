@@ -66,7 +66,7 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
     const sb = getRegistrySubBlock("customer_clarity", subBlockId);
     return (sb?.fields ?? []).map((field) => {
       const base = toFieldDef(field, tokens);
-      const copy = getFieldCopy(bt.id, field.key);
+      const copy = getFieldCopy(bt.id, field.key as keyof CustomerClarityData);
       return {
         ...base,
         placeholder: copy.placeholder ?? base.placeholder,
