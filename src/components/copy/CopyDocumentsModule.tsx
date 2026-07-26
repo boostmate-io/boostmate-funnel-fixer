@@ -254,7 +254,7 @@ const CopyDocumentsModule = () => {
       <PageHeader
         title="Copy Documents"
         subtitle="Create and manage your sales copy, email sequences, scripts and ads."
-        divider={false}
+        icon={FileText}
         actions={
           <Button onClick={openPicker} size="sm" disabled={creating}>
             <Plus className="w-4 h-4 mr-1" /> New Document

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, FileText, BarChart3, Settings, Kanban } from "lucide-react";
+import { Users, FileText, BarChart3, Settings, Kanban, Send } from "lucide-react";
 import { PageHeader, PageTabs, PageBody } from "@/components/layout/PageLayout";
 import OutreachLeadsList from "./OutreachLeadsList";
 import OutreachPipeline from "./OutreachPipeline";
@@ -26,7 +26,7 @@ const OutreachModule = () => {
       <PageHeader
         title="Outreach"
         subtitle="Find leads, draft personalized messages and track your pipeline."
-        divider={false}
+        icon={Send}
       />
       <PageTabs tabs={TABS} value={activeTab} onChange={setActiveTab} />
       <PageBody>

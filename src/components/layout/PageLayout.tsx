@@ -24,23 +24,28 @@ interface PageHeaderProps {
   title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
-  /** Set false when a tab bar directly follows the header (tabs own the divider). */
+  /** Module icon — always the same icon component used in the sidebar navigation. */
+  icon?: React.ComponentType<{ className?: string }>;
+  /** Deprecated — headers no longer render a divider. Kept for call-site compatibility. */
   divider?: boolean;
   className?: string;
 }
 
-/** Standardized page header: title, subtitle below it, actions right-aligned. */
+/** Standardized page header: icon + title, subtitle below it, actions right-aligned. */
 export const PageHeader = ({
   title,
   subtitle,
   actions,
-  divider = true,
+  icon: Icon,
   className,
 }: PageHeaderProps) => (
-  <div className={cn(divider && "border-b border-border", className)}>
+  <div className={className}>
     <div className={cn(PAGE_CONTAINER, "py-6 flex items-start justify-between gap-6 flex-wrap")}>
       <div className="min-w-0">
-        <h1 className="text-2xl font-display font-bold text-foreground">{title}</h1>
+        <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
+          {Icon && <Icon className="w-6 h-6" />}
+          {title}
+        </h1>
         {subtitle && (
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{subtitle}</p>
         )}
@@ -56,7 +61,7 @@ export interface PageTabItem {
   icon?: React.ComponentType<{ className?: string }>;
 }
 
-/** Standardized tab bar — always sits directly under the page header. */
+/** Standardized tab bar — pill/tab bar directly under the page header (Admin pattern). */
 export const PageTabs = ({
   tabs,
   value,
@@ -68,8 +73,8 @@ export const PageTabs = ({
   onChange: (id: string) => void;
   className?: string;
 }) => (
-  <div className={cn("border-b border-border", className)}>
-    <div className={cn(PAGE_CONTAINER, "flex gap-1 -mb-px overflow-x-auto")}>
+  <div className={cn(PAGE_CONTAINER, className)}>
+    <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground max-w-full overflow-x-auto">
       {tabs.map((tab) => {
         const isActive = value === tab.id;
         const Icon = tab.icon;
@@ -78,10 +83,10 @@ export const PageTabs = ({
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "relative flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap",
+              "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               isActive
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+                ? "bg-background text-foreground shadow-sm"
+                : "hover:text-foreground",
             )}
           >
             {Icon && <Icon className="w-4 h-4" />}

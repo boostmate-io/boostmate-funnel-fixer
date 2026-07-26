@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { TrendingUp } from "lucide-react";
 import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
 import AssessmentWizard from "@/components/growth/AssessmentWizard";
 import AssessmentResult from "@/components/growth/AssessmentResult";
@@ -86,6 +87,7 @@ export default function GrowthRoadmapModule({ onOpenModule }: Props) {
     <div className="h-full flex flex-col">
       <PageHeader
         title={t("growth.title")}
+        icon={TrendingUp}
         subtitle={t("growth.publicSubtitle")}
         actions={
           row && phase === "result" ? (

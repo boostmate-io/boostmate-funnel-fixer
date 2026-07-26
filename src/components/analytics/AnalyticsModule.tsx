@@ -13,7 +13,7 @@ import AnalyticsSavedViews, { loadDefaultView, type LoadedView } from "./Analyti
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Share2 } from "lucide-react";
+import { Plus, Share2, BarChart3 } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
 
@@ -161,6 +161,7 @@ const AnalyticsModule = ({
     <div className="h-full flex flex-col">
       <PageHeader
         title={titleOverride ?? t("analytics.title")}
+        icon={BarChart3}
         subtitle={subtitleOverride ?? t("analytics.subtitle")}
         actions={
           <>

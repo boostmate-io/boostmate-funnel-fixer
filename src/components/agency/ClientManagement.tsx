@@ -19,7 +19,7 @@ const ClientManagement = () => {
       <PageHeader
         title={t("agency.clientsTitle")}
         subtitle={t("agency.clientsDescription")}
-        divider={false}
+        icon={Users}
       />
       <PageTabs tabs={TABS} value={activeTab} onChange={setActiveTab} />
       <PageBody>
