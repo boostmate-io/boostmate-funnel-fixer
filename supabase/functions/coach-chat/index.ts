@@ -435,13 +435,17 @@ function buildSystemPrompt(
 
   if (context?.scope === "blueprint.field") {
     parts.push(prompts.field);
+    parts.push(BLUEPRINT_STRUCTURE);
   } else if (context?.scope === "blueprint.section") {
     parts.push(prompts.section);
+    parts.push(BLUEPRINT_STRUCTURE);
     parts.push(BLUEPRINT_FIELD_PATHS);
   } else if (context?.scope === "global") {
     parts.push(prompts.global);
+    parts.push(BLUEPRINT_STRUCTURE);
     parts.push(BLUEPRINT_FIELD_PATHS);
   }
+
 
   // Admin-curated knowledge blocks (any instruction block linked to the
   // coach-chat AI action whose name is NOT one of the four reserved prompt
