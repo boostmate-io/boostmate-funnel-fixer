@@ -8,8 +8,10 @@
 // =============================================================================
 
 import { useEffect, useMemo, useState } from "react";
-import { Workflow, Plus, Loader2, Map as MapIcon, List } from "lucide-react";
+import { Plus, Loader2, Map as MapIcon, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader, PageTabs, PageBody } from "@/components/layout/PageLayout";
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -147,46 +149,25 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="border-b border-border bg-card px-8">
-        <div className="max-w-6xl mx-auto flex gap-1 -mb-px overflow-x-auto">
-          {tabs.map((tab) => {
-            const isActive = active === tab.id;
-            const TabIcon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActive(tab.id)}
-                className={`group relative flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
-                  isActive
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                }`}
-              >
-                <TabIcon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <PageHeader
+        title="Growth Architecture"
+        subtitle="Each funnel connects a growth system to a target offer. Traffic sources are the mix of external acquisition channels and upstream funnels that feed customers in."
+        divider={false}
+        actions={
+          <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5">
+            <Plus className="w-4 h-4" /> Add Funnel
+          </Button>
+        }
+      />
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto p-8 space-y-6">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Workflow className="w-5 h-5 text-primary" />
-                <h2 className="text-2xl font-display font-bold text-foreground">Growth Architecture</h2>
-              </div>
-              <p className="text-sm text-muted-foreground max-w-2xl">
-                Each funnel connects a growth system to a target offer. Traffic sources are the mix of
-                external acquisition channels and upstream funnels that feed customers in.
-              </p>
-            </div>
-            <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 shrink-0">
-              <Plus className="w-4 h-4" /> Add Funnel
-            </Button>
-          </div>
+      <PageTabs
+        tabs={tabs.map((t) => ({ id: t.id, label: t.label, icon: t.icon }))}
+        value={active}
+        onChange={(id) => setActive(id as GrowthTab)}
+      />
+
+      <PageBody>
+
 
           {active === "map" && (
             <div>
@@ -282,8 +263,8 @@ const GrowthArchitectureSection = ({ offers }: Props) => {
               </div>
             )
           )}
-        </div>
-      </div>
+      </PageBody>
+
 
       <AddRouteWizard
         open={addOpen}

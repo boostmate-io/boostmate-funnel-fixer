@@ -1,9 +1,11 @@
-import { Users, Package, Palette, Award, Sparkles, Pencil, Wand2, ArrowRight, CheckCircle2, Settings2, Eye, Share2 } from "lucide-react";
+import { Users, Package, Palette, Award, Sparkles, Pencil, ArrowRight, CheckCircle2, Settings2, Eye, Share2 } from "lucide-react";
+import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
 import { useCurrency } from "@/hooks/useCurrency";
+
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
 import { calculateClarityProgress, type SectionId, type CustomerClarityData } from "./types";
 import { calculateOfferDesignProgress, buildPromisePreview, type OfferDesignData } from "./offerDesignTypes";
 import { type GrowthSystemData, type FunnelMappingRow } from "./growthSystemTypes";
@@ -107,54 +109,29 @@ const BlueprintOverview = ({ clarity, offer, growth, mappings, offers, brandIden
     .map((s) => s.label);
 
   return (
-    <div className="h-full overflow-y-auto bg-background-dashboard">
-      <div className="max-w-6xl mx-auto p-8 space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-6 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <h1 className="text-3xl font-display font-bold text-foreground">Business Blueprint</h1>
-            </div>
-            <p className="text-muted-foreground max-w-2xl">
-              Strategic overview of your business, offers, {bt.customerNoun}, and growth systems.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {setupCompleted && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={onOpenSetup} className="gap-1.5 h-8">
-                    <Settings2 className="w-4 h-4" />
-                    Business type: {bt.label}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Change your business type</TooltipContent>
-              </Tooltip>
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-60 h-8">
-                  <Wand2 className="w-4 h-4" />
-                  AI Analyze
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>AI analysis coming soon</TooltipContent>
-            </Tooltip>
-            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8">
-              <Share2 className="w-4 h-4" />
-              Share
-            </Button>
+    <div className="h-full flex flex-col overflow-y-auto bg-background-dashboard">
+      <PageHeader
+        title="Business Blueprint"
+        subtitle={`Strategic overview of your business, offers, ${bt.customerNoun}, and growth systems.`}
+        actions={
+          <>
             <Button variant="outline" size="sm" onClick={onView} className="gap-1.5 h-8">
               <Eye className="w-4 h-4" />
               View Blueprint
+            </Button>
+            <Button variant="outline" size="sm" onClick={onShare} className="gap-1.5 h-8">
+              <Share2 className="w-4 h-4" />
+              Share
             </Button>
             <Button size="sm" onClick={() => onEdit()} className="gap-1.5 h-8">
               <Pencil className="w-4 h-4" />
               Edit Blueprint
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      />
+      <div className={`${PAGE_CONTAINER} py-8 space-y-6`}>
+
 
         {/* Setup banner — shown only until personalization completed */}
         {!setupCompleted && (

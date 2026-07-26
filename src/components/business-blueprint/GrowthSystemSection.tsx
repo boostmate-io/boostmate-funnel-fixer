@@ -68,7 +68,7 @@ const GrowthSystemSection = ({
     <div className="h-full flex flex-col">
       {/* Sub-tab navigation (sticky like Offer Design) */}
       <div className="border-b border-border bg-card px-8 shrink-0">
-        <div className="max-w-6xl mx-auto flex gap-1 -mb-px overflow-x-auto">
+        <div className="max-w-[1200px] mx-auto flex gap-1 -mb-px overflow-x-auto">
           {GROWTH_TABS.map((tab) => {
             const TabIcon = tab.icon;
             const isActive = active === tab.id;
@@ -105,7 +105,7 @@ const GrowthSystemSection = ({
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto p-8">
+        <div className="max-w-[1200px] mx-auto p-8">
           {/* Header */}
           <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
             <div>

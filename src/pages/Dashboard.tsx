@@ -24,6 +24,8 @@ import GlobalCoachBubble from "@/components/coach/GlobalCoachBubble";
 import GrowthRoadmapOverview from "@/components/growth/GrowthRoadmapOverview";
 import GrowthRoadmapModule from "@/components/growth/GrowthRoadmapModule";
 import { usePendingGrowthClaim } from "@/hooks/usePendingGrowthClaim";
+import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
+
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -54,7 +56,7 @@ const Dashboard = () => {
     return () => window.removeEventListener("boostmate:navigate-module", handler);
   }, []);
 
-  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "growth-architecture", "admin-accounts", "admin-ai", "admin-copy", "admin-growth", "outreach", "growth-roadmap"];
+  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "growth-architecture", "admin-accounts", "admin-ai", "admin-copy", "admin-growth", "outreach", "growth-roadmap", "overview", "settings"];
 
   usePendingGrowthClaim();
 
@@ -71,21 +73,20 @@ const Dashboard = () => {
       
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
-        <main className={`flex-1 overflow-auto ${fullHeightModules.includes(activeModule) ? "" : "p-8"}`}>
-          {!fullHeightModules.includes(activeModule) && activeModule !== "overview" && (
-            <div className="mb-8">
-              <h1 className="text-2xl font-display font-bold text-foreground">
-                {activeModule === "settings" && t("dashboard.settings.title")}
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1">{t("dashboard.welcomeBack", { email: user?.email })}</p>
-            </div>
-          )}
-
+        <main className="flex-1 overflow-auto">
           {activeModule === "overview" && (
-            <GrowthRoadmapOverview
-              onStartAssessment={() => setActiveModule("growth-roadmap")}
-              onOpenModule={(m) => setActiveModule(m)}
-            />
+            <>
+              <PageHeader
+                title={t("growth.title")}
+                subtitle={t("dashboard.welcomeBack", { email: user?.email })}
+              />
+              <div className={`${PAGE_CONTAINER} py-8`}>
+                <GrowthRoadmapOverview
+                  onStartAssessment={() => setActiveModule("growth-roadmap")}
+                  onOpenModule={(m) => setActiveModule(m)}
+                />
+              </div>
+            </>
           )}
 
           {activeModule === "growth-roadmap" && (
@@ -93,13 +94,21 @@ const Dashboard = () => {
           )}
 
 
-          {activeModule === "clients" && <ClientManagement />}
+          {activeModule === "clients" && (
+            <div className="h-full">
+              <ClientManagement />
+            </div>
+          )}
           {activeModule === "outreach" && (
             <div className="h-full">
               <OutreachModule />
             </div>
           )}
-          {activeModule === "funnel-audit" && <AuditModule />}
+          {activeModule === "funnel-audit" && (
+            <div className="h-full">
+              <AuditModule />
+            </div>
+          )}
           {activeModule === "business-blueprint" && (
             <div className="h-full">
               <BusinessBlueprintModule />
@@ -146,7 +155,13 @@ const Dashboard = () => {
             </div>
           )}
           {activeModule === "settings" && (
-            <div className="space-y-6">
+            <>
+              <PageHeader
+                title={t("dashboard.settings.title")}
+                subtitle={t("dashboard.welcomeBack", { email: user?.email })}
+              />
+            <div className={`${PAGE_CONTAINER} py-8 space-y-6`}>
+
               <div className="bg-card rounded-xl border border-border p-6 shadow-card">
                 <ProjectSettings />
               </div>
@@ -163,6 +178,7 @@ const Dashboard = () => {
               <KnowledgeCenter />
               <DeleteAccountSection />
             </div>
+            </>
           )}
         </main>
       </div>

@@ -37,7 +37,7 @@ const SectionShell = ({
   children,
 }: Props) => (
   <div className={embedded ? "" : "h-full overflow-y-auto"}>
-    <div className={embedded ? "px-4 py-5" : "max-w-6xl mx-auto p-8"}>
+    <div className={embedded ? "px-4 py-5" : "max-w-[1200px] mx-auto p-8"}>
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2 mb-1">

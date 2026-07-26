@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
 import AssessmentWizard from "@/components/growth/AssessmentWizard";
 import AssessmentResult from "@/components/growth/AssessmentResult";
 import GrowthPlanPanel from "@/components/growth/GrowthPlanPanel";
@@ -82,19 +83,20 @@ export default function GrowthRoadmapModule({ onOpenModule }: Props) {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">
-            {t("growth.title")}
-          </h1>
-        </div>
-        {row && phase === "result" && (
-          <Button variant="outline" size="sm" onClick={() => setPhase("wizard")}>
-            {t("growth.retake")}
-          </Button>
-        )}
-      </div>
+    <div className="h-full flex flex-col">
+      <PageHeader
+        title={t("growth.title")}
+        subtitle={t("growth.publicSubtitle")}
+        actions={
+          row && phase === "result" ? (
+            <Button variant="outline" size="sm" onClick={() => setPhase("wizard")}>
+              {t("growth.retake")}
+            </Button>
+          ) : undefined
+        }
+      />
+      <div className={`${PAGE_CONTAINER} py-8`}>
+
 
       {phase === "wizard" && (
         <AssessmentWizard
@@ -121,6 +123,7 @@ export default function GrowthRoadmapModule({ onOpenModule }: Props) {
           />
         </div>
       )}
+      </div>
     </div>
   );
 }
