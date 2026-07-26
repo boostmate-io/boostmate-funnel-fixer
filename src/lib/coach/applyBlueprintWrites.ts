@@ -339,10 +339,11 @@ export async function applyBlueprintWrites(
     return { applied: ecoApplied };
   }
 
-  // 1) Load current row
+  // 1) Load current row — every registry column plus legacy growth_system.
+  const selectColumns = ["id", ...ROOT_COLUMNS].join(", ");
   const { data: row, error: loadErr } = await supabase
     .from("business_blueprints")
-    .select("id, customer_clarity, offer_stack, growth_system, proof_authority")
+    .select(selectColumns)
     .eq("sub_account_id", subAccountId)
     .maybeSingle();
 
@@ -351,12 +352,10 @@ export async function applyBlueprintWrites(
   }
 
   // 2) Build patch column-by-column
-  const patch: BlueprintPatch = {
-    customer_clarity: { ...(row.customer_clarity as any) },
-    offer_stack: { ...(row.offer_stack as any) },
-    growth_system: { ...(row.growth_system as any) },
-    proof_authority: { ...(row.proof_authority as any) },
-  };
+  const patch: BlueprintPatch = {};
+  for (const column of ROOT_COLUMNS) {
+    patch[column] = { ...(((row as any)[column] as any) ?? {}) };
+  }
 
   let applied = 0;
   for (const w of rest) {
@@ -364,9 +363,15 @@ export async function applyBlueprintWrites(
     if (segments.length < 2) continue;
     const [root, ...tail] = segments;
     if (!ROOT_COLUMNS.has(root)) continue;
-    setDeep((patch as any)[root], tail, coerceForPath(w.path, w.value));
+    // Registry is the source of truth for what the Coach may write.
+    if (root !== "growth_system" && !isWritablePath(w.path)) {
+      console.warn(`[applyBlueprintWrites] rejected unknown path "${w.path}"`);
+      continue;
+    }
+    setDeep(patch[root], tail, coerceForPath(w.path, w.value));
     applied++;
   }
+
 
   normalizeFrameworkPillars(patch);
   normalizeOfferStackLists(patch);
