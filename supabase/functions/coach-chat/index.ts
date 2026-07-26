@@ -8,8 +8,10 @@ import {
   BLUEPRINT_FIELDS,
   BLUEPRINT_SUB_BLOCKS,
   renderBlueprintFieldPathsPrompt,
+  renderBlueprintStructurePrompt,
   type BlueprintFieldKind,
-} from "../_shared/blueprintSchema.ts";
+} from "../_shared/blueprintRegistry.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
