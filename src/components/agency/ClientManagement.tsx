@@ -1,43 +1,31 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Users } from "lucide-react";
+import { PageHeader, PageTabs, PageBody } from "@/components/layout/PageLayout";
 import ClientAccountsView from "./ClientAccountsView";
 import ClientUsersView from "./ClientUsersView";
+
+const TABS = [
+  { id: "accounts", label: "Accounts", icon: Building2 },
+  { id: "users", label: "Users", icon: Users },
+];
 
 const ClientManagement = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("accounts");
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
-          <Users className="w-6 h-6" />
-          {t("agency.clientsTitle")}
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">{t("agency.clientsDescription")}</p>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="accounts" className="gap-2">
-            <Building2 className="w-4 h-4" />
-            Accounts
-          </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2">
-            <Users className="w-4 h-4" />
-            Users
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="accounts" className="mt-6">
-          <ClientAccountsView />
-        </TabsContent>
-        <TabsContent value="users" className="mt-6">
-          <ClientUsersView />
-        </TabsContent>
-      </Tabs>
+    <div className="h-full flex flex-col">
+      <PageHeader
+        title={t("agency.clientsTitle")}
+        subtitle={t("agency.clientsDescription")}
+        divider={false}
+      />
+      <PageTabs tabs={TABS} value={activeTab} onChange={setActiveTab} />
+      <PageBody>
+        {activeTab === "accounts" && <ClientAccountsView />}
+        {activeTab === "users" && <ClientUsersView />}
+      </PageBody>
     </div>
   );
 };
