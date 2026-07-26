@@ -135,15 +135,9 @@ export function getClarityConfig(businessTypeId?: BusinessTypeId | string | null
     },
     {
       id: "desire",
-      label: "Desire & Goals",
-      icon: Target,
-      description: `Map what your ${noun} want, externally and internally.`,
+      ...meta("desire"),
       insight: `${Noun} don't buy products — they buy a better version of themselves. Mapping desire is what makes your offer irresistible.`,
-      fields: [
-        f({ key: "desire_main_result", label: "What result do they want most?", type: "textarea", fullWidth: true, rows: 2 }),
-        f({ key: "desire_success_vision", label: "What would success look and feel like?", type: "textarea", rows: 4 }),
-        f({ key: "desire_why_badly", label: "Why do they want this so badly?", type: "textarea", rows: 4 }),
-      ],
+
       coachQuestions: [
         "What outcome do they want most?",
         "What does success look like in 12 months?",
