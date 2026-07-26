@@ -366,13 +366,17 @@ async function loadCoachPrompts(supabase: any): Promise<PromptSet> {
 
     const { data: blocks } = await supabase
       .from("ai_instruction_blocks")
-      .select("name, content")
+      .select("name, content, blueprint_scopes")
       .in("id", ids);
 
     const byName = new Map<string, string>((blocks ?? []).map((b: any) => [b.name, b.content]));
     const knowledgeBlocks: KnowledgeBlock[] = (blocks ?? [])
       .filter((b: any) => b?.name && !RESERVED_PROMPT_NAMES.has(b.name) && typeof b.content === "string" && b.content.trim().length > 0)
-      .map((b: any) => ({ name: b.name as string, content: b.content as string }));
+      .map((b: any) => ({
+        name: b.name as string,
+        content: b.content as string,
+        scopes: Array.isArray(b.blueprint_scopes) ? (b.blueprint_scopes as string[]) : [],
+      }));
     const prompts: PromptSet = {
       base: byName.get("coach:base") || PROMPT_FALLBACK.base,
       field: byName.get("coach:blueprint-field") || PROMPT_FALLBACK.field,
