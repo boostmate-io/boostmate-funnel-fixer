@@ -261,6 +261,8 @@ const AnalyticsModule = ({
             />
           </div>
         </div>
+        </div>
+
       ) : (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           {t("analytics.noFunnelSelected")}
