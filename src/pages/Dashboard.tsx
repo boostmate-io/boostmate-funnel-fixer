@@ -71,22 +71,29 @@ const Dashboard = () => {
       
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
-        <main className={`flex-1 overflow-auto ${fullHeightModules.includes(activeModule) ? "" : "p-8"}`}>
+        <main className={`flex-1 overflow-auto ${fullHeightModules.includes(activeModule) ? "" : ""}`}>
           {!fullHeightModules.includes(activeModule) && activeModule !== "overview" && (
-            <div className="mb-8">
-              <h1 className="text-2xl font-display font-bold text-foreground">
-                {activeModule === "settings" && t("dashboard.settings.title")}
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1">{t("dashboard.welcomeBack", { email: user?.email })}</p>
-            </div>
+            <PageHeader
+              title={activeModule === "settings" ? t("dashboard.settings.title") : ""}
+              subtitle={t("dashboard.welcomeBack", { email: user?.email })}
+            />
           )}
 
           {activeModule === "overview" && (
-            <GrowthRoadmapOverview
-              onStartAssessment={() => setActiveModule("growth-roadmap")}
-              onOpenModule={(m) => setActiveModule(m)}
-            />
+            <>
+              <PageHeader
+                title={t("growth.title")}
+                subtitle={t("dashboard.welcomeBack", { email: user?.email })}
+              />
+              <div className={`${PAGE_CONTAINER} py-8`}>
+                <GrowthRoadmapOverview
+                  onStartAssessment={() => setActiveModule("growth-roadmap")}
+                  onOpenModule={(m) => setActiveModule(m)}
+                />
+              </div>
+            </>
           )}
+
 
           {activeModule === "growth-roadmap" && (
             <GrowthRoadmapModule onOpenModule={(m) => setActiveModule(m)} />
