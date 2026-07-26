@@ -192,6 +192,34 @@ const AdminInstructionBlocks = ({ filterActionId = null, onFilterActionChange }:
                   className="min-h-[250px] text-sm"
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Blueprint scopes</Label>
+                <p className="text-xs text-muted-foreground">
+                  Where the Coach loads this block. Leave empty to load it in every context.
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {BLUEPRINT_SCOPES.map(opt => {
+                    const selected = (editing.blueprint_scopes ?? []).includes(opt.value);
+                    return (
+                      <label key={opt.value} className="flex items-center gap-2 text-xs cursor-pointer">
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={() => {
+                            const cur = editing.blueprint_scopes ?? [];
+                            setEditing({
+                              ...editing,
+                              blueprint_scopes: selected
+                                ? cur.filter(s => s !== opt.value)
+                                : [...cur, opt.value],
+                            });
+                          }}
+                        />
+                        {opt.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="flex justify-end gap-2 pt-4 border-t border-border">
                 <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
                 <Button onClick={save} disabled={loading}>{loading ? "Saving..." : "Save"}</Button>
