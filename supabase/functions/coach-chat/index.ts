@@ -244,6 +244,100 @@ function renderTargetFieldMeta(path: string): string | null {
 }
 
 
+// -----------------------------------------------------------------------------
+// Scoped knowledge loading (Phase 2)
+// Knowledge blocks declare which Business Blueprint scopes they belong to via
+// `ai_instruction_blocks.blueprint_scopes`. A block with NO scopes stays global
+// (backwards compatible). Scope vocabulary:
+//   global | customer_clarity | offer_design | brand_strategy | proof_authority
+//   offer_tier:free | offer_tier:low_mid | offer_tier:high
+// -----------------------------------------------------------------------------
+export const BLUEPRINT_SCOPE_VALUES = [
+  "global",
+  "customer_clarity",
+  "offer_design",
+  "brand_strategy",
+  "proof_authority",
+  "offer_tier:free",
+  "offer_tier:low_mid",
+  "offer_tier:high",
+] as const;
+
+const TAB_BY_ROOT: Record<string, string> = {
+  customer_clarity: "customer_clarity",
+  offer_stack: "offer_design",
+  offer_ecosystem: "offer_design",
+  brand_strategy: "brand_strategy",
+  proof_authority: "proof_authority",
+};
+
+const SUB_BLOCK_TAB: Record<string, string> = Object.fromEntries(
+  BLUEPRINT_SUB_BLOCKS.map((s: any) => [s.id, s.tabId]),
+);
+
+/** Resolve the active Blueprint tab from the coach target id. */
+function resolveBlueprintTab(context: any): string | null {
+  const rawId = context?.target?.id ? String(context.target.id) : "";
+  if (!rawId) return null;
+  if (rawId.startsWith("section:")) {
+    const sub = rawId.slice("section:".length);
+    return SUB_BLOCK_TAB[sub] ?? TAB_BY_ROOT[sub] ?? null;
+  }
+  const path = canonicalBlueprintPath(rawId.replace(/^list:/, ""));
+  const root = path.split(".")[0];
+  return TAB_BY_ROOT[root] ?? null;
+}
+
+/** Route to exactly ONE offer-tier knowledge block for Offer Design context. */
+function resolveOfferTierScope(context: any): string | null {
+  const rawId = context?.target?.id ? String(context.target.id) : "";
+  const ecoMatch = /offer_ecosystem\.([a-z_]+)/.exec(rawId);
+  if (ecoMatch) {
+    const tier = ecoMatch[1];
+    if (tier === "free") return "offer_tier:free";
+    if (tier === "low_ticket" || tier === "mid_ticket") return "offer_tier:low_mid";
+    if (tier === "premium" || tier === "core" || tier === "continuity") return "offer_tier:high";
+  }
+  const bp = context?.businessContext?.blueprintSnapshot;
+  const raw = bp?.offer_stack?.pricing?.core_price;
+  const price = Number(String(raw ?? "").replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(price) || price <= 0) return null;
+  if (price < 500) return "offer_tier:free";
+  if (price < 2000) return "offer_tier:low_mid";
+  return "offer_tier:high";
+}
+
+/** The set of scopes whose knowledge blocks may be injected for this request. */
+function activeKnowledgeScopes(context: any): Set<string> {
+  const scopes = new Set<string>();
+  const scope = context?.scope;
+  if (scope === "global") {
+    scopes.add("global");
+    return scopes;
+  }
+  if (scope !== "blueprint.field" && scope !== "blueprint.section") {
+    // Non-blueprint touchpoints (copy, funnel node) keep their previous
+    // behaviour: only unscoped/global knowledge.
+    scopes.add("global");
+    return scopes;
+  }
+  const tab = resolveBlueprintTab(context);
+  if (tab) scopes.add(tab);
+  if (tab === "offer_design") {
+    const tier = resolveOfferTierScope(context);
+    if (tier) scopes.add(tier);
+  }
+  return scopes;
+}
+
+function selectKnowledgeBlocks(blocks: KnowledgeBlock[], context: any): KnowledgeBlock[] {
+  const active = activeKnowledgeScopes(context);
+  return blocks.filter((b) => {
+    if (!b.scopes || b.scopes.length === 0) return true; // unscoped = always
+    return b.scopes.some((s) => active.has(s));
+  });
+}
+
 const BLUEPRINT_SUB_BLOCK_PATHS: Record<string, string[]> = Object.fromEntries(
   BLUEPRINT_SUB_BLOCKS.map((s) => [s.id, s.fieldPaths]),
 );
