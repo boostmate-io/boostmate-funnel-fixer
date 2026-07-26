@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { readActiveForWorkspace } from "@/lib/growth/api";
-import { STAGE_META, STAGE_ORDER } from "@/lib/growth/engine";
+
 import { useGrowthPlan } from "@/lib/growth/useGrowthPlan";
 import {
   DECISION_SPECS,
@@ -39,6 +39,8 @@ import {
   Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
+import StageLadder from "./StageLadder";
+import StageDetailCard from "./StageDetailCard";
 
 interface Props {
   onStartAssessment: () => void;
@@ -141,37 +143,16 @@ export default function GrowthRoadmapOverview({ onStartAssessment, onOpenModule 
 
   const roadmapCompleted = workspaceState.roadmap_completed === true;
   const stage: GrowthStage = activeCycle?.stage ?? row.computed_stage;
-  const meta = STAGE_META[stage];
-  const currentIdx = STAGE_ORDER.indexOf(stage);
+
 
   // Header rendered by the page shell (Dashboard).
   const header = null;
 
 
   const stageStrip = (
-    <div className="grid grid-cols-5 gap-2">
-      {STAGE_ORDER.map((s, i) => {
-        const active = !roadmapCompleted && i === currentIdx;
-        const done = roadmapCompleted || i < currentIdx;
-        return (
-          <div
-            key={s}
-            className={`rounded-lg p-3 text-center border ${
-              active
-                ? "border-primary bg-primary/10 text-foreground"
-                : done
-                  ? "border-border bg-muted/40 text-muted-foreground"
-                  : "border-border bg-card text-muted-foreground"
-            }`}
-          >
-            <div className="text-[10px] uppercase tracking-wide">Stage {i + 1}</div>
-            <div className="text-sm font-medium">{t(STAGE_META[s].labelKey)}</div>
-            <div className="text-xs mt-1">{row.stage_scores[s]}</div>
-          </div>
-        );
-      })}
-    </div>
+    <StageLadder currentStage={stage} allCompleted={roadmapCompleted} />
   );
+
 
   // Terminal completed → replaces plan area with completion banner.
   if (roadmapCompleted) {
@@ -227,30 +208,8 @@ export default function GrowthRoadmapOverview({ onStartAssessment, onOpenModule 
       {stageStrip}
 
       {/* Stage header card */}
-      <div className="bg-card rounded-xl border border-border p-6 shadow-card">
-        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-          {t("growth.yourStage")}
-        </div>
-        <h2 className="text-2xl font-display font-bold text-foreground mb-3">
-          {t(meta.labelKey)}
-        </h2>
-        <div className="space-y-1.5">
-          <p className="text-sm text-foreground">
-            <span className="text-muted-foreground">{t("growth.bottleneck")}: </span>
-            {t(meta.bottleneckKey)}
-          </p>
-          <p className="text-sm text-foreground">
-            <span className="text-muted-foreground">{t("growth.objective")}: </span>
-            {t(meta.objectiveKey)}
-          </p>
-          <p className="text-sm text-foreground">
-            <span className="text-muted-foreground">
-              {t("growth.milestone", "Milestone")}:{" "}
-            </span>
-            {t(meta.milestoneKey)}
-          </p>
-        </div>
-      </div>
+      <StageDetailCard stage={stage} />
+
 
       {/* Focus + upcoming */}
       <div className="bg-card rounded-xl border border-border p-6 shadow-card">
