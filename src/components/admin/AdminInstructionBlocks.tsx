@@ -66,6 +66,7 @@ const AdminInstructionBlocks = ({ filterActionId = null, onFilterActionChange }:
       const payload = {
         name: editing.name,
         content: editing.content || "",
+        blueprint_scopes: editing.blueprint_scopes ?? [],
       };
       if (editing.id) {
         const { error } = await supabase.from("ai_instruction_blocks").update(payload).eq("id", editing.id);
