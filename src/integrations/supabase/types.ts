@@ -1914,6 +1914,60 @@ export type Database = {
           },
         ]
       }
+      growth_stages: {
+        Row: {
+          ai_guidance: string
+          bottleneck: string
+          created_at: string
+          focus: string
+          label: string
+          milestone: string
+          objective: string
+          sort_order: number
+          stage: string
+          success_criteria: string
+          summary: string
+          translations: Json
+          typical_profile: string
+          unlock_condition: string
+          updated_at: string
+        }
+        Insert: {
+          ai_guidance?: string
+          bottleneck?: string
+          created_at?: string
+          focus?: string
+          label?: string
+          milestone?: string
+          objective?: string
+          sort_order?: number
+          stage: string
+          success_criteria?: string
+          summary?: string
+          translations?: Json
+          typical_profile?: string
+          unlock_condition?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_guidance?: string
+          bottleneck?: string
+          created_at?: string
+          focus?: string
+          label?: string
+          milestone?: string
+          objective?: string
+          sort_order?: number
+          stage?: string
+          success_criteria?: string
+          summary?: string
+          translations?: Json
+          typical_profile?: string
+          unlock_condition?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       growth_system_build_guides: {
         Row: {
           build_guide_id: string
@@ -1982,6 +2036,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      growth_systems: {
+        Row: {
+          addresses: string
+          ai_guidance: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          related_module: string | null
+          sort_order: number
+          stage_relevance: string[]
+          summary: string
+          translations: Json
+          updated_at: string
+        }
+        Insert: {
+          addresses?: string
+          ai_guidance?: string
+          created_at?: string
+          id: string
+          is_active?: boolean
+          name?: string
+          related_module?: string | null
+          sort_order?: number
+          stage_relevance?: string[]
+          summary?: string
+          translations?: Json
+          updated_at?: string
+        }
+        Update: {
+          addresses?: string
+          ai_guidance?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          related_module?: string | null
+          sort_order?: number
+          stage_relevance?: string[]
+          summary?: string
+          translations?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       growth_systems_catalog: {
         Row: {
