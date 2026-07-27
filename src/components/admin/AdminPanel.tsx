@@ -54,6 +54,8 @@ const categoryConfig = {
     defaultTab: "growth-tasks",
     tabs: [
       { value: "growth-tasks", label: "Roadmap Tasks", icon: Milestone, content: <AdminGrowthRoadmapTasks /> },
+      { value: "roadmap-content", label: "Roadmap Content", icon: BookOpen, content: <AdminGrowthContent /> },
+
       { value: "growth-systems", label: "Growth Systems", icon: Workflow, content: <AdminGrowthSystemsCatalog /> },
       { value: "acquisition-channels", label: "Acquisition Channels", icon: Radio, content: <AdminAcquisitionChannels /> },
       { value: "build-guides", label: "Build Guides", icon: BookOpen, content: <AdminBuildGuides /> },
