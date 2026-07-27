@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { STAGE_META, STAGE_ORDER } from "@/lib/growth/engine";
 import { STAGE_IDENTITY, stageState } from "@/lib/growth/stageIdentity";
+import { useGrowthStageContent } from "@/lib/growth/useGrowthContent";
 import type { GrowthStage } from "@/lib/growth/types";
 
 interface Props {
@@ -29,8 +30,10 @@ interface Props {
 
 export default function StageLadder({ currentStage, allCompleted = false }: Props) {
   const { t } = useTranslation();
+  const { getStage } = useGrowthStageContent();
   const [openStage, setOpenStage] = useState<GrowthStage | null>(null);
   const currentIdx = STAGE_ORDER.indexOf(currentStage);
+
 
   return (
     <>
