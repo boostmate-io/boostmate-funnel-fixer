@@ -176,14 +176,15 @@ export function StageInfoDialog({
 
         <div className="space-y-4 text-sm">
           <InfoBlock label={t("growth.ladder.whatIsIt", "What this stage is")}>
-            {t(id.summaryKey)}
+            {pick(content.summary, id.summaryKey)}
           </InfoBlock>
           <InfoBlock label={t("growth.ladder.typical", "What a business in this stage looks like")}>
-            {t(id.typicalKey)}
+            {pick(content.typical_profile, id.typicalKey)}
           </InfoBlock>
           <InfoBlock label={t("growth.ladder.unlock", "What must be achieved to unlock it")}>
-            {t(id.unlockKey)}
+            {pick(content.unlock_condition, id.unlockKey)}
           </InfoBlock>
+
         </div>
       </DialogContent>
     </Dialog>
