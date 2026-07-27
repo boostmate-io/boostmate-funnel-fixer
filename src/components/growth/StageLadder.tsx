@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { STAGE_META, STAGE_ORDER } from "@/lib/growth/engine";
 import { STAGE_IDENTITY, stageState } from "@/lib/growth/stageIdentity";
+import { useGrowthStageContent } from "@/lib/growth/useGrowthContent";
 import type { GrowthStage } from "@/lib/growth/types";
 
 interface Props {
@@ -29,8 +30,10 @@ interface Props {
 
 export default function StageLadder({ currentStage, allCompleted = false }: Props) {
   const { t } = useTranslation();
+  const { getStage } = useGrowthStageContent();
   const [openStage, setOpenStage] = useState<GrowthStage | null>(null);
   const currentIdx = STAGE_ORDER.indexOf(currentStage);
+
 
   return (
     <>
@@ -86,9 +89,10 @@ export default function StageLadder({ currentStage, allCompleted = false }: Prop
                     state === "current" ? "text-foreground" : "text-muted-foreground"
                   }`}
                 >
-                  {t(STAGE_META[s].labelKey)}
+                  {getStage(s).label?.trim() || t(STAGE_META[s].labelKey)}
                 </span>
               </div>
+
 
               <div
                 className={`text-[11px] font-medium uppercase tracking-wide mt-1 ${
@@ -136,7 +140,11 @@ export function StageInfoDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const { getStage } = useGrowthStageContent();
   if (!stage) return null;
+  const content = getStage(stage);
+  const pick = (value: string, fallbackKey: string) => value?.trim() || t(fallbackKey);
+
 
   const id = STAGE_IDENTITY[stage];
   const meta = STAGE_META[stage];
@@ -154,7 +162,7 @@ export function StageInfoDialog({
               <Icon className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle className="text-left">{t(meta.labelKey)}</DialogTitle>
+              <DialogTitle className="text-left">{pick(content.label, meta.labelKey)}</DialogTitle>
               <DialogDescription className="text-left">
                 {state === "current"
                   ? t("growth.ladder.current", "Current stage")
@@ -168,14 +176,15 @@ export function StageInfoDialog({
 
         <div className="space-y-4 text-sm">
           <InfoBlock label={t("growth.ladder.whatIsIt", "What this stage is")}>
-            {t(id.summaryKey)}
+            {pick(content.summary, id.summaryKey)}
           </InfoBlock>
           <InfoBlock label={t("growth.ladder.typical", "What a business in this stage looks like")}>
-            {t(id.typicalKey)}
+            {pick(content.typical_profile, id.typicalKey)}
           </InfoBlock>
           <InfoBlock label={t("growth.ladder.unlock", "What must be achieved to unlock it")}>
-            {t(id.unlockKey)}
+            {pick(content.unlock_condition, id.unlockKey)}
           </InfoBlock>
+
         </div>
       </DialogContent>
     </Dialog>

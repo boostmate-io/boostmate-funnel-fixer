@@ -59,6 +59,24 @@ Deno.serve(async (req) => {
   }
   if (!authorized) return json({ error: "forbidden" }, 403);
 
+  // Growth System catalog: admin-managed `growth_systems` content table is the
+  // source of truth. The client-sent catalog is only a fallback while the table
+  // is empty.
+  const { data: systemRows } = await admin
+    .from("growth_systems")
+    .select("id,name,summary,addresses,stage_relevance,ai_guidance,is_active,sort_order")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  const dbCatalog = (systemRows ?? [])
+    .map(
+      (s: any) =>
+        `- id: ${s.id}\n  name: ${s.name}\n  stages: ${(s.stage_relevance ?? []).join(", ")}\n  addresses: ${s.addresses ?? ""}\n  summary: ${s.summary ?? ""}${s.ai_guidance ? `\n  guidance: ${s.ai_guidance}` : ""}`,
+    )
+    .join("\n");
+
+  const effectiveCatalog = dbCatalog || catalog;
+
   // Delegate the model call to execute-ai-action for consistency (loads instruction blocks, model config).
   const inputs = {
     computed_stage: row.computed_stage,
@@ -68,8 +86,9 @@ Deno.serve(async (req) => {
     lead_sources: JSON.stringify((row.answers as any)?.q6 ?? []),
     testimonials: String((row.answers as any)?.q3 ?? "unknown"),
     language,
-    growth_systems_catalog: catalog,
+    growth_systems_catalog: effectiveCatalog,
   };
+
 
   const resp = await fetch(`${SUPABASE_URL}/functions/v1/execute-ai-action`, {
     method: "POST",
@@ -92,15 +111,16 @@ Deno.serve(async (req) => {
   // depending on version — accept either shape.
   const modelOut = parsed?.data ?? parsed?.result ?? parsed?.output ?? parsed;
 
-  // Canonical Growth System ids — kept in sync with src/lib/growth/growthSystems.ts.
-  // Any recommendation with an id outside this list is dropped rather than persisted,
+  // Allowed Growth System ids come from the admin-managed `growth_systems`
+  // table (falls back to the historical code catalog when the table is empty).
+  // Any recommendation outside this list is dropped rather than persisted,
   // so the UI never renders a fabricated system name.
-  const ALLOWED_SYSTEM_IDS = new Set([
-    "audience-builder",
-    "client-converter",
-    "offer-launcher",
-    "launch-engine",
-  ]);
+  const ALLOWED_SYSTEM_IDS = new Set<string>(
+    (systemRows ?? []).length
+      ? (systemRows ?? []).map((s: any) => s.id)
+      : ["audience-builder", "client-converter", "offer-launcher", "launch-engine"],
+  );
+
 
   const rawRecommended = Array.isArray(modelOut?.recommended_growth_system)
     ? modelOut.recommended_growth_system[0]

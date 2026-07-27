@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { getGrowthSystemById } from "@/lib/growth/growthSystems";
+import { useGrowthSystemsContent } from "@/lib/growth/useGrowthContent";
 import type { GrowthAssessmentRow, RelatedModule } from "@/lib/growth/types";
 import StageLadder from "./StageLadder";
 import StageDetailCard from "./StageDetailCard";
@@ -12,10 +13,12 @@ interface Props {
 
 export default function AssessmentResult({ row, ctaSlot }: Props) {
   const { t } = useTranslation();
+  const { getSystem } = useGrowthSystemsContent();
   const stage = row.computed_stage;
-  const sys = row.ai_result?.recommended_growth_system
-    ? getGrowthSystemById(row.ai_result.recommended_growth_system.id)
-    : undefined;
+  const systemId = row.ai_result?.recommended_growth_system?.id;
+  // Admin-managed content first; the code catalog remains a fallback.
+  const sys = getSystem(systemId) ?? (systemId ? getGrowthSystemById(systemId) : undefined);
+
 
   return (
     <div className="space-y-6">

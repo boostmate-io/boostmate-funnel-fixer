@@ -1,22 +1,27 @@
 // =============================================================================
 // StageDetailCard — the "Current stage" panel.
 //
-// Shows the stage identity (icon + accent), the existing bottleneck / objective
-// / milestone triple, plus a short summary explaining why the business is in
-// this stage, what the focus is, and what success looks like before advancing.
+// Copy comes from the admin-managed `growth_stages` content table (Editable
+// Product Content pattern). i18n keys remain as a fallback while content loads
+// or when a field has not been filled in yet.
 // =============================================================================
 
 import { useTranslation } from "react-i18next";
 import { Compass, Flag, Target } from "lucide-react";
 import { STAGE_META } from "@/lib/growth/engine";
 import { STAGE_IDENTITY } from "@/lib/growth/stageIdentity";
+import { useGrowthStageContent } from "@/lib/growth/useGrowthContent";
 import type { GrowthStage } from "@/lib/growth/types";
 
 export default function StageDetailCard({ stage }: { stage: GrowthStage }) {
   const { t } = useTranslation();
+  const { getStage } = useGrowthStageContent();
+  const content = getStage(stage);
   const meta = STAGE_META[stage];
   const id = STAGE_IDENTITY[stage];
   const Icon = id.icon;
+
+  const pick = (value: string, fallbackKey: string) => value?.trim() || t(fallbackKey);
 
   return (
     <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
@@ -32,7 +37,9 @@ export default function StageDetailCard({ stage }: { stage: GrowthStage }) {
             <div className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">
               {t("growth.yourStage")}
             </div>
-            <h3 className="text-2xl font-display font-bold text-foreground">{t(meta.labelKey)}</h3>
+            <h3 className="text-2xl font-display font-bold text-foreground">
+              {pick(content.label, meta.labelKey)}
+            </h3>
           </div>
         </div>
 
@@ -42,19 +49,19 @@ export default function StageDetailCard({ stage }: { stage: GrowthStage }) {
             icon={Compass}
             accent={id.text}
             label={t("growth.stageSummary.why", "Why you're here")}
-            value={t(id.summaryKey)}
+            value={pick(content.summary, id.summaryKey)}
           />
           <SummaryRow
             icon={Target}
             accent={id.text}
             label={t("growth.stageSummary.focus", "Focus of this stage")}
-            value={t(id.focusKey)}
+            value={pick(content.focus, id.focusKey)}
           />
           <SummaryRow
             icon={Flag}
             accent={id.text}
             label={t("growth.stageSummary.success", "What success looks like")}
-            value={t(id.successKey)}
+            value={pick(content.success_criteria, id.successKey)}
           />
         </div>
 
@@ -62,15 +69,15 @@ export default function StageDetailCard({ stage }: { stage: GrowthStage }) {
         <dl className="grid md:grid-cols-3 gap-4 text-sm mt-5">
           <div>
             <dt className="text-muted-foreground mb-1">{t("growth.bottleneck")}</dt>
-            <dd className="text-foreground">{t(meta.bottleneckKey)}</dd>
+            <dd className="text-foreground">{pick(content.bottleneck, meta.bottleneckKey)}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground mb-1">{t("growth.objective")}</dt>
-            <dd className="text-foreground">{t(meta.objectiveKey)}</dd>
+            <dd className="text-foreground">{pick(content.objective, meta.objectiveKey)}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground mb-1">{t("growth.milestone")}</dt>
-            <dd className="text-foreground">{t(meta.milestoneKey)}</dd>
+            <dd className="text-foreground">{pick(content.milestone, meta.milestoneKey)}</dd>
           </div>
         </dl>
       </div>
