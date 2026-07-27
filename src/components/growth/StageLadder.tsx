@@ -162,7 +162,7 @@ export function StageInfoDialog({
               <Icon className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle className="text-left">{t(meta.labelKey)}</DialogTitle>
+              <DialogTitle className="text-left">{pick(content.label, meta.labelKey)}</DialogTitle>
               <DialogDescription className="text-left">
                 {state === "current"
                   ? t("growth.ladder.current", "Current stage")
