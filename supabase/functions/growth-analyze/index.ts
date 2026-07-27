@@ -111,15 +111,16 @@ Deno.serve(async (req) => {
   // depending on version — accept either shape.
   const modelOut = parsed?.data ?? parsed?.result ?? parsed?.output ?? parsed;
 
-  // Canonical Growth System ids — kept in sync with src/lib/growth/growthSystems.ts.
-  // Any recommendation with an id outside this list is dropped rather than persisted,
+  // Allowed Growth System ids come from the admin-managed `growth_systems`
+  // table (falls back to the historical code catalog when the table is empty).
+  // Any recommendation outside this list is dropped rather than persisted,
   // so the UI never renders a fabricated system name.
-  const ALLOWED_SYSTEM_IDS = new Set([
-    "audience-builder",
-    "client-converter",
-    "offer-launcher",
-    "launch-engine",
-  ]);
+  const ALLOWED_SYSTEM_IDS = new Set<string>(
+    (systemRows ?? []).length
+      ? (systemRows ?? []).map((s: any) => s.id)
+      : ["audience-builder", "client-converter", "offer-launcher", "launch-engine"],
+  );
+
 
   const rawRecommended = Array.isArray(modelOut?.recommended_growth_system)
     ? modelOut.recommended_growth_system[0]
