@@ -1,82 +1,70 @@
+## Where the copy comes from today
 
-# Phase 1 — AI Coach Instruction Block Correctness Pass
+| Text | Source | Type |
+|---|---|---|
+| Stage modal: "What this stage is" / "Typically looks like" / "To unlock" | `StageLadder.tsx:170-178` → keys in `stageIdentity.ts` → `src/i18n/en.json` | Hardcoded (frontend i18n) |
+| "Why you're here" / "Focus of this stage" / "What success looks like" | `StageDetailCard.tsx:44-58` → `summaryKey`/`focusKey`/`successKey` | Hardcoded |
+| Bottleneck / Objective / Milestone | `engine.ts` `STAGE_META` → i18n | Hardcoded |
+| Recommended Growth System — name + summary | `growthSystems.ts` `CATALOG` TS constant | Hardcoded |
+| Recommended Growth System — rationale | `growth-analyze` edge function, stored in `growth_assessments.ai_result` | AI-generated (prompt already DB-editable) |
+| Roadmap task titles/descriptions | `growth_roadmap_tasks` | Already admin-managed |
 
-Only correctness fixes. No behaviour redesign, no new philosophy, no restructuring, no scoped loading, no new blocks.
+Everything you listed is hardcoded except the one AI rationale sentence. Dutch translations for the stage keys are also missing today, so NL silently falls back to English.
 
-## Verified current state (pre-plan reads)
+Note: the existing `growth_systems_catalog` table is a different thing (Blueprint offer/channel compatibility) and cannot be reused here.
 
-- Registry field kinds are exactly: `text`, `textarea`, `tags`, `suggested-tags`, `chips-single`, `chips-multi`, `bullet-list`, `colors` (`blueprintRegistry.ts:27-35`).
-- `aiWritable` exists on registry fields, defaults to `true`, and is `false` for `brand_strategy.visual_colors`, `proof_authority.authority.authority_types`, `proof_authority.authority.credibility_foundations`.
-- `renderBlueprintFieldPathsPrompt()` already filters to `aiWritable` fields only, and is injected on **section** and **global** scope but **not** on field scope (`coach-chat/index.ts:441-452`).
-- `renderBlueprintStructurePrompt()` outputs tabs/sub-blocks only — no per-field kind, helper, options, suggestions or `aiWritable`.
-- On field scope the only field metadata reaching the prompt is `context.target` from the client (`buildContext.ts:30-34`): `id`, `label`, `kind` collapsed to `text|chips|tags|structured`, `helper`, `placeholder` — no `options`, `suggestions` or `aiWritable`.
-- The list-item write convention `<basePath>.new_N.<fieldKey>` currently exists only in the runtime "List section mode" block, not in `coach:blueprint-section`.
-- `coach:high-ticket-offer` contains no obsolete field paths, but does use "differentiation" phrasing (line ~119) and pricing guidance with no reference to the current `payment_plans` schema.
+## The reusable pattern (Editable Product Content standard)
 
-## Required supporting code change (minimal)
+No generic CMS, no universal content table. Instead, a documented convention every future domain table follows — Business Blueprint content, Build Guide intros, Academy intros, Coach contextual content:
 
-`supabase/functions/coach-chat/index.ts`:
-- Add a `BLUEPRINT_FIELD_BY_PATH` map over the existing registry fields and a `renderTargetFieldMeta(path)` helper.
-- In the `scope === "blueprint.field"` branch, resolve `context.target.id` via the existing `canonicalBlueprintPath()` and push:
+1. **Structured table per domain.** Real, typed columns for the fields that domain actually has. Base columns hold the default (English) copy.
+2. **Localization** via a single `translations JSONB` column shaped `{ "nl": { "<column>": "..." } }`. No per-locale row duplication, no schema change to add a language.
+3. **AI guidance** via a `ai_guidance TEXT` column: admin-editable, never rendered to users, injected into AI Actions as domain knowledge. Instruction blocks keep owning behaviour, reasoning and coaching method; these columns hold the evolving domain facts.
+4. **Admin editing** via a standard CRUD component with a built-in EN/NL toggle and a clearly separated "AI guidance (not shown to users)" field.
+5. **Delivery + caching** via one shared resolver helper — `resolveContent(row, lang)` — plus a React Query hook per domain with a shared cache policy, so content loads once per session.
+6. **Access** — read for `anon` + `authenticated`, write restricted to app admins via `is_app_admin(auth.uid())`.
 
-```
-# Target field metadata (authoritative)
-path — kind — label
-helper: …
-placeholder: …
-options: value | value            (chips only)
-suggestions: item, item, item     (suggested-tags only)
-ai_writable: true | false
-```
+This is captured in a short `src/lib/content/README.md` plus the shared `resolveContent` helper in `src/lib/content/resolveContent.ts`, so the next domain is a table + a hook + an admin tab, not a new architecture.
 
-- Also inject `BLUEPRINT_FIELD_PATHS` on field scope so the field prompt references the same authoritative path list.
+## Scope of this implementation
 
-No client changes. This is required because otherwise `options`, `suggestions` and `aiWritable` never reach the model on field scope.
+Only `growth_stages` and `growth_systems`. Nothing else migrates.
 
-## Instruction block edits (`ai_instruction_blocks.content`)
+### 1. `public.growth_stages`
 
-### 1. `coach:base` — add a Blueprint Awareness section
-Appended; existing content untouched:
-- The complete current Business Blueprint is always injected and represents the **authoritative current state of the user's business** (described as such, not as "JSON").
-- Never ask the user for information that already exists in the injected Blueprint — read it, then build on it.
-- The injected Blueprint structure and field-path lists are authoritative for tab, sub-block and field names. Never rely on remembered or assumed field names, and never invent paths.
-- **Improve before replacing:** before proposing a replacement, first understand what already exists in the Blueprint and refine or sharpen it where possible, rather than generating a completely new alternative.
+One row per stage, seeded verbatim from today's English copy so the UI is unchanged on day one.
 
-### 2. `coach:blueprint-field` — full kind coverage + non-writable rule
-Replace the current 3-kind rule list with all eight kinds (reasoning + draft format + when to propose):
+`stage` (pk), `label`, `summary`, `typical_profile`, `unlock_condition`, `focus`, `success_criteria`, `bottleneck`, `objective`, `milestone`, `ai_guidance`, `sort_order`, `translations` JSONB.
 
-| kind | draft format |
-|---|---|
-| `text` | one short line, no trailing punctuation |
-| `textarea` | 1–3 sentences of prose in the user's voice |
-| `tags` | comma-separated short items, no prose |
-| `suggested-tags` | comma-separated items; prefer relevant injected `suggestions`, add custom items only when they fit better |
-| `chips-single` | exactly one value from the injected `options` |
-| `chips-multi` | comma-separated subset of the injected `options`, values verbatim |
-| `bullet-list` | one short item per line, no bullet characters |
-| `colors` | never drafted (non-writable) |
+### 2. `public.growth_systems`
 
-Plus:
-- Field metadata (kind, helper, placeholder, options, suggestions) comes only from the injected target-metadata block — never from memory.
-- If `ai_writable: false`: explain, brainstorm and advise in prose, name concrete candidate values, and tell the user to set it in the UI — never call the write/proposal tool for that field.
-- Propose a draft only when the user asks for one or confirms a direction; single-field scope discipline unchanged.
+Replaces the hardcoded `CATALOG`: `id` (text slug), `name`, `summary`, `addresses`, `stage_relevance` (text[]), `related_module`, `ai_guidance`, `is_active`, `sort_order`, `translations` JSONB. Seeded with the four existing systems.
 
-### 3. `coach:blueprint-section` — same kind table + path discipline
-- Same eight-kind value-format table.
-- Write paths may come **only** from `BLUEPRINT_FIELD_PATHS`; anything not listed is not writable and must never be invented or inferred from memory.
-- Document repeatable lists explicitly: `<basePath>.new_0.<fieldKey>`, `<basePath>.new_1.<fieldKey>`, … with every listed item field populated per item, labelled `Item <n> — <field label>`.
-- Guided-vs-direct-fill logic, confirmation-before-writes and already-handled rules stay exactly as they are.
+This also removes the drift risk between `growthSystems.ts` and the duplicated `ALLOWED_SYSTEM_IDS` list in `growth-analyze/index.ts:98-103`.
 
-### 4. `coach:high-ticket-offer` — terminology alignment
-- Remove Premium/Differentiation-era vocabulary (rephrase the "differentiation" guidance as positioning/angle language matching the current Offer Angle fields).
-- Express pricing in current schema terms: `offer_stack.pricing.payment_plans` with plan types `full_pay | split_2 | split_3 | split_6 | monthly | custom`, plus `offer_stack.pricing.guarantee_details`.
-- Strategic content and tier positioning otherwise unchanged.
+### 3. Frontend
 
-## Verification
-- Typecheck.
-- Deploy `coach-chat`.
-- Open Coach on: Brand Colors (`colors`, non-writable) and Authority Types (`chips-multi`, non-writable) → advice only, no write proposal; a `suggested-tags` field → suggestion-aware draft; a repeatable list section → `new_N` writes still apply.
-- Read the four blocks back from the database to confirm content.
+- New `src/lib/growth/useGrowthContent.ts` (React Query, shared cache policy) fetching both tables.
+- `StageLadder`, `StageDetailCard`, `AssessmentResult`, `GrowthRoadmapOverview` read from the hook via `resolveContent(row, i18n.language)` instead of `t(...)`.
+- Icons/colours stay in `stageIdentity.ts` — design tokens, not copy.
+- Static UI chrome ("Current stage", section headings) stays in i18n.
+- The migrated stage keys are removed from `en.json`/`nl.json` so there is one source of truth.
 
-## Report after implementation
-Changed instruction blocks, verification results, and user-visible behaviour changes.
+### 4. Admin
+
+New `src/components/admin/AdminGrowthStages.tsx` (stages + systems), following `AdminGrowthRoadmapTasks.tsx`. EN/NL toggle in the edit dialog; `ai_guidance` in its own section marked as AI-only. Added as tabs in the existing `growth` category of `AdminPanel.tsx`.
+
+### 5. Edge function
+
+`growth-analyze` builds its catalog block and validation set from `growth_systems`, and appends each system's `ai_guidance` (plus the current stage's `ai_guidance`) as contextual knowledge alongside the existing instruction blocks.
+
+## Technical notes
+
+- `growthSystems.ts` keeps its types/helpers; the `CATALOG` array is deleted once the table is live.
+- No change to the scoring engine, gates, task activation, or roadmap structure.
+- Verification: typecheck, then a Playwright pass through the assessment result and each stage dialog to confirm identical rendering, plus one admin edit round-trip.
+
+## Deliberately out of scope
+
+- Authoring the missing Dutch stage copy — the fields exist and are editable, but I won't write NL content unless asked.
+- Migrating any other module's copy; only the pattern is established.
