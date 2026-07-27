@@ -59,6 +59,24 @@ Deno.serve(async (req) => {
   }
   if (!authorized) return json({ error: "forbidden" }, 403);
 
+  // Growth System catalog: admin-managed `growth_systems` content table is the
+  // source of truth. The client-sent catalog is only a fallback while the table
+  // is empty.
+  const { data: systemRows } = await admin
+    .from("growth_systems")
+    .select("id,name,summary,addresses,stage_relevance,ai_guidance,is_active,sort_order")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  const dbCatalog = (systemRows ?? [])
+    .map(
+      (s: any) =>
+        `- id: ${s.id}\n  name: ${s.name}\n  stages: ${(s.stage_relevance ?? []).join(", ")}\n  addresses: ${s.addresses ?? ""}\n  summary: ${s.summary ?? ""}${s.ai_guidance ? `\n  guidance: ${s.ai_guidance}` : ""}`,
+    )
+    .join("\n");
+
+  const effectiveCatalog = dbCatalog || catalog;
+
   // Delegate the model call to execute-ai-action for consistency (loads instruction blocks, model config).
   const inputs = {
     computed_stage: row.computed_stage,
@@ -68,8 +86,9 @@ Deno.serve(async (req) => {
     lead_sources: JSON.stringify((row.answers as any)?.q6 ?? []),
     testimonials: String((row.answers as any)?.q3 ?? "unknown"),
     language,
-    growth_systems_catalog: catalog,
+    growth_systems_catalog: effectiveCatalog,
   };
+
 
   const resp = await fetch(`${SUPABASE_URL}/functions/v1/execute-ai-action`, {
     method: "POST",
