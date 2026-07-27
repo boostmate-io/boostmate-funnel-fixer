@@ -89,9 +89,10 @@ export default function StageLadder({ currentStage, allCompleted = false }: Prop
                     state === "current" ? "text-foreground" : "text-muted-foreground"
                   }`}
                 >
-                  {t(STAGE_META[s].labelKey)}
+                  {getStage(s).label?.trim() || t(STAGE_META[s].labelKey)}
                 </span>
               </div>
+
 
               <div
                 className={`text-[11px] font-medium uppercase tracking-wide mt-1 ${
