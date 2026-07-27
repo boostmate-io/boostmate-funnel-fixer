@@ -140,7 +140,11 @@ export function StageInfoDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const { getStage } = useGrowthStageContent();
   if (!stage) return null;
+  const content = getStage(stage);
+  const pick = (value: string, fallbackKey: string) => value?.trim() || t(fallbackKey);
+
 
   const id = STAGE_IDENTITY[stage];
   const meta = STAGE_META[stage];
