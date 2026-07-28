@@ -79,13 +79,19 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
     }
     setLoading(true);
     try {
-      const [tasks, progress, bpRes, offersRes, funnelsRes, analyticsRes, cycles, wsState] =
+      const [tasks, progress, bpRes, offersRes, funnelsRes, routesRes, analyticsRes, cycles, wsState] =
         await Promise.all([
           fetchActiveTasks(),
           fetchProgressForWorkspace(subAccountId),
           supabase.from("business_blueprints").select("*").eq("sub_account_id", subAccountId).maybeSingle(),
           supabase.from("offers").select("tier").eq("sub_account_id", subAccountId),
           supabase.from("funnels").select("share_token").eq("sub_account_id", subAccountId),
+          supabase
+            .from("growth_architecture_systems")
+            .select("id")
+            .eq("sub_account_id", subAccountId)
+            .not("system_catalog_id", "is", null)
+            .not("target_offer_id", "is", null),
           supabase.from("funnel_analytics_entries").select("date").eq("sub_account_id", subAccountId).order("date", { ascending: false }).limit(1),
           fetchActiveCycles(subAccountId),
           fetchWorkspaceState(subAccountId),
@@ -102,6 +108,7 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
         blueprint: bpRes.data as Record<string, unknown> | null,
         offers: (offersRes.data ?? []) as Array<{ tier?: string | null }>,
         funnels: (funnelsRes.data ?? []) as Array<{ share_token?: string | null }>,
+        architectureRoutes: (routesRes.data ?? []) as Array<unknown>,
         analyticsEntries: ((analyticsRes.data ?? []) as Array<{ date?: string | null }>).map((e) => ({ entry_date: e.date })),
         workspaceState: wsState,
       });
