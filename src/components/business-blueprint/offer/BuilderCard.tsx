@@ -7,7 +7,7 @@
 // can propose a batch of items at once — no need to add empty items first.
 // =============================================================================
 
-import { Plus, MessageSquare, type LucideIcon } from "lucide-react";
+import { Plus, Sparkles, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -66,11 +66,11 @@ const BuilderCard = ({
               size="sm"
               variant="ghost"
               onClick={onCoach}
-              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+              className="h-8 gap-1.5 text-xs text-primary hover:bg-primary/5"
               aria-label={`Open AI Coach for ${title}`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
-              Coach
+              <Sparkles className="w-3.5 h-3.5" />
+              AI Coach
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={onAdd} className="gap-1.5 h-8">
@@ -94,7 +94,7 @@ const BuilderCard = ({
                 </Button>
                 {onCoach && (
                   <Button size="sm" variant="ghost" onClick={onCoach} className="gap-1.5 text-primary hover:bg-primary/5">
-                    <MessageSquare className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5" />
                     Ask Coach to suggest
                   </Button>
                 )}

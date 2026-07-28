@@ -1,4 +1,4 @@
-import { MessageSquare, Check } from "lucide-react";
+import { Sparkles, Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
@@ -75,11 +75,11 @@ const FieldCard = ({ field, value, onChange, onCoach }: Props) => {
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 shrink-0"
+          className="h-7 gap-1.5 text-xs text-primary hover:bg-primary/5 shrink-0"
           onClick={onCoach}
         >
-          <MessageSquare className="w-3 h-3" />
-          Coach
+          <Sparkles className="w-3.5 h-3.5" />
+          AI Coach
         </Button>
       </div>
 

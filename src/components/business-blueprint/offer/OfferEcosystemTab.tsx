@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight, Plus, MessageSquare,
+  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight, Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -396,10 +396,10 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                         })
                       }
                       disabled={!blueprintId}
-                      className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+                      className="h-8 gap-1.5 text-xs text-primary hover:bg-primary/5"
                     >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      Coach
+                      <Sparkles className="w-3.5 h-3.5" />
+                      AI Coach
                     </Button>
                     <Button
                       size="sm"

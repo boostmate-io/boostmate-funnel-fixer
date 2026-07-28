@@ -31,7 +31,7 @@ const SectionHelpCoach = ({
   sectionId,
   sectionLabel,
   seed,
-  compact = true,
+  compact: _compact = true,
   variant = "explain",
 }: Props) => {
   const { openCoach } = useCoach();
@@ -83,16 +83,13 @@ const SectionHelpCoach = ({
       variant="ghost"
       onClick={handleClick}
       aria-label={`Explain ${sectionLabel}`}
-      className={
-        compact
-          ? "h-7 w-7 p-0 text-muted-foreground hover:text-primary hover:bg-primary/5"
-          : "h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
-      }
+      className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
     >
-      <Info className="w-4 h-4" />
-      {!compact && <span>Explain</span>}
+      <Info className="w-3.5 h-3.5" />
+      <span>Info</span>
     </Button>
   );
+
 };
 
 export default SectionHelpCoach;
