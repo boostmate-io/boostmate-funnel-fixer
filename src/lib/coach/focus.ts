@@ -80,8 +80,8 @@ export function buildFocusTurnText(
           : "Explain why this part matters for my business and how I should approach it.";
       case "walkthrough":
         return nl
-          ? "Loop veld voor veld met me door deze sectie: stel per veld gerichte vragen, geef feedback op wat er al staat en stel daarna Blueprint-updates voor die ik kan toepassen."
-          : "Walk me through this section field by field: ask focused questions per field, give feedback on what's already there, then propose Blueprint updates I can apply.";
+          ? "Loop veld voor veld met me door deze sectie. Begin bij het eerste veld dat nu nog leeg is in de Blueprint (eerder besproken is niet hetzelfde als ingevuld): stel per veld gerichte vragen, geef feedback op wat er al staat en stel daarna Blueprint-updates voor die ik kan toepassen."
+          : "Walk me through this section field by field. Start at the first field that is still empty in the current Blueprint (discussed is not the same as filled in): ask focused questions per field, give feedback on what's already there, then propose Blueprint updates I can apply.";
       case "task":
         return nl
           ? "Help me deze roadmap-taak stap voor stap af te ronden."
