@@ -149,6 +149,10 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
       count: funnelList.length,
       hasPublished: funnelList.some((f) => !!f.share_token),
     },
+    architecture: {
+      routeCount: routeList.length,
+      hasRoute: routeList.length > 0,
+    },
     analytics: {
       hasEntries: entries.length > 0,
       lastEntryDays,
