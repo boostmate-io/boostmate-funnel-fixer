@@ -76,6 +76,7 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
     blueprint,
     offers,
     funnels,
+    architectureRoutes,
     analyticsEntries,
     workspaceState,
     extras,
@@ -84,6 +85,7 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
   const bp = (blueprint ?? {}) as Record<string, unknown>;
   const offerList = offers ?? [];
   const funnelList = funnels ?? [];
+  const routeList = architectureRoutes ?? [];
   const entries = analyticsEntries ?? [];
   const state = (workspaceState ?? {}) as Record<string, unknown>;
 
