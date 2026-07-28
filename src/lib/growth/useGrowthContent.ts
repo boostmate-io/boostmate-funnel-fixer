@@ -99,7 +99,13 @@ export function useGrowthStageContent() {
   return { stages: resolved, byStage, getStage, isLoading: query.isLoading };
 }
 
-/** All active Growth Systems, resolved for the active locale. */
+/**
+ * All active Growth Systems, resolved for the active locale.
+ *
+ * Canonical source: `growth_systems_catalog` (the single Growth Systems
+ * catalog managed in Admin → Growth → Growth Systems). Catalog columns are
+ * mapped onto the roadmap-facing content shape here.
+ */
 export function useGrowthSystemsContent(opts: { includeInactive?: boolean } = {}) {
   const { i18n } = useTranslation();
   const lang = i18n.language;
@@ -107,11 +113,22 @@ export function useGrowthSystemsContent(opts: { includeInactive?: boolean } = {}
   const query = useQuery({
     queryKey: ["growth-systems-content", opts.includeInactive ?? false],
     queryFn: async (): Promise<GrowthSystemContentRow[]> => {
-      let q = supabase.from("growth_systems").select(SYSTEM_COLUMNS);
+      let q = supabase.from("growth_systems_catalog").select(SYSTEM_COLUMNS);
       if (!opts.includeInactive) q = q.eq("is_active", true);
       const { data, error } = await q.order("sort_order", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as unknown as GrowthSystemContentRow[];
+      return (data ?? []).map((r: Record<string, unknown>) => ({
+        id: String(r.key),
+        name: String(r.label ?? ""),
+        summary: String(r.description ?? ""),
+        addresses: String(r.primary_objective ?? ""),
+        stage_relevance: (r.recommended_stages as string[]) ?? [],
+        related_module: "funnels",
+        ai_guidance: String(r.ai_guidance ?? ""),
+        is_active: Boolean(r.is_active),
+        sort_order: Number(r.sort_order ?? 0),
+        translations: (r.translations as GrowthSystemContentRow["translations"]) ?? null,
+      }));
     },
     ...CONTENT_QUERY_OPTIONS,
   });
