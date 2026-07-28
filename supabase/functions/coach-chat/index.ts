@@ -590,7 +590,17 @@ function buildSystemPrompt(
     const targetId = context?.target?.id ? String(context.target.id) : "";
     const targetMeta = targetId ? renderTargetFieldMeta(canonicalBlueprintPath(targetId)) : null;
     if (targetMeta) parts.push(targetMeta);
+    const fieldPath = targetBlueprintPath(context);
+    parts.push(
+      `# Single-field scope — HARD CONSTRAINT
+The user opened the Coach from ONE specific field: "${context?.target?.label ?? fieldPath}"${fieldPath ? ` (path: ${fieldPath})` : ""}.
+- Coach and propose a value for THAT field ONLY. Exactly one field, never a batch.
+- Never draft, propose or "also fill" any neighbouring field, even if it feels related or the user's answer contains material for it. Anything proposed for another path is discarded by the system.
+- If adjacent fields clearly need work, mention it in one short sentence and tell the user to open that field's own Coach button, or use the section-level "AI Coach" walkthrough to go through the whole tab field by field.
+- Use propose_field_value (never propose_blueprint_writes) for the draft.`,
+    );
   } else if (context?.scope === "blueprint.section") {
+
 
     parts.push(prompts.section);
     parts.push(BLUEPRINT_STRUCTURE);
