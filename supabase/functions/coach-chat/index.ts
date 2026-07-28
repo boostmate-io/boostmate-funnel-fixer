@@ -1857,8 +1857,9 @@ Deno.serve(async (req) => {
     }
 
 
-    // Load memory facts + previously handled Blueprint paths + active Growth assessment
-    const [{ data: memoryRows }, { data: decisionRows }, { data: growthRow }] = await Promise.all([
+    // Load memory facts + handled Blueprint paths + Growth assessment + workspace profile
+    const [{ data: memoryRows }, { data: decisionRows }, { data: growthRow }, { data: workspaceSettings }] =
+      await Promise.all([
       supabase
         .from("ai_coach_memory")
         .select("key, value")
@@ -1877,7 +1878,13 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from("workspace_settings")
+        .select("business_type, who_help, help_achieve, main_goal, biggest_challenge")
+        .eq("sub_account_id", subAccountId)
+        .maybeSingle(),
     ]);
+
     const memoryFacts = (memoryRows ?? []) as Array<{ key: string; value: string }>;
     const handledDecisions = (decisionRows ?? []) as Array<{ path: string; decision: string }>;
     const handledPaths = new Set(handledDecisions.map((d) => d.path));
