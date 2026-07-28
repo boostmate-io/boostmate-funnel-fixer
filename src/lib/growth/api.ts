@@ -2,7 +2,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { runEngine } from "./engine";
-import { serializeCatalogForPrompt } from "./growthSystems";
 import type { AnswerMap, GrowthAssessmentRow, GrowthStage } from "./types";
 import {
   advanceStage,
@@ -134,7 +133,6 @@ export async function runAiAnalysis(assessmentId: string, opts: { claimToken?: s
       assessment_id: assessmentId,
       claim_token: opts.claimToken,
       language: opts.language ?? "en",
-      catalog: serializeCatalogForPrompt(),
     },
   });
   if (error) throw error;

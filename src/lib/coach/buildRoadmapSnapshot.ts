@@ -13,7 +13,6 @@
 
 import type { DerivedTask, CycleSnapshot, TaskStatus } from "@/lib/growth/taskTypes";
 import { DECISION_SPECS, isDecisionTask, readDecisionValue } from "@/lib/growth/decisionOptions";
-import { getGrowthSystems } from "@/lib/growth/growthSystems";
 import { resolveTaskResources } from "@/lib/growth/resourceResolver";
 import type { CoachRoadmapSnapshot, CoachRoadmapResource } from "./types";
 
@@ -27,8 +26,10 @@ export function buildRoadmapSnapshot(params: {
   plan: DerivedTask[];
   activeCycle: CycleSnapshot | null;
   workspaceState: Record<string, unknown>;
+  /** Canonical Growth Systems, read from `growth_systems_catalog` by the caller. */
+  growthSystems?: Array<{ id: string; name: string; summary: string }>;
 }): CoachRoadmapSnapshot {
-  const { plan, activeCycle, workspaceState } = params;
+  const { plan, activeCycle, workspaceState, growthSystems = [] } = params;
 
   const foundationTasks = plan
     .filter((d) => d.task.stage === "any")
@@ -96,7 +97,7 @@ export function buildRoadmapSnapshot(params: {
     foundationTasks,
     workspaceState,
     roadmapCompleted: isRoadmapCompleted(workspaceState),
-    canonicalGrowthSystems: getGrowthSystems().map((s) => ({
+    canonicalGrowthSystems: growthSystems.map((s) => ({
       id: s.id,
       name: s.name,
       summary: s.summary,

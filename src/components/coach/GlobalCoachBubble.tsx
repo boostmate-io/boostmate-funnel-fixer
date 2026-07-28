@@ -14,6 +14,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import CoachPanel from "@/components/coach/CoachPanel";
 import { buildGlobalContext } from "@/lib/coach/buildContext";
 import { buildRoadmapSnapshot } from "@/lib/coach/buildRoadmapSnapshot";
+import { useGrowthSystemsContent } from "@/lib/growth/useGrowthContent";
 import { applyBlueprintWrites } from "@/lib/coach/applyBlueprintWrites";
 import type { CoachBlueprintWrite, CoachContext, CoachGrowthDecision } from "@/lib/coach/types";
 import type { BlueprintRow } from "@/components/business-blueprint/types";
@@ -100,6 +101,8 @@ const GlobalCoachBubble = () => {
     };
   }, [activeSubAccountId, open]);
 
+  const { systems: growthSystems } = useGrowthSystemsContent();
+
   const { plan, activeCycle, workspaceState, refresh } = useGrowthPlan(
     activeSubAccountId,
     assessment,
@@ -109,8 +112,13 @@ const GlobalCoachBubble = () => {
     if (!activeSubAccountId) return null;
     // Even without an active cycle we pass foundation + workspace state so
     // the Coach can nudge the user through the assessment/bootstrap path.
-    return buildRoadmapSnapshot({ plan, activeCycle, workspaceState });
-  }, [activeSubAccountId, plan, activeCycle, workspaceState]);
+    return buildRoadmapSnapshot({
+      plan,
+      activeCycle,
+      workspaceState,
+      growthSystems: growthSystems.map((s) => ({ id: s.id, name: s.name, summary: s.summary })),
+    });
+  }, [activeSubAccountId, plan, activeCycle, workspaceState, growthSystems]);
 
   const context = useMemo<CoachContext | null>(() => {
     if (!activeSubAccountId) return null;
