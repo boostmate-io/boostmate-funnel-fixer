@@ -568,6 +568,54 @@ ${extra}
 EVERY example, avatar suggestion, pain, offer idea, channel and draft you produce MUST come from that business model's world and vocabulary. Never illustrate with examples from another model (e.g. do not use agency owners, ecommerce founders or SaaS teams as examples for a coaching business) unless the user explicitly says their clients are exactly that. When you need an illustration, take it from what a ${label} typically sells and who they typically serve.`;
 }
 
+/**
+ * Blueprint state = the ONLY source of truth for "is this field done?".
+ *
+ * Renders, for the fields in scope, whether the Blueprint currently holds a
+ * value (DONE) or is still empty (EMPTY), plus which of those empty fields
+ * were already discussed but never applied. Prevents the walkthrough from
+ * treating "we talked about it" as "it is filled in".
+ */
+function renderBlueprintStateTruth(context: any, discussedUnfilledPaths: string[] = []): string | null {
+  const scope = context?.scope;
+  if (scope !== "blueprint.section" && scope !== "blueprint.field") return null;
+  const snapshot = context?.businessContext?.blueprintSnapshot;
+  if (!snapshot) return null;
+
+  const rawId = String(context?.target?.id ?? "");
+  const subId = rawId.replace(/^(section|list):/, "");
+  let paths: string[] = BLUEPRINT_SUB_BLOCK_PATHS[subId] ?? [];
+  if (paths.length === 0) {
+    const prefix = targetRootPrefix(context);
+    if (!prefix) return null;
+    paths = Object.keys(BLUEPRINT_FIELD_META).filter(
+      (p) => p === prefix || p.startsWith(`${prefix}.`),
+    );
+  }
+  if (paths.length === 0) return null;
+
+  const discussed = new Set(discussedUnfilledPaths.map((p) => canonicalBlueprintPath(p)));
+  const lines = paths.map((path) => {
+    const filled = !isEmptyBlueprintValue(getDeepValue(snapshot, path));
+    const label = BLUEPRINT_FIELD_META[path]?.label ?? path;
+    const note = filled ? "DONE (value in Blueprint)" : discussed.has(path) ? "EMPTY — discussed earlier but NEVER applied" : "EMPTY — not started";
+    return `- ${path} — ${label}: ${note}`;
+  });
+  const nextEmpty = paths.find((p) => isEmptyBlueprintValue(getDeepValue(snapshot, p)));
+
+  return `# Blueprint state — SINGLE SOURCE OF TRUTH (HARD CONSTRAINT)
+A field counts as complete ONLY when the Blueprint currently holds a value for it. Talking about a field, drafting it, or proposing a value does NOT complete it — the user may have dismissed the proposal.
+
+${lines.join("\n")}
+
+Rules:
+- Determine the next walkthrough step from this list, NEVER from what was discussed earlier in the conversation.
+- Never say or assume a field is done because you covered it in chat. If it is marked EMPTY, it still needs work.
+- For fields marked "discussed earlier but NEVER applied": acknowledge briefly that the earlier proposal was not applied, ask what did not fit, and work that field again before moving on.
+- Do not move to the next field while an earlier field in this list is still EMPTY, unless the user explicitly asks to skip it.${nextEmpty ? `\n- Next field to work on right now: ${nextEmpty} (${BLUEPRINT_FIELD_META[nextEmpty]?.label ?? nextEmpty}).` : "\n- All fields in scope are filled — shift to sharpening quality instead of filling gaps."}`;
+}
+
+
 function buildSystemPrompt(
   context: any,
   memoryFacts: Array<{ key: string; value: string }>,
