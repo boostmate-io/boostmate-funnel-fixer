@@ -2052,6 +2052,26 @@ Deno.serve(async (req) => {
 
     await processToolCalls();
 
+    // Field-scope guard: a Coach opened from ONE field may only ever propose a
+    // value for that field. Any blueprint_writes recovered from leaked prose is
+    // collapsed to the target path (or dropped entirely).
+    if (context?.scope === "blueprint.field") {
+      const fieldPath = targetBlueprintPath(context);
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const p: any = parts[i];
+        if (p?.type !== "blueprint_writes") continue;
+        const own = (Array.isArray(p.writes) ? p.writes : []).filter(
+          (w: any) => fieldPath && canonicalBlueprintPath(String(w?.path ?? "")) === fieldPath,
+        );
+        if (own.length > 0 && !parts.some((q: any) => q?.type === "proposal")) {
+          parts[i] = { type: "proposal", value: String(own[0].value ?? ""), reasoning: p.reasoning ?? "" };
+        } else {
+          parts.splice(i, 1);
+        }
+      }
+    }
+
+
     if (forcedMainOfferStep && !parts.some((p: any) => p?.type === "blueprint_writes")) {
       try {
         assistantMsg = await fetchCoachCompletion(
