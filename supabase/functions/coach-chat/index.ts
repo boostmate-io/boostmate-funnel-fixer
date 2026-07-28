@@ -1938,8 +1938,18 @@ Deno.serve(async (req) => {
     ]);
 
     const memoryFacts = (memoryRows ?? []) as Array<{ key: string; value: string }>;
-    const handledDecisions = (decisionRows ?? []) as Array<{ path: string; decision: string }>;
-    const handledPaths = new Set(handledDecisions.map((d) => d.path));
+    const allDecisions = (decisionRows ?? []) as Array<{ path: string; decision: string }>;
+    // A decision only counts as "handled" when the Blueprint actually holds a
+    // value for that path. Dismissed (or later cleared) proposals leave the
+    // field EMPTY — the walkthrough must keep working on it.
+    const bpSnapshot = context?.businessContext?.blueprintSnapshot ?? null;
+    const pathIsFilled = (p: string) =>
+      !isEmptyBlueprintValue(getDeepValue(bpSnapshot, canonicalBlueprintPath(p)));
+    const handledDecisions = bpSnapshot ? allDecisions.filter((d) => pathIsFilled(d.path)) : allDecisions;
+    const discussedUnfilledPaths = bpSnapshot
+      ? [...new Set(allDecisions.filter((d) => !pathIsFilled(d.path)).map((d) => canonicalBlueprintPath(d.path)))]
+      : [];
+    const handledPaths = new Set(handledDecisions.map((d) => canonicalBlueprintPath(d.path)));
 
     // Task-scoped instruction block: when the client opened the Coach via the
     // Growth Roadmap "Ask Coach" CTA, `context.target.coachPromptRef` names an
