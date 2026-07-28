@@ -2037,53 +2037,9 @@ export type Database = {
           },
         ]
       }
-      growth_systems: {
-        Row: {
-          addresses: string
-          ai_guidance: string
-          created_at: string
-          id: string
-          is_active: boolean
-          name: string
-          related_module: string | null
-          sort_order: number
-          stage_relevance: string[]
-          summary: string
-          translations: Json
-          updated_at: string
-        }
-        Insert: {
-          addresses?: string
-          ai_guidance?: string
-          created_at?: string
-          id: string
-          is_active?: boolean
-          name?: string
-          related_module?: string | null
-          sort_order?: number
-          stage_relevance?: string[]
-          summary?: string
-          translations?: Json
-          updated_at?: string
-        }
-        Update: {
-          addresses?: string
-          ai_guidance?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          related_module?: string | null
-          sort_order?: number
-          stage_relevance?: string[]
-          summary?: string
-          translations?: Json
-          updated_at?: string
-        }
-        Relationships: []
-      }
       growth_systems_catalog: {
         Row: {
+          ai_guidance: string
           architecture: Json | null
           created_at: string
           description: string | null
@@ -2097,9 +2053,11 @@ export type Database = {
           seed_template_id: string | null
           sort_order: number
           suitable_offer_tiers: string[]
+          translations: Json
           updated_at: string
         }
         Insert: {
+          ai_guidance?: string
           architecture?: Json | null
           created_at?: string
           description?: string | null
@@ -2113,9 +2071,11 @@ export type Database = {
           seed_template_id?: string | null
           sort_order?: number
           suitable_offer_tiers?: string[]
+          translations?: Json
           updated_at?: string
         }
         Update: {
+          ai_guidance?: string
           architecture?: Json | null
           created_at?: string
           description?: string | null
@@ -2129,6 +2089,7 @@ export type Database = {
           seed_template_id?: string | null
           sort_order?: number
           suitable_offer_tiers?: string[]
+          translations?: Json
           updated_at?: string
         }
         Relationships: [
