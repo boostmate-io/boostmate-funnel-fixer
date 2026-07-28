@@ -67,6 +67,7 @@ export interface EngineOutput {
 export type RelatedModule =
   | "blueprint"
   | "offer-creator"
+  | "growth-architecture"
   | "funnels"
   | "copy"
   | "analytics"

@@ -50,6 +50,7 @@ interface Props {
 const MODULE_TO_APP: Partial<Record<RelatedModule, string>> = {
   blueprint: "business-blueprint",
   "offer-creator": "business-blueprint",
+  "growth-architecture": "growth-architecture",
   funnels: "funnels",
   copy: "copy-documents",
   analytics: "analytics",

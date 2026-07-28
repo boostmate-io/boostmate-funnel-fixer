@@ -20,6 +20,8 @@ interface BuildInput {
   blueprint?: Record<string, unknown> | null;
   offers?: Array<{ tier?: string | null; is_published?: boolean | null }> | null;
   funnels?: Array<{ is_published?: boolean | null; share_token?: string | null }> | null;
+  /** Configured Growth Architecture routes (growth_architecture_systems rows). */
+  architectureRoutes?: Array<unknown> | null;
   analyticsEntries?: Array<{ entry_date?: string | null }> | null;
   workspaceState?: Record<string, unknown> | null;
   /** Free-form extra overrides layered on top of workspaceState. */
@@ -74,6 +76,7 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
     blueprint,
     offers,
     funnels,
+    architectureRoutes,
     analyticsEntries,
     workspaceState,
     extras,
@@ -82,6 +85,7 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
   const bp = (blueprint ?? {}) as Record<string, unknown>;
   const offerList = offers ?? [];
   const funnelList = funnels ?? [];
+  const routeList = architectureRoutes ?? [];
   const entries = analyticsEntries ?? [];
   const state = (workspaceState ?? {}) as Record<string, unknown>;
 
@@ -144,6 +148,10 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
     funnels: {
       count: funnelList.length,
       hasPublished: funnelList.some((f) => !!f.share_token),
+    },
+    architecture: {
+      routeCount: routeList.length,
+      hasRoute: routeList.length > 0,
     },
     analytics: {
       hasEntries: entries.length > 0,

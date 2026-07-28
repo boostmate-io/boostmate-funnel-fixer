@@ -167,6 +167,11 @@ export interface ConditionContext {
     count: number;
     hasPublished: boolean;
   };
+  /** Growth Architecture routes configured for the workspace. */
+  architecture?: {
+    routeCount: number;
+    hasRoute: boolean;
+  };
   analytics?: {
     hasEntries: boolean;
     lastEntryDays?: number;
