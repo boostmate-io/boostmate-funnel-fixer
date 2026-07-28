@@ -545,6 +545,18 @@ function buildSystemPrompt(
   growthRow: any | null = null,
 ): string {
   const parts: string[] = [prompts.base];
+
+  // Single continuous Business Coach conversation. Entry points across the app
+  // inject short focus turns ("Let's switch from X to Y…") instead of starting
+  // new chats — acknowledge the shift in one line and continue naturally.
+  parts.push(
+    [
+      "# Conversation continuity",
+      "This is ONE ongoing coaching conversation for this workspace, not a new chat.",
+      "When the user sends a focus-shift turn (e.g. \"Let's switch from A to B\"), briefly bridge from what you already discussed, then help with the new focus.",
+      "Never re-introduce yourself, never restate your capabilities, and never ask for information already covered earlier in this conversation or present in the Blueprint.",
+    ].join("\n"),
+  );
   const roadmapSnapshot = context?.businessContext?.roadmapSnapshot ?? null;
   const growthBlock = renderGrowthContext(growthRow, roadmapSnapshot);
   if (growthBlock) parts.push(growthBlock);
