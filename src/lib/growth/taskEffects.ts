@@ -31,7 +31,9 @@ export const TASK_STATE_EFFECTS: Record<string, TaskEffect> = {
   "foundation-blueprint": { kind: "none" },
 
   // Validate — decision task: chosenPath (written by decision UI, not here)
-  "validate-refine-offer": { kind: "boolean", key: "validate.offerReady" },
+  // Completion is DERIVED from Growth Architecture (Client Converter route
+  // built), so no Layer-B flag is written here.
+  "validate-refine-offer": { kind: "none" },
   "validate-choose-path": { kind: "none" },
   "validate-setup-tracking": { kind: "boolean", key: "validate.trackingReady" },
   "validate-activate-path": { kind: "boolean", key: "validate.pathActivated" },
@@ -131,7 +133,6 @@ export const STAGE_CYCLE_RESET_KEYS: Record<
   // All Validate facts are attempt-specific: a new cycle means the previous
   // validation did not stick, so path/tracking/proof are re-decided.
   validate: [
-    "validate.offerReady",
     "validate.chosenPath",
     "validate.trackingReady",
     "validate.pathActivated",

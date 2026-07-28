@@ -13,6 +13,7 @@ import {
   type StageCycleRow,
 } from "./cycleService";
 import { effectForStatus } from "./taskEffects";
+import { fetchMainOfferSystemStatus } from "./mainOfferSystem";
 import type { GrowthAssessmentRow, GrowthStage } from "./types";
 
 interface UseGrowthPlanResult {
@@ -79,7 +80,7 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
     }
     setLoading(true);
     try {
-      const [tasks, progress, bpRes, offersRes, funnelsRes, routesRes, analyticsRes, cycles, wsState] =
+      const [tasks, progress, bpRes, offersRes, funnelsRes, routesRes, analyticsRes, cycles, wsState, mainOfferSystem] =
         await Promise.all([
           fetchActiveTasks(),
           fetchProgressForWorkspace(subAccountId),
@@ -95,6 +96,7 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
           supabase.from("funnel_analytics_entries").select("date").eq("sub_account_id", subAccountId).order("date", { ascending: false }).limit(1),
           fetchActiveCycles(subAccountId),
           fetchWorkspaceState(subAccountId),
+          fetchMainOfferSystemStatus(subAccountId),
         ]);
 
       setWorkspaceStateSnap(wsState ?? {});
@@ -109,6 +111,7 @@ export function useGrowthPlan(subAccountId: string | null, assessment: GrowthAss
         offers: (offersRes.data ?? []) as Array<{ tier?: string | null }>,
         funnels: (funnelsRes.data ?? []) as Array<{ share_token?: string | null }>,
         architectureRoutes: (routesRes.data ?? []) as Array<unknown>,
+        mainOfferSystem,
         analyticsEntries: ((analyticsRes.data ?? []) as Array<{ date?: string | null }>).map((e) => ({ entry_date: e.date })),
         workspaceState: wsState,
       });
