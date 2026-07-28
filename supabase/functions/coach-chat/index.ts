@@ -545,6 +545,18 @@ function buildSystemPrompt(
   growthRow: any | null = null,
 ): string {
   const parts: string[] = [prompts.base];
+
+  // Single continuous Business Coach conversation. Entry points across the app
+  // inject short focus turns ("Let's switch from X to Y…") instead of starting
+  // new chats — acknowledge the shift in one line and continue naturally.
+  parts.push(
+    [
+      "# Conversation continuity",
+      "This is ONE ongoing coaching conversation for this workspace, not a new chat.",
+      "When the user sends a focus-shift turn (e.g. \"Let's switch from A to B\"), briefly bridge from what you already discussed, then help with the new focus.",
+      "Never re-introduce yourself, never restate your capabilities, and never ask for information already covered earlier in this conversation or present in the Blueprint.",
+    ].join("\n"),
+  );
   const roadmapSnapshot = context?.businessContext?.roadmapSnapshot ?? null;
   const growthBlock = renderGrowthContext(growthRow, roadmapSnapshot);
   if (growthBlock) parts.push(growthBlock);
@@ -887,6 +899,32 @@ function renderForcedMainOfferRetryPrompt(step: MainOfferWalkthroughStep) {
   ].join(", ")}. Do not ask a clarifying question and do not output pseudo-tool text like [proposed blueprint writes].`;
 }
 
+
+
+// -----------------------------------------------------------------------------
+// Bounded history window.
+// Keeps the last `keep` turns verbatim and condenses everything older into a
+// short rolling digest so a single long-lived Coach conversation never blows
+// past the model's context window.
+// -----------------------------------------------------------------------------
+function windowMessagesForModel(messages: any[], keep = 24): { digest: string; recent: any[] } {
+  if (!Array.isArray(messages) || messages.length <= keep) {
+    return { digest: "", recent: messages ?? [] };
+  }
+  const older = messages.slice(0, messages.length - keep);
+  const recent = messages.slice(-keep);
+  const lines = older
+    .map((m: any) => {
+      const role = m?.role === "assistant" ? "Coach" : "User";
+      const text = typeof m?.content === "string" ? m.content.replace(/\s+/g, " ").trim() : "";
+      if (!text) return "";
+      return `- ${role}: ${text.slice(0, 220)}${text.length > 220 ? "…" : ""}`;
+    })
+    .filter(Boolean);
+  // Cap the digest itself so very long histories stay bounded.
+  const capped = lines.slice(-60);
+  return { digest: capped.join("\n"), recent };
+}
 
 function latestUserText(messages: any[]): string {
   return String([...messages].reverse().find((m: any) => m?.role !== "assistant")?.content ?? "");
@@ -1829,9 +1867,15 @@ Deno.serve(async (req) => {
     ]
       .filter(Boolean)
       .join("\n\n---\n\n");
+    // The Coach is ONE long-lived conversation per workspace, so the history
+    // is bounded: recent turns verbatim + a condensed digest of older ones.
+    const { digest, recent } = windowMessagesForModel(messages);
     const llmMessages: any[] = [
       { role: "system", content: systemPrompt },
-      ...messages.map((m: any) => ({
+      ...(digest
+        ? [{ role: "system", content: `# Earlier in this conversation (condensed)\n${digest}` }]
+        : []),
+      ...recent.map((m: any) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content:
           m.role === "assistant"

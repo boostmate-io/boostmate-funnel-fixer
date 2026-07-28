@@ -33,3 +33,4 @@
 - [Outreach Module](mem://features/outreach-module) — AI-first DM workflows, Kanban, and strict prompt formatting
 - [AI Infrastructure](mem://features/ai-infrastructure) — Global AI Actions, instruction blocks, execute edge function
 - [Copy System](mem://features/copy-system) — Section-level components, frameworks, document editor, context linking
+- [AI Coach Architecture](mem://features/ai-coach-architecture) — One conversation per workspace, focus turns, single CoachPanel

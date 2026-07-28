@@ -30,10 +30,12 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
   const [decisions, setDecisions] = useState<Record<string, Record<string, ProposalDecision>>>({});
   const initKey = useRef<string | null>(null);
 
-  const targetKey = context?.target?.id ?? "__global__";
-  const scope = context?.scope ?? null;
+  // ONE Business Coach conversation per (user, workspace). Scope/target only
+  // shape the prompt for the current turn — they never fork the conversation.
+  const targetKey = "__workspace__";
+  const scope = context ? "global" : null;
   const subAccountId = context?.businessContext.subAccountId ?? null;
-  const targetLabel = context?.target?.label ?? null;
+  const targetLabel = "Business Coach";
   const userId = user?.id ?? null;
 
   // Keep a live ref to context so we can snapshot it on insert without
@@ -69,11 +71,10 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
 
       let convId = existing?.id as string | undefined;
 
-      // Global Coach used to have slightly different target_id shapes in older
-      // builds. After a refresh, prefer the latest existing global conversation
-      // over creating a fresh empty one, otherwise the Coach loses the prior
-      // walkthrough context and asks vague follow-up questions.
-      if (!convId && scope === "global" && targetKey === "__global__") {
+      // Older builds keyed global conversations by other target_id shapes.
+      // Adopt the most recent existing global conversation instead of creating
+      // a fresh empty one, so history carries over into the single-thread model.
+      if (!convId) {
         const { data: latestGlobal } = await supabase
           .from("ai_coach_conversations")
           .select("id")
@@ -173,7 +174,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
       }));
       const { error: upErr } = await supabase
         .from("ai_coach_proposal_decisions")
-        .upsert(payload, { onConflict: "conversation_id,path" });
+        .upsert(payload, { onConflict: "conversation_id,message_id,path" });
       if (upErr) console.error("[useCoachChat] recordDecision failed:", upErr);
     },
     [conversationId, subAccountId, userId],

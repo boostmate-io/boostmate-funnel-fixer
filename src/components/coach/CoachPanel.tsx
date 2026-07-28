@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Send, Sparkles, Loader2, RefreshCw, Check, X, Maximize2, Minimize2 } from "lucide-react";
 import { useCoachChat } from "@/lib/coach/useCoachChat";
+import { buildResumeTurnText } from "@/lib/coach/focus";
 import type { CoachContext, CoachMessage, CoachMessagePart, CoachBlueprintWrite, CoachGrowthDecision } from "@/lib/coach/types";
 import { cn } from "@/lib/utils";
 
@@ -152,19 +153,34 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
     }
   }, [displayMessages.length, open, status]);
 
-  // Auto-seed: when the panel opens on a fresh (empty) conversation with a
-  // pending seed message, send it exactly once. Guarded by seed key so that
-  // switching between task-scoped Coach entries reseeds appropriately, and
-  // by messages.length so we never replay on an existing conversation.
+  // Focus turn: the Coach is ONE continuous conversation, so every entry point
+  // injects a short focus turn instead of starting a new chat. Guarded by key
+  // so it fires exactly once per focus, on empty AND existing conversations.
   const seededKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!open || !pendingSeed || !conversationId) return;
     if (status !== "idle") return;
-    if (messages.length > 0) return;
     if (seededKeyRef.current === pendingSeed.key) return;
     seededKeyRef.current = pendingSeed.key;
     void sendMessage(pendingSeed.text);
-  }, [open, pendingSeed, conversationId, status, messages.length, sendMessage]);
+  }, [open, pendingSeed, conversationId, status, sendMessage]);
+
+  // Re-entry recap: reopening the Coach after a long break asks for a short
+  // recap so the user isn't dropped mid-thread with no orientation.
+  const resumedConvRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open || pendingSeed || !conversationId) return;
+    if (status !== "idle") return;
+    if (resumedConvRef.current === conversationId) return;
+    if (messages.length === 0) return;
+    resumedConvRef.current = conversationId;
+    const last = messages[messages.length - 1]?.created_at;
+    if (!last) return;
+    const idleMs = Date.now() - new Date(last).getTime();
+    if (idleMs < 6 * 60 * 60 * 1000) return;
+    void sendMessage(buildResumeTurnText(context?.businessContext.locale));
+  }, [open, pendingSeed, conversationId, status, messages, sendMessage, context]);
+
 
   const handleSend = async (text?: string) => {
     const value = (text ?? input).trim();

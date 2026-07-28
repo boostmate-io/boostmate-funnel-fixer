@@ -9,7 +9,7 @@ import { useMemo, useState } from "react";
 import { Check, Palette } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import CoachPanel from "@/components/coach/CoachPanel";
+import { useCoach } from "@/contexts/CoachContext";
 import FieldCard from "./FieldCard";
 import SectionHelpCoach from "./SectionHelpCoach";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -35,29 +35,39 @@ interface Props {
 
 const BrandIdentitySection = ({ data, onChange, saving }: Props) => {
   const [active, setActive] = useState<BrandTabId>("positioning");
-  const [coachField, setCoachField] = useState<{ key: string; label: string; helper?: string; placeholder?: string } | null>(null);
   const { activeSubAccountId } = useWorkspace();
+  const { openCoach } = useCoach();
 
   const tab = BRAND_STRATEGY_TABS.find((t) => t.id === active)!;
   const TabIcon = tab.icon;
   const progress = calcBrandTabProgress(data, active);
 
-  const coachContext = useMemo(() => {
-    if (!coachField || !activeSubAccountId) return null;
+  const openFieldCoach = (field: { key: string; label: string; helper?: string; placeholder?: string }) => {
+    if (!activeSubAccountId) return;
     const snapshot = { brand_strategy: data } as unknown as BlueprintRow;
-    return buildBlueprintFieldContext(
+    const ctx = buildBlueprintFieldContext(
       {
-        id: `brand_strategy.${coachField.key}`,
-        label: coachField.label,
-        helper: coachField.helper,
-        placeholder: coachField.placeholder,
-        currentValue: (data?.[coachField.key] as string) || "",
+        id: `brand_strategy.${field.key}`,
+        label: field.label,
+        helper: field.helper,
+        placeholder: field.placeholder,
+        currentValue: (data?.[field.key] as string) || "",
         kind: "text",
       },
       snapshot,
       activeSubAccountId,
     );
-  }, [coachField, activeSubAccountId, data]);
+    openCoach({
+      key: `brand_strategy.${field.key}`,
+      label: field.label,
+      scope: ctx.scope,
+      intent: ctx.intent,
+      mode: "field",
+      target: ctx.target,
+      blueprintSnapshot: snapshot,
+      onApply: (value) => onChange({ [field.key]: value }),
+    });
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -111,6 +121,11 @@ const BrandIdentitySection = ({ data, onChange, saving }: Props) => {
                   sectionId={`brand_strategy.${tab.id}`}
                   sectionLabel={`Brand Strategy — ${tab.label}`}
                 />
+                <SectionHelpCoach
+                  variant="walkthrough"
+                  sectionId={`brand_strategy.${tab.id}`}
+                  sectionLabel={`Brand Strategy — ${tab.label}`}
+                />
               </div>
               <p className="text-sm text-muted-foreground">{tab.description}</p>
             </div>
@@ -128,7 +143,7 @@ const BrandIdentitySection = ({ data, onChange, saving }: Props) => {
                 value={((data?.[field.key] as string) || "").toString()}
                 onChange={(v) => onChange({ [field.key]: v })}
                 onCoach={() =>
-                  setCoachField({
+                  openFieldCoach({
                     key: field.key,
                     label: field.label,
                     helper: field.helper,
@@ -142,17 +157,6 @@ const BrandIdentitySection = ({ data, onChange, saving }: Props) => {
         </div>
       </div>
 
-      {/* Field-level AI Coach */}
-      <CoachPanel
-        open={!!coachField}
-        onOpenChange={(o) => {
-          if (!o) setCoachField(null);
-        }}
-        context={coachContext}
-        onApply={(value) => {
-          if (coachField) onChange({ [coachField.key]: value });
-        }}
-      />
     </div>
   );
 };
