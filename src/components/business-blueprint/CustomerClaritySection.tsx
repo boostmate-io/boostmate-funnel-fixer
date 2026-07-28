@@ -8,7 +8,7 @@ import {
   type CustomerClarityData,
 } from "./types";
 import { getClarityConfig, type FieldDef } from "./clarityConfig";
-import CoachPanel from "@/components/coach/CoachPanel";
+import { useCoach } from "@/contexts/CoachContext";
 import FieldCard from "./FieldCard";
 import SectionHelpCoach from "./SectionHelpCoach";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -24,8 +24,8 @@ interface Props {
 
 const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props) => {
   const [active, setActive] = useState<ClaritySubBlock>("avatar");
-  const [coachField, setCoachField] = useState<FieldDef | null>(null);
   const { activeSubAccountId } = useWorkspace();
+  const { openCoach } = useCoach();
 
 
   const clarityConfig = useMemo(() => getClarityConfig(businessType), [businessType]);
@@ -35,22 +35,32 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
   
   const progress = calculateSubBlockProgress(data, active);
 
-  const coachContext = useMemo(() => {
-    if (!coachField || !activeSubAccountId) return null;
+  const openFieldCoach = (field: FieldDef) => {
+    if (!activeSubAccountId) return;
     const snapshot = { customer_clarity: data } as unknown as BlueprintRow;
-    return buildBlueprintFieldContext(
+    const ctx = buildBlueprintFieldContext(
       {
-        id: coachField.key as string,
-        label: coachField.label,
-        helper: coachField.helper,
-        placeholder: coachField.placeholder,
-        currentValue: (data[coachField.key] as string) || "",
-        kind: coachField.type === "tags" ? "tags" : coachField.type === "chips-single" ? "chips" : "text",
+        id: field.key as string,
+        label: field.label,
+        helper: field.helper,
+        placeholder: field.placeholder,
+        currentValue: (data[field.key] as string) || "",
+        kind: field.type === "tags" ? "tags" : field.type === "chips-single" ? "chips" : "text",
       },
       snapshot,
       activeSubAccountId,
     );
-  }, [coachField, activeSubAccountId, data]);
+    openCoach({
+      key: `customer_clarity.${field.key as string}`,
+      label: field.label,
+      scope: ctx.scope,
+      intent: ctx.intent,
+      mode: "field",
+      target: ctx.target,
+      blueprintSnapshot: snapshot,
+      onApply: (value) => onChange({ [field.key]: value } as Partial<CustomerClarityData>),
+    });
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -104,6 +114,11 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
                   sectionId={`customer_clarity.${active}`}
                   sectionLabel={`Customer Clarity — ${config.label}`}
                 />
+                <SectionHelpCoach
+                  variant="walkthrough"
+                  sectionId={`customer_clarity.${active}`}
+                  sectionLabel={`Customer Clarity — ${config.label}`}
+                />
               </div>
               <p className="text-sm text-muted-foreground">{config.description}</p>
             </div>
@@ -125,7 +140,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
                   field={field}
                   value={(data[field.key] as string) || ""}
                   onChange={(v) => onChange({ [field.key]: v } as Partial<CustomerClarityData>)}
-                  onCoach={() => setCoachField(field)}
+                  onCoach={() => openFieldCoach(field)}
                 />
               </div>
             ))}
@@ -133,19 +148,6 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
         </div>
       </div>
 
-      {/* AI Coach */}
-      <CoachPanel
-        open={!!coachField}
-        onOpenChange={(o) => {
-          if (!o) setCoachField(null);
-        }}
-        context={coachContext}
-        onApply={(value) => {
-          if (coachField) {
-            onChange({ [coachField.key]: value } as Partial<CustomerClarityData>);
-          }
-        }}
-      />
     </div>
   );
 };

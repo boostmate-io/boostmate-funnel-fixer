@@ -19,6 +19,8 @@ import NotFound from "./pages/NotFound.tsx";
 import OAuthConsent from "./pages/OAuthConsent.tsx";
 import PublicAssessment from "./pages/PublicAssessment.tsx";
 
+import { CoachProvider } from "@/contexts/CoachContext";
+
 const queryClient = new QueryClient();
 
 const WithAuth = ({ children }: { children: ReactNode }) => (
@@ -30,6 +32,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <CoachProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<WithAuth><Index /></WithAuth>} />
@@ -52,6 +55,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </CoachProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

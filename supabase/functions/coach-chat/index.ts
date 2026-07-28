@@ -888,6 +888,32 @@ function renderForcedMainOfferRetryPrompt(step: MainOfferWalkthroughStep) {
 }
 
 
+
+// -----------------------------------------------------------------------------
+// Bounded history window.
+// Keeps the last `keep` turns verbatim and condenses everything older into a
+// short rolling digest so a single long-lived Coach conversation never blows
+// past the model's context window.
+// -----------------------------------------------------------------------------
+function windowMessagesForModel(messages: any[], keep = 24): { digest: string; recent: any[] } {
+  if (!Array.isArray(messages) || messages.length <= keep) {
+    return { digest: "", recent: messages ?? [] };
+  }
+  const older = messages.slice(0, messages.length - keep);
+  const recent = messages.slice(-keep);
+  const lines = older
+    .map((m: any) => {
+      const role = m?.role === "assistant" ? "Coach" : "User";
+      const text = typeof m?.content === "string" ? m.content.replace(/\s+/g, " ").trim() : "";
+      if (!text) return "";
+      return `- ${role}: ${text.slice(0, 220)}${text.length > 220 ? "…" : ""}`;
+    })
+    .filter(Boolean);
+  // Cap the digest itself so very long histories stay bounded.
+  const capped = lines.slice(-60);
+  return { digest: capped.join("\n"), recent };
+}
+
 function latestUserText(messages: any[]): string {
   return String([...messages].reverse().find((m: any) => m?.role !== "assistant")?.content ?? "");
 }
@@ -1829,9 +1855,15 @@ Deno.serve(async (req) => {
     ]
       .filter(Boolean)
       .join("\n\n---\n\n");
+    // The Coach is ONE long-lived conversation per workspace, so the history
+    // is bounded: recent turns verbatim + a condensed digest of older ones.
+    const { digest, recent } = windowMessagesForModel(messages);
     const llmMessages: any[] = [
       { role: "system", content: systemPrompt },
-      ...messages.map((m: any) => ({
+      ...(digest
+        ? [{ role: "system", content: `# Earlier in this conversation (condensed)\n${digest}` }]
+        : []),
+      ...recent.map((m: any) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content:
           m.role === "assistant"

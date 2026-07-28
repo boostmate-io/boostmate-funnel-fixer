@@ -1,14 +1,16 @@
 // =============================================================================
-// SectionHelpCoach — small info button placed next to a Blueprint section or
-// tab title. Opens the AI Coach with section-scope context and auto-seeds a
-// "why does this matter + how should I approach it" first user message so the
-// explanation is personalized to the workspace's Blueprint data.
+// SectionHelpCoach — Blueprint section/tab Coach entry point.
+//
+// Does NOT open its own chat: it focuses the single Business Coach
+// conversation on this section. Two variants:
+//   • "explain"     — info icon, "why does this matter / how to approach it".
+//   • "walkthrough" — "AI Coach" button, field-by-field coaching of the tab.
 // =============================================================================
 
-import { useMemo, useState } from "react";
-import { Info } from "lucide-react";
+import { useMemo } from "react";
+import { Info, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import CoachPanel from "@/components/coach/CoachPanel";
+import { useCoach } from "@/contexts/CoachContext";
 import { buildBlueprintSectionContext } from "@/lib/coach/buildContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -17,49 +19,79 @@ interface Props {
   sectionId: string;
   /** Human label, e.g. "Customer Clarity — Ideal Avatar". */
   sectionLabel: string;
-  /** Optional custom seed. Defaults to a generic "explain this section" prompt. */
+  /** Optional custom focus turn. */
   seed?: string;
   /** Optional compact mode (icon-only, tighter). Default true. */
   compact?: boolean;
+  /** "explain" (default) or "walkthrough". */
+  variant?: "explain" | "walkthrough";
 }
 
-const SectionHelpCoach = ({ sectionId, sectionLabel, seed, compact = true }: Props) => {
-  const [open, setOpen] = useState(false);
+const SectionHelpCoach = ({
+  sectionId,
+  sectionLabel,
+  seed,
+  compact = true,
+  variant = "explain",
+}: Props) => {
+  const { openCoach } = useCoach();
   const { activeSubAccountId } = useWorkspace();
 
   const context = useMemo(
-    () => (activeSubAccountId ? buildBlueprintSectionContext(sectionId, sectionLabel, null, activeSubAccountId) : null),
+    () =>
+      activeSubAccountId
+        ? buildBlueprintSectionContext(sectionId, sectionLabel, null, activeSubAccountId)
+        : null,
     [activeSubAccountId, sectionId, sectionLabel],
   );
 
-  const seedText =
-    seed ??
-    `Explain why "${sectionLabel}" matters for my business and help me understand how to approach it based on what you already know about me.`;
+  const walkthrough = variant === "walkthrough";
 
-  return (
-    <>
+  const handleClick = () => {
+    if (!context) return;
+    openCoach({
+      key: `${sectionId}:${walkthrough ? "walkthrough" : "help"}`,
+      label: sectionLabel,
+      scope: context.scope,
+      intent: context.intent,
+      mode: walkthrough ? "walkthrough" : "section",
+      target: context.target,
+      seed,
+    });
+  };
+
+  if (walkthrough) {
+    return (
       <Button
         type="button"
         size="sm"
         variant="ghost"
-        onClick={() => setOpen(true)}
-        aria-label={`Explain ${sectionLabel}`}
-        className={
-          compact
-            ? "h-7 w-7 p-0 text-muted-foreground hover:text-primary hover:bg-primary/5"
-            : "h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
-        }
+        onClick={handleClick}
+        aria-label={`AI Coach walkthrough — ${sectionLabel}`}
+        className="h-7 gap-1.5 text-xs text-primary hover:bg-primary/5"
       >
-        <Info className="w-4 h-4" />
-        {!compact && <span>Explain</span>}
+        <Sparkles className="w-3.5 h-3.5" />
+        <span>AI Coach</span>
       </Button>
-      <CoachPanel
-        open={open}
-        onOpenChange={setOpen}
-        context={context}
-        pendingSeed={open ? { key: `${sectionId}:help`, text: seedText } : null}
-      />
-    </>
+    );
+  }
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      onClick={handleClick}
+      aria-label={`Explain ${sectionLabel}`}
+      className={
+        compact
+          ? "h-7 w-7 p-0 text-muted-foreground hover:text-primary hover:bg-primary/5"
+          : "h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+      }
+    >
+      <Info className="w-4 h-4" />
+      {!compact && <span>Explain</span>}
+    </Button>
   );
 };
 

@@ -29,12 +29,12 @@ import {
   type CoachOpenForTaskDetail,
 } from "@/lib/coach/askCoachForTask";
 import i18n from "@/i18n";
+import { useCoach } from "@/contexts/CoachContext";
 
 const GlobalCoachBubble = () => {
-  const [open, setOpen] = useState(false);
+  const { open, focus, focusTurn, openCoach, closeCoach } = useCoach();
   const [blueprint, setBlueprint] = useState<BlueprintRow | null>(null);
   const [assessment, setAssessment] = useState<GrowthAssessmentRow | null>(null);
-  const [taskFocus, setTaskFocus] = useState<CoachOpenForTaskDetail | null>(null);
   const { activeSubAccountId } = useWorkspace();
   const location = useLocation();
 
@@ -46,19 +46,34 @@ const GlobalCoachBubble = () => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<CoachOpenForTaskDetail>).detail;
       if (!detail || !detail.taskSlug) return;
-      setTaskFocus(detail);
-      setOpen(true);
+      const locale = (i18n.language ?? "en").split("-")[0];
+      openCoach({
+        key: `growth-task:${detail.taskSlug}`,
+        label: detail.taskTitle,
+        scope: "global",
+        mode: "task",
+        seed: buildTaskSeedMessage(detail.taskTitle, locale),
+        target: {
+          id: `growth-task:${detail.taskSlug}`,
+          label: detail.taskTitle,
+          kind: "text",
+          currentValue: null,
+          growthTaskSlug: detail.taskSlug,
+          coachPromptRef: detail.coachPromptRef ?? undefined,
+        },
+      });
     };
     window.addEventListener(COACH_OPEN_FOR_TASK_EVENT, handler);
     return () => window.removeEventListener(COACH_OPEN_FOR_TASK_EVENT, handler);
-  }, []);
+  }, [openCoach]);
 
-  // Closing the panel clears the task focus so the next open reverts to the
-  // generic Growth Strategist scope.
-  const handleOpenChange = useCallback((next: boolean) => {
-    setOpen(next);
-    if (!next) setTaskFocus(null);
-  }, []);
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (next) openCoach(focus ?? null);
+      else closeCoach();
+    },
+    [openCoach, closeCoach, focus],
+  );
 
 
   // Blueprint fetch
@@ -130,33 +145,22 @@ const GlobalCoachBubble = () => {
       `Route: ${location.pathname} · module: ${module}`,
       roadmapSnapshot,
     );
-    // Task-scoped override: same global scope + blueprint/roadmap grounding,
-    // but with a per-task target. `useCoachChat` keys conversations by
-    // (scope, target.id) so each Roadmap task gets its own thread.
-    if (taskFocus) {
+    // Focus overlay: the conversation stays the SAME (one Business Coach
+    // thread per workspace) — the active focus only shapes this turn's prompt.
+    if (focus) {
       return {
         ...base,
-        target: {
-          id: `growth-task:${taskFocus.taskSlug}`,
-          label: taskFocus.taskTitle,
-          kind: "text",
-          currentValue: null,
-          growthTaskSlug: taskFocus.taskSlug,
-          coachPromptRef: taskFocus.coachPromptRef ?? undefined,
+        scope: focus.scope,
+        intent: focus.intent ?? base.intent,
+        target: focus.target ?? null,
+        businessContext: {
+          ...base.businessContext,
+          blueprintSnapshot: focus.blueprintSnapshot ?? base.businessContext.blueprintSnapshot,
         },
       };
     }
     return base;
-  }, [activeSubAccountId, blueprint, location.pathname, location.search, roadmapSnapshot, taskFocus]);
-
-  const pendingSeed = useMemo(() => {
-    if (!taskFocus) return null;
-    const locale = (i18n.language ?? "en").split("-")[0];
-    return {
-      key: `growth-task:${taskFocus.taskSlug}`,
-      text: buildTaskSeedMessage(taskFocus.taskTitle, locale),
-    };
-  }, [taskFocus]);
+  }, [activeSubAccountId, blueprint, location.pathname, location.search, roadmapSnapshot, focus]);
 
   const handleApplyBlueprintWrites = useCallback(
     async (writes: CoachBlueprintWrite[]) => {
@@ -218,7 +222,7 @@ const GlobalCoachBubble = () => {
       {!open && (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => openCoach(null)}
           aria-label="Open Growth Strategist"
           className="fixed bottom-6 right-6 z-40 group flex items-center gap-2 pl-3 pr-4 py-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-xl hover:scale-[1.03] transition-all"
         >
@@ -234,9 +238,10 @@ const GlobalCoachBubble = () => {
         open={open}
         onOpenChange={handleOpenChange}
         context={context}
-        onApplyBlueprintWrites={handleApplyBlueprintWrites}
+        onApply={focus?.onApply}
+        onApplyBlueprintWrites={focus?.onApplyBlueprintWrites ?? handleApplyBlueprintWrites}
         onApplyGrowthDecision={handleApplyGrowthDecision}
-        pendingSeed={pendingSeed}
+        pendingSeed={focusTurn}
       />
     </>
   );

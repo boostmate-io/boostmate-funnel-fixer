@@ -1,70 +1,46 @@
-## Where the copy comes from today
+## Plan — Single Persistent Business Coach
 
-| Text | Source | Type |
-|---|---|---|
-| Stage modal: "What this stage is" / "Typically looks like" / "To unlock" | `StageLadder.tsx:170-178` → keys in `stageIdentity.ts` → `src/i18n/en.json` | Hardcoded (frontend i18n) |
-| "Why you're here" / "Focus of this stage" / "What success looks like" | `StageDetailCard.tsx:44-58` → `summaryKey`/`focusKey`/`successKey` | Hardcoded |
-| Bottleneck / Objective / Milestone | `engine.ts` `STAGE_META` → i18n | Hardcoded |
-| Recommended Growth System — name + summary | `growthSystems.ts` `CATALOG` TS constant | Hardcoded |
-| Recommended Growth System — rationale | `growth-analyze` edge function, stored in `growth_assessments.ai_result` | AI-generated (prompt already DB-editable) |
-| Roadmap task titles/descriptions | `growth_roadmap_tasks` | Already admin-managed |
+### Concerns already accounted for
+- Knowledge scoping changes per turn: always inject global + `coach:business-blueprint` blocks, layer focus-specific blocks on top, and make every focus switch an explicit turn so the model knows why its context shifted.
+- History growth: bounded window (recent turns verbatim + rolling summary of older turns).
+- `ai_coach_proposal_decisions` unique key `(conversation_id, path)` breaks when one conversation spans the whole Blueprint — a field could only ever be decided once.
+- Multiple `<CoachPanel>` instances would each run their own `useCoachChat` against the same thread — needs a single provider.
+- Existing per-field conversation rows are retained, not deleted.
 
-Everything you listed is hardcoded except the one AI rationale sentence. Dutch translations for the stage keys are also missing today, so NL silently falls back to English.
+### 1. One conversation per workspace
+- `src/lib/coach/useCoachChat.ts`: resolve the conversation by `(user_id, sub_account_id)` with fixed `scope = "global"`, `target_id = "__coach__"`, adopting the most recent existing global conversation if one exists (so demo history carries over).
+- Focus stops being part of conversation identity and becomes part of each turn's payload.
 
-Note: the existing `growth_systems_catalog` table is a different thing (Blueprint offer/channel compatibility) and cannot be reused here.
+### 2. Coach provider + single panel
+- New `src/contexts/CoachContext.tsx` (`CoachProvider` + `useCoach()`), mounted once in the dashboard shell, owning the single `useCoachChat` instance and the panel's open state.
+- Expose `openCoach(focus)` taking the existing `CoachContext` shape.
+- Replace local `<CoachPanel>` usage in `SectionHelpCoach`, the `FieldCard` / `AngleField` / `CoachIconButton` call sites, and `GlobalCoachBubble` with `useCoach().openCoach(...)`.
 
-## The reusable pattern (Editable Product Content standard)
+### 3. Focus as per-turn context, with natural transitions
+- Opening the Coach from a field or section sets the active focus and sends a focus turn describing it ("The user wants help with the *Who is your ideal client?* field in Ideal Client Avatar").
+- The turn carries the **previous focus** as well, and the coach prompt instructs it to bridge conversationally rather than hard-switching — e.g. "Great, I think we've defined your ideal client well enough for now. Let's move on to your Core Offer." If the previous topic is clearly unfinished, it should say so briefly before moving on.
+- Rendered in the transcript as a compact focus chip so the thread still reads as one session.
+- The full `context` (scope, target metadata, blueprint snapshot, locale) travels with every request, so server-side field metadata, write validation and scoped knowledge are unchanged.
 
-No generic CMS, no universal content table. Instead, a documented convention every future domain table follows — Business Blueprint content, Build Guide intros, Academy intros, Coach contextual content:
+### 4. Resume naturally on reopen
+- Reopening the Coach never shows a fresh-chat opener when history exists; it restores the transcript scrolled to the last exchange.
+- If the session has been idle (or the Blueprint changed since the last turn), the first turn back includes a short "re-entry" note so the coach opens with a brief recap and a concrete next step — "Last time we were sharpening your Core Offer promise. Want to pick that back up, or start on Brand Strategy?" — instead of a generic greeting.
+- Per-scope opener messages become focus chips; the generic opener only ever appears on a genuinely empty conversation.
 
-1. **Structured table per domain.** Real, typed columns for the fields that domain actually has. Base columns hold the default (English) copy.
-2. **Localization** via a single `translations JSONB` column shaped `{ "nl": { "<column>": "..." } }`. No per-locale row duplication, no schema change to add a language.
-3. **AI guidance** via a `ai_guidance TEXT` column: admin-editable, never rendered to users, injected into AI Actions as domain knowledge. Instruction blocks keep owning behaviour, reasoning and coaching method; these columns hold the evolving domain facts.
-4. **Admin editing** via a standard CRUD component with a built-in EN/NL toggle and a clearly separated "AI guidance (not shown to users)" field.
-5. **Delivery + caching** via one shared resolver helper — `resolveContent(row, lang)` — plus a React Query hook per domain with a shared cache policy, so content loads once per session.
-6. **Access** — read for `anon` + `authenticated`, write restricted to app admins via `is_app_admin(auth.uid())`.
+### 5. Restore tab-level section walkthrough
+- Bring back the tab-level "AI Coach" button on each Blueprint section tab.
+- Sets a section focus with walkthrough intent: work the tab field-by-field, proposing `blueprint_writes` per field until the section is complete, then confirm and offer the next tab.
+- Extend the section instruction block so the coach tracks which registry fields in the active tab are still empty and works through them in order.
 
-This is captured in a short `src/lib/content/README.md` plus the shared `resolveContent` helper in `src/lib/content/resolveContent.ts`, so the next domain is a table + a hook + an admin tab, not a new architecture.
+### 6. Persistence fixes
+- Migration: replace the `(conversation_id, path)` unique constraint on `ai_coach_proposal_decisions` with `(conversation_id, message_id, path)`; update the upsert conflict target in `useCoachChat`.
+- Keep the null-`message_id` fallback bucket for legacy rows.
 
-## Scope of this implementation
+### 7. History management
+- Send a bounded window to `coach-chat`: last N turns verbatim plus a rolling summary of older turns persisted on the conversation row.
+- **No** "Start a new conversation" action — the experience stays a single continuous thread. Conversation management can be revisited later if it's actually needed.
 
-Only `growth_stages` and `growth_systems`. Nothing else migrates.
-
-### 1. `public.growth_stages`
-
-One row per stage, seeded verbatim from today's English copy so the UI is unchanged on day one.
-
-`stage` (pk), `label`, `summary`, `typical_profile`, `unlock_condition`, `focus`, `success_criteria`, `bottleneck`, `objective`, `milestone`, `ai_guidance`, `sort_order`, `translations` JSONB.
-
-### 2. `public.growth_systems`
-
-Replaces the hardcoded `CATALOG`: `id` (text slug), `name`, `summary`, `addresses`, `stage_relevance` (text[]), `related_module`, `ai_guidance`, `is_active`, `sort_order`, `translations` JSONB. Seeded with the four existing systems.
-
-This also removes the drift risk between `growthSystems.ts` and the duplicated `ALLOWED_SYSTEM_IDS` list in `growth-analyze/index.ts:98-103`.
-
-### 3. Frontend
-
-- New `src/lib/growth/useGrowthContent.ts` (React Query, shared cache policy) fetching both tables.
-- `StageLadder`, `StageDetailCard`, `AssessmentResult`, `GrowthRoadmapOverview` read from the hook via `resolveContent(row, i18n.language)` instead of `t(...)`.
-- Icons/colours stay in `stageIdentity.ts` — design tokens, not copy.
-- Static UI chrome ("Current stage", section headings) stays in i18n.
-- The migrated stage keys are removed from `en.json`/`nl.json` so there is one source of truth.
-
-### 4. Admin
-
-New `src/components/admin/AdminGrowthStages.tsx` (stages + systems), following `AdminGrowthRoadmapTasks.tsx`. EN/NL toggle in the edit dialog; `ai_guidance` in its own section marked as AI-only. Added as tabs in the existing `growth` category of `AdminPanel.tsx`.
-
-### 5. Edge function
-
-`growth-analyze` builds its catalog block and validation set from `growth_systems`, and appends each system's `ai_guidance` (plus the current stage's `ai_guidance`) as contextual knowledge alongside the existing instruction blocks.
-
-## Technical notes
-
-- `growthSystems.ts` keeps its types/helpers; the `CATALOG` array is deleted once the table is live.
-- No change to the scoring engine, gates, task activation, or roadmap structure.
-- Verification: typecheck, then a Playwright pass through the assessment result and each stage dialog to confirm identical rendering, plus one admin edit round-trip.
-
-## Deliberately out of scope
-
-- Authoring the missing Dutch stage copy — the fields exist and are editable, but I won't write NL content unless asked.
-- Migrating any other module's copy; only the pattern is established.
+### Technical notes
+- `coach-chat`'s prompt assembly, tool calling, and `applyBlueprintWrites` need no structural change — they already read focus from the per-request `context`. The additions are the previous-focus/re-entry hints and transition guidance in the base coach prompt.
+- `src/lib/coach/buildContext.ts` builders stay as-is; they now produce focus descriptors rather than conversation identities.
+- Old per-field conversation rows are orphaned, not deleted; no destructive migration.
