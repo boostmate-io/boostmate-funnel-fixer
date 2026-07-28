@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight, Plus, MessageSquare,
+  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight, Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

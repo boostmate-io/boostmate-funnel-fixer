@@ -4,7 +4,7 @@
 // Every field (framework meta + each pillar) has an AI Coach entry point.
 // =============================================================================
 
-import { Layers3, Plus, MessageSquare } from "lucide-react";
+import { Layers3, Plus, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";

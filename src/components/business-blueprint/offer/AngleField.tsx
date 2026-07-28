@@ -3,7 +3,7 @@
 // Coach entry point sits top-right, consistent with FieldCard.
 // =============================================================================
 
-import { MessageSquare, Check } from "lucide-react";
+import { Sparkles, Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AutoTextarea } from "@/components/ui/auto-textarea";

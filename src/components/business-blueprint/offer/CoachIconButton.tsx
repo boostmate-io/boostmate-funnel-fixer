@@ -3,7 +3,7 @@
 // Matches the "Coach" chip used in FieldCard/AngleField but sized for headers.
 // =============================================================================
 
-import { MessageSquare } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Props {

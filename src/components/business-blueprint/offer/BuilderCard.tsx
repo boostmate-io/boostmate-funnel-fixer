@@ -7,7 +7,7 @@
 // can propose a batch of items at once — no need to add empty items first.
 // =============================================================================
 
-import { Plus, MessageSquare, type LucideIcon } from "lucide-react";
+import { Plus, Sparkles, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Props {
