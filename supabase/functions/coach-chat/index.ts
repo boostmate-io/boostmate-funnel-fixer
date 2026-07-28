@@ -576,6 +576,7 @@ function buildSystemPrompt(
   handledDecisions: Array<{ path: string; decision: string }> = [],
   growthRow: any | null = null,
   workspaceSettings: any | null = null,
+  discussedUnfilledPaths: string[] = [],
 ): string {
   const parts: string[] = [prompts.base];
 
