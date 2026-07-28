@@ -20,6 +20,8 @@ interface BuildInput {
   blueprint?: Record<string, unknown> | null;
   offers?: Array<{ tier?: string | null; is_published?: boolean | null }> | null;
   funnels?: Array<{ is_published?: boolean | null; share_token?: string | null }> | null;
+  /** Configured Growth Architecture routes (growth_architecture_systems rows). */
+  architectureRoutes?: Array<unknown> | null;
   analyticsEntries?: Array<{ entry_date?: string | null }> | null;
   workspaceState?: Record<string, unknown> | null;
   /** Free-form extra overrides layered on top of workspaceState. */
