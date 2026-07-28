@@ -50,7 +50,7 @@ export type GrowthSystemContent = Omit<GrowthSystemContentRow, "translations">;
 const STAGE_COLUMNS =
   "stage,label,summary,typical_profile,unlock_condition,focus,success_criteria,bottleneck,objective,milestone,ai_guidance,sort_order,translations";
 const SYSTEM_COLUMNS =
-  "id,name,summary,addresses,stage_relevance,related_module,ai_guidance,is_active,sort_order,translations";
+  "key,label,description,primary_objective,recommended_stages,ai_guidance,is_active,sort_order,translations";
 
 /** Empty placeholder so components can render before content arrives. */
 const EMPTY_STAGE = (stage: string): GrowthStageContent => ({
