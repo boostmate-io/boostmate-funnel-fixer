@@ -38,7 +38,7 @@ const AngleField = ({ label, helper, placeholder, value, onChange, onCoach }: Pr
             onClick={onCoach}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            Coach
+            AI Coach
           </Button>
         )}
       </div>

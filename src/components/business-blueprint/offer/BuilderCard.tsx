@@ -70,7 +70,7 @@ const BuilderCard = ({
               aria-label={`Open AI Coach for ${title}`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Coach
+              AI Coach
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={onAdd} className="gap-1.5 h-8">

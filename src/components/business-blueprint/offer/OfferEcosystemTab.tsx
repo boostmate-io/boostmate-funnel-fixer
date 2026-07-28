@@ -399,7 +399,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                       className="h-8 gap-1.5 text-xs text-primary hover:bg-primary/5"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
-                      Coach
+                      AI Coach
                     </Button>
                     <Button
                       size="sm"

@@ -79,7 +79,7 @@ const FieldCard = ({ field, value, onChange, onCoach }: Props) => {
           onClick={onCoach}
         >
           <Sparkles className="w-3.5 h-3.5" />
-          Coach
+          AI Coach
         </Button>
       </div>
 

@@ -12,7 +12,7 @@ interface Props {
   compact?: boolean;
 }
 
-const CoachIconButton = ({ onClick, label = "Coach", compact = false }: Props) => (
+const CoachIconButton = ({ onClick, label = "AI Coach", compact = false }: Props) => (
   <Button
     type="button"
     size="sm"

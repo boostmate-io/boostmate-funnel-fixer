@@ -133,7 +133,7 @@ const FrameworkSection = ({ value, onChange, onCoach, onCoachPillars }: Props) =
                   className="h-7 gap-1 text-xs text-primary hover:bg-primary/5"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  Coach
+                  AI Coach
                 </Button>
               )}
               <Button size="sm" variant="outline" onClick={addPillar} className="h-7 gap-1 text-xs">
