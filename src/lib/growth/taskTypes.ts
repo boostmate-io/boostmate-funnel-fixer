@@ -171,6 +171,12 @@ export interface ConditionContext {
   architecture?: {
     routeCount: number;
     hasRoute: boolean;
+    /** Main Offer Growth System (Client Converter) route exists. */
+    mainOfferSystemExists: boolean;
+    /** That route has a funnel created via Start Building. */
+    mainOfferSystemHasFunnel: boolean;
+    /** That funnel's build guide tasks are all complete. */
+    mainOfferSystemBuilt: boolean;
   };
   analytics?: {
     hasEntries: boolean;

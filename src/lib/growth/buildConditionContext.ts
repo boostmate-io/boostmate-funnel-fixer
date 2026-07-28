@@ -22,6 +22,8 @@ interface BuildInput {
   funnels?: Array<{ is_published?: boolean | null; share_token?: string | null }> | null;
   /** Configured Growth Architecture routes (growth_architecture_systems rows). */
   architectureRoutes?: Array<unknown> | null;
+  /** Implementation state of the Main Offer Growth System (Client Converter). */
+  mainOfferSystem?: { exists: boolean; hasFunnel: boolean; built: boolean } | null;
   analyticsEntries?: Array<{ entry_date?: string | null }> | null;
   workspaceState?: Record<string, unknown> | null;
   /** Free-form extra overrides layered on top of workspaceState. */
@@ -77,6 +79,7 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
     offers,
     funnels,
     architectureRoutes,
+    mainOfferSystem,
     analyticsEntries,
     workspaceState,
     extras,
@@ -152,6 +155,9 @@ export function buildConditionContext(input: BuildInput): ConditionContext {
     architecture: {
       routeCount: routeList.length,
       hasRoute: routeList.length > 0,
+      mainOfferSystemExists: !!mainOfferSystem?.exists,
+      mainOfferSystemHasFunnel: !!mainOfferSystem?.hasFunnel,
+      mainOfferSystemBuilt: !!mainOfferSystem?.built,
     },
     analytics: {
       hasEntries: entries.length > 0,
