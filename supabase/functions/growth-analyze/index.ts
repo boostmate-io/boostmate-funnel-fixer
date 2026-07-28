@@ -25,7 +25,6 @@ Deno.serve(async (req) => {
 
   const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRe.test(assessment_id)) return json({ error: "invalid_input" }, 400);
-  if (!catalog) return json({ error: "missing_catalog" }, 400);
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -59,19 +58,19 @@ Deno.serve(async (req) => {
   }
   if (!authorized) return json({ error: "forbidden" }, 403);
 
-  // Growth System catalog: admin-managed `growth_systems` content table is the
-  // source of truth. The client-sent catalog is only a fallback while the table
-  // is empty.
+  // Growth System catalog: `growth_systems_catalog` is the single canonical
+  // source of truth. The client-sent catalog is only a fallback while the
+  // table is empty.
   const { data: systemRows } = await admin
-    .from("growth_systems")
-    .select("id,name,summary,addresses,stage_relevance,ai_guidance,is_active,sort_order")
+    .from("growth_systems_catalog")
+    .select("key,label,description,primary_objective,recommended_stages,ai_guidance,is_active,sort_order")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
   const dbCatalog = (systemRows ?? [])
     .map(
       (s: any) =>
-        `- id: ${s.id}\n  name: ${s.name}\n  stages: ${(s.stage_relevance ?? []).join(", ")}\n  addresses: ${s.addresses ?? ""}\n  summary: ${s.summary ?? ""}${s.ai_guidance ? `\n  guidance: ${s.ai_guidance}` : ""}`,
+        `- id: ${s.key}\n  name: ${s.label}\n  stages: ${(s.recommended_stages ?? []).join(", ")}\n  addresses: ${s.primary_objective ?? ""}\n  summary: ${s.description ?? ""}${s.ai_guidance ? `\n  guidance: ${s.ai_guidance}` : ""}`,
     )
     .join("\n");
 
@@ -111,13 +110,13 @@ Deno.serve(async (req) => {
   // depending on version — accept either shape.
   const modelOut = parsed?.data ?? parsed?.result ?? parsed?.output ?? parsed;
 
-  // Allowed Growth System ids come from the admin-managed `growth_systems`
-  // table (falls back to the historical code catalog when the table is empty).
+  // Allowed Growth System ids come from `growth_systems_catalog`
+  // (falls back to the historical code catalog when the table is empty).
   // Any recommendation outside this list is dropped rather than persisted,
   // so the UI never renders a fabricated system name.
   const ALLOWED_SYSTEM_IDS = new Set<string>(
     (systemRows ?? []).length
-      ? (systemRows ?? []).map((s: any) => s.id)
+      ? (systemRows ?? []).map((s: any) => s.key)
       : ["audience-builder", "client-converter", "offer-launcher", "launch-engine"],
   );
 

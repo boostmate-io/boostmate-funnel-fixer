@@ -27,6 +27,7 @@ interface System {
   icon: string | null;
   sort_order: number;
   is_active: boolean;
+  ai_guidance: string | null;
 }
 
 interface Channel {
@@ -56,7 +57,7 @@ const AdminGrowthSystemsCatalog = () => {
 
   const load = useCallback(async () => {
     const [sys, ch, cp, gd, sg, st] = await Promise.all([
-      supabase.from("growth_systems_catalog").select("id,key,label,description,primary_objective,suitable_offer_tiers,recommended_stages,seed_template_id,icon,sort_order,is_active").order("sort_order", { ascending: true }),
+      supabase.from("growth_systems_catalog").select("id,key,label,description,primary_objective,suitable_offer_tiers,recommended_stages,seed_template_id,icon,sort_order,is_active,ai_guidance").order("sort_order", { ascending: true }),
       supabase.from("acquisition_channels").select("id,key,label").eq("is_active", true).order("sort_order"),
       supabase.from("growth_system_channel_compat").select("growth_system_id,acquisition_channel_id"),
       supabase.from("build_guides").select("id,name").eq("is_active", true).order("sort_order"),
@@ -115,6 +116,7 @@ const AdminGrowthSystemsCatalog = () => {
       icon: editing.icon ?? null,
       sort_order: editing.sort_order ?? 100,
       is_active: editing.is_active ?? true,
+      ai_guidance: editing.ai_guidance ?? "",
     };
 
     let systemId = editing.id;
@@ -249,6 +251,10 @@ const AdminGrowthSystemsCatalog = () => {
             </div>
             <div><Label>Primary Objective</Label><Input value={editing?.primary_objective ?? ""} onChange={(e) => setEditing({ ...editing!, primary_objective: e.target.value })} placeholder="Convert leads into paying clients" /></div>
             <div><Label>Description</Label><Textarea value={editing?.description ?? ""} onChange={(e) => setEditing({ ...editing!, description: e.target.value })} rows={2} /></div>
+            <div>
+              <Label>AI guidance (never shown to users)</Label>
+              <Textarea value={editing?.ai_guidance ?? ""} onChange={(e) => setEditing({ ...editing!, ai_guidance: e.target.value })} rows={5} />
+            </div>
 
             <div>
               <Label>Suitable offer tiers</Label>
