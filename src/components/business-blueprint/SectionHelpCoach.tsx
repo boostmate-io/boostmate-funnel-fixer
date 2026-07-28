@@ -31,7 +31,7 @@ const SectionHelpCoach = ({
   sectionId,
   sectionLabel,
   seed,
-  compact = true,
+  compact: _compact = true,
   variant = "explain",
 }: Props) => {
   const { openCoach } = useCoach();
