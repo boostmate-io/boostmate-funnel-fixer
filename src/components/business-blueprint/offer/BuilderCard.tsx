@@ -66,10 +66,10 @@ const BuilderCard = ({
               size="sm"
               variant="ghost"
               onClick={onCoach}
-              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+              className="h-8 gap-1.5 text-xs text-primary hover:bg-primary/5"
               aria-label={`Open AI Coach for ${title}`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5" />
               Coach
             </Button>
           )}
@@ -94,7 +94,7 @@ const BuilderCard = ({
                 </Button>
                 {onCoach && (
                   <Button size="sm" variant="ghost" onClick={onCoach} className="gap-1.5 text-primary hover:bg-primary/5">
-                    <MessageSquare className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5" />
                     Ask Coach to suggest
                   </Button>
                 )}

@@ -34,10 +34,10 @@ const AngleField = ({ label, helper, placeholder, value, onChange, onCoach }: Pr
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 shrink-0"
+            className="h-7 gap-1.5 text-xs text-primary hover:bg-primary/5 shrink-0"
             onClick={onCoach}
           >
-            <MessageSquare className="w-3 h-3" />
+            <Sparkles className="w-3.5 h-3.5" />
             Coach
           </Button>
         )}

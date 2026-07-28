@@ -396,9 +396,9 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                         })
                       }
                       disabled={!blueprintId}
-                      className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+                      className="h-8 gap-1.5 text-xs text-primary hover:bg-primary/5"
                     >
-                      <MessageSquare className="w-3.5 h-3.5" />
+                      <Sparkles className="w-3.5 h-3.5" />
                       Coach
                     </Button>
                     <Button

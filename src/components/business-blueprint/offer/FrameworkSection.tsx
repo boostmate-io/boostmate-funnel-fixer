@@ -130,9 +130,9 @@ const FrameworkSection = ({ value, onChange, onCoach, onCoachPillars }: Props) =
                   size="sm"
                   variant="ghost"
                   onClick={onCoachPillars}
-                  className="h-7 gap-1 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+                  className="h-7 gap-1 text-xs text-primary hover:bg-primary/5"
                 >
-                  <MessageSquare className="w-3 h-3" />
+                  <Sparkles className="w-3.5 h-3.5" />
                   Coach
                 </Button>
               )}
@@ -155,7 +155,7 @@ const FrameworkSection = ({ value, onChange, onCoach, onCoachPillars }: Props) =
                 </Button>
                 {onCoachPillars && (
                   <Button size="sm" variant="ghost" onClick={onCoachPillars} className="gap-1.5 text-primary hover:bg-primary/5">
-                    <MessageSquare className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5" />
                     Ask Coach to suggest
                   </Button>
                 )}
