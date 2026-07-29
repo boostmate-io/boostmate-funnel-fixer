@@ -188,8 +188,43 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
 
   const handleApply = (value: string) => {
     onApply?.(value);
-    // Field-scope: closing after apply still makes sense so the user sees the update.
-    onOpenChange(false);
+    // Stay open: the conversation continues naturally into the next field.
+  };
+
+  // "Looks good, next field" style quick replies should APPLY the proposal that
+  // is already on screen and then continue — not ask the Coach to propose again.
+  const APPROVE_AND_CONTINUE_RE =
+    /(looks good|sounds good|that's good|apply|next field|next step|lock it in|ziet er goed uit|prima|akkoord|toepassen|volgende (veld|stap))/i;
+
+  const handleQuickReply = async (reply: string) => {
+    if (isBusy) return;
+    if (APPROVE_AND_CONTINUE_RE.test(reply)) {
+      // Find the most recent assistant message that still has pending writes.
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const m = messages[i];
+        if (m.role !== "assistant") continue;
+        const handled = { ...(decisions["__any__"] ?? {}), ...(decisions[m.id] ?? {}) };
+        const pending = m.parts
+          .filter((p: any) => p.type === "blueprint_writes")
+          .flatMap((p: any) => p.writes as CoachBlueprintWrite[])
+          .filter((w) => !handled[w.path]);
+        if (pending.length === 0) continue;
+        if (!onApplyBlueprintWrites) break;
+        try {
+          await onApplyBlueprintWrites(pending);
+          recordDecision(m.id, pending, "applied");
+          await handleSend(
+            nl
+              ? `${reply}. Ik heb je voorstel net toegepast op de Blueprint. Ga verder met het eerstvolgende veld dat nu nog leeg is.`
+              : `${reply}. I just applied your proposal to the Blueprint. Continue with the next field that is still empty.`,
+          );
+          return;
+        } catch {
+          break;
+        }
+      }
+    }
+    await handleSend(expandQuickReplyForContext(reply, context));
   };
 
   if (!open) return null;
@@ -241,7 +276,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
             <MessageBubble
               key={m.id}
               message={m}
-              onQuickReply={(r) => handleSend(expandQuickReplyForContext(r, context))}
+              onQuickReply={(r) => void handleQuickReply(r)}
               onApply={handleApply}
               onApplyBlueprintWrites={onApplyBlueprintWrites}
               onApplyGrowthDecision={onApplyGrowthDecision}
@@ -540,6 +575,18 @@ function BlueprintWritesCard({
   );
   const [batchApplying, setBatchApplying] = useState(false);
 
+  // Writes can also be applied from outside the card (e.g. an "apply and
+  // continue" quick reply). Reflect those decisions here.
+  useEffect(() => {
+    if (!initialDecisions) return;
+    setStates((prev) =>
+      prev.map((state, i) => {
+        const external = initialDecisions[writes[i]?.path ?? ""];
+        return state === "pending" && external ? (external as ItemState) : state;
+      }),
+    );
+  }, [initialDecisions, writes]);
+
   const setAt = (i: number, s: ItemState) =>
     setStates((prev) => prev.map((v, idx) => (idx === i ? s : v)));
 
@@ -721,8 +768,8 @@ function expandQuickReplyForContext(reply: string, context: CoachContext | null)
     return `${text}. Propose the Blueprint updates for the current Main Offer step so I can apply them.`;
   }
 
-  if (/\b(looks good|next step|volgende stap|ziet er goed uit)\b/.test(lower)) {
-    return `${text}. First propose the Blueprint updates for this step so I can apply them; then we can move to the next step.`;
+  if (/\b(looks good|next step|next field|volgende stap|volgende veld|ziet er goed uit)\b/.test(lower)) {
+    return `${text}. If there is no Blueprint update on screen yet, propose one for the field we just agreed on; otherwise move on to the next field that is still empty in the Blueprint.`;
   }
 
   if (!context?.target) return text;
