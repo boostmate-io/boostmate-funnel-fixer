@@ -39,8 +39,8 @@ const MAIN_OFFER_WALKTHROUGH_STEPS: MainOfferWalkthroughStep[] = [
       "offer_stack.angle.main_offer_name",
       "offer_stack.angle.short_description",
     ]),
-    missingHintEn: "the core promise or concrete outcome from Step 1",
-    missingHintNl: "de kernbelofte of het concrete resultaat uit Step 1",
+    missingHintEn: "the core promise or concrete outcome we covered earlier",
+    missingHintNl: "de kernbelofte of het concrete resultaat dat we eerder bespraken",
   },
   {
     number: 2,
@@ -69,8 +69,8 @@ const MAIN_OFFER_WALKTHROUGH_STEPS: MainOfferWalkthroughStep[] = [
       "offer_stack.angle.framework.pillars.2.name",
       "offer_stack.angle.framework.pillars.2.description",
     ]),
-    missingHintEn: "the framework name or the three pillar ideas from Step 3",
-    missingHintNl: "de frameworknaam of de drie pijler-ideeën uit Step 3",
+    missingHintEn: "the framework name or the three pillar ideas we discussed",
+    missingHintNl: "de frameworknaam of de drie pijler-ideeën die we bespraken",
   },
 ];
 
@@ -2252,8 +2252,8 @@ Deno.serve(async (req) => {
       let text: string;
       if (forcedMainOfferStep) {
         text = nl
-          ? `Ik had hier Step ${forcedMainOfferStep.number} Blueprint updates moeten voorstellen, maar kon net geen geldige update-card maken. Geef me nog één keer ${forcedMainOfferStep.missingHintNl}, dan zet ik die direct om naar Blueprint updates.`
-          : `I should have proposed Step ${forcedMainOfferStep.number} Blueprint updates here, but I couldn't create a valid update card. Give me ${forcedMainOfferStep.missingHintEn} once more and I'll turn it directly into Blueprint updates.`;
+          ? `Ik had hier Blueprint updates voor "${forcedMainOfferStep.title}" moeten voorstellen, maar kon net geen geldige update-card maken. Geef me nog één keer ${forcedMainOfferStep.missingHintNl}, dan zet ik die direct om naar Blueprint updates.`
+          : `I should have proposed Blueprint updates for "${forcedMainOfferStep.title}" here, but I couldn't create a valid update card. Give me ${forcedMainOfferStep.missingHintEn} once more and I'll turn it directly into Blueprint updates.`;
       } else if (priorPaths.length > 0) {
         text = nl
           ? "Ik heb je vorige voorstel niet kunnen herzien. Kan je aangeven wat er anders moet (bv. taal, toon, lengte)?"
