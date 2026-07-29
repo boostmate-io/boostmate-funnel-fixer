@@ -247,7 +247,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-display font-semibold truncate">
-            Coach — {context?.target?.label ?? "Growth Strategist"}
+            AI Coach
           </div>
           <div className="text-[11px] text-muted-foreground truncate">{t.subtitle}</div>
         </div>
@@ -402,6 +402,18 @@ function PartRenderer({
         "",
       )
       .replace(/^\s*(?:path|label|value|reasoning|replies)\s*:\s*.*$/gim, "")
+      // Quick replies must render as pills — never as plain text in the answer.
+      .replace(
+        /^\s*(?:\*\*)?(?:quick replies|suggested replies|snelle antwoorden|suggesties)(?:\*\*)?\s*:?\s*$/gim,
+        "",
+      )
+      .replace(
+        /^\s*(?:\*\*)?(?:quick replies|suggested replies|snelle antwoorden|suggesties)(?:\*\*)?\s*:.*$/gim,
+        "",
+      )
+      // Step numbering exposes internal process — keep the transition, drop the number.
+      .replace(/\b(?:Step|Stap)\s+\d+\s*[:—-]\s*/g, "")
+      .replace(/\((?:Step|Stap)\s+\d+(?:\s*(?:of|van)\s*\d+)?\)/gi, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
     if (!cleaned) return null;

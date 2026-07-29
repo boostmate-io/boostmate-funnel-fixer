@@ -39,8 +39,8 @@ const MAIN_OFFER_WALKTHROUGH_STEPS: MainOfferWalkthroughStep[] = [
       "offer_stack.angle.main_offer_name",
       "offer_stack.angle.short_description",
     ]),
-    missingHintEn: "the core promise or concrete outcome from Step 1",
-    missingHintNl: "de kernbelofte of het concrete resultaat uit Step 1",
+    missingHintEn: "the core promise or concrete outcome we covered earlier",
+    missingHintNl: "de kernbelofte of het concrete resultaat dat we eerder bespraken",
   },
   {
     number: 2,
@@ -69,8 +69,8 @@ const MAIN_OFFER_WALKTHROUGH_STEPS: MainOfferWalkthroughStep[] = [
       "offer_stack.angle.framework.pillars.2.name",
       "offer_stack.angle.framework.pillars.2.description",
     ]),
-    missingHintEn: "the framework name or the three pillar ideas from Step 3",
-    missingHintNl: "de frameworknaam of de drie pijler-ideeën uit Step 3",
+    missingHintEn: "the framework name or the three pillar ideas we discussed",
+    missingHintNl: "de frameworknaam of de drie pijler-ideeën die we bespraken",
   },
 ];
 
@@ -100,6 +100,9 @@ Principles:
 - If the user seems stuck, offer 2-3 concrete quick replies via suggest_quick_replies.
 - Never answer a direct request to fill, draft, update, or write Blueprint fields with only quick replies. A direct write request must produce a Blueprint write proposal.
 - NEVER write tool calls or their arguments as visible text. Do NOT output strings like "[propose_blueprint_writes]", "[suggest_quick_replies]", "[proposed blueprint writes]", "path:", "reasoning:", "replies:", raw JSON, or pipe-separated reply lists inside your message content. Blueprint writes and quick replies exist ONLY as real tool calls — if you want to propose them, invoke the tool. Never describe or transcribe a tool call in prose.
+- NEVER expose internal process mechanics in visible prose. Do not label turns with "Step 1", "Step 5", "Stap 3", "phase 2", or checklist numbering, and never mention "first empty field", "already handled", "discussed vs filled" or tool names. Use natural coaching transitions instead ("Great, let's move on...", "Now let's look at...", "Next, I'd like to define...").
+- Quick replies exist ONLY as suggest_quick_replies tool calls so the UI can render them as clickable pills. NEVER list suggested replies in your message text (no "Quick replies:", no bullet list of options, no pipe-separated list).
+- In a section walkthrough, always determine the next topic from the CURRENT Blueprint values (the authoritative state given to you) — start with the first field that is still empty — but never say that out loud.
 - Pricing writes MUST be complete: for each proposed Payment Plan include type + custom_label + amount + duration in the SAME propose_blueprint_writes call; for a Premium Upgrade include name + price + description together; for a Recurring Offer include name + monthly_price + interval + description together. Never propose only a label without its numeric amount/price. Amounts are numbers only (no currency symbol).
 - When the user follows up saying you forgot an amount / price / bedrag / monetary value / "you didn't send the amounts", immediately call propose_blueprint_writes for the missing amount paths on the plans/items you just proposed. Do NOT ask them to be more specific.`;
 
@@ -2249,8 +2252,8 @@ Deno.serve(async (req) => {
       let text: string;
       if (forcedMainOfferStep) {
         text = nl
-          ? `Ik had hier Step ${forcedMainOfferStep.number} Blueprint updates moeten voorstellen, maar kon net geen geldige update-card maken. Geef me nog één keer ${forcedMainOfferStep.missingHintNl}, dan zet ik die direct om naar Blueprint updates.`
-          : `I should have proposed Step ${forcedMainOfferStep.number} Blueprint updates here, but I couldn't create a valid update card. Give me ${forcedMainOfferStep.missingHintEn} once more and I'll turn it directly into Blueprint updates.`;
+          ? `Ik had hier Blueprint updates voor "${forcedMainOfferStep.title}" moeten voorstellen, maar kon net geen geldige update-card maken. Geef me nog één keer ${forcedMainOfferStep.missingHintNl}, dan zet ik die direct om naar Blueprint updates.`
+          : `I should have proposed Blueprint updates for "${forcedMainOfferStep.title}" here, but I couldn't create a valid update card. Give me ${forcedMainOfferStep.missingHintEn} once more and I'll turn it directly into Blueprint updates.`;
       } else if (priorPaths.length > 0) {
         text = nl
           ? "Ik heb je vorige voorstel niet kunnen herzien. Kan je aangeven wat er anders moet (bv. taal, toon, lengte)?"
