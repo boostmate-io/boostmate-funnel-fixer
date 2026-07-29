@@ -579,12 +579,18 @@ function BlueprintWritesCard({
   // continue" quick reply). Reflect those decisions here.
   useEffect(() => {
     if (!initialDecisions) return;
-    setStates((prev) =>
-      prev.map((state, i) => {
+    setStates((prev) => {
+      let changed = false;
+      const next = prev.map((state, i) => {
         const external = initialDecisions[writes[i]?.path ?? ""];
-        return state === "pending" && external ? (external as ItemState) : state;
-      }),
-    );
+        if (state === "pending" && external) {
+          changed = true;
+          return external as ItemState;
+        }
+        return state;
+      });
+      return changed ? next : prev;
+    });
   }, [initialDecisions, writes]);
 
   const setAt = (i: number, s: ItemState) =>
