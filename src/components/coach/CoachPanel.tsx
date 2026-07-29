@@ -11,7 +11,7 @@ import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, Loader2, RefreshCw, Check, X, Maximize2, Minimize2 } from "lucide-react";
+import { Send, Sparkles, Loader2, Check, X, Maximize2, Minimize2 } from "lucide-react";
 import { useCoachChat } from "@/lib/coach/useCoachChat";
 import { buildResumeTurnText } from "@/lib/coach/focus";
 import type { CoachContext, CoachMessage, CoachMessagePart, CoachBlueprintWrite, CoachGrowthDecision } from "@/lib/coach/types";
@@ -135,9 +135,6 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
     thinking: nl ? "Denken…" : "Thinking…",
     placeholder: nl ? "Typ je bericht… (Enter om te versturen)" : "Type your message… (Enter to send)",
     subtitle: nl ? "Chat tot we op het juiste antwoord landen." : "Chat until we land on the right answer.",
-    refinePrompt: nl
-      ? "Scherp deze versie verder aan, houd de kern maar maak hem sterker:"
-      : "Sharpen this version further — keep the core, make it stronger:",
     close: nl ? "Sluiten" : "Close",
     expand: nl ? "Volledig scherm" : "Fullscreen",
     collapse: nl ? "Verkleinen" : "Exit fullscreen",
@@ -246,7 +243,6 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
               message={m}
               onQuickReply={(r) => handleSend(expandQuickReplyForContext(r, context))}
               onApply={handleApply}
-              onRefine={(v) => handleSend(`${t.refinePrompt}\n\n${v}`)}
               onApplyBlueprintWrites={onApplyBlueprintWrites}
               onApplyGrowthDecision={onApplyGrowthDecision}
               initialDecisions={{ ...(decisions["__any__"] ?? {}), ...(decisions[m.id] ?? {}) }}
@@ -308,7 +304,6 @@ function MessageBubble({
   message,
   onQuickReply,
   onApply,
-  onRefine,
   onApplyBlueprintWrites,
   onApplyGrowthDecision,
   initialDecisions,
@@ -317,7 +312,6 @@ function MessageBubble({
   message: CoachMessage;
   onQuickReply: (r: string) => void;
   onApply: (value: string) => void;
-  onRefine: (value: string) => void;
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
   onApplyGrowthDecision?: (decision: CoachGrowthDecision) => Promise<void> | void;
   initialDecisions?: Record<string, "applied" | "dismissed">;
@@ -334,7 +328,6 @@ function MessageBubble({
             isUser={isUser}
             onQuickReply={onQuickReply}
             onApply={onApply}
-            onRefine={onRefine}
             onApplyBlueprintWrites={onApplyBlueprintWrites}
             onApplyGrowthDecision={onApplyGrowthDecision}
             initialDecisions={initialDecisions}
@@ -351,7 +344,6 @@ function PartRenderer({
   isUser,
   onQuickReply,
   onApply,
-  onRefine,
   onApplyBlueprintWrites,
   onApplyGrowthDecision,
   initialDecisions,
@@ -361,7 +353,6 @@ function PartRenderer({
   isUser: boolean;
   onQuickReply: (r: string) => void;
   onApply: (value: string) => void;
-  onRefine: (value: string) => void;
   onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
   onApplyGrowthDecision?: (decision: CoachGrowthDecision) => Promise<void> | void;
   initialDecisions?: Record<string, "applied" | "dismissed">;
@@ -429,15 +420,6 @@ function PartRenderer({
           <Button size="sm" className="h-7 gap-1.5" onClick={() => onApply(part.value)}>
             <Check className="w-3 h-3" />
             Replace field
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 gap-1.5"
-            onClick={() => onRefine(part.value)}
-          >
-            <RefreshCw className="w-3 h-3" />
-            Refine
           </Button>
         </div>
       </div>
