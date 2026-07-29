@@ -59,44 +59,31 @@ export function buildFocusTurnText(
   const nl = (locale ?? "en").toLowerCase().slice(0, 2) === "nl";
   const label = focus.label;
 
-  const lead =
-    previousLabel && previousLabel !== label
-      ? nl
-        ? `We schakelen van **${previousLabel}** naar **${label}**.`
-        : `Let's switch from **${previousLabel}** to **${label}**.`
-      : nl
-        ? `Laten we focussen op **${label}**.`
-        : `Let's focus on **${label}**.`;
-
-  const ask = (() => {
-    switch (focus.mode ?? "general") {
-      case "field":
-        return nl
-          ? "Help me dit veld scherp te krijgen en stel een concrete waarde voor die ik kan toepassen."
-          : "Help me sharpen this field and propose a concrete value I can apply.";
-      case "section":
-        return nl
-          ? "Leg uit waarom dit onderdeel belangrijk is voor mijn business en hoe ik het het beste aanpak."
-          : "Explain why this part matters for my business and how I should approach it.";
-      case "walkthrough":
-        return nl
-          ? "Loop veld voor veld met me door deze sectie. Begin bij het eerste veld dat nu nog leeg is in de Blueprint (eerder besproken is niet hetzelfde als ingevuld): stel per veld gerichte vragen, geef feedback op wat er al staat en stel daarna Blueprint-updates voor die ik kan toepassen."
-          : "Walk me through this section field by field. Start at the first field that is still empty in the current Blueprint (discussed is not the same as filled in): ask focused questions per field, give feedback on what's already there, then propose Blueprint updates I can apply.";
-      case "task":
-        return nl
-          ? "Help me deze roadmap-taak stap voor stap af te ronden."
-          : "Help me work through this roadmap task step by step.";
-      default:
-        return nl ? "Waar moet ik me nu op richten?" : "What should I focus on here?";
-    }
-  })();
-
-  const bridge = nl
-    ? "Bouw voort op wat we eerder hebben besproken — begin niet opnieuw."
-    : "Build on what we already discussed — don't start over.";
-
-  return `${lead} ${ask} ${bridge}`;
+  // Openers stay deliberately minimal: the Coach decides — based on the current
+  // Blueprint state — whether to ask questions, give feedback or suggest
+  // improvements. The UI never asks it to draft or propose an answer up front.
+  switch (focus.mode ?? "general") {
+    case "field":
+      return nl
+        ? `Laten we focussen op het veld "${label}".`
+        : `Let's focus on the "${label}" field.`;
+    case "section":
+      return nl
+        ? `Laten we het hebben over "${label}".`
+        : `Let's talk about "${label}".`;
+    case "walkthrough":
+      return nl
+        ? `Loop met me door "${label}". Begin bij het eerste veld dat nu nog leeg is in de Blueprint (besproken is niet hetzelfde als ingevuld).`
+        : `Walk me through "${label}". Start at the first field that is still empty in the current Blueprint (discussed is not the same as filled in).`;
+    case "task":
+      return nl
+        ? `Laten we werken aan "${label}".`
+        : `Let's work on "${label}".`;
+    default:
+      return nl ? `Laten we focussen op "${label}".` : `Let's focus on "${label}".`;
+  }
 }
+
 
 /** Re-entry recap turn, used when the user returns after a long break. */
 export function buildResumeTurnText(locale: string | undefined): string {
