@@ -45,7 +45,12 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
         helper: field.helper,
         placeholder: field.placeholder,
         currentValue: (data[field.key] as string) || "",
-        kind: field.type === "tags" ? "tags" : field.type === "chips-single" ? "chips" : "text",
+        kind:
+          field.type === "tags" || field.type === "suggested-tags"
+            ? "tags"
+            : field.type === "chips-single" || field.type === "chips-multi"
+              ? "chips"
+              : "text",
       },
       snapshot,
       activeSubAccountId,

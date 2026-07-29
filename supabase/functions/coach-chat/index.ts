@@ -201,13 +201,23 @@ const RESERVED_PROMPT_NAMES = new Set([
 // Blueprint field/sub-block lookups derived from the shared schema
 // -----------------------------------------------------------------------------
 
-type CoachFieldKind = "textarea" | "tags" | "chips";
+type CoachFieldKind = "textarea" | "tags" | "chips" | "bullet-list";
 
 function coachKind(kind: BlueprintFieldKind): CoachFieldKind {
-  if (kind === "tags") return "tags";
+  if (kind === "tags" || kind === "suggested-tags") return "tags";
   if (kind === "chips-single" || kind === "chips-multi") return "chips";
+  if (kind === "bullet-list") return "bullet-list";
   return "textarea";
 }
+
+/** Human-readable output contract per registry field kind. The Coach must never
+ *  infer a field's format — it is derived from the Blueprint Registry. */
+const FIELD_FORMAT_RULES: Record<CoachFieldKind, string> = {
+  textarea: "prose — one or a few complete sentences. No bullets, no comma-separated keyword lists.",
+  tags: "a comma-separated list of SHORT items (1–5 words each, max 10 items). Never a sentence or paragraph.",
+  chips: "exactly ONE value copied verbatim from the field's allowed options.",
+  "bullet-list": "one short item per line (newline separated, no bullet characters, no prose paragraph).",
+};
 
 interface CoachFieldMeta {
   kind: CoachFieldKind;
@@ -241,6 +251,9 @@ function renderTargetFieldMeta(path: string): string | null {
   if (f.options?.length) lines.push(`options: ${f.options.map((o) => o.value).join(" | ")}`);
   if (f.suggestions?.length) lines.push(`suggestions: ${f.suggestions.join(", ")}`);
   lines.push(`ai_writable: ${f.aiWritable ? "true" : "false"}`);
+  lines.push(
+    `REQUIRED VALUE FORMAT (HARD CONSTRAINT): ${FIELD_FORMAT_RULES[coachKind(f.kind)]}`,
+  );
   return lines.join("\n");
 }
 
@@ -614,7 +627,8 @@ Rules:
 - Determine the next walkthrough step from this list, NEVER from what was discussed earlier in the conversation.
 - Never say or assume a field is done because you covered it in chat. If it is marked EMPTY, it still needs work.
 - For fields marked "discussed earlier but NEVER applied": acknowledge briefly that the earlier proposal was not applied, ask what did not fit, and work that field again before moving on.
-- Do not move to the next field while an earlier field in this list is still EMPTY, unless the user explicitly asks to skip it.${nextEmpty ? `\n- Next field to work on right now: ${nextEmpty} (${BLUEPRINT_FIELD_META[nextEmpty]?.label ?? nextEmpty}).` : "\n- All fields in scope are filled — shift to sharpening quality instead of filling gaps."}`;
+- Do not move to the next field while an earlier field in this list is still EMPTY, unless the user explicitly asks to skip it.
+- The field you are working on right now is the "next field to work on" below. Never suggest "move to X" or "apply and continue to X" when X IS that current field — the follow-up must always name the field AFTER it in this list.${nextEmpty ? `\n- Next field to work on right now: ${nextEmpty} (${BLUEPRINT_FIELD_META[nextEmpty]?.label ?? nextEmpty}).` : "\n- All fields in scope are filled — shift to sharpening quality instead of filling gaps."}`;
 }
 
 
@@ -655,6 +669,14 @@ function buildSystemPrompt(
       "Opening a field or section from the UI is NOT a request for a draft. Treat it as an invitation to start the conversation.",
       "If you have a strong idea early, express it in prose as a suggestion and ask whether it lands — then propose formally once they confirm.",
       "Never propose the same field twice in a row without new input from the user.",
+    ].join("\n"),
+  );
+  parts.push(
+    [
+      "# Field value formats — HARD CONSTRAINT (from the Blueprint Registry)",
+      "Every field's data type is defined by the registry and listed next to its path. Never infer a format.",
+      ...Object.entries(FIELD_FORMAT_RULES).map(([kind, rule]) => `- ${kind}: ${rule}`),
+      "Any proposed value MUST already match the target field's format — the UI does not reformat your output for you.",
     ].join("\n"),
   );
   const businessBlock = renderBusinessProfile(workspaceSettings);
@@ -1295,9 +1317,21 @@ function normalizeTagOrChipValue(raw: string): string {
   return items.join(", ");
 }
 
+function normalizeBulletListValue(raw: string): string {
+  const text = String(raw ?? "").trim();
+  if (!text) return "";
+  const source = /[\n•]/.test(text) ? text.split(/[\n•]+/) : text.split(/(?<=[.!?])\s+|;\s*/);
+  const items = source
+    .map((line) => line.replace(/^\s*[-–—*•\d.)]+\s*/, "").trim().replace(/[.;]+$/, "").trim())
+    .filter((line) => line.length > 1)
+    .slice(0, 12);
+  return items.join("\n");
+}
+
 function normalizeFieldValue(path: string, value: string): string {
   const meta = BLUEPRINT_FIELD_META[path];
   if (meta?.kind === "tags" || meta?.kind === "chips") return normalizeTagOrChipValue(value);
+  if (meta?.kind === "bullet-list") return normalizeBulletListValue(value);
   if (path === "offer_stack.angle.core_promise.timeframe" || path === "offer_stack.stack.delivery_timeline") return normalizeTimeframeValue(value);
   if (isPricingNumberPath(path)) return normalizeNumberValue(value);
   if (path === "offer_stack.pricing.guarantee_type") return normalizeGuaranteeType(value);
@@ -2143,11 +2177,43 @@ Deno.serve(async (req) => {
         const own = (Array.isArray(p.writes) ? p.writes : []).filter(
           (w: any) => fieldPath && canonicalBlueprintPath(String(w?.path ?? "")) === fieldPath,
         );
-        if (own.length > 0 && !parts.some((q: any) => q?.type === "proposal")) {
-          parts[i] = { type: "proposal", value: String(own[0].value ?? ""), reasoning: p.reasoning ?? "" };
-        } else {
-          parts.splice(i, 1);
+        if (own.length > 0 && fieldPath) {
+          const meta = BLUEPRINT_FIELD_META[fieldPath];
+          const value = normalizeFieldValue(fieldPath, String(own[0].value ?? ""));
+          if (value) {
+            parts[i] = {
+              type: "blueprint_writes",
+              writes: [{ path: fieldPath, label: own[0].label ?? meta?.label ?? fieldPath, value }],
+              reasoning: p.reasoning ?? "",
+            };
+            continue;
+          }
         }
+        parts.splice(i, 1);
+      }
+
+      // Any generic "Proposed answer" for a writable Blueprint field is upgraded
+      // to the Blueprint Update card, so the user always sees which field changes.
+      const meta = fieldPath ? BLUEPRINT_FIELD_META[fieldPath] : null;
+      let hasWrites = parts.some((q: any) => q?.type === "blueprint_writes");
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const p: any = parts[i];
+        if (p?.type !== "proposal") continue;
+        if (!fieldPath || !meta?.aiWritable || hasWrites) {
+          if (hasWrites) parts.splice(i, 1);
+          continue;
+        }
+        const value = normalizeFieldValue(fieldPath, String(p.value ?? ""));
+        if (!value) {
+          parts.splice(i, 1);
+          continue;
+        }
+        parts[i] = {
+          type: "blueprint_writes",
+          writes: [{ path: fieldPath, label: meta.label ?? fieldPath, value }],
+          reasoning: p.reasoning ?? "",
+        };
+        hasWrites = true;
       }
     }
 
