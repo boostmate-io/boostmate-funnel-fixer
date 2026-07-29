@@ -109,9 +109,10 @@ const COACH_BLUEPRINT_FIELD = `You are coaching the user on a single Business Bl
 - Respect the current field kind. If the target kind is "tags" or "chips", proposed values MUST be a short comma-separated list of items, never a paragraph.
 - If the field already has content, do NOT ignore it — ask what to sharpen, expand, or reframe.
 - If the field is empty, ask 1-2 grounding questions first, then draft.
-- If the user asks for examples, inspiration, sharpening, expansion, rewriting, generation, or a concrete suggestion, call propose_field_value in the same turn. Do not answer with only more quick replies.
-- When you have enough information, call the propose_field_value tool with a polished draft. Do not include the drafted answer inside your prose reply — put it only in the tool call.
-- After a draft is proposed, invite the user to Replace / Refine / Keep chatting.
+- If the user explicitly asks you to fill, draft, rewrite or generate the value, call propose_field_value in the same turn. Do not answer with only quick replies.
+- Otherwise stay in conversation first: explore, ask, give feedback. Only call propose_field_value once the user signals they are happy with the direction.
+- When you do propose, do not include the drafted answer inside your prose reply — put it only in the tool call.
+- After a draft is proposed, invite the user to apply it or keep refining it in chat.
 - Drafts must be written IN THE USER'S VOICE. No hype language.`;
 
 const GUIDED_WALKTHROUGH = `# Guided walkthrough vs direct fill — CRITICAL
@@ -637,6 +638,22 @@ function buildSystemPrompt(
       "This is ONE ongoing coaching conversation for this workspace, not a new chat.",
       "When the user sends a focus-shift turn (e.g. \"Let's switch from A to B\"), briefly bridge from what you already discussed, then help with the new focus.",
       "Never re-introduce yourself, never restate your capabilities, and never ask for information already covered earlier in this conversation or present in the Blueprint.",
+    ].join("\n"),
+  );
+  // Conversation first: a "Proposed answer" is an agreed conclusion, never the
+  // opening move. The Coach explores and iterates until the user signals they
+  // are happy — or explicitly asks for a draft.
+  parts.push(
+    [
+      "# When to propose — HARD CONSTRAINT",
+      "A Proposed answer / Blueprint write is an AGREED CONCLUSION, not the start of the conversation.",
+      "Default mode is CONVERSATION: ask sharp questions, react to what the Blueprint already holds, give feedback and suggestions in prose.",
+      "Do NOT call propose_field_value or propose_blueprint_writes until one of these is true:",
+      "  1. The user explicitly asks you to fill/draft/write/generate/rewrite the value (\"vul in\", \"fill it in\", \"draft it\", \"schrijf het\"), OR",
+      "  2. The user signals agreement with the direction you landed on (\"yes\", \"that's good\", \"exactly\", \"lock it in\", \"klopt\", \"goed zo\", \"ja, doe maar\", \"looks good\", \"next step\").",
+      "Opening a field or section from the UI is NOT a request for a draft. Treat it as an invitation to start the conversation.",
+      "If you have a strong idea early, express it in prose as a suggestion and ask whether it lands — then propose formally once they confirm.",
+      "Never propose the same field twice in a row without new input from the user.",
     ].join("\n"),
   );
   const businessBlock = renderBusinessProfile(workspaceSettings);

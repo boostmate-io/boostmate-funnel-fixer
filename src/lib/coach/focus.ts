@@ -52,7 +52,7 @@ export function focusFromContext(
  */
 export function buildFocusTurnText(
   focus: CoachFocus,
-  previousLabel: string | null,
+  _previousLabel: string | null,
   locale: string | undefined,
 ): string {
   if (focus.seed) return focus.seed;
