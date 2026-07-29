@@ -59,30 +59,31 @@ export function buildFocusTurnText(
   const nl = (locale ?? "en").toLowerCase().slice(0, 2) === "nl";
   const label = focus.label;
 
-  // Openers stay deliberately minimal: the Coach decides — based on the current
-  // Blueprint state — whether to ask questions, give feedback or suggest
-  // improvements. The UI never asks it to draft or propose an answer up front.
+  // Openers only express the user's intent. Internal coaching behaviour
+  // (where to start, what counts as complete, when to propose) is handled
+  // server-side and must never leak into the visible message.
   switch (focus.mode ?? "general") {
     case "field":
       return nl
-        ? `Laten we focussen op het veld "${label}".`
-        : `Let's focus on the "${label}" field.`;
+        ? `Laten we werken aan het veld "${label}".`
+        : `Let's work on the "${label}" field.`;
     case "section":
       return nl
-        ? `Laten we het hebben over "${label}".`
-        : `Let's talk about "${label}".`;
+        ? `Laten we samen door de sectie "${label}" lopen.`
+        : `Let's work through the "${label}" section together.`;
     case "walkthrough":
       return nl
-        ? `Loop met me door "${label}". Begin bij het eerste veld dat nu nog leeg is in de Blueprint (besproken is niet hetzelfde als ingevuld).`
-        : `Walk me through "${label}". Start at the first field that is still empty in the current Blueprint (discussed is not the same as filled in).`;
+        ? `Laten we samen door de sectie "${label}" lopen en alle velden invullen.`
+        : `Let's work through the "${label}" section together and complete all fields.`;
     case "task":
       return nl
         ? `Laten we werken aan "${label}".`
         : `Let's work on "${label}".`;
     default:
-      return nl ? `Laten we focussen op "${label}".` : `Let's focus on "${label}".`;
+      return nl ? `Laten we werken aan "${label}".` : `Let's work on "${label}".`;
   }
 }
+
 
 
 /** Re-entry recap turn, used when the user returns after a long break. */
