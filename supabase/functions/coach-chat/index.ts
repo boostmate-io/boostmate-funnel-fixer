@@ -566,7 +566,8 @@ function renderBusinessProfile(settings: any | null): string {
 This workspace is a **${label}** business (business_type: \`${raw}\`).
 ${extra}
 
-EVERY example, avatar suggestion, pain, offer idea, channel and draft you produce MUST come from that business model's world and vocabulary. Never illustrate with examples from another model (e.g. do not use agency owners, ecommerce founders or SaaS teams as examples for a coaching business) unless the user explicitly says their clients are exactly that. When you need an illustration, take it from what a ${label} typically sells and who they typically serve.`;
+EVERY example, avatar suggestion, pain, offer idea, channel and draft you produce MUST come from that business model's world and vocabulary. Never illustrate with examples from another model (e.g. do not use agency owners, ecommerce founders or SaaS teams as examples for a coaching business) unless the user explicitly says their clients are exactly that. When you need an illustration, take it from what a ${label} typically sells and who they typically serve.
+This overrides ANY earlier example, draft or summary in the conversation history or rolling digest: if earlier turns used examples from another business model, silently correct course and use ${label} examples from now on.`;
 }
 
 /**
