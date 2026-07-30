@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
   // Fetch the unclaimed assessment
   const { data: row, error: rowErr } = await admin
     .from("growth_assessments")
-    .select("id, user_id, source")
+    .select("id, user_id, source, computed_stage")
     .eq("claim_token", claim_token)
     .maybeSingle();
   if (rowErr || !row) {
@@ -123,6 +123,20 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "claim_failed", detail: updErr.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  }
+
+  // Start the workspace's first stage cycle immediately, so the claimed
+  // roadmap is live (and identical to the preview) on first dashboard load.
+  // Idempotent: the RPC no-ops when a cycle is already open.
+  const { error: cycleErr } = await admin.rpc("growth_cycle_transition", {
+    _sub_account_id: sub_account_id,
+    _action: "start_initial_cycle",
+    _stage: row.computed_stage,
+    _reason: "assessment_claim",
+  });
+  if (cycleErr) {
+    // Non-fatal: the assessment is claimed; the in-app bootstrap will retry.
+    console.error("claim: start_initial_cycle failed", cycleErr.message);
   }
 
   return new Response(JSON.stringify({ ok: true, id: updated.id }), {
