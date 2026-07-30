@@ -160,7 +160,7 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
         </div>
       )}
 
-      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-2 pb-2 pt-1 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isBlueprint = item.id === "business-blueprint";
           if (isBlueprint && !collapsed) {
