@@ -98,18 +98,20 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
   const handleResendConfirmation = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("auth-signup-email", {
-        body: { action: "resend", email: email.trim(), redirectTo: buildReturnUrl() },
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim(),
+        options: { emailRedirectTo: buildReturnUrl() },
       });
       if (error) throw error;
-      if (data?.status === "already_confirmed") {
-        setFormNotice({ kind: "existing", message: t("auth.accountExists") });
-        return;
-      }
-      if (!data?.ok) throw new Error(data?.status || t("auth.error"));
       setFormNotice({ kind: "info", message: t("auth.resendSent") });
     } catch (err: any) {
-      setFormNotice({ kind: "error", message: t("auth.signupEmailDeliveryFailed") });
+      const msg: string = err?.message || "";
+      if (/already confirmed/i.test(msg)) {
+        setFormNotice({ kind: "existing", message: t("auth.accountExists") });
+      } else {
+        setFormNotice({ kind: "error", message: t("auth.signupEmailDeliveryFailed") });
+      }
     } finally {
       setLoading(false);
     }
@@ -131,33 +133,42 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
         }
         const generatedAccountName = `${fullName}'s Workspace`;
         const returnUrl = buildReturnUrl();
-        const { data, error } = await supabase.functions.invoke("auth-signup-email", {
-          body: {
-            action: "signup",
-            email: email.trim(),
-            password,
-            firstName: cleanFirstName,
-            lastName: cleanLastName,
-            accountType,
-            redirectTo: returnUrl,
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: returnUrl,
+            data: {
+              account_type: accountType,
+              account_name: generatedAccountName,
+              first_name: cleanFirstName,
+              last_name: cleanLastName,
+              display_name: fullName,
+            },
           },
         });
         if (error) throw error;
-        if (data?.status === "existing_confirmed") {
-          setFormNotice({ kind: "existing", message: t("auth.accountExists") });
-          setLoading(false);
-          return;
-        }
-        if (data?.status === "existing_unconfirmed_sent") {
+
+        // Supabase returns a user with zero identities when the address is
+        // already registered but unconfirmed (it does not reveal existence).
+        const identities = data.user?.identities ?? [];
+        if (data.user && identities.length === 0) {
           setFormNotice({
             kind: "existing",
-            message: `${t("auth.accountExistsUnconfirmed")} ${t("auth.resendSent")}`,
+            message: t("auth.accountExistsUnconfirmed"),
           });
           setLoading(false);
           return;
         }
-        if (!data?.ok) throw new Error(data?.status || t("auth.error"));
+
+        if (data.session) {
+          onSuccess();
+          setLoading(false);
+          return;
+        }
+
         setFormNotice({ kind: "info", message: t("auth.signupSuccess") });
+
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
