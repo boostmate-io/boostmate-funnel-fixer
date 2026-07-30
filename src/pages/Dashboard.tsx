@@ -80,7 +80,7 @@ const Dashboard = () => {
           {activeModule === "overview" && (
             <>
               <PageHeader
-                title={t("growth.title")}
+                title={t("dashboard.sidebar.dashboard")}
                 icon={LayoutDashboard}
                 subtitle={t("dashboard.welcomeBack", { email: user?.email })}
               />
