@@ -27,6 +27,9 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
+  const [formNotice, setFormNotice] = useState<
+    { kind: "error" | "info" | "existing"; message: string } | null
+  >(null);
 
   if (!open) return null;
 
