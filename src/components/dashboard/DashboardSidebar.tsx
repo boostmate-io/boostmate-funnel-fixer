@@ -2,11 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, LogOut, GitBranch, Settings, TrendingUp, Users, ChevronsLeft, ChevronsRight, Sparkles, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, Milestone, ChevronDown, ChevronRight, Package, Workflow, Palette, Award, Network } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { BarChart3, LayoutDashboard, GitBranch, Settings, TrendingUp, Users, ChevronsLeft, ChevronsRight, Sparkles, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, Milestone, ChevronDown, ChevronRight, Package, Workflow, Palette, Award, Network } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -32,8 +29,6 @@ const blueprintSubItems: { id: "customer-clarity" | "offer-design" | "brand-stra
 
 const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProps) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { signOut } = useAuth();
   const { isAgency, isAppAdmin, subAccounts, activeSubAccountId, switchSubAccount, activeSubAccount, mainAccount, allMainAccounts, switchMainAccount } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
   const [adminOpen, setAdminOpen] = useState(activeModule.startsWith("admin"));
@@ -53,12 +48,6 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
     ...(isAgency ? [{ id: "clients", label: t("agency.sidebar.clients"), icon: Users }] : []),
     { id: "settings", label: t("dashboard.sidebar.settings"), icon: Settings },
   ];
-
-  const handleLogout = async () => {
-    await signOut();
-    toast.success(t("dashboard.logoutSuccess"));
-    navigate("/");
-  };
 
   const showSubSwitcher = (isAgency || isAppAdmin) && subAccounts.length > 1;
   const showMainSwitcher = isAppAdmin && allMainAccounts.length > 1;
