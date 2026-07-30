@@ -15,7 +15,7 @@ import SharedBrief from "./pages/SharedBrief.tsx";
 import SharedOffer from "./pages/SharedOffer.tsx";
 import SharedBlueprint from "./pages/SharedBlueprint.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
-import AuthConfirm from "./pages/AuthConfirm.tsx";
+
 import NotFound from "./pages/NotFound.tsx";
 import OAuthConsent from "./pages/OAuthConsent.tsx";
 import PublicAssessment from "./pages/PublicAssessment.tsx";
@@ -45,7 +45,7 @@ const App = () => (
           <Route path="/offer/:token" element={<SharedOffer />} />
           <Route path="/blueprint/:token" element={<SharedBlueprint />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/auth/confirm" element={<AuthConfirm />} />
+          
           <Route path="/.lovable/oauth/consent" element={<WithAuth><OAuthConsent /></WithAuth>} />
           <Route path="/dashboard" element={
             <WithAuth>
