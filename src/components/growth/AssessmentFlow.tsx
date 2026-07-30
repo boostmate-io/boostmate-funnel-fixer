@@ -16,6 +16,7 @@ import { usePreviewGrowthPlan } from "@/lib/growth/usePreviewGrowthPlan";
 import { createPublicAssessment, readByClaimToken, runAiAnalysis } from "@/lib/growth/api";
 import type { AnswerMap, GrowthAssessmentRow } from "@/lib/growth/types";
 import { toast } from "sonner";
+import { Check, ArrowRight } from "lucide-react";
 
 export const PENDING_CLAIM_KEY = "boostmate:pending_growth_claim";
 
@@ -73,11 +74,26 @@ export default function AssessmentFlow({ variant = "page" }: Props) {
   };
 
   const cta = (
-    <div className="bg-primary/5 border border-primary/30 rounded-xl p-6 text-center">
-      <p className="text-foreground mb-4">{t("growth.createAccountCta")}</p>
-      <Button size="lg" onClick={handleCreateAccount}>
+    <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 md:p-10 text-center">
+      <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-3">
+        {t("growth.ctaHeadline")}
+      </h2>
+      <p className="text-muted-foreground max-w-xl mx-auto mb-6">
+        {t("growth.ctaBody")}
+      </p>
+      <ul className="flex flex-col sm:flex-row gap-3 sm:gap-6 justify-center mb-8 text-sm text-foreground">
+        {[t("growth.ctaBullet1"), t("growth.ctaBullet2"), t("growth.ctaBullet3")].map((b) => (
+          <li key={b} className="flex items-center gap-2 justify-center">
+            <Check className="w-4 h-4 text-primary shrink-0" />
+            {b}
+          </li>
+        ))}
+      </ul>
+      <Button size="lg" className="h-12 px-8 text-base" onClick={handleCreateAccount}>
         {t("growth.createAccountCtaButton")}
+        <ArrowRight className="w-4 h-4 ml-2" />
       </Button>
+      <p className="text-xs text-muted-foreground mt-3">{t("growth.createAccountCta")}</p>
     </div>
   );
 

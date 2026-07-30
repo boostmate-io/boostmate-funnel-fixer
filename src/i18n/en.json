@@ -57,7 +57,7 @@
   "auth": {
     "signup": "Create account",
     "login": "Log in",
-    "signupSubtitle": "Save your audit and get access to all tools.",
+    "signupSubtitle": "Save your Growth Assessment and unlock your full Growth Roadmap.",
     "loginSubtitle": "Log in to your Boostmate account.",
     "emailPlaceholder": "Email address",
     "passwordPlaceholder": "Password (min. 6 characters)",
@@ -80,7 +80,11 @@
     "passwordUpdated": "Password updated! You can now log in.",
     "passwordMismatch": "Passwords do not match",
     "resetPasswordTitle": "Set new password",
-    "resetPasswordSubtitle": "Enter your new password below."
+    "resetPasswordSubtitle": "Enter your new password below.",
+    "accountExistsUnconfirmed": "An account with this email already exists but hasn't been confirmed yet. Resend the confirmation email to finish signing up.",
+    "accountExists": "An account with this email already exists. Try logging in instead.",
+    "resendConfirmation": "Resend confirmation email",
+    "resendSent": "Confirmation email sent. Check your inbox (and spam folder)."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -463,7 +467,7 @@
     "openModule": "Open module",
     "retake": "Retake assessment",
     "createAccountCta": "Create your free Boostmate account to save this roadmap and start executing.",
-    "createAccountCtaButton": "Create your free account",
+    "createAccountCtaButton": "Start growing my business",
     "claiming": "Linking your roadmap…",
     "stage0Title": "Complete your Business Blueprint",
     "stage0Body": "Before the Growth Roadmap can point at the right next steps, fill out your Business Blueprint — offer, avatar, and outcome. That's the foundation we assess against.",
@@ -678,6 +682,11 @@
       "why": "Why you're here",
       "focus": "Focus of this stage",
       "success": "What success looks like"
-    }
+    },
+    "ctaHeadline": "You know your stage. Now build what's next.",
+    "ctaBody": "You've got your Growth Stage and the exact next system to build. Boostmate walks you through executing this roadmap step by step — offers, funnels, channels and tracking included.",
+    "ctaBullet1": "Your Growth Stage, diagnosed",
+    "ctaBullet2": "The exact next thing to build",
+    "ctaBullet3": "Step-by-step execution inside Boostmate"
   }
 }

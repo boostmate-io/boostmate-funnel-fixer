@@ -50,7 +50,20 @@ export function usePreviewGrowthPlan(
         assessment,
       });
       const derived = derivePlan(tasks, [], ctx);
-      setPlan(derived.tasks);
+      // Anonymous users can complete nothing, so the honest preview state is
+      // "first actionable task only". Every later task that would only unlock
+      // after earlier work is shown locked — mirroring what the in-app
+      // roadmap looks like the moment the assessment is claimed.
+      let seenAvailable = false;
+      const gated: DerivedTask[] = derived.tasks.map((d) => {
+        if (d.status !== "available") return d;
+        if (!seenAvailable) {
+          seenAvailable = true;
+          return d;
+        }
+        return { ...d, status: "locked", isActivated: false };
+      });
+      setPlan(gated);
     } catch (e) {
       console.error("usePreviewGrowthPlan failed", e);
       setPlan([]);
