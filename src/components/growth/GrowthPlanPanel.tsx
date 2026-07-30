@@ -25,17 +25,32 @@ import {
 import { resolveTaskResources } from "@/lib/growth/resourceResolver";
 import { askCoachForTask, normalizeExternalUrl } from "@/lib/coach/askCoachForTask";
 
+export type GrowthPlanMode = "interactive" | "preview";
+
 interface Props {
+  /** `interactive` = in-app roadmap. `preview` = anonymous, read-only. */
+  mode?: GrowthPlanMode;
   subAccountId: string | null;
   assessment: GrowthAssessmentRow | null;
+  loading: boolean;
+  needsCycleBootstrap?: boolean;
+  plan: DerivedTask[];
+  workspaceState: Record<string, unknown>;
+  refresh?: () => Promise<void>;
+  updateStatus?: (taskId: string, status: TaskStatus) => Promise<void>;
   onOpenModule?: (moduleId: RelatedModule) => void;
   /** Invoked when the user clicks the "Retake assessment" CTA on a reassess
    *  task (or the terminal completion banner). Parent flips the wizard on. */
   onRetakeAssessment?: () => void;
+  /** Preview mode only — rendered where interactive actions would normally be. */
+  previewCta?: React.ReactNode;
 }
 
 /**
- * Cycle-aware Growth Plan (Step 6).
+ * Cycle-aware Growth Plan (Step 6). PRESENTATIONAL — all data arrives via
+ * props so the exact same component can render both the in-app roadmap
+ * (`GrowthPlanContainer` + `useGrowthPlan`) and the public, read-only preview
+ * shown before signup (`usePreviewGrowthPlan`).
  *
  * Layout:
  *   1. Terminal completion banner  → when `workspaceState.roadmap_completed`.
@@ -49,24 +64,29 @@ interface Props {
  *                        no toggle, no progress row is ever written.
  *   - Normal tasks     → checkbox toggle → `updateStatus`.
  *
+ * In `preview` mode every interaction is stripped (no toggles, Start /
+ * Dismiss, decision pickers, coach buttons or resource links); the layout,
+ * ordering and visual hierarchy stay identical.
+ *
  * Cycle numbers and internal cycle mechanics are intentionally not exposed.
  */
 export default function GrowthPlanPanel({
+  mode = "interactive",
   subAccountId,
   assessment,
+  loading,
+  needsCycleBootstrap = false,
+  plan,
+  workspaceState,
+  refresh,
+  updateStatus,
   onOpenModule,
   onRetakeAssessment,
+  previewCta,
 }: Props) {
   const { t } = useTranslation();
-  const {
-    loading,
-    plan,
-    activeCycle,
-    needsCycleBootstrap,
-    workspaceState,
-    refresh,
-    updateStatus,
-  } = useGrowthPlan(subAccountId, assessment);
+  const readOnly = mode === "preview";
+
 
   if (!assessment) return null;
 
