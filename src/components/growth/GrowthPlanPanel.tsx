@@ -252,9 +252,10 @@ function PlanRow({
       >
         {index}
       </div>
-      <StatusIcon status={status} interactive={!isReassess && !isDecision && !isLocked} onToggle={() =>
+      <StatusIcon status={status} interactive={!readOnly && !isReassess && !isDecision && !isLocked} onToggle={() =>
         onStatus(status === "completed" ? "available" : "completed")
       } />
+
 
       <div className="flex-1 min-w-0">
         <div
@@ -280,7 +281,7 @@ function PlanRow({
           </div>
         )}
 
-        {isDecision && subAccountId && !isLocked && (
+        {isDecision && subAccountId && !isLocked && !readOnly && (
           <DecisionPicker
             slug={task.slug}
             subAccountId={subAccountId}
@@ -295,9 +296,11 @@ function PlanRow({
           const hasCoachPrompt = Boolean(task.coach_prompt_ref);
           if (resolved.length === 0 && !buildGuideUrl && !hasCoachPrompt) return null;
 
-          // Locked tasks show their resources as inert, non-clickable chips so
-          // the user can see what's coming without being able to act on it.
-          if (isLocked) {
+          // Locked tasks (and every task in read-only preview mode) show their
+          // resources as inert, non-clickable chips so the user can see what's
+          // coming without being able to act on it.
+          if (isLocked || readOnly) {
+
             return (
               <div className="flex flex-wrap gap-2 mt-2 items-center">
                 {resolved.map((r, i) => (
@@ -367,7 +370,7 @@ function PlanRow({
         })()}
 
 
-        {!isLocked && (
+        {!isLocked && !readOnly && (
           <RowActions
             status={status}
             isReassess={isReassess}
