@@ -16,6 +16,7 @@ import { usePreviewGrowthPlan } from "@/lib/growth/usePreviewGrowthPlan";
 import { createPublicAssessment, readByClaimToken, runAiAnalysis } from "@/lib/growth/api";
 import type { AnswerMap, GrowthAssessmentRow } from "@/lib/growth/types";
 import { toast } from "sonner";
+import { Check, ArrowRight } from "lucide-react";
 
 export const PENDING_CLAIM_KEY = "boostmate:pending_growth_claim";
 
