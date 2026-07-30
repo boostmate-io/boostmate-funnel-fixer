@@ -11,7 +11,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { CheckCircle2, Circle, PlayCircle, XCircle, ExternalLink, RefreshCw, Trophy, MessageCircle, BookOpen, Lock, Workflow } from "lucide-react";
 import { toast } from "sonner";
-import { useGrowthPlan } from "@/lib/growth/useGrowthPlan";
 import type { DerivedTask, TaskResource, TaskStatus } from "@/lib/growth/taskTypes";
 import type { GrowthAssessmentRow, RelatedModule } from "@/lib/growth/types";
 import { setWorkspaceState } from "@/lib/growth/cycleService";
