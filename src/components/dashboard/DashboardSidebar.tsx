@@ -80,13 +80,14 @@ const DashboardSidebar = ({ activeModule, onModuleChange }: DashboardSidebarProp
 
   return (
     <aside className={`${collapsed ? "w-16" : "w-64"} h-screen bg-card border-r border-border flex flex-col shrink-0 transition-all duration-200 relative`}>
-      <div className={`${collapsed ? "p-3 flex justify-center" : "p-6"} border-b border-border`}>
+      <div className={`${collapsed ? "p-3 flex justify-center" : "px-6 py-4"}`}>
         {collapsed ? (
           <img src={logoBadge} alt="Boostmate" className="h-8 w-8 rounded-lg" />
         ) : (
           <img src={logo} alt="Boostmate" className="h-7" />
         )}
       </div>
+
 
       {showMainSwitcher && !collapsed && (
         <div className="px-3 pt-2 pb-1">
