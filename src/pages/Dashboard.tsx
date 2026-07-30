@@ -4,6 +4,8 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import TopBar from "@/components/dashboard/TopBar";
+import DashboardHome from "@/components/dashboard/DashboardHome";
 import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
 import KnowledgeCenter from "@/components/dashboard/KnowledgeCenter";
@@ -21,7 +23,6 @@ import OutreachModule from "@/components/outreach/OutreachModule";
 import BusinessBlueprintModule from "@/components/business-blueprint/BusinessBlueprintModule";
 import GrowthArchitectureModule from "@/components/growth-architecture/GrowthArchitectureModule";
 import GlobalCoachBubble from "@/components/coach/GlobalCoachBubble";
-import GrowthRoadmapOverview from "@/components/growth/GrowthRoadmapOverview";
 import GrowthRoadmapModule from "@/components/growth/GrowthRoadmapModule";
 import { usePendingGrowthClaim } from "@/hooks/usePendingGrowthClaim";
 import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
@@ -73,16 +74,18 @@ const Dashboard = () => {
       
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
-        <main className="flex-1 overflow-auto">
+        <div className="flex-1 flex flex-col min-w-0">
+          <TopBar onOpenSettings={() => handleModuleChange("settings")} />
+          <main className="flex-1 overflow-auto">
           {activeModule === "overview" && (
             <>
               <PageHeader
-                title={t("growth.title")}
+                title={t("dashboard.sidebar.dashboard")}
                 icon={LayoutDashboard}
                 subtitle={t("dashboard.welcomeBack", { email: user?.email })}
               />
               <div className={`${PAGE_CONTAINER} py-8`}>
-                <GrowthRoadmapOverview
+                <DashboardHome
                   onStartAssessment={() => setActiveModule("growth-roadmap")}
                   onOpenModule={(m) => setActiveModule(m)}
                 />
@@ -182,7 +185,8 @@ const Dashboard = () => {
             </div>
             </>
           )}
-        </main>
+          </main>
+        </div>
       </div>
       <GlobalCoachBubble />
     </div>
