@@ -3,6 +3,7 @@ import { useGrowthSystemsContent } from "@/lib/growth/useGrowthContent";
 import type { GrowthAssessmentRow, RelatedModule } from "@/lib/growth/types";
 import StageLadder from "./StageLadder";
 import StageDetailCard from "./StageDetailCard";
+import { STAGE_META } from "@/lib/growth/engine";
 
 interface Props {
   row: GrowthAssessmentRow;
@@ -17,12 +18,26 @@ export default function AssessmentResult({ row, ctaSlot }: Props) {
   const systemId = row.ai_result?.recommended_growth_system?.id;
   // Canonical catalog content (growth_systems_catalog).
   const sys = getSystem(systemId);
+  const summary = row.ai_result?.summary?.trim();
 
 
   return (
     <div className="space-y-6">
       {/* Stage ladder */}
       <StageLadder currentStage={stage} />
+
+      {/* AI assessment summary */}
+      <div className="bg-card rounded-xl border border-border p-6 shadow-card">
+        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+          {t("growth.aiSummaryTitle")}
+        </div>
+        <p className="text-base text-foreground leading-relaxed">
+          {summary || t("growth.aiSummaryFallback", {
+            stage: t(STAGE_META[stage].labelKey),
+            system: sys?.name ?? t("growth.recommendedSystem"),
+          })}
+        </p>
+      </div>
 
       {/* Current stage detail */}
       <StageDetailCard stage={stage} />

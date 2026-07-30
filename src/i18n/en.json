@@ -464,6 +464,8 @@
     "milestone": "Milestone to unlock next stage",
     "priorities": "Your next 3 priorities",
     "recommendedSystem": "Recommended Growth System",
+    "aiSummaryTitle": "AI Assessment Summary",
+    "aiSummaryFallback": "Based on your answers, your business is currently in the {{stage}} stage. Your biggest opportunity is to build the next system that removes this bottleneck — starting with {{system}}.",
     "openModule": "Open module",
     "retake": "Retake assessment",
     "createAccountCta": "Create your free Boostmate account to save this roadmap and start executing.",
@@ -683,8 +685,8 @@
       "focus": "Focus of this stage",
       "success": "What success looks like"
     },
-    "ctaHeadline": "You know your stage. Now build what's next.",
-    "ctaBody": "You've got your Growth Stage and the exact next system to build. Boostmate walks you through executing this roadmap step by step — offers, funnels, channels and tracking included.",
+    "ctaHeadline": "Your roadmap is clear — now build it.",
+    "ctaBody": "You know your Growth Stage, the system that matters most, and the next step to execute. Boostmate helps you turn that roadmap into offers, funnels, channels and tracking that grow the business.",
     "ctaBullet1": "Your Growth Stage, diagnosed",
     "ctaBullet2": "The exact next thing to build",
     "ctaBullet3": "Step-by-step execution inside Boostmate"

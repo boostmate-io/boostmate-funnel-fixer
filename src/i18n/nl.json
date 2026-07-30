@@ -464,6 +464,8 @@
     "milestone": "Mijlpaal om de volgende fase te ontgrendelen",
     "priorities": "Jouw 3 volgende prioriteiten",
     "recommendedSystem": "Aanbevolen Growth System",
+    "aiSummaryTitle": "AI Assessment Samenvatting",
+    "aiSummaryFallback": "Op basis van je antwoorden zit je bedrijf nu in de fase {{stage}}. Je grootste kans is om het volgende systeem te bouwen dat dit knelpunt wegneemt — te beginnen met {{system}}.",
     "openModule": "Open module",
     "retake": "Assessment opnieuw doen",
     "createAccountCta": "Maak je gratis Boostmate-account aan om deze roadmap te bewaren en aan de slag te gaan.",
@@ -683,8 +685,8 @@
       "focus": "Focus van deze fase",
       "success": "Hoe succes eruitziet"
     },
-    "ctaHeadline": "Je kent je fase. Bouw nu wat er nodig is.",
-    "ctaBody": "Je weet je Growth Stage en welk systeem je nu moet bouwen. Boostmate begeleidt je stap voor stap bij de uitvoering — aanbod, funnels, kanalen en tracking inbegrepen.",
+    "ctaHeadline": "Je roadmap is duidelijk — bouw hem nu uit.",
+    "ctaBody": "Je kent je Growth Stage, het systeem dat nu het meeste verschil maakt en de volgende stap om uit te voeren. Boostmate helpt je die roadmap om te zetten in aanbod, funnels, kanalen en tracking die het bedrijf laten groeien.",
     "ctaBullet1": "Je Growth Stage, bepaald",
     "ctaBullet2": "Precies wat je nu moet bouwen",
     "ctaBullet3": "Stap-voor-stap uitvoering in Boostmate"

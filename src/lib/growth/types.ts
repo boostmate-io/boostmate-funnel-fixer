@@ -88,6 +88,7 @@ export interface RecommendedGrowthSystem {
 }
 
 export interface AiResult {
+  summary?: string;
   next_priorities: NextPriority[];
   recommended_growth_system?: RecommendedGrowthSystem;
   confidence?: "low" | "medium" | "high";

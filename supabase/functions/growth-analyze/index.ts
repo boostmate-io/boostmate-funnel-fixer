@@ -133,6 +133,7 @@ Deno.serve(async (req) => {
   }
 
   const ai_result = {
+    summary: typeof modelOut?.summary === "string" ? modelOut.summary : undefined,
     next_priorities: Array.isArray(modelOut?.next_priorities) ? modelOut.next_priorities : [],
     recommended_growth_system,
     confidence: modelOut?.confidence,

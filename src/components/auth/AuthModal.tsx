@@ -19,7 +19,6 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
   const [mode, setMode] = useState<"login" | "signup">(defaultMode);
   const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState("");
-  const [accountName, setAccountName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [accountType, setAccountType] = useState<"standard" | "agency">("standard");
@@ -111,11 +110,15 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
     setFormNotice(null);
     try {
       if (mode === "signup") {
-        if (!accountName.trim()) {
-          setFormNotice({ kind: "error", message: "Please enter an account name" });
+        const cleanFirstName = firstName.trim();
+        const cleanLastName = lastName.trim();
+        const fullName = [cleanFirstName, cleanLastName].filter(Boolean).join(" ");
+        if (!fullName) {
+          setFormNotice({ kind: "error", message: "Please enter your first and last name" });
           setLoading(false);
           return;
         }
+        const generatedAccountName = `${fullName}'s Workspace`;
         const nextParam = new URLSearchParams(window.location.search).get("next");
         const safeNext = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
         const returnUrl = safeNext
@@ -126,7 +129,7 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
           password,
           options: {
             emailRedirectTo: returnUrl,
-            data: { account_type: accountType, account_name: accountName.trim(), first_name: firstName.trim(), last_name: lastName.trim() },
+            data: { account_type: accountType, account_name: generatedAccountName, first_name: cleanFirstName, last_name: cleanLastName, display_name: fullName },
           },
         });
         if (error) throw error;
@@ -197,14 +200,6 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
                   className="h-11"
                 />
               </div>
-              <Input
-                type="text"
-                placeholder="Account name (e.g. your company name)"
-                value={accountName}
-                onChange={(e) => setAccountName(e.target.value)}
-                required
-                className="h-11"
-              />
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">Account type</p>
                 <div className="grid grid-cols-2 gap-2">
