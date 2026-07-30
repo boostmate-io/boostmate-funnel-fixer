@@ -202,7 +202,6 @@ async function sendConfirmationEmail(params: {
   try {
     await sendLovableEmail(
       {
-        run_id: crypto.randomUUID(),
         to: params.email,
         from: FROM_ADDRESS,
         sender_domain: SENDER_DOMAIN,
