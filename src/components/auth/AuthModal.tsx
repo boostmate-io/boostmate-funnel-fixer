@@ -237,9 +237,41 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
             </>
           )}
 
+          {formNotice && (
+            <div
+              className={`rounded-lg border p-3 text-sm ${
+                formNotice.kind === "error"
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-primary/40 bg-primary/5 text-foreground"
+              }`}
+            >
+              <p>{formNotice.message}</p>
+              {formNotice.kind === "existing" && (
+                <div className="flex flex-wrap gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={handleResendConfirmation}
+                    disabled={loading}
+                    className="text-primary font-medium hover:underline disabled:opacity-50"
+                  >
+                    {t("auth.resendConfirmation")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMode("login"); setFormNotice(null); }}
+                    className="text-muted-foreground hover:underline"
+                  >
+                    {t("auth.login")}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
             {loading ? t("auth.loading") : mode === "signup" ? t("auth.signup") : t("auth.login")}
           </Button>
+
         </form>
         {mode === "login" && (
           <p className="text-center text-sm text-muted-foreground mt-3">
