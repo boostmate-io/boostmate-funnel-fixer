@@ -214,7 +214,7 @@ async function sendConfirmationEmail(params: {
         message_id: messageId,
         idempotency_key: `auth-confirm-${params.user.id}-${Math.floor(Date.now() / 60000)}`,
       },
-      { apiKey },
+      { apiKey: params.apiKey },
     )
 
     const { error: sentError } = await params.client.from('email_send_log').insert({
