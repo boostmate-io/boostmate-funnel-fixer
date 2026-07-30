@@ -171,20 +171,24 @@ export default function GrowthPlanPanel({
               key={item.task.id}
               item={item}
               index={idx + 1}
-              isFocus={item.task.id === focusTaskId}
+              isFocus={!readOnly && item.task.id === focusTaskId}
+              readOnly={readOnly}
               subAccountId={subAccountId}
               workspaceState={workspaceState}
-              onStatus={(status) => updateStatus(item.task.id, status)}
-              onRefresh={refresh}
+              onStatus={async (status) => { await updateStatus?.(item.task.id, status); }}
+              onRefresh={async () => { await refresh?.(); }}
               onOpenModule={onOpenModule}
               onRetakeAssessment={onRetakeAssessment}
             />
           ))}
         </ol>
       )}
+
+      {readOnly && previewCta && <div className="mt-6">{previewCta}</div>}
     </div>
   );
 }
+
 
 // ---------------------------------------------------------------------------
 // Row
