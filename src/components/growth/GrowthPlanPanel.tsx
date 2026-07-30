@@ -198,6 +198,7 @@ function PlanRow({
   item,
   index,
   isFocus,
+  readOnly = false,
   subAccountId,
   workspaceState,
   onStatus,
@@ -208,6 +209,7 @@ function PlanRow({
   item: DerivedTask;
   index: number;
   isFocus: boolean;
+  readOnly?: boolean;
   subAccountId: string | null;
   workspaceState: Record<string, unknown>;
   onStatus: (status: TaskStatus) => Promise<void>;
@@ -215,6 +217,7 @@ function PlanRow({
   onOpenModule?: (m: RelatedModule) => void;
   onRetakeAssessment?: () => void;
 }) {
+
   const { task, status } = item;
   const isReassess = REASSESS_SLUGS.has(task.slug);
   const isDecision = isDecisionTask(task.slug);
