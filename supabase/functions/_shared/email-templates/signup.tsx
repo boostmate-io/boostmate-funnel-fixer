@@ -29,13 +29,13 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your Boostmate account and continue your Growth Roadmap</Preview>
+    <Preview>Confirm your email to activate your Boostmate account</Preview>
     <Body style={main}>
       <Container style={container}>
         <Text style={brand}>Boostmate</Text>
         <Heading style={h1}>Confirm your email</Heading>
         <Text style={text}>
-          You're one step away from saving your Growth Assessment and building your roadmap in{' '}
+          Welcome to{' '}
           <Link href={siteUrl} style={link}>
             <strong>{siteName}</strong>
           </Link>
@@ -46,11 +46,12 @@ export const SignupEmail = ({
           <Link href={`mailto:${recipient}`} style={link}>
             {recipient}
           </Link>
-          ) by clicking the button below:
+          ) to activate your account and get started.
         </Text>
         <Button style={button} href={confirmationUrl}>
           Confirm email
         </Button>
+
         <Text style={footer}>
           If you didn't create an account, you can safely ignore this email.
         </Text>
