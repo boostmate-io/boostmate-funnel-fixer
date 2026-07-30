@@ -32,6 +32,14 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
 
   if (!open) return null;
 
+  const buildReturnUrl = () => {
+    const nextParam = new URLSearchParams(window.location.search).get("next");
+    const safeNext = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
+    return safeNext
+      ? `${window.location.origin}/?next=${encodeURIComponent(safeNext)}`
+      : window.location.origin;
+  };
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetEmail.trim()) return;
@@ -90,15 +98,18 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
   const handleResendConfirmation = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email,
-        options: { emailRedirectTo: window.location.origin },
+      const { data, error } = await supabase.functions.invoke("auth-signup-email", {
+        body: { action: "resend", email: email.trim(), redirectTo: buildReturnUrl() },
       });
       if (error) throw error;
+      if (data?.status === "already_confirmed") {
+        setFormNotice({ kind: "existing", message: t("auth.accountExists") });
+        return;
+      }
+      if (!data?.ok) throw new Error(data?.status || t("auth.error"));
       setFormNotice({ kind: "info", message: t("auth.resendSent") });
     } catch (err: any) {
-      setFormNotice({ kind: "error", message: err.message || t("auth.error") });
+      setFormNotice({ kind: "error", message: t("auth.signupEmailDeliveryFailed") });
     } finally {
       setLoading(false);
     }
@@ -119,31 +130,33 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
           return;
         }
         const generatedAccountName = `${fullName}'s Workspace`;
-        const nextParam = new URLSearchParams(window.location.search).get("next");
-        const safeNext = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
-        const returnUrl = safeNext
-          ? `${window.location.origin}/?next=${encodeURIComponent(safeNext)}`
-          : window.location.origin;
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: returnUrl,
-            data: { account_type: accountType, account_name: generatedAccountName, first_name: cleanFirstName, last_name: cleanLastName, display_name: fullName },
+        const returnUrl = buildReturnUrl();
+        const { data, error } = await supabase.functions.invoke("auth-signup-email", {
+          body: {
+            action: "signup",
+            email: email.trim(),
+            password,
+            firstName: cleanFirstName,
+            lastName: cleanLastName,
+            accountType,
+            redirectTo: returnUrl,
           },
         });
         if (error) throw error;
-        // Supabase returns a success response with an empty `identities` array
-        // when the email is already registered (enumeration protection).
-        const alreadyExists = !!data.user && (data.user.identities?.length ?? 0) === 0;
-        if (alreadyExists) {
+        if (data?.status === "existing_confirmed") {
+          setFormNotice({ kind: "existing", message: t("auth.accountExists") });
+          setLoading(false);
+          return;
+        }
+        if (data?.status === "existing_unconfirmed_sent") {
           setFormNotice({
             kind: "existing",
-            message: data.user?.email_confirmed_at ? t("auth.accountExists") : t("auth.accountExistsUnconfirmed"),
+            message: `${t("auth.accountExistsUnconfirmed")} ${t("auth.resendSent")}`,
           });
           setLoading(false);
           return;
         }
+        if (!data?.ok) throw new Error(data?.status || t("auth.error"));
         setFormNotice({ kind: "info", message: t("auth.signupSuccess") });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
