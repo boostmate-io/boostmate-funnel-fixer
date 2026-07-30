@@ -1,80 +1,63 @@
-## Goal
+## Root cause — what I found before touching anything
 
-Replace the Funnel Audit wizard on `/` with the Growth Assessment, and extend the public result so an anonymous visitor sees their Growth Stage **and** the exact same Growth Roadmap UI they'll use inside the app — rendered read-only, ending in a "Create your free account" CTA. After signup the assessment, stage and roadmap attach to the new workspace and the stage cycle starts automatically.
+Evidence gathered read-only:
 
-The old Funnel Audit code stays in place, just unhooked from the homepage.
+| Check | Result |
+|---|---|
+| Sender domain `notify.app.boostmate.io` | Verified |
+| Project email setup | **"Send path not ready — Timed out waiting for email delivery path verification"** |
+| Queue infrastructure (`pgmq.q_auth_emails`, `_dlq`, `q_transactional_emails`) | Exists, all empty |
+| `email_send_state` | 1 config row present |
+| `suppressed_emails` | 0 rows — nothing is blocking the test address |
+| `cron.job` | empty (expected — on-demand scheduling with empty queues) |
+| `auth-email-hook` invocation logs | **none, ever** — only boot/shutdown from deploys |
+| `process-email-queue` invocation logs | **none, ever** |
 
----
+So: infrastructure reconciliation did create the database side correctly. Nothing failed in SQL. The break is that **neither edge function has ever been invoked once**, which is exactly the signature of the platform's delivery-path verification never reaching the project.
 
-## 1. Homepage becomes the assessment
+The one non-default deviation in this project is in `supabase/config.toml`:
 
-`src/pages/Index.tsx` currently embeds the audit wizard (`AuditWizard` → `AnalyzingScreen` → `AuditResults` with hardcoded mock scores). Replace that body with the assessment flow already used by `PublicAssessment.tsx`: intro → wizard → analyzing → result.
-
-- Extract the shared flow out of `PublicAssessment.tsx` into a reusable component so both `/` and `/assessment` render the identical experience (`/assessment` keeps working as a direct link).
-- Keep the existing header, logged-in redirect to `/dashboard`, and `AuthModal` wiring.
-- Audit components, `mockAuditData.ts`, the scrape/analyze libs and edge functions, and the `audits` table are untouched — just no longer reachable from `/`.
-
----
-
-## 2. One Growth Roadmap component, two modes
-
-`GrowthPlanPanel` today both fetches workspace data (via `useGrowthPlan`) and renders the roadmap. Split that responsibility so the rendering is shared:
-
-```text
-useGrowthPlan (workspace)  ──┐
-                             ├─► GrowthPlanPanel (pure rendering, mode: interactive | preview)
-usePreviewGrowthPlan (anon) ─┘
+```toml
+[functions.process-email-queue]
+  verify_jwt = true
 ```
 
-- `GrowthPlanPanel` keeps its entire current layout, grouping, ordering, task cards, stage identity, decision/reassess/normal variants and visual hierarchy. It stops fetching and instead receives `plan`, `activeCycle`, `workspaceState`, `loading` plus a `mode` flag.
-- A thin container preserves today's in-app usage, so `GrowthRoadmapModule` and `GrowthRoadmapOverview` behave exactly as before.
-- In `preview` mode the same component renders with interactions disabled: no status toggles, Start/Complete/Skip/Snooze, decision pickers, AI Coach buttons, resource links or retake CTA. Tasks render in their normal card form, visibly non-interactive.
+That block was added during earlier setup work. Lovable-managed email functions are expected to deploy with the default `verify_jwt = false` and do their own auth check in code (which `process-email-queue` already does — it parses the bearer token and rejects anything that is not `service_role`). With `verify_jwt = true`, the API gateway rejects the platform's delivery-path verification call **before** it reaches the function — which is precisely why there are zero invocation logs rather than a 401 logged inside the function.
 
-This guarantees the anonymous roadmap is literally the app's roadmap, not a parallel implementation.
+Verification times out → project email setup never flips to active → the Supabase auth hook is never pointed at `auth-email-hook` → signup produces an auth event with no delivery path → account created, no email. That chain accounts for every symptom, including the ones from the very first test.
 
----
+Answering your list directly:
+- Infrastructure reconciliation: **completed** (DB objects all present).
+- Required function missing/not deployed: **no**, both are deployed.
+- `auth-email-hook` failed to register: **yes, as a consequence** — registration is gated on the send path verifying.
+- Platform reconciliation failed: **it timed out**, caused by our own gateway config, not a platform defect.
+- Platform-side issue: **no evidence of one.**
 
-## 3. Anonymous roadmap data
+## Fix
 
-The roadmap catalog is currently readable by signed-in users only, so two things are needed:
+1. Remove the `[functions.process-email-queue] verify_jwt = true` override from `supabase/config.toml` so it deploys with the managed default. Its in-code `service_role` claim check stays — the function is still not publicly usable.
+2. Redeploy `process-email-queue` and `auth-email-hook`.
+3. Re-run email infrastructure setup so the platform re-attempts delivery-path verification, then re-check status until it reports active (not "setting up", not "timed out"). If it times out a second time with the gateway override gone, that *is* platform-side and I will say so with the exact status instead of guessing again.
 
-**Access:** allow anonymous read of the two product-content catalogs (`growth_roadmap_tasks` and `growth_systems_catalog`, active rows only). These hold no customer data — they are the same product copy every signed-in user already sees. `growth_stages` is already public.
+## Remove the wrong-lane fallback
 
-**Preview derivation:** a `usePreviewGrowthPlan` hook that runs the same pure `derivePlan` evaluator against an empty signal context and the assessment's computed stage, with no progress rows and no cycle writes. Result: every foundation + stage task in its natural order, none completed.
+Once the auth lane is active:
+- `auth-signup-email` stops calling the send API directly with `purpose: "transactional"`. Signup and resend go through native auth (`signUp` / `auth.resend`) so the auth run, the hook, and the auth queue are used. Account-name generation moves into the existing signup metadata (already handled by the `handle_new_user_role` trigger via `account_name`).
+- No unsubscribe token is added to any auth email.
+- `confirm-auth-email` / `/auth/confirm` custom HMAC route is retired in favour of the standard confirmation link, so there is one confirmation path, not two.
+- `AuthModal` keeps the honest failure states: no "check your email" unless the send was accepted, plus the existing inline "account exists, resend confirmation" handling.
 
----
+## End-to-end verification
 
-## 4. Public result page framing
+With a brand-new address (not `markwalkercoaching1@gmail.com`, which now carries failed runs), I will produce evidence for each link:
 
-Above the roadmap, contextual copy in the same visual language as the app:
+1. Auth user created — auth log entry
+2. `auth-email-hook` invoked — function invocation log with the signup action type
+3. Email queued — row in `email_send_log` with `status = pending` on the `auth_emails` queue
+4. Provider accepted — `status = sent`, no `missing_unsubscribe`
+5. Gmail receipt — you confirm arrival and Boostmate branding
+6. Confirmation link confirms the account and lands in the right flow
+7. Resend delivers a second email
+8. Already-confirmed address is rejected with the inline message
 
-> Based on your Growth Assessment, you've been placed in the **Validate** stage.
-> Below is the roadmap you'll follow inside Boostmate.
-> Create your free account to start completing these tasks with the help of the AI Coach.
-
-Below the roadmap, a closing CTA card → opens `AuthModal` in signup mode. Where an interactive action would normally sit, the preview surfaces the account-creation CTA instead.
-
----
-
-## 5. Claim on signup also starts the cycle
-
-The handoff already works: the claim token is stashed before signup, and `usePendingGrowthClaim` calls `claim-growth-assessment` once the dashboard mounts with a workspace.
-
-Extend that function so, right after attaching the assessment, it opens the initial stage cycle for the computed stage using the existing cycle-transition routine (already idempotent). The user lands in the dashboard on the exact roadmap they just saw, now interactive. Route them to the Growth Roadmap after a claim rather than the generic overview.
-
----
-
-## 6. Copy
-
-Reframe the homepage intro from "Free Funnel Audit" to "Free Growth Assessment & Roadmap"; update `<title>` and meta description to match.
-
----
-
-## Technical notes
-
-- Migration: `GRANT SELECT ... TO anon` plus anon SELECT policies scoped to `is_active = true` on `growth_roadmap_tasks` and `growth_systems_catalog`. No change to `growth_assessments` policies — the claim-token pattern already covers the anonymous row.
-- `GrowthPlanPanel.tsx` refactored to presentational props + `mode`; new `GrowthPlanContainer.tsx` wraps `useGrowthPlan` for in-app callers so `GrowthRoadmapModule`/`GrowthRoadmapOverview` change only their import.
-- New `src/lib/growth/usePreviewGrowthPlan.ts` — builds an empty `ConditionContext`, calls `derivePlan`, performs no writes.
-- `PublicAssessment.tsx` flow extracted to `src/components/growth/AssessmentFlow.tsx`, consumed by both `Index.tsx` and `PublicAssessment.tsx`; `AssessmentResult.tsx` gains an optional roadmap slot so the in-app result view is unaffected.
-- `claim-growth-assessment/index.ts`: after the claim update, call `growth_cycle_transition` with `start_initial_cycle` and the row's `computed_stage` (service role, membership check skipped for null `auth.uid()`); failures logged but non-fatal so the claim never breaks.
-- No changes to `handle_new_user_role`, `AuthModal`, `ProtectedRoute`, or `WorkspaceContext`.
+I will not call this resolved until steps 1–4 are in the logs and you confirm 5–6.
