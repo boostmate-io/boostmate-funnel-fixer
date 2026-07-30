@@ -144,8 +144,7 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
           setLoading(false);
           return;
         }
-        toast.success(t("auth.signupSuccess"));
-        onSuccess();
+        setFormNotice({ kind: "info", message: t("auth.signupSuccess") });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -156,6 +155,8 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
       const msg: string = err?.message || t("auth.error");
       if (/email not confirmed/i.test(msg)) {
         setFormNotice({ kind: "existing", message: t("auth.accountExistsUnconfirmed") });
+      } else if (/email|hook|send|deliver|enqueue/i.test(msg)) {
+        setFormNotice({ kind: "error", message: t("auth.signupEmailDeliveryFailed") });
       } else {
         setFormNotice({ kind: "error", message: msg });
       }

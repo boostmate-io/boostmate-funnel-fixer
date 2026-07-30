@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Confirm your Boostmate account',
+  invite: "You've been invited to Boostmate",
+  magiclink: 'Your Boostmate login link',
+  recovery: 'Reset your Boostmate password',
+  email_change: 'Confirm your new Boostmate email',
+  reauthentication: 'Your Boostmate verification code',
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "boostmate"
+const SITE_NAME = "Boostmate"
 const SENDER_DOMAIN = "notify.app.boostmate.io"
 const ROOT_DOMAIN = "app.boostmate.io"
 const FROM_DOMAIN = "app.boostmate.io" // Domain shown in From address (may be root or sender subdomain)
@@ -133,9 +133,15 @@ async function handlePreview(req: Request): Promise<Response> {
 // Webhook handler - verifies signature and sends email
 async function handleWebhook(req: Request): Promise<Response> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-  if (!apiKey) {
-    console.error('LOVABLE_API_KEY not configured')
+  if (!apiKey || !supabaseUrl || !supabaseServiceKey) {
+    console.error('Auth email configuration missing', {
+      hasApiKey: Boolean(apiKey),
+      hasSupabaseUrl: Boolean(supabaseUrl),
+      hasServiceKey: Boolean(supabaseServiceKey),
+    })
     return new Response(
       JSON.stringify({ error: 'Server configuration error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -207,7 +213,14 @@ async function handleWebhook(req: Request): Promise<Response> {
   // The email action type is in payload.data.action_type (e.g., "signup", "recovery")
   // payload.type is the hook event type ("auth")
   const emailType = payload.data.action_type
-  console.log('Received auth event', { emailType, email: payload.data.email, run_id })
+  console.log('Auth email event received', {
+    emailType,
+    email: payload.data.email,
+    run_id,
+    senderDomain: SENDER_DOMAIN,
+    fromDomain: FROM_DOMAIN,
+    hasConfirmationUrl: Boolean(payload.data.url),
+  })
 
   const EmailTemplate = EMAIL_TEMPLATES[emailType]
   if (!EmailTemplate) {
@@ -231,26 +244,55 @@ async function handleWebhook(req: Request): Promise<Response> {
   }
 
   // Render React Email to HTML and plain text
-  const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
-  const text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
-    plainText: true,
-  })
+  let html = ''
+  let text = ''
+  try {
+    html = await renderAsync(React.createElement(EmailTemplate, templateProps))
+    text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
+      plainText: true,
+    })
+    console.log('Auth email template rendered', {
+      emailType,
+      email: payload.data.email,
+      run_id,
+      htmlLength: html.length,
+      textLength: text.length,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('Auth email template render failed', { emailType, email: payload.data.email, run_id, error: message })
+    return new Response(JSON.stringify({ error: 'Failed to render email template' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
 
   // Enqueue email for async processing by the dispatcher (process-email-queue).
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
   const messageId = crypto.randomUUID()
+  const fromAddress = `${SITE_NAME} <noreply@${FROM_DOMAIN}>`
 
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
-  await supabase.from('email_send_log').insert({
+  const { error: pendingLogError } = await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: emailType,
     recipient_email: payload.data.email,
     status: 'pending',
+    metadata: {
+      run_id,
+      sender_domain: SENDER_DOMAIN,
+      from: fromAddress,
+      auth_action_type: emailType,
+    },
   })
+  if (pendingLogError) {
+    console.error('Failed to write auth email pending log', { emailType, email: payload.data.email, run_id, error: pendingLogError })
+    return new Response(JSON.stringify({ error: 'Failed to log email delivery attempt' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
 
   const { error: enqueueError } = await supabase.rpc('enqueue_email', {
     queue_name: 'auth_emails',
@@ -258,7 +300,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       run_id,
       message_id: messageId,
       to: payload.data.email,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      from: fromAddress,
       sender_domain: SENDER_DOMAIN,
       subject: EMAIL_SUBJECTS[emailType] || 'Notification',
       html,
@@ -277,6 +319,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       recipient_email: payload.data.email,
       status: 'failed',
       error_message: 'Failed to enqueue email',
+      metadata: { run_id, sender_domain: SENDER_DOMAIN, from: fromAddress },
     })
     return new Response(JSON.stringify({ error: 'Failed to enqueue email' }), {
       status: 500,
@@ -284,7 +327,14 @@ async function handleWebhook(req: Request): Promise<Response> {
     })
   }
 
-  console.log('Auth email enqueued', { emailType, email: payload.data.email, run_id })
+  console.log('Auth email enqueued', {
+    emailType,
+    email: payload.data.email,
+    run_id,
+    messageId,
+    senderDomain: SENDER_DOMAIN,
+    from: fromAddress,
+  })
 
   return new Response(
     JSON.stringify({ success: true, queued: true }),

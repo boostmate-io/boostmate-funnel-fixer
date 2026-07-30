@@ -65,7 +65,7 @@
     "haveAccount": "Already have an account?",
     "noAccount": "Don't have an account yet?",
     "register": "Register",
-    "signupSuccess": "Account created! Check your email to confirm.",
+    "signupSuccess": "Account created. We've sent your Boostmate confirmation email — check your inbox to continue.",
     "loginSuccess": "Successfully logged in!",
     "error": "Something went wrong",
     "forgotPassword": "Reset password",
@@ -84,7 +84,8 @@
     "accountExistsUnconfirmed": "An account with this email already exists but hasn't been confirmed yet. Resend the confirmation email to finish signing up.",
     "accountExists": "An account with this email already exists. Try logging in instead.",
     "resendConfirmation": "Resend confirmation email",
-    "resendSent": "Confirmation email sent. Check your inbox (and spam folder)."
+    "resendSent": "Confirmation email sent. Check your inbox (and spam folder).",
+    "signupEmailDeliveryFailed": "Your account was created, but Boostmate could not send the confirmation email. Please use Resend confirmation email or contact support if it keeps failing."
   },
   "dashboard": {
     "title": "Dashboard",

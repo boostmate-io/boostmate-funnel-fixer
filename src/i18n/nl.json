@@ -65,7 +65,7 @@
     "haveAccount": "Heb je al een account?",
     "noAccount": "Nog geen account?",
     "register": "Registreren",
-    "signupSuccess": "Account aangemaakt! Check je e-mail om te bevestigen.",
+    "signupSuccess": "Account aangemaakt. We hebben je Boostmate bevestigingsmail verstuurd — check je inbox om verder te gaan.",
     "loginSuccess": "Succesvol ingelogd!",
     "error": "Er ging iets mis",
     "forgotPassword": "Wachtwoord vergeten",
@@ -84,7 +84,8 @@
     "accountExistsUnconfirmed": "Er bestaat al een account met dit e-mailadres, maar het is nog niet bevestigd. Verstuur de bevestigingsmail opnieuw om je aanmelding af te ronden.",
     "accountExists": "Er bestaat al een account met dit e-mailadres. Probeer in te loggen.",
     "resendConfirmation": "Bevestigingsmail opnieuw versturen",
-    "resendSent": "Bevestigingsmail verstuurd. Check je inbox (en spamfolder)."
+    "resendSent": "Bevestigingsmail verstuurd. Check je inbox (en spamfolder).",
+    "signupEmailDeliveryFailed": "Je account is aangemaakt, maar Boostmate kon de bevestigingsmail niet versturen. Gebruik Bevestigingsmail opnieuw versturen of neem contact op als dit blijft mislukken."
   },
   "dashboard": {
     "title": "Dashboard",
