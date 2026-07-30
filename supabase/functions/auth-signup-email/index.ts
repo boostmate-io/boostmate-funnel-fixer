@@ -211,7 +211,7 @@ async function sendConfirmationEmail(params: {
         purpose: 'transactional',
         label: 'signup',
         message_id: messageId,
-        idempotency_key: `auth-confirm-${params.user.id}-${Math.floor(Date.now() / 60000)}`,
+        idempotency_key: `auth-confirm-${messageId}`,
       },
       { apiKey: params.apiKey },
     )
