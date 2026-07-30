@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your Boostmate account',
-  invite: "You've been invited to Boostmate",
-  magiclink: 'Your Boostmate login link',
-  recovery: 'Reset your Boostmate password',
-  email_change: 'Confirm your new email for Boostmate',
-  reauthentication: 'Your Boostmate verification code',
+  signup: 'Confirm your email',
+  invite: "You've been invited",
+  magiclink: 'Your login link',
+  recovery: 'Reset your password',
+  email_change: 'Confirm your new email',
+  reauthentication: 'Your verification code',
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "Boostmate"
+const SITE_NAME = "boostmate"
 const SENDER_DOMAIN = "notify.app.boostmate.io"
 const ROOT_DOMAIN = "app.boostmate.io"
 const FROM_DOMAIN = "app.boostmate.io" // Domain shown in From address (may be root or sender subdomain)
