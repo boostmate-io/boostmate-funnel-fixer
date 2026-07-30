@@ -8,7 +8,7 @@ import { TrendingUp } from "lucide-react";
 import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
 import AssessmentWizard from "@/components/growth/AssessmentWizard";
 import AssessmentResult from "@/components/growth/AssessmentResult";
-import GrowthPlanPanel from "@/components/growth/GrowthPlanPanel";
+import GrowthPlanContainer from "@/components/growth/GrowthPlanContainer";
 import { createInternalAssessment, readActiveForWorkspace, runAiAnalysis } from "@/lib/growth/api";
 import type { AnswerMap, GrowthAssessmentRow, RelatedModule } from "@/lib/growth/types";
 
@@ -118,7 +118,7 @@ export default function GrowthRoadmapModule({ onOpenModule }: Props) {
       {phase === "result" && row && (
         <div className="space-y-6">
           <AssessmentResult row={row} onOpenModule={openModule} />
-          <GrowthPlanPanel
+          <GrowthPlanContainer
             subAccountId={activeSubAccountId}
             assessment={row}
             onOpenModule={openModule}

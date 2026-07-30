@@ -11,7 +11,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { CheckCircle2, Circle, PlayCircle, XCircle, ExternalLink, RefreshCw, Trophy, MessageCircle, BookOpen, Lock, Workflow } from "lucide-react";
 import { toast } from "sonner";
-import { useGrowthPlan } from "@/lib/growth/useGrowthPlan";
 import type { DerivedTask, TaskResource, TaskStatus } from "@/lib/growth/taskTypes";
 import type { GrowthAssessmentRow, RelatedModule } from "@/lib/growth/types";
 import { setWorkspaceState } from "@/lib/growth/cycleService";
@@ -25,17 +24,32 @@ import {
 import { resolveTaskResources } from "@/lib/growth/resourceResolver";
 import { askCoachForTask, normalizeExternalUrl } from "@/lib/coach/askCoachForTask";
 
+export type GrowthPlanMode = "interactive" | "preview";
+
 interface Props {
+  /** `interactive` = in-app roadmap. `preview` = anonymous, read-only. */
+  mode?: GrowthPlanMode;
   subAccountId: string | null;
   assessment: GrowthAssessmentRow | null;
+  loading: boolean;
+  needsCycleBootstrap?: boolean;
+  plan: DerivedTask[];
+  workspaceState: Record<string, unknown>;
+  refresh?: () => Promise<void>;
+  updateStatus?: (taskId: string, status: TaskStatus) => Promise<void>;
   onOpenModule?: (moduleId: RelatedModule) => void;
   /** Invoked when the user clicks the "Retake assessment" CTA on a reassess
    *  task (or the terminal completion banner). Parent flips the wizard on. */
   onRetakeAssessment?: () => void;
+  /** Preview mode only — rendered where interactive actions would normally be. */
+  previewCta?: React.ReactNode;
 }
 
 /**
- * Cycle-aware Growth Plan (Step 6).
+ * Cycle-aware Growth Plan (Step 6). PRESENTATIONAL — all data arrives via
+ * props so the exact same component can render both the in-app roadmap
+ * (`GrowthPlanContainer` + `useGrowthPlan`) and the public, read-only preview
+ * shown before signup (`usePreviewGrowthPlan`).
  *
  * Layout:
  *   1. Terminal completion banner  → when `workspaceState.roadmap_completed`.
@@ -49,24 +63,29 @@ interface Props {
  *                        no toggle, no progress row is ever written.
  *   - Normal tasks     → checkbox toggle → `updateStatus`.
  *
+ * In `preview` mode every interaction is stripped (no toggles, Start /
+ * Dismiss, decision pickers, coach buttons or resource links); the layout,
+ * ordering and visual hierarchy stay identical.
+ *
  * Cycle numbers and internal cycle mechanics are intentionally not exposed.
  */
 export default function GrowthPlanPanel({
+  mode = "interactive",
   subAccountId,
   assessment,
+  loading,
+  needsCycleBootstrap = false,
+  plan,
+  workspaceState,
+  refresh,
+  updateStatus,
   onOpenModule,
   onRetakeAssessment,
+  previewCta,
 }: Props) {
   const { t } = useTranslation();
-  const {
-    loading,
-    plan,
-    activeCycle,
-    needsCycleBootstrap,
-    workspaceState,
-    refresh,
-    updateStatus,
-  } = useGrowthPlan(subAccountId, assessment);
+  const readOnly = mode === "preview";
+
 
   if (!assessment) return null;
 
@@ -151,20 +170,24 @@ export default function GrowthPlanPanel({
               key={item.task.id}
               item={item}
               index={idx + 1}
-              isFocus={item.task.id === focusTaskId}
+              isFocus={!readOnly && item.task.id === focusTaskId}
+              readOnly={readOnly}
               subAccountId={subAccountId}
               workspaceState={workspaceState}
-              onStatus={(status) => updateStatus(item.task.id, status)}
-              onRefresh={refresh}
+              onStatus={async (status) => { await updateStatus?.(item.task.id, status); }}
+              onRefresh={async () => { await refresh?.(); }}
               onOpenModule={onOpenModule}
               onRetakeAssessment={onRetakeAssessment}
             />
           ))}
         </ol>
       )}
+
+      {readOnly && previewCta && <div className="mt-6">{previewCta}</div>}
     </div>
   );
 }
+
 
 // ---------------------------------------------------------------------------
 // Row
@@ -174,6 +197,7 @@ function PlanRow({
   item,
   index,
   isFocus,
+  readOnly = false,
   subAccountId,
   workspaceState,
   onStatus,
@@ -184,6 +208,7 @@ function PlanRow({
   item: DerivedTask;
   index: number;
   isFocus: boolean;
+  readOnly?: boolean;
   subAccountId: string | null;
   workspaceState: Record<string, unknown>;
   onStatus: (status: TaskStatus) => Promise<void>;
@@ -191,6 +216,7 @@ function PlanRow({
   onOpenModule?: (m: RelatedModule) => void;
   onRetakeAssessment?: () => void;
 }) {
+
   const { task, status } = item;
   const isReassess = REASSESS_SLUGS.has(task.slug);
   const isDecision = isDecisionTask(task.slug);
@@ -225,9 +251,10 @@ function PlanRow({
       >
         {index}
       </div>
-      <StatusIcon status={status} interactive={!isReassess && !isDecision && !isLocked} onToggle={() =>
+      <StatusIcon status={status} interactive={!readOnly && !isReassess && !isDecision && !isLocked} onToggle={() =>
         onStatus(status === "completed" ? "available" : "completed")
       } />
+
 
       <div className="flex-1 min-w-0">
         <div
@@ -253,7 +280,7 @@ function PlanRow({
           </div>
         )}
 
-        {isDecision && subAccountId && !isLocked && (
+        {isDecision && subAccountId && !isLocked && !readOnly && (
           <DecisionPicker
             slug={task.slug}
             subAccountId={subAccountId}
@@ -268,9 +295,11 @@ function PlanRow({
           const hasCoachPrompt = Boolean(task.coach_prompt_ref);
           if (resolved.length === 0 && !buildGuideUrl && !hasCoachPrompt) return null;
 
-          // Locked tasks show their resources as inert, non-clickable chips so
-          // the user can see what's coming without being able to act on it.
-          if (isLocked) {
+          // Locked tasks (and every task in read-only preview mode) show their
+          // resources as inert, non-clickable chips so the user can see what's
+          // coming without being able to act on it.
+          if (isLocked || readOnly) {
+
             return (
               <div className="flex flex-wrap gap-2 mt-2 items-center">
                 {resolved.map((r, i) => (
@@ -340,7 +369,7 @@ function PlanRow({
         })()}
 
 
-        {!isLocked && (
+        {!isLocked && !readOnly && (
           <RowActions
             status={status}
             isReassess={isReassess}
