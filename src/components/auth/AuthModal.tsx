@@ -85,13 +85,31 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
     );
   }
 
+  const handleResendConfirmation = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (error) throw error;
+      setFormNotice({ kind: "info", message: t("auth.resendSent") });
+    } catch (err: any) {
+      setFormNotice({ kind: "error", message: err.message || t("auth.error") });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setFormNotice(null);
     try {
       if (mode === "signup") {
         if (!accountName.trim()) {
-          toast.error("Please enter an account name");
+          setFormNotice({ kind: "error", message: "Please enter an account name" });
           setLoading(false);
           return;
         }
@@ -100,7 +118,7 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
         const returnUrl = safeNext
           ? `${window.location.origin}/?next=${encodeURIComponent(safeNext)}`
           : window.location.origin;
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -109,6 +127,17 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
           },
         });
         if (error) throw error;
+        // Supabase returns a success response with an empty `identities` array
+        // when the email is already registered (enumeration protection).
+        const alreadyExists = !!data.user && (data.user.identities?.length ?? 0) === 0;
+        if (alreadyExists) {
+          setFormNotice({
+            kind: "existing",
+            message: data.user?.email_confirmed_at ? t("auth.accountExists") : t("auth.accountExistsUnconfirmed"),
+          });
+          setLoading(false);
+          return;
+        }
         toast.success(t("auth.signupSuccess"));
         onSuccess();
       } else {
@@ -118,7 +147,12 @@ const AuthModal = ({ open, onClose, onSuccess, defaultEmail = "", defaultMode = 
         onSuccess();
       }
     } catch (err: any) {
-      toast.error(err.message || t("auth.error"));
+      const msg: string = err?.message || t("auth.error");
+      if (/email not confirmed/i.test(msg)) {
+        setFormNotice({ kind: "existing", message: t("auth.accountExistsUnconfirmed") });
+      } else {
+        setFormNotice({ kind: "error", message: msg });
+      }
     } finally {
       setLoading(false);
     }
