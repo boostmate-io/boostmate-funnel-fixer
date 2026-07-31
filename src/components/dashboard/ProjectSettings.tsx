@@ -49,7 +49,8 @@ const ProjectSettings = () => {
 
       {/* Main account name (owner only) */}
       {isOwner && mainAccount && (
-        <div className="border-t border-border pt-6 space-y-3">
+        <div className="space-y-3">
+
           <h3 className="font-display font-bold text-foreground">Account Name</h3>
           <p className="text-sm text-muted-foreground">The name of your main account.</p>
           <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
