@@ -6,9 +6,10 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import DashboardHome from "@/components/dashboard/DashboardHome";
-import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
-import KnowledgeCenter from "@/components/dashboard/KnowledgeCenter";
+import ProfileSettings from "@/components/dashboard/ProfileSettings";
+import WorkspaceToolsSettings from "@/components/dashboard/WorkspaceToolsSettings";
+
 import AuditModule from "@/components/audit/AuditModule";
 
 import ClientManagement from "@/components/agency/ClientManagement";
