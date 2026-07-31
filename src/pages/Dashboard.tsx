@@ -6,9 +6,10 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import DashboardHome from "@/components/dashboard/DashboardHome";
-import LanguageSwitcher from "@/components/dashboard/LanguageSwitcher";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
-import KnowledgeCenter from "@/components/dashboard/KnowledgeCenter";
+import ProfileSettings from "@/components/dashboard/ProfileSettings";
+import WorkspaceToolsSettings from "@/components/dashboard/WorkspaceToolsSettings";
+
 import AuditModule from "@/components/audit/AuditModule";
 
 import ClientManagement from "@/components/agency/ClientManagement";
@@ -168,21 +169,18 @@ const Dashboard = () => {
             <div className={`${PAGE_CONTAINER} py-8 space-y-6`}>
 
               <div className="bg-card rounded-xl border border-border p-6 shadow-card">
+                <ProfileSettings />
+              </div>
+              <div className="bg-card rounded-xl border border-border p-6 shadow-card">
                 <ProjectSettings />
               </div>
-              <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-6">
-                <div>
-                  <h3 className="font-display font-bold text-foreground mb-2">{t("dashboard.settings.account")}</h3>
-                  <p className="text-sm text-muted-foreground">{t("dashboard.settings.email")}: {user?.email}</p>
-                </div>
-                <div className="border-t border-border pt-6">
-                  <LanguageSwitcher />
-                </div>
+              <div className="bg-card rounded-xl border border-border p-6 shadow-card">
+                <WorkspaceToolsSettings />
               </div>
               <AgencySettings />
-              <KnowledgeCenter />
               <DeleteAccountSection />
             </div>
+
             </>
           )}
           </main>
