@@ -1,0 +1,1 @@
+update public.workspace_settings set setup_status = 'pending' where id = '498a795e-e544-4902-a63b-f79c2e8597f5';
