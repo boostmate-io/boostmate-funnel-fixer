@@ -27,46 +27,76 @@ const OutreachAnalytics = (_props: Props) => {
 
   const stats = useMemo(() => {
     const [year, month] = period.split("-").map(Number);
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    const startDate = new Date(year, month - 1, 1, 0, 0, 0, 0);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
-    const periodLeads = leads.filter((l) => {
-      const d = new Date(l.created_at);
+    const inPeriod = (v?: string | null) => {
+      if (!v) return false;
+      const d = new Date(v);
       return d >= startDate && d <= endDate;
-    });
+    };
+    const dayKeyOf = (v: string) => {
+      const d = new Date(v);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
 
-    const total = periodLeads.length;
-    // Cumulative status counts: a lead that reached "replied" also counts as "sent" and "new"
-    const cumulativeStatus: Record<string, number> = { new: 0, drafted: 0, ready_to_send: 0, sent: 0, replied: 0, interested: 0, closed: 0, no_response: 0, not_interested: 0 };
     const SENT_STATUSES = ["sent", "replied", "interested", "closed", "no_response", "not_interested"];
     const REPLIED_STATUSES = ["replied", "interested", "closed"];
     const INTERESTED_STATUSES = ["interested", "closed"];
+
+    // Timestamp of the moment the lead was actually contacted
+    const sentAtOf = (l: typeof leads[number]) =>
+      SENT_STATUSES.includes(l.status)
+        ? l.opener_sent_at || l.last_contact_at || l.updated_at || l.created_at
+        : null;
+    // Timestamp of the latest outcome change (reply / interested / closed / ...)
+    const outcomeAtOf = (l: typeof leads[number]) =>
+      l.updated_at || l.last_contact_at || l.created_at;
+
+    const cumulativeStatus: Record<string, number> = { new: 0, drafted: 0, ready_to_send: 0, sent: 0, replied: 0, interested: 0, closed: 0, no_response: 0, not_interested: 0 };
 
     const bySetupType: Record<string, { total: number; interested: number; closed: number }> = {};
     const bySource: Record<string, { total: number; interested: number; closed: number }> = {};
     const byChannel: Record<string, { total: number; sent: number; replied: number; interested: number; closed: number }> = {};
 
-    // Daily breakdown
     const dailyMap: Record<string, { new: number; sent: number; replied: number; interested: number; closed: number; no_response: number }> = {};
+    const touchDay = (v: string) => {
+      const k = dayKeyOf(v);
+      if (!dailyMap[k]) dailyMap[k] = { new: 0, sent: 0, replied: 0, interested: 0, closed: 0, no_response: 0 };
+      return dailyMap[k];
+    };
 
-    periodLeads.forEach((l) => {
-      // Every lead is always "new"
-      cumulativeStatus.new++;
-      if (SENT_STATUSES.includes(l.status)) cumulativeStatus.sent++;
-      if (REPLIED_STATUSES.includes(l.status)) cumulativeStatus.replied++;
-      if (INTERESTED_STATUSES.includes(l.status)) cumulativeStatus.interested++;
-      if (l.status === "closed") cumulativeStatus.closed++;
-      if (l.status === "no_response") cumulativeStatus.no_response++;
-      if (l.status === "not_interested") cumulativeStatus.not_interested++;
+    const activeLeadIds = new Set<string>();
 
-      const dayKey = new Date(l.created_at).toISOString().split("T")[0];
-      if (!dailyMap[dayKey]) dailyMap[dayKey] = { new: 0, sent: 0, replied: 0, interested: 0, closed: 0, no_response: 0 };
-      dailyMap[dayKey].new++;
-      if (["sent", "replied", "interested", "closed", "no_response", "not_interested"].includes(l.status)) dailyMap[dayKey].sent++;
-      if (["replied", "interested", "closed"].includes(l.status)) dailyMap[dayKey].replied++;
-      if (["interested", "closed"].includes(l.status)) dailyMap[dayKey].interested++;
-      if (l.status === "closed") dailyMap[dayKey].closed++;
-      if (l.status === "no_response") dailyMap[dayKey].no_response++;
+    leads.forEach((l) => {
+      const sentAt = sentAtOf(l);
+      const outcomeAt = outcomeAtOf(l);
+
+      const createdIn = inPeriod(l.created_at);
+      const sentIn = inPeriod(sentAt);
+      const outcomeIn = inPeriod(outcomeAt);
+
+      if (createdIn) {
+        cumulativeStatus.new++;
+        touchDay(l.created_at).new++;
+        activeLeadIds.add(l.id);
+      }
+      if (sentIn && sentAt) {
+        cumulativeStatus.sent++;
+        touchDay(sentAt).sent++;
+        activeLeadIds.add(l.id);
+      }
+      if (outcomeIn) {
+        if (REPLIED_STATUSES.includes(l.status)) { cumulativeStatus.replied++; touchDay(outcomeAt).replied++; }
+        if (INTERESTED_STATUSES.includes(l.status)) { cumulativeStatus.interested++; touchDay(outcomeAt).interested++; }
+        if (l.status === "closed") { cumulativeStatus.closed++; touchDay(outcomeAt).closed++; }
+        if (l.status === "no_response") { cumulativeStatus.no_response++; touchDay(outcomeAt).no_response++; }
+        if (l.status === "not_interested") cumulativeStatus.not_interested++;
+        if (REPLIED_STATUSES.includes(l.status) || ["no_response", "not_interested"].includes(l.status)) activeLeadIds.add(l.id);
+      }
+
+      // Breakdowns: any lead with activity in this period
+      if (!activeLeadIds.has(l.id)) return;
 
       const st = l.setup_type || "Unknown";
       if (!bySetupType[st]) bySetupType[st] = { total: 0, interested: 0, closed: 0 };
@@ -83,13 +113,13 @@ const OutreachAnalytics = (_props: Props) => {
       const ch = l.outreach_channel;
       if (!byChannel[ch]) byChannel[ch] = { total: 0, sent: 0, replied: 0, interested: 0, closed: 0 };
       byChannel[ch].total++;
-      if (["sent", "replied", "interested", "closed", "no_response", "not_interested"].includes(l.status)) byChannel[ch].sent++;
-      if (["replied", "interested", "closed"].includes(l.status)) byChannel[ch].replied++;
-      if (["interested", "closed"].includes(l.status)) byChannel[ch].interested++;
+      if (SENT_STATUSES.includes(l.status)) byChannel[ch].sent++;
+      if (REPLIED_STATUSES.includes(l.status)) byChannel[ch].replied++;
+      if (INTERESTED_STATUSES.includes(l.status)) byChannel[ch].interested++;
       if (l.status === "closed") byChannel[ch].closed++;
     });
 
-    // Conversion rates (use cumulative counts)
+    const total = activeLeadIds.size;
     const totalSent = cumulativeStatus.sent;
     const totalReplied = cumulativeStatus.replied;
     const totalInterested = cumulativeStatus.interested;
@@ -103,6 +133,7 @@ const OutreachAnalytics = (_props: Props) => {
 
     return { total, cumulativeStatus, bySetupType, bySource, byChannel, sentToReply, replyToInterested, interestedToClosed, daily };
   }, [leads, period]);
+
 
   if (loading) return <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
 
