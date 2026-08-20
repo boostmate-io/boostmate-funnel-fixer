@@ -64,6 +64,7 @@ export function buildBlueprintSectionContext(
       label: sectionLabel,
       kind: "structured",
       currentValue: null,
+      subBlockId: sectionId.includes(".") ? sectionId.split(".").pop() : sectionId,
     },
     businessContext: {
       subAccountId,
