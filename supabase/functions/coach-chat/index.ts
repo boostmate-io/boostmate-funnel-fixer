@@ -623,6 +623,9 @@ function resolveActiveSubBlock(
     fromId,
     fieldPath ? SUB_BLOCK_BY_FIELD_PATH[fieldPath] ?? "" : "",
     // list ids are conventionally "<subBlockId>_<listKey>"
+    // section ids look like "customer_clarity.avatar" → leaf is the sub-block id
+    fromId.includes(".") ? fromId.split(".").at(-1) ?? "" : "",
+    // list ids are conventionally "<subBlockId>_<listKey>"
     Object.keys(BLUEPRINT_SUB_BLOCK_PATHS).find((id) => fromId.startsWith(`${id}_`)) ?? "",
   ].filter(Boolean);
   for (const id of candidates) {
