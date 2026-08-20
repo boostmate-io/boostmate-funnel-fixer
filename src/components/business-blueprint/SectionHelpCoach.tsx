@@ -54,7 +54,7 @@ const SectionHelpCoach = ({
       label: sectionLabel,
       scope: context.scope,
       intent: context.intent,
-      mode: walkthrough ? "walkthrough" : "section",
+      mode: walkthrough ? "walkthrough" : "explain",
       target: context.target,
       seed,
     });

@@ -701,6 +701,11 @@ const ProofAuthoritySection = ({ data, onChange, saving }: Props) => {
                   sectionId={`proof_authority.${active}`}
                   sectionLabel={`Authority & Content — ${tab.label}`}
                 />
+                <SectionHelpCoach
+                  variant="walkthrough"
+                  sectionId={`proof_authority.${active}`}
+                  sectionLabel={`Authority & Content — ${tab.label}`}
+                />
               </div>
               <p className="text-sm text-muted-foreground">{tab.description}</p>
             </div>

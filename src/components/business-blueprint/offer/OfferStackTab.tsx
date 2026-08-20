@@ -295,7 +295,10 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
       progress={progress}
       saving={saving}
       embedded={embedded}
-      helpButton={<SectionHelpCoach sectionId="offer_design.stack" sectionLabel="Offer Design — Stack" />}
+      helpButton={<>
+          <SectionHelpCoach sectionId="offer_design.stack" sectionLabel="Offer Design — Stack" />
+          <SectionHelpCoach variant="walkthrough" sectionId="offer_design.stack" sectionLabel="Offer Design — Stack" />
+        </>}
     >
       <div className="space-y-5">
         {/* Core Deliverables */}

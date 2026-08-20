@@ -116,6 +116,11 @@ const GrowthSystemSection = ({
                   sectionId={`growth_system.${active}`}
                   sectionLabel={`Growth System — ${tabConfig.label}`}
                 />
+                <SectionHelpCoach
+                  variant="walkthrough"
+                  sectionId={`growth_system.${active}`}
+                  sectionLabel={`Growth System — ${tabConfig.label}`}
+                />
               </div>
               <p className="text-sm text-muted-foreground">{tabConfig.description}</p>
             </div>
