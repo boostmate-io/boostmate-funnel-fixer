@@ -2,11 +2,14 @@ import { useEffect, useState, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Link2, Plus } from "lucide-react";
+import { Link2, Plus, FilePlus2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { resolveDocumentThumbnails } from "@/lib/copy/documentThumbnail";
+import { createLinkedDocument } from "@/lib/copy/createLinkedDocument";
 import LinkedDocumentsGrid, { LinkedDocument, FrameworkInfo } from "./LinkedDocumentsGrid";
+
 
 interface NodeLinkedDocumentsProps {
   funnelNodeId: string;
@@ -20,8 +23,11 @@ interface NodeLinkedDocumentsProps {
   funnelName?: string;
   readOnly?: boolean;
   onOpenDocument?: (id: string) => void;
+  /** Called when the user picks a framework while creating a document (persist on the node). */
+  onFrameworkChange?: (frameworkId: string) => void;
   /** Optional Supabase client override — pass `publicSupabase` on shared/read-only views. */
   client?: SupabaseClient<any, any, any>;
+
 }
 
 interface CopyFrameworkRow {
@@ -49,6 +55,7 @@ const NodeLinkedDocuments = ({
   funnelName,
   readOnly,
   onOpenDocument,
+  onFrameworkChange,
   client,
 }: NodeLinkedDocumentsProps) => {
   const sb = (client || supabase) as SupabaseClient<any, any, any>;
@@ -58,6 +65,9 @@ const NodeLinkedDocuments = ({
   const [frameworks, setFrameworks] = useState<CopyFrameworkRow[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, string | undefined>>({});
   const [attachOpen, setAttachOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+
 
   const load = useCallback(async () => {
     const [{ data: docs }, { data: fws }, { data: availableDocs }] = await Promise.all([
@@ -179,6 +189,48 @@ const NodeLinkedDocuments = ({
       ? "email sequence documents"
       : "sales copy documents";
 
+  const frameworksForType = frameworks.filter((f) => f.type === documentType);
+  const canCreate = !readOnly && !!userId && !!subAccountId;
+
+  const create = async (frameworkId: string) => {
+    if (!canCreate || creating) return;
+    setCreating(true);
+    try {
+      const fw = frameworks.find((f) => f.id === frameworkId);
+      const baseName = [funnelName, nodeLabel].filter(Boolean).join(" — ")
+        || fw?.name || "Untitled document";
+      const doc = await createLinkedDocument({
+        client: sb,
+        userId: userId!,
+        subAccountId: subAccountId!,
+        framework: fw || frameworkId,
+        type: documentType,
+        name: baseName,
+        funnelId: funnelId ?? null,
+        funnelNodeId: funnelNodeId,
+        contextOfferId: linkedOfferId ?? null,
+      });
+      if (fw && fw.id !== defaultFrameworkId) onFrameworkChange?.(fw.id);
+      setPickerOpen(false);
+      toast.success("Document created");
+      dispatchDocumentsChanged();
+      await load();
+      onOpenDocument?.(doc.id);
+    } catch (e: any) {
+      toast.error(e?.message || "Create failed");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleNewClick = () => {
+    if (defaultFrameworkId) create(defaultFrameworkId);
+    else if (frameworksForType.length === 1) create(frameworksForType[0].id);
+    else setPickerOpen(true);
+  };
+
+
+
   return (
     <div className="space-y-3">
       <LinkedDocumentsGrid
@@ -193,13 +245,46 @@ const NodeLinkedDocuments = ({
         emptyLabel={readOnly ? "No linked documents." : "No linked documents yet."}
       />
 
+      {canCreate && (
+        <Button size="sm" className="w-full h-8 text-xs" onClick={handleNewClick} disabled={creating}>
+          <FilePlus2 className="w-3.5 h-3.5 mr-1" /> {creating ? "Creating…" : "New document"}
+        </Button>
+      )}
+
+      {canCreate && (
+        <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-base">Choose a copy framework</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-1 max-h-72 overflow-auto">
+              {frameworksForType.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-3 text-center">No frameworks available for this node type.</p>
+              ) : (
+                frameworksForType.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => create(f.id)}
+                    disabled={creating}
+                    className="w-full text-left px-3 py-2 rounded-md hover:bg-muted/60 text-sm disabled:opacity-50"
+                  >
+                    {f.name}
+                  </button>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {!readOnly && (
         <Popover open={attachOpen} onOpenChange={setAttachOpen}>
           <PopoverTrigger asChild>
-            <Button size="sm" className="w-full h-8 text-xs">
+            <Button size="sm" variant="outline" className="w-full h-8 text-xs">
               <Link2 className="w-3.5 h-3.5 mr-1" /> Attach existing document
             </Button>
           </PopoverTrigger>
+
           <PopoverContent className="w-72 p-0" align="start">
             <div className="p-2 border-b border-border">
               <p className="text-[11px] font-medium text-muted-foreground">Available {typeLabel}</p>

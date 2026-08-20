@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LinkedDocumentsGrid, { LinkedDocument, FrameworkInfo } from "./linked/LinkedDocumentsGrid";
 import { resolveDocumentThumbnails } from "@/lib/copy/documentThumbnail";
+import { createLinkedDocument } from "@/lib/copy/createLinkedDocument";
+
 import CopyDocumentEditor from "./CopyDocumentEditor";
 
 interface CopyDocument extends LinkedDocument {
@@ -141,34 +143,13 @@ const CopyDocumentsModule = () => {
     const docType = typeOverride || framework.type;
     setCreating(true);
     try {
-      const { data, error } = await supabase
-        .from("copy_documents")
-        .insert({
-          user_id: user.id,
-          sub_account_id: activeSubAccountId,
-          name: `Untitled ${framework.name}`,
-          type: docType,
-          framework_id: framework.id,
-          status: "draft",
-        } as any)
-        .select("id, name, type, status, framework_id, updated_at")
-        .single();
-      if (error || !data) throw error;
-
-      const slugs: string[] = Array.isArray(framework.component_slugs)
-        ? framework.component_slugs
-        : (framework.component_slugs?.slugs || []);
-      if (slugs.length > 0) {
-        const rows = slugs.map((slug, i) => ({
-          document_id: (data as any).id,
-          component_slug: slug,
-          sort_order: i,
-          inputs: {},
-          outputs: {},
-          is_generated: false,
-        }));
-        await supabase.from("copy_document_components").insert(rows as any);
-      }
+      const data = await createLinkedDocument({
+        userId: user.id,
+        subAccountId: activeSubAccountId,
+        framework: framework as any,
+        type: docType,
+        name: `Untitled ${framework.name}`,
+      });
       setPickerOpen(false);
       setDocuments((prev) => [data as unknown as CopyDocument, ...prev]);
       setSelectedDoc(data as unknown as CopyDocument);
@@ -178,6 +159,7 @@ const CopyDocumentsModule = () => {
       setCreating(false);
     }
   };
+
 
   const deleteDocument = async (id: string) => {
     if (!confirm("Delete this document permanently?")) return;

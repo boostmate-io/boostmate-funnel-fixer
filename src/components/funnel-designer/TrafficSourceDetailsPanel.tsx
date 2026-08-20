@@ -2,11 +2,13 @@ import { useEffect, useState, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { X, Plus, Link2 } from "lucide-react";
+import { X, Plus, Link2, FilePlus2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { resolveDocumentThumbnails } from "@/lib/copy/documentThumbnail";
+import { createLinkedDocument } from "@/lib/copy/createLinkedDocument";
 import LinkedDocumentsGrid, { LinkedDocument } from "@/components/copy/linked/LinkedDocumentsGrid";
+
 
 interface Props {
   nodeId: string;
@@ -35,33 +37,43 @@ const TrafficSourceDetailsPanel = ({
   const [thumbnails, setThumbnails] = useState<Record<string, string | undefined>>({});
   const [resolvedSubAccountId, setResolvedSubAccountId] = useState<string | null>(null);
   const [metaFrameworkName, setMetaFrameworkName] = useState<string>("Meta Ad");
+  const [metaFramework, setMetaFramework] = useState<any | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
 
   const load = useCallback(async () => {
     // Resolve current sub_account for the user (needed to filter available docs).
     let subId: string | null = subAccountId ?? resolvedSubAccountId;
-    if (!readOnly && !subId) {
+    if (!readOnly) {
       const { data: auth } = await sb.auth.getUser();
       if (auth.user?.id) {
-        const { data: memb } = await sb
-          .from("account_memberships")
-          .select("sub_account_id")
-          .eq("user_id", auth.user.id)
-          .not("sub_account_id", "is", null)
-          .limit(1)
-          .maybeSingle();
-        subId = (memb as any)?.sub_account_id || null;
-        setResolvedSubAccountId(subId);
+        setUserId(auth.user.id);
+        if (!subId) {
+          const { data: memb } = await sb
+            .from("account_memberships")
+            .select("sub_account_id")
+            .eq("user_id", auth.user.id)
+            .not("sub_account_id", "is", null)
+            .limit(1)
+            .maybeSingle();
+          subId = (memb as any)?.sub_account_id || null;
+          setResolvedSubAccountId(subId);
+        }
       }
     }
 
+
     const { data: fw } = await sb
       .from("copy_frameworks")
-      .select("name")
+      .select("id, name, type, component_slugs")
       .eq("type", "meta_ad")
       .eq("is_active", true)
       .limit(1)
       .maybeSingle();
     if ((fw as any)?.name) setMetaFrameworkName((fw as any).name);
+    setMetaFramework((fw as any) || null);
+
 
     const { data: linkedDocs } = await sb
       .from("copy_documents")
@@ -116,6 +128,34 @@ const TrafficSourceDetailsPanel = ({
     }
   };
 
+  const effectiveSubId = subAccountId ?? resolvedSubAccountId;
+  const canCreate = !readOnly && !!userId && !!effectiveSubId && !!metaFramework;
+
+  const createDocument = async () => {
+    if (!canCreate || creating) return;
+    setCreating(true);
+    try {
+      const doc = await createLinkedDocument({
+        client: sb,
+        userId: userId!,
+        subAccountId: effectiveSubId!,
+        framework: metaFramework,
+        type: "meta_ad",
+        name: [funnelName, label].filter(Boolean).join(" — ") || metaFrameworkName,
+        funnelId: funnelId ?? null,
+        funnelNodeId: nodeId,
+      });
+      toast.success("Document created");
+      window.dispatchEvent(new CustomEvent("boostmate:funnel-copy-documents-changed", { detail: { funnelNodeId: nodeId } }));
+      await load();
+      onOpenCopyDocument?.(doc.id);
+    } catch (e: any) {
+      toast.error(e?.message || "Create failed");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-border">
@@ -138,10 +178,18 @@ const TrafficSourceDetailsPanel = ({
           emptyLabel={readOnly ? "No linked ad documents." : "No ad documents linked yet."}
         />
 
+        {canCreate && (
+          <Button size="sm" className="w-full h-8 text-xs" onClick={createDocument} disabled={creating}>
+            <FilePlus2 className="w-3.5 h-3.5 mr-1" /> {creating ? "Creating…" : "New ad document"}
+          </Button>
+        )}
+
         {!readOnly && (
           <Popover>
             <PopoverTrigger asChild>
-              <Button size="sm" className="w-full h-8 text-xs">
+              <Button size="sm" variant="outline" className="w-full h-8 text-xs">
+                <Link2 className="w-3.5 h-3.5 mr-1" /> Attach existing ad document
+
                 <Link2 className="w-3.5 h-3.5 mr-1" /> Attach existing ad document
               </Button>
             </PopoverTrigger>
