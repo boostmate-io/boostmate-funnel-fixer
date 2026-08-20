@@ -126,6 +126,34 @@ const TrafficSourceDetailsPanel = ({
     }
   };
 
+  const effectiveSubId = subAccountId ?? resolvedSubAccountId;
+  const canCreate = !readOnly && !!userId && !!effectiveSubId && !!metaFramework;
+
+  const createDocument = async () => {
+    if (!canCreate || creating) return;
+    setCreating(true);
+    try {
+      const doc = await createLinkedDocument({
+        client: sb,
+        userId: userId!,
+        subAccountId: effectiveSubId!,
+        framework: metaFramework,
+        type: "meta_ad",
+        name: [funnelName, label].filter(Boolean).join(" — ") || metaFrameworkName,
+        funnelId: funnelId ?? null,
+        funnelNodeId: nodeId,
+      });
+      toast.success("Document created");
+      window.dispatchEvent(new CustomEvent("boostmate:funnel-copy-documents-changed", { detail: { funnelNodeId: nodeId } }));
+      await load();
+      onOpenCopyDocument?.(doc.id);
+    } catch (e: any) {
+      toast.error(e?.message || "Create failed");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="w-80 border-l border-border bg-card flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-border">
@@ -148,10 +176,18 @@ const TrafficSourceDetailsPanel = ({
           emptyLabel={readOnly ? "No linked ad documents." : "No ad documents linked yet."}
         />
 
+        {canCreate && (
+          <Button size="sm" className="w-full h-8 text-xs" onClick={createDocument} disabled={creating}>
+            <FilePlus2 className="w-3.5 h-3.5 mr-1" /> {creating ? "Creating…" : "New ad document"}
+          </Button>
+        )}
+
         {!readOnly && (
           <Popover>
             <PopoverTrigger asChild>
-              <Button size="sm" className="w-full h-8 text-xs">
+              <Button size="sm" variant="outline" className="w-full h-8 text-xs">
+                <Link2 className="w-3.5 h-3.5 mr-1" /> Attach existing ad document
+
                 <Link2 className="w-3.5 h-3.5 mr-1" /> Attach existing ad document
               </Button>
             </PopoverTrigger>
