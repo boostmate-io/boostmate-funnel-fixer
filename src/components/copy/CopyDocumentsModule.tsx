@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LinkedDocumentsGrid, { LinkedDocument, FrameworkInfo } from "./linked/LinkedDocumentsGrid";
 import { resolveDocumentThumbnails } from "@/lib/copy/documentThumbnail";
+import { createLinkedDocument } from "@/lib/copy/createLinkedDocument";
+
 import CopyDocumentEditor from "./CopyDocumentEditor";
 
 interface CopyDocument extends LinkedDocument {
