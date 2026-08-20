@@ -318,7 +318,25 @@ async function applyEcosystemWrites(
   return payloads.length;
 }
 
-export async function applyBlueprintWrites(
+/**
+ * Serializes every apply call. Each call does a read-modify-write on the
+ * blueprint JSON columns, so two overlapping applies (e.g. the user clicking
+ * "apply" on several proposed fields in quick succession) would otherwise both
+ * read the same original row and the last write would silently drop the other
+ * one's field.
+ */
+let applyQueue: Promise<unknown> = Promise.resolve();
+
+export function applyBlueprintWrites(
+  subAccountId: string,
+  writes: BlueprintWrite[],
+): Promise<{ applied: number; error?: string }> {
+  const run = applyQueue.then(() => applyBlueprintWritesUnsafe(subAccountId, writes));
+  applyQueue = run.catch(() => undefined);
+  return run;
+}
+
+async function applyBlueprintWritesUnsafe(
   subAccountId: string,
   writes: BlueprintWrite[],
 ): Promise<{ applied: number; error?: string }> {

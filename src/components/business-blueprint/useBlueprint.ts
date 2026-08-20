@@ -93,7 +93,22 @@ export function useBlueprint() {
     if (!activeSubAccountId) return;
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (!detail || detail.subAccountId === activeSubAccountId) void load({ silent: true });
+      if (detail && detail.subAccountId !== activeSubAccountId) return;
+      // Drop any pending debounced save first: it would write a snapshot taken
+      // BEFORE the Coach's write and silently overwrite the applied fields.
+      for (const timer of [
+        claritySaveTimer,
+        offerSaveTimer,
+        growthSaveTimer,
+        proofSaveTimer,
+        brandSaveTimer,
+      ]) {
+        if (timer.current) {
+          window.clearTimeout(timer.current);
+          timer.current = null;
+        }
+      }
+      void load({ silent: true });
     };
     window.addEventListener("blueprint:updated", handler);
     return () => window.removeEventListener("blueprint:updated", handler);
