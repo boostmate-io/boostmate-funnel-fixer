@@ -56,12 +56,14 @@ const TrafficSourceDetailsPanel = ({
 
     const { data: fw } = await sb
       .from("copy_frameworks")
-      .select("name")
+      .select("id, name, type, component_slugs")
       .eq("type", "meta_ad")
       .eq("is_active", true)
       .limit(1)
       .maybeSingle();
     if ((fw as any)?.name) setMetaFrameworkName((fw as any).name);
+    setMetaFramework((fw as any) || null);
+
 
     const { data: linkedDocs } = await sb
       .from("copy_documents")
