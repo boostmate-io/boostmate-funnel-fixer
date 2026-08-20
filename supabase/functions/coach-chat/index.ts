@@ -594,15 +594,62 @@ This overrides ANY earlier example, draft or summary in the conversation history
  * were already discussed but never applied. Prevents the walkthrough from
  * treating "we talked about it" as "it is filled in".
  */
+/** Sub-block id → label, and field path → owning sub-block id. */
+const SUB_BLOCK_LABEL: Record<string, string> = Object.fromEntries(
+  BLUEPRINT_SUB_BLOCKS.map((s: any) => [s.id, s.label]),
+);
+const SUB_BLOCK_BY_FIELD_PATH: Record<string, string> = (() => {
+  const map: Record<string, string> = {};
+  for (const sb of BLUEPRINT_SUB_BLOCKS as any[]) {
+    for (const p of sb.fieldPaths as string[]) if (!map[p]) map[p] = sb.id;
+  }
+  return map;
+})();
+
+/**
+ * The tab (registry sub-block) the user is currently working in.
+ * Priority: explicit `target.subBlockId` from the UI → section/list target id →
+ * the sub-block that owns the targeted field path.
+ */
+function resolveActiveSubBlock(
+  context: any,
+): { id: string; label: string; paths: string[] } | null {
+  const explicit = context?.target?.subBlockId ? String(context.target.subBlockId) : "";
+  const rawId = String(context?.target?.id ?? "");
+  const fromId = rawId.replace(/^(section|list):/, "");
+  const fieldPath = targetBlueprintPath(context);
+  const candidates = [
+    explicit,
+    fromId,
+    fieldPath ? SUB_BLOCK_BY_FIELD_PATH[fieldPath] ?? "" : "",
+    // list ids are conventionally "<subBlockId>_<listKey>"
+    Object.keys(BLUEPRINT_SUB_BLOCK_PATHS).find((id) => fromId.startsWith(`${id}_`)) ?? "",
+  ].filter(Boolean);
+  for (const id of candidates) {
+    const paths = BLUEPRINT_SUB_BLOCK_PATHS[id];
+    if (paths?.length) return { id, label: SUB_BLOCK_LABEL[id] ?? id, paths };
+  }
+  return null;
+}
+
+/** "next", "ok", "verder"… — a continue signal without naming a field or tab. */
+const CONTINUE_SIGNAL_RE =
+  /^(?:\s*(?:ok|oke|oké|okay|yes|ja|top|prima|goed|good|great|perfect|done|klaar|thanks|dank|bedankt|next|volgende|verder|ga verder|go on|continue|next one|next field|volgend veld|volgende veld|next step|volgende stap|and now|en nu|\.|,|!|—|-)\s*)+$/i;
+
+function isBareContinueTurn(messages: any[]): boolean {
+  const latest = latestInstructionText(messages).trim();
+  if (!latest || latest.length > 60) return false;
+  return CONTINUE_SIGNAL_RE.test(latest);
+}
+
 function renderBlueprintStateTruth(context: any, discussedUnfilledPaths: string[] = []): string | null {
   const scope = context?.scope;
   if (scope !== "blueprint.section" && scope !== "blueprint.field") return null;
   const snapshot = context?.businessContext?.blueprintSnapshot;
   if (!snapshot) return null;
 
-  const rawId = String(context?.target?.id ?? "");
-  const subId = rawId.replace(/^(section|list):/, "");
-  let paths: string[] = BLUEPRINT_SUB_BLOCK_PATHS[subId] ?? [];
+  const subBlock = resolveActiveSubBlock(context);
+  let paths: string[] = subBlock?.paths ?? [];
   if (paths.length === 0) {
     const prefix = targetRootPrefix(context);
     if (!prefix) return null;
@@ -620,9 +667,13 @@ function renderBlueprintStateTruth(context: any, discussedUnfilledPaths: string[
     return `- ${path} — ${label}: ${note}`;
   });
   const nextEmpty = paths.find((p) => isEmptyBlueprintValue(getDeepValue(snapshot, p)));
+  const tabName = subBlock?.label ?? "the current tab";
+  const allFilled = !nextEmpty;
 
   return `# Blueprint state — SINGLE SOURCE OF TRUTH (HARD CONSTRAINT)
 A field counts as complete ONLY when the Blueprint currently holds a value for it. Talking about a field, drafting it, or proposing a value does NOT complete it — the user may have dismissed the proposal.
+
+Active tab: **${tabName}**. These are ALL the fields of that tab, in order:
 
 ${lines.join("\n")}
 
@@ -631,8 +682,11 @@ Rules:
 - Never say or assume a field is done because you covered it in chat. If it is marked EMPTY, it still needs work.
 - For fields marked "discussed earlier but NEVER applied": acknowledge briefly that the earlier proposal was not applied, ask what did not fit, and work that field again before moving on.
 - Do not move to the next field while an earlier field in this list is still EMPTY, unless the user explicitly asks to skip it.
-- The field you are working on right now is the "next field to work on" below. Never suggest "move to X" or "apply and continue to X" when X IS that current field — the follow-up must always name the field AFTER it in this list.${nextEmpty ? `\n- Next field to work on right now: ${nextEmpty} (${BLUEPRINT_FIELD_META[nextEmpty]?.label ?? nextEmpty}).` : "\n- All fields in scope are filled — shift to sharpening quality instead of filling gaps."}`;
+- TAB BOUNDARY (HARD): when the user just says "next", "ok", "verder", "volgende", "done" or any other bare continue signal, you continue with the FIRST field still marked EMPTY in the list above — inside this same tab. You may ONLY leave the "${tabName}" tab when (a) every field above is DONE, or (b) the user explicitly names another tab/section. Never propose switching tabs while an EMPTY field remains here.
+- Writes on a bare continue signal must stay inside the paths listed above.
+- The field you are working on right now is the "next field to work on" below. Never suggest "move to X" or "apply and continue to X" when X IS that current field — the follow-up must always name the field AFTER it in this list.${allFilled ? `\n- Every field in "${tabName}" is filled. Say so in one short sentence, then suggest the next tab (or sharpening quality) and let the user choose.` : `\n- Next field to work on right now: ${nextEmpty} (${BLUEPRINT_FIELD_META[nextEmpty!]?.label ?? nextEmpty}).`}`;
 }
+
 
 
 function buildSystemPrompt(
