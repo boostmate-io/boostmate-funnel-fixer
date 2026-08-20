@@ -35,6 +35,10 @@ const TrafficSourceDetailsPanel = ({
   const [thumbnails, setThumbnails] = useState<Record<string, string | undefined>>({});
   const [resolvedSubAccountId, setResolvedSubAccountId] = useState<string | null>(null);
   const [metaFrameworkName, setMetaFrameworkName] = useState<string>("Meta Ad");
+  const [metaFramework, setMetaFramework] = useState<any | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
 
   const load = useCallback(async () => {
     // Resolve current sub_account for the user (needed to filter available docs).
