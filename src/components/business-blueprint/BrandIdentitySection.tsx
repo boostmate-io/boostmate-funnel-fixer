@@ -53,6 +53,7 @@ const BrandIdentitySection = ({ data, onChange, saving }: Props) => {
         placeholder: field.placeholder,
         currentValue: (data?.[field.key] as string) || "",
         kind: "text",
+        subBlockId: tab.id,
       },
       snapshot,
       activeSubAccountId,
