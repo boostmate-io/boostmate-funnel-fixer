@@ -43,20 +43,24 @@ const TrafficSourceDetailsPanel = ({
   const load = useCallback(async () => {
     // Resolve current sub_account for the user (needed to filter available docs).
     let subId: string | null = subAccountId ?? resolvedSubAccountId;
-    if (!readOnly && !subId) {
+    if (!readOnly) {
       const { data: auth } = await sb.auth.getUser();
       if (auth.user?.id) {
-        const { data: memb } = await sb
-          .from("account_memberships")
-          .select("sub_account_id")
-          .eq("user_id", auth.user.id)
-          .not("sub_account_id", "is", null)
-          .limit(1)
-          .maybeSingle();
-        subId = (memb as any)?.sub_account_id || null;
-        setResolvedSubAccountId(subId);
+        setUserId(auth.user.id);
+        if (!subId) {
+          const { data: memb } = await sb
+            .from("account_memberships")
+            .select("sub_account_id")
+            .eq("user_id", auth.user.id)
+            .not("sub_account_id", "is", null)
+            .limit(1)
+            .maybeSingle();
+          subId = (memb as any)?.sub_account_id || null;
+          setResolvedSubAccountId(subId);
+        }
       }
     }
+
 
     const { data: fw } = await sb
       .from("copy_frameworks")
