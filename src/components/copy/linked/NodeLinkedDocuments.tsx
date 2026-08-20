@@ -189,6 +189,48 @@ const NodeLinkedDocuments = ({
       ? "email sequence documents"
       : "sales copy documents";
 
+  const frameworksForType = frameworks.filter((f) => f.type === documentType);
+  const canCreate = !readOnly && !!userId && !!subAccountId;
+
+  const create = async (frameworkId: string) => {
+    if (!canCreate || creating) return;
+    setCreating(true);
+    try {
+      const fw = frameworks.find((f) => f.id === frameworkId);
+      const baseName = [funnelName, nodeLabel].filter(Boolean).join(" — ")
+        || fw?.name || "Untitled document";
+      const doc = await createLinkedDocument({
+        client: sb,
+        userId: userId!,
+        subAccountId: subAccountId!,
+        framework: fw || frameworkId,
+        type: documentType,
+        name: baseName,
+        funnelId: funnelId ?? null,
+        funnelNodeId: funnelNodeId,
+        contextOfferId: linkedOfferId ?? null,
+      });
+      if (fw && fw.id !== defaultFrameworkId) onFrameworkChange?.(fw.id);
+      setPickerOpen(false);
+      toast.success("Document created");
+      dispatchDocumentsChanged();
+      await load();
+      onOpenDocument?.(doc.id);
+    } catch (e: any) {
+      toast.error(e?.message || "Create failed");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleNewClick = () => {
+    if (defaultFrameworkId) create(defaultFrameworkId);
+    else if (frameworksForType.length === 1) create(frameworksForType[0].id);
+    else setPickerOpen(true);
+  };
+
+
+
   return (
     <div className="space-y-3">
       <LinkedDocumentsGrid
