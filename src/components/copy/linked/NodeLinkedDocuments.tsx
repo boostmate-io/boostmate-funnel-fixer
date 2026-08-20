@@ -23,8 +23,11 @@ interface NodeLinkedDocumentsProps {
   funnelName?: string;
   readOnly?: boolean;
   onOpenDocument?: (id: string) => void;
+  /** Called when the user picks a framework while creating a document (persist on the node). */
+  onFrameworkChange?: (frameworkId: string) => void;
   /** Optional Supabase client override — pass `publicSupabase` on shared/read-only views. */
   client?: SupabaseClient<any, any, any>;
+
 }
 
 interface CopyFrameworkRow {
