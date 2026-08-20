@@ -55,6 +55,7 @@ const NodeLinkedDocuments = ({
   funnelName,
   readOnly,
   onOpenDocument,
+  onFrameworkChange,
   client,
 }: NodeLinkedDocumentsProps) => {
   const sb = (client || supabase) as SupabaseClient<any, any, any>;
@@ -64,6 +65,9 @@ const NodeLinkedDocuments = ({
   const [frameworks, setFrameworks] = useState<CopyFrameworkRow[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, string | undefined>>({});
   const [attachOpen, setAttachOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+
 
   const load = useCallback(async () => {
     const [{ data: docs }, { data: fws }, { data: availableDocs }] = await Promise.all([
