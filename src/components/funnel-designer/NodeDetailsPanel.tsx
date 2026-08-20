@@ -612,6 +612,8 @@ const NodeDetailsPanel = ({
                 nodeLabel={customLabel || nodeLabel}
                 funnelName={funnelName}
                 onOpenDocument={onOpenCopyDocument}
+                onFrameworkChange={(id) => setNodeData("copyFrameworkId", id)}
+
                 client={supabaseClient}
               />
             </div>
