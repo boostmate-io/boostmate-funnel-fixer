@@ -1329,7 +1329,21 @@ function preferredBlueprintWritePaths(context: any, messages: any[]): Set<string
     return filterPathsToCurrentTarget(new Set(scoped), context);
   }
 
+  // Bare continue turn ("next", "ok", "verder") inside a Blueprint tab:
+  // keep writes inside the ACTIVE tab so the Coach cannot drift to another tab.
+  if (isBareContinueTurn(messages)) {
+    const active = resolveActiveSubBlock(context);
+    if (active) {
+      const snapshot = context?.businessContext?.blueprintSnapshot;
+      const emptyPaths = active.paths.filter((path) =>
+        isEmptyBlueprintValue(getDeepValue(snapshot, path)),
+      );
+      if (emptyPaths.length > 0) return new Set(emptyPaths);
+    }
+  }
+
   return null;
+
 }
 
 
