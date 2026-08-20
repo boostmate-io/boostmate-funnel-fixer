@@ -34,6 +34,8 @@ export interface CoachTarget {
   label: string;
   kind: CoachTargetKind;
   currentValue: string | null;
+  /** Registry sub-block (Blueprint tab) the user is working in, e.g. "avatar". */
+  subBlockId?: string;
   helper?: string;
   placeholder?: string;
   listSection?: CoachListSectionMeta;
