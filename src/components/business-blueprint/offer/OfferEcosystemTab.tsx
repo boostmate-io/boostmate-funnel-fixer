@@ -341,7 +341,10 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
       description="Build your full monetization ecosystem — from free entry to premium retention."
       progress={progress}
       saving={saving}
-      helpButton={<SectionHelpCoach sectionId="offer_design.ecosystem" sectionLabel="Offer Design — Ecosystem" />}
+      helpButton={<>
+          <SectionHelpCoach sectionId="offer_design.ecosystem" sectionLabel="Offer Design — Ecosystem" />
+          <SectionHelpCoach variant="walkthrough" sectionId="offer_design.ecosystem" sectionLabel="Offer Design — Ecosystem" />
+        </>}
     >
       <div className="space-y-5">
         {ECOSYSTEM_TIERS.map((tier) => {

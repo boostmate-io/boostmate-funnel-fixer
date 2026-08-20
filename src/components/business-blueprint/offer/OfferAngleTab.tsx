@@ -125,7 +125,10 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
       progress={progress}
       saving={saving}
       embedded={embedded}
-      helpButton={<SectionHelpCoach sectionId="offer_design.angle" sectionLabel="Offer Design — Angle" />}
+      helpButton={<>
+          <SectionHelpCoach sectionId="offer_design.angle" sectionLabel="Offer Design — Angle" />
+          <SectionHelpCoach variant="walkthrough" sectionId="offer_design.angle" sectionLabel="Offer Design — Angle" />
+        </>}
     >
       {/* 1. Main Offer Name */}
       <div className="rounded-xl border border-border bg-card p-5 mb-4">

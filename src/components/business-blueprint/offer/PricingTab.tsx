@@ -138,7 +138,10 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
       progress={progress}
       saving={saving}
       embedded={embedded}
-      helpButton={<SectionHelpCoach sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />}
+      helpButton={<>
+          <SectionHelpCoach sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />
+          <SectionHelpCoach variant="walkthrough" sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />
+        </>}
     >
       <div className="space-y-5">
         {/* Core Price */}

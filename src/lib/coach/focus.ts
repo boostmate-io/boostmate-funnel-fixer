@@ -11,7 +11,7 @@
 import type { CoachBlueprintWrite, CoachContext, CoachScope, CoachTarget } from "./types";
 import type { BlueprintRow } from "@/components/business-blueprint/types";
 
-export type CoachFocusMode = "field" | "section" | "walkthrough" | "task" | "general";
+export type CoachFocusMode = "field" | "section" | "explain" | "walkthrough" | "task" | "general";
 
 export interface CoachFocus {
   /** Stable key — the focus turn is injected once per key. */
@@ -67,6 +67,10 @@ export function buildFocusTurnText(
       return nl
         ? `Laten we werken aan het veld "${label}".`
         : `Let's work on the "${label}" field.`;
+    case "explain":
+      return nl
+        ? `Kan je de sectie "${label}" uitleggen? Waarom is die belangrijk en hoe pak ik die het beste aan?`
+        : `Can you explain the "${label}" section — why it matters and how to approach it?`;
     case "section":
       return nl
         ? `Laten we samen door de sectie "${label}" lopen.`
