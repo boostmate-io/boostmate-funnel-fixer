@@ -16,6 +16,8 @@ interface BlueprintFieldSpec {
   placeholder?: string;
   currentValue: string | null;
   kind?: CoachTarget["kind"];
+  /** Registry sub-block (tab) the field lives in — keeps the Coach inside the tab. */
+  subBlockId?: string;
 }
 
 export function buildBlueprintFieldContext(
@@ -33,6 +35,7 @@ export function buildBlueprintFieldContext(
       currentValue: spec.currentValue,
       helper: spec.helper,
       placeholder: spec.placeholder,
+      subBlockId: spec.subBlockId,
     },
     businessContext: {
       subAccountId,
@@ -61,6 +64,7 @@ export function buildBlueprintSectionContext(
       label: sectionLabel,
       kind: "structured",
       currentValue: null,
+      subBlockId: sectionId.includes(".") ? sectionId.split(".").pop() : sectionId,
     },
     businessContext: {
       subAccountId,

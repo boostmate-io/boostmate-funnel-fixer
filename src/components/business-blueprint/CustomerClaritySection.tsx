@@ -45,6 +45,7 @@ const CustomerClaritySection = ({ data, onChange, saving, businessType }: Props)
         helper: field.helper,
         placeholder: field.placeholder,
         currentValue: (data[field.key] as string) || "",
+        subBlockId: active,
         kind:
           field.type === "tags" || field.type === "suggested-tags"
             ? "tags"

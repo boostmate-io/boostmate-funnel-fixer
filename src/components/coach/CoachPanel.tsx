@@ -787,8 +787,9 @@ function expandQuickReplyForContext(reply: string, context: CoachContext | null)
   }
 
   if (/\b(looks good|next step|next field|volgende stap|volgende veld|ziet er goed uit)\b/.test(lower)) {
-    return `${text}. If there is no Blueprint update on screen yet, propose one for the field we just agreed on; otherwise move on to the next field that is still empty in the Blueprint.`;
+    return `${text}. If there is no Blueprint update on screen yet, propose one for the field we just agreed on; otherwise move on to the next field that is still empty WITHIN THE CURRENT TAB. Only move to another tab when every field of this tab is filled or I explicitly ask for another tab.`;
   }
+
 
   if (!context?.target) return text;
 
