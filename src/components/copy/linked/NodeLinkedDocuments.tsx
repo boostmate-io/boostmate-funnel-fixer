@@ -245,13 +245,46 @@ const NodeLinkedDocuments = ({
         emptyLabel={readOnly ? "No linked documents." : "No linked documents yet."}
       />
 
+      {canCreate && (
+        <Button size="sm" className="w-full h-8 text-xs" onClick={handleNewClick} disabled={creating}>
+          <FilePlus2 className="w-3.5 h-3.5 mr-1" /> {creating ? "Creating…" : "New document"}
+        </Button>
+      )}
+
+      {canCreate && (
+        <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-base">Choose a copy framework</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-1 max-h-72 overflow-auto">
+              {frameworksForType.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-3 text-center">No frameworks available for this node type.</p>
+              ) : (
+                frameworksForType.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => create(f.id)}
+                    disabled={creating}
+                    className="w-full text-left px-3 py-2 rounded-md hover:bg-muted/60 text-sm disabled:opacity-50"
+                  >
+                    {f.name}
+                  </button>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {!readOnly && (
         <Popover open={attachOpen} onOpenChange={setAttachOpen}>
           <PopoverTrigger asChild>
-            <Button size="sm" className="w-full h-8 text-xs">
+            <Button size="sm" variant="outline" className="w-full h-8 text-xs">
               <Link2 className="w-3.5 h-3.5 mr-1" /> Attach existing document
             </Button>
           </PopoverTrigger>
+
           <PopoverContent className="w-72 p-0" align="start">
             <div className="p-2 border-b border-border">
               <p className="text-[11px] font-medium text-muted-foreground">Available {typeLabel}</p>
