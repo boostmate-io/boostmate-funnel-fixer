@@ -2,11 +2,14 @@ import { useEffect, useState, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Link2, Plus } from "lucide-react";
+import { Link2, Plus, FilePlus2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { resolveDocumentThumbnails } from "@/lib/copy/documentThumbnail";
+import { createLinkedDocument } from "@/lib/copy/createLinkedDocument";
 import LinkedDocumentsGrid, { LinkedDocument, FrameworkInfo } from "./LinkedDocumentsGrid";
+
 
 interface NodeLinkedDocumentsProps {
   funnelNodeId: string;
