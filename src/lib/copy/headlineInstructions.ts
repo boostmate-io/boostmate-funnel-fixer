@@ -64,3 +64,26 @@ export function buildCopyExtraInstructions(
 
   return base ? `${base}\n\n${headline}` : headline;
 }
+
+/**
+ * Build the focus instruction for a single-field regeneration.
+ * Guarantees the model never returns the value that is already in the field.
+ */
+export function buildRegenerateFocus(
+  fieldLabel: string,
+  currentValue: unknown,
+  existingOutputSummary: string,
+  componentInstructions?: string | null,
+): string {
+  const current = typeof currentValue === "string"
+    ? currentValue.trim()
+    : currentValue
+      ? JSON.stringify(currentValue)
+      : "";
+
+  const noRepeat = current
+    ? `\n\nHARD RULE — DO NOT REPEAT:\nThe current value of "${fieldLabel}" is:\n"""\n${current}\n"""\nYour new "${fieldLabel}" MUST be materially different from that text. Do not return it verbatim, do not return a near-identical rewording, and do not simply change punctuation, casing or a single word. Use a different angle, structure or wording. If you can only think of the same line, deliberately choose another approach.`
+    : "";
+
+  return `IMPORTANT: Only regenerate the "${fieldLabel}" field. Keep all other fields unchanged.${noRepeat}\n\nEXISTING OUTPUT:\n${existingOutputSummary}\n\n${componentInstructions || ""}`;
+}
