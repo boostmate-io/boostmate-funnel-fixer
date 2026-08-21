@@ -194,17 +194,80 @@ const HeroSectionUI = ({
   inputs,
   outputs,
   outputStructure,
+  documentId,
+  subAccountId,
   onInputsChange,
   onOutputsChange,
   onGenerated,
 }: HeroSectionUIProps) => {
   const [generating, setGenerating] = useState(false);
   const [regeneratingField, setRegeneratingField] = useState<string | null>(null);
+  const [testimonials, setTestimonials] = useState<BlueprintTestimonial[]>([]);
+  const [loadingTestimonials, setLoadingTestimonials] = useState(false);
   const s = (key: string, value: any) => onInputsChange({ ...inputs, [key]: value });
+
+  const useExisting = inputs.testimonial_source === "select_existing";
+
+  useEffect(() => {
+    if (!useExisting || !subAccountId) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingTestimonials(true);
+      try {
+        let offerId: string | null = null;
+        if (documentId) {
+          const { data } = await supabase
+            .from("copy_documents")
+            .select("context_offer_id")
+            .eq("id", documentId)
+            .maybeSingle();
+          offerId = (data as any)?.context_offer_id || null;
+        }
+        const list = await fetchBlueprintTestimonials(subAccountId, offerId);
+        if (!cancelled) setTestimonials(list);
+      } finally {
+        if (!cancelled) setLoadingTestimonials(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [useExisting, subAccountId, documentId]);
+
+  /**
+   * When "Select Existing Testimonial" is active we hand the blueprint
+   * testimonials to the AI and ask it to pick the best fit for this offer and
+   * shorten it so the hero stays compact.
+   */
+  const buildTestimonialInstruction = (): string => {
+    if (!useExisting) return "";
+    if (!testimonials.length) return "";
+    const chosenId = inputs.testimonial_id;
+    const chosen = testimonials.find((t) => t.id === chosenId);
+    const pool = chosen ? [chosen] : testimonials;
+    const maxWords = Number(inputs.testimonial_max_words) || 25;
+    return [
+      "",
+      "FEATURED TESTIMONIAL — USE EXISTING PROOF:",
+      chosen
+        ? "Use the testimonial below. Do not invent a new one."
+        : "Pick the ONE testimonial below that best matches the offer, audience and promise in the context. Do not invent a new one and do not blend multiple testimonials.",
+      `Rewrite/shorten it to max ${maxWords} words so it stays compact for the hero section, while keeping the client's own voice, the concrete outcome and the original meaning. Never add facts or numbers that are not in the source.`,
+      "Return the shortened quote in \"testimonial_quote\" and the client name/type in \"testimonial_author\".",
+      "",
+      serializeTestimonials(pool),
+    ].join("\n");
+  };
+
+  const extraFor = (base?: string) => `${base || ""}${buildTestimonialInstruction()}`.trim() || undefined;
 
   const handleGenerate = async () => {
     if (!aiActionSlug) {
       toast.error("No AI Action linked to this component");
+      return;
+    }
+    if (useExisting && !loadingTestimonials && testimonials.length === 0) {
+      toast.error("No testimonials found in your Business Blueprint");
       return;
     }
     setGenerating(true);
@@ -212,7 +275,7 @@ const HeroSectionUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: componentInstructions || undefined,
+        extraInstructions: extraFor(componentInstructions),
         outputStructure,
       });
       onOutputsChange(result.output);
@@ -224,6 +287,7 @@ const HeroSectionUI = ({
       setGenerating(false);
     }
   };
+
 
   const handleRegenerateField = async (fieldKey: string) => {
     if (!aiActionSlug) {
