@@ -1,3 +1,4 @@
+import { buildRegenerateFocus } from "@/lib/copy/headlineInstructions";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
