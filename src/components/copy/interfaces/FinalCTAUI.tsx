@@ -1,3 +1,4 @@
+import { buildRegenerateFocus } from "@/lib/copy/headlineInstructions";
 import { isCtaFieldHidden } from "@/lib/copy/outputFilters";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
