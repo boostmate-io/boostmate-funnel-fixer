@@ -254,6 +254,25 @@ const OutreachAnalytics = (_props: Props) => {
         ))}
       </div>
 
+      {/* Interest by message stage */}
+      {stats.stageRates.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Interested by Message Stage</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {stats.stageRates.map((r) => (
+                <div key={r.label} className="rounded-lg border border-border p-3 text-center">
+                  <p className="text-2xl font-bold text-primary">{r.value}%</p>
+                  <p className="text-xs text-muted-foreground mt-1">{r.label}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{r.count} / {r.base}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+
       {/* Daily breakdown */}
       {stats.daily.length > 0 && (
         <Card>
