@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,13 @@ import { Sparkles, RotateCw, Loader2 } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchBlueprintTestimonials,
+  serializeTestimonials,
+  testimonialLabel,
+  type BlueprintTestimonial,
+} from "@/lib/copy/blueprintTestimonials";
 
 interface HeroSectionUIProps {
   componentSlug: string;
@@ -25,10 +32,13 @@ interface HeroSectionUIProps {
   inputs: Record<string, any>;
   outputs: Record<string, any>;
   outputStructure?: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
+  documentId?: string | null;
+  subAccountId?: string | null;
   onInputsChange: (inputs: Record<string, any>) => void;
   onOutputsChange: (outputs: Record<string, any>) => void;
   onGenerated: () => void;
 }
+
 
 type Option = { value: string; label: string };
 
@@ -184,17 +194,80 @@ const HeroSectionUI = ({
   inputs,
   outputs,
   outputStructure,
+  documentId,
+  subAccountId,
   onInputsChange,
   onOutputsChange,
   onGenerated,
 }: HeroSectionUIProps) => {
   const [generating, setGenerating] = useState(false);
   const [regeneratingField, setRegeneratingField] = useState<string | null>(null);
+  const [testimonials, setTestimonials] = useState<BlueprintTestimonial[]>([]);
+  const [loadingTestimonials, setLoadingTestimonials] = useState(false);
   const s = (key: string, value: any) => onInputsChange({ ...inputs, [key]: value });
+
+  const useExisting = inputs.testimonial_source === "select_existing";
+
+  useEffect(() => {
+    if (!useExisting || !subAccountId) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingTestimonials(true);
+      try {
+        let offerId: string | null = null;
+        if (documentId) {
+          const { data } = await supabase
+            .from("copy_documents")
+            .select("context_offer_id")
+            .eq("id", documentId)
+            .maybeSingle();
+          offerId = (data as any)?.context_offer_id || null;
+        }
+        const list = await fetchBlueprintTestimonials(subAccountId, offerId);
+        if (!cancelled) setTestimonials(list);
+      } finally {
+        if (!cancelled) setLoadingTestimonials(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [useExisting, subAccountId, documentId]);
+
+  /**
+   * When "Select Existing Testimonial" is active we hand the blueprint
+   * testimonials to the AI and ask it to pick the best fit for this offer and
+   * shorten it so the hero stays compact.
+   */
+  const buildTestimonialInstruction = (): string => {
+    if (!useExisting) return "";
+    if (!testimonials.length) return "";
+    const chosenId = inputs.testimonial_id;
+    const chosen = testimonials.find((t) => t.id === chosenId);
+    const pool = chosen ? [chosen] : testimonials;
+    const maxWords = Number(inputs.testimonial_max_words) || 25;
+    return [
+      "",
+      "FEATURED TESTIMONIAL — USE EXISTING PROOF:",
+      chosen
+        ? "Use the testimonial below. Do not invent a new one."
+        : "Pick the ONE testimonial below that best matches the offer, audience and promise in the context. Do not invent a new one and do not blend multiple testimonials.",
+      `Rewrite/shorten it to max ${maxWords} words so it stays compact for the hero section, while keeping the client's own voice, the concrete outcome and the original meaning. Never add facts or numbers that are not in the source.`,
+      "Return the shortened quote in \"testimonial_quote\" and the client name/type in \"testimonial_author\".",
+      "",
+      serializeTestimonials(pool),
+    ].join("\n");
+  };
+
+  const extraFor = (base?: string) => `${base || ""}${buildTestimonialInstruction()}`.trim() || undefined;
 
   const handleGenerate = async () => {
     if (!aiActionSlug) {
       toast.error("No AI Action linked to this component");
+      return;
+    }
+    if (useExisting && !loadingTestimonials && testimonials.length === 0) {
+      toast.error("No testimonials found in your Business Blueprint");
       return;
     }
     setGenerating(true);
@@ -202,7 +275,7 @@ const HeroSectionUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: componentInstructions || undefined,
+        extraInstructions: extraFor(componentInstructions),
         outputStructure,
       });
       onOutputsChange(result.output);
@@ -214,6 +287,7 @@ const HeroSectionUI = ({
       setGenerating(false);
     }
   };
+
 
   const handleRegenerateField = async (fieldKey: string) => {
     if (!aiActionSlug) {
@@ -231,7 +305,7 @@ const HeroSectionUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: focusInstruction,
+        extraInstructions: extraFor(focusInstruction),
         outputStructure,
       });
       if (result.output && result.output[fieldKey] !== undefined && result.output[fieldKey] !== "") {
@@ -423,7 +497,53 @@ const HeroSectionUI = ({
             className="min-h-[60px] text-sm mt-2"
           />
         )}
+        {useExisting && (
+          <div className="space-y-2 mt-2">
+            {loadingTestimonials ? (
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading testimonials from your Blueprint…
+              </p>
+            ) : testimonials.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No testimonials found in your Business Blueprint (Proof & Authority). Add one there first.
+              </p>
+            ) : (
+              <>
+                <Label className="text-xs text-muted-foreground">Which testimonial?</Label>
+                <Select
+                  value={inputs.testimonial_id || "auto"}
+                  onValueChange={(v) => s("testimonial_id", v === "auto" ? "" : v)}
+                >
+                  <SelectTrigger className="text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">AI picks the best match for this offer</SelectItem>
+                    {testimonials.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {testimonialLabel(t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Label className="text-xs text-muted-foreground">Max length (words)</Label>
+                <Input
+                  type="number"
+                  min={10}
+                  max={80}
+                  value={inputs.testimonial_max_words ?? 25}
+                  onChange={(e) => s("testimonial_max_words", e.target.value)}
+                  className="text-sm"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  The testimonial is taken from your Blueprint and shortened to stay compact — no new claims are invented.
+                </p>
+              </>
+            )}
+          </div>
+        )}
       </SectionCard>
+
 
       <div className="flex gap-2 pt-2">
         <Button onClick={handleGenerate} disabled={generating} className="gap-2">
