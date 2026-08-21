@@ -497,7 +497,53 @@ const HeroSectionUI = ({
             className="min-h-[60px] text-sm mt-2"
           />
         )}
+        {useExisting && (
+          <div className="space-y-2 mt-2">
+            {loadingTestimonials ? (
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading testimonials from your Blueprint…
+              </p>
+            ) : testimonials.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No testimonials found in your Business Blueprint (Proof & Authority). Add one there first.
+              </p>
+            ) : (
+              <>
+                <Label className="text-xs text-muted-foreground">Which testimonial?</Label>
+                <Select
+                  value={inputs.testimonial_id || "auto"}
+                  onValueChange={(v) => s("testimonial_id", v === "auto" ? "" : v)}
+                >
+                  <SelectTrigger className="text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">AI picks the best match for this offer</SelectItem>
+                    {testimonials.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {testimonialLabel(t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Label className="text-xs text-muted-foreground">Max length (words)</Label>
+                <Input
+                  type="number"
+                  min={10}
+                  max={80}
+                  value={inputs.testimonial_max_words ?? 25}
+                  onChange={(e) => s("testimonial_max_words", e.target.value)}
+                  className="text-sm"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  The testimonial is taken from your Blueprint and shortened to stay compact — no new claims are invented.
+                </p>
+              </>
+            )}
+          </div>
+        )}
       </SectionCard>
+
 
       <div className="flex gap-2 pt-2">
         <Button onClick={handleGenerate} disabled={generating} className="gap-2">
