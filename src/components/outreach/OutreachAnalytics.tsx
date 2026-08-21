@@ -285,6 +285,7 @@ const OutreachAnalytics = (_props: Props) => {
                     <th className="text-left py-2 px-2 font-medium">Date</th>
                     <th className="text-center py-2 px-2 font-medium">New</th>
                     <th className="text-center py-2 px-2 font-medium">Sent</th>
+                    <th className="text-center py-2 px-2 font-medium">Follow-ups</th>
                     <th className="text-center py-2 px-2 font-medium">Replied</th>
                     <th className="text-center py-2 px-2 font-medium">Interested</th>
                     <th className="text-center py-2 px-2 font-medium">Closed</th>
@@ -297,6 +298,7 @@ const OutreachAnalytics = (_props: Props) => {
                       <td className="py-1.5 px-2 font-medium">{new Date(day).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
                       <td className="text-center py-1.5 px-2">{d.new}</td>
                       <td className="text-center py-1.5 px-2">{d.sent}</td>
+                      <td className="text-center py-1.5 px-2">{d.followups}</td>
                       <td className="text-center py-1.5 px-2">{d.replied}</td>
                       <td className="text-center py-1.5 px-2">{d.interested}</td>
                       <td className="text-center py-1.5 px-2">{d.closed}</td>
@@ -304,7 +306,20 @@ const OutreachAnalytics = (_props: Props) => {
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border font-semibold bg-muted/40">
+                    <td className="py-2 px-2">Total</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.new}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.sent}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.followups}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.replied}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.interested}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.closed}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.no_response}</td>
+                  </tr>
+                </tfoot>
               </table>
+
             </div>
           </CardContent>
         </Card>
