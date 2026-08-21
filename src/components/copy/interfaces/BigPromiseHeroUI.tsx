@@ -301,7 +301,7 @@ const HeroSectionUI = ({
         .filter(([k, v]) => k !== fieldKey && v)
         .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
         .join("\n");
-      const focusInstruction = `IMPORTANT: Only regenerate the "${fieldLabel}" field. Keep all other fields consistent with the existing output below and return a fresh, different variation for "${fieldLabel}" only.\n\nEXISTING OUTPUT (keep these unchanged in your response):\n${existingOutputSummary}\n\n${componentInstructions || ""}`;
+      const focusInstruction = buildRegenerateFocus(fieldLabel, outputs[fieldKey], existingOutputSummary, componentInstructions);
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
