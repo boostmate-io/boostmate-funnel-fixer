@@ -125,10 +125,27 @@ export function getFollowUpSentAt(lead: OutreachLead, index: number): string | n
   return null;
 }
 
+/**
+ * Due-moment van een follow-up, op kalenderdagen.
+ * wait_days > 0 → begin van de dag (00:00) X kalenderdagen na de vorige verzending,
+ * plus een eventuele wait_hours offset. wait_days = 0 → exacte klok + wait_hours.
+ */
+function followUpDueDate(prevSentAt: string, waitDays: number, waitHours: number): Date {
+  const due = new Date(prevSentAt);
+  if (waitDays > 0) {
+    due.setDate(due.getDate() + waitDays);
+    due.setHours(0, 0, 0, 0);
+  }
+  if (waitHours) due.setHours(due.getHours() + waitHours);
+  return due;
+}
+
 export function getNextFollowUp(
   lead: OutreachLead,
   followUps: FollowUpTemplate[] = [],
 ): { next: string | null; isDue: boolean; label: string } {
+  // Alleen leads die op "sent" staan (dus nog niet geantwoord) krijgen follow-up meldingen.
+  if (lead.status !== "sent") return { next: null, isDue: false, label: "Not in follow-up" };
   if (!lead.opener_sent_at) return { next: null, isDue: false, label: "Opener not sent" };
   if (followUps.length === 0) return { next: null, isDue: false, label: "No follow-ups" };
 
@@ -136,9 +153,7 @@ export function getNextFollowUp(
   for (const fu of followUps) {
     const sentAt = getFollowUpSentAt(lead, fu.index);
     if (!sentAt) {
-      const due = new Date(prevSentAt);
-      due.setDate(due.getDate() + (fu.wait_days || 0));
-      due.setHours(due.getHours() + (fu.wait_hours || 0));
+      const due = followUpDueDate(prevSentAt, fu.wait_days || 0, fu.wait_hours || 0);
       return {
         next: `fu${fu.index}`,
         isDue: new Date() >= due,
@@ -149,6 +164,7 @@ export function getNextFollowUp(
   }
   return { next: null, isDue: false, label: "All sent" };
 }
+
 
 export interface UseOutreachLeadsOptions {
   /** Include archived leads in the results (still excludes deleted). */
