@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useOptionalWorkspace } from "@/contexts/WorkspaceContext";
 import { X, Upload, ExternalLink, Trash2, Bold, Italic, Underline, Minus, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,7 +101,7 @@ const NodeDetailsPanel = ({
 }: NodeDetailsPanelProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { activeSubAccountId } = useWorkspace();
+  const activeSubAccountId = useOptionalWorkspace()?.activeSubAccountId ?? null;
   const userId = user?.id ?? null;
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

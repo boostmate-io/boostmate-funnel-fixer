@@ -55,6 +55,10 @@ export const useWorkspace = () => {
   return ctx;
 };
 
+/** Safe variant for public/read-only pages rendered outside the WorkspaceProvider. */
+export const useOptionalWorkspace = () => useContext(WorkspaceContext);
+
+
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const { user, isReady } = useAuth();
   const userId = user?.id ?? null;
