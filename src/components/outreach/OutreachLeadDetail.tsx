@@ -327,11 +327,11 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
         ) : messages.length === 0 ? (
           <p className="text-muted-foreground text-sm">No messages generated yet. Click "Regenerate All" to generate.</p>
         ) : (
-          messages.map((msg) => (
+          [...messages].sort((a, b) => messageOrder(a.message_type) - messageOrder(b.message_type)).map((msg) => (
             <div key={msg.id} className="bg-card border border-border rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{MESSAGE_LABELS[msg.message_type] || msg.message_type}</span>
+                  <span className="font-medium text-sm">{messageLabel(msg.message_type)}</span>
                   {msg.sent && (
                     <Badge className="bg-green-100 text-green-800 text-xs">
                       <Check className="w-3 h-3 mr-0.5" /> Sent {msg.sent_at ? new Date(msg.sent_at).toLocaleDateString() : ""}
