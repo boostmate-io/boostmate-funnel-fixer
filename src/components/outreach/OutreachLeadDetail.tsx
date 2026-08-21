@@ -22,6 +22,24 @@ function followUpIndex(messageType: string): number | null {
   return m ? parseInt(m[1], 10) : null;
 }
 
+/** Human label: "Follow-up 1" instead of "followup_1". */
+function messageLabel(messageType: string): string {
+  if (MESSAGE_LABELS[messageType]) return MESSAGE_LABELS[messageType];
+  const idx = followUpIndex(messageType);
+  if (idx !== null) return `Follow-up ${idx}`;
+  return messageType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Sequence order: opener → opener alt → follow-ups in order. */
+function messageOrder(messageType: string): number {
+  if (messageType === "opener") return 0;
+  if (messageType === "opener_alt") return 1;
+  const idx = followUpIndex(messageType);
+  if (idx !== null) return 10 + idx;
+  return 1000;
+}
+
+
 /** Legacy fu1..4 column name if index is 1-4, else null. */
 function legacyFuColumn(index: number): string | null {
   if (index >= 1 && index <= 4) return `fu${index}_sent_at`;
