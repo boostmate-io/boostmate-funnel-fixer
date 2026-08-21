@@ -305,7 +305,7 @@ const HeroSectionUI = ({
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
-        extraInstructions: focusInstruction,
+        extraInstructions: extraFor(focusInstruction),
         outputStructure,
       });
       if (result.output && result.output[fieldKey] !== undefined && result.output[fieldKey] !== "") {
