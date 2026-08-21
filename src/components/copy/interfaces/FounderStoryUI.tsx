@@ -175,7 +175,7 @@ const FounderStoryUI = ({
       const existing = Object.entries(outputs)
         .filter(([k, v]) => k !== fieldKey && v)
         .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`).join("\n");
-      const focus = `IMPORTANT: Only regenerate the "${fieldLabel}" field. Keep all other fields unchanged.\n\nEXISTING OUTPUT:\n${existing}\n\n${componentInstructions || ""}`;
+      const focus = buildRegenerateFocus(fieldLabel, outputs[fieldKey], existing, componentInstructions);
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },

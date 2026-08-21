@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Sparkles, RotateCw, Loader2, Check } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
-import { buildCopyExtraInstructions } from "@/lib/copy/headlineInstructions";
+import { buildCopyExtraInstructions, buildRegenerateFocus } from "@/lib/copy/headlineInstructions";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -102,7 +102,7 @@ const CredibilityStatsUI = ({
       const existing = Object.entries(outputs)
         .filter(([k, v]) => k !== fieldKey && v)
         .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`).join("\n");
-      const focus = `IMPORTANT: Only regenerate the "${fieldLabel}" field. Keep all other fields unchanged.\n\nEXISTING OUTPUT:\n${existing}\n\n${componentInstructions || ""}`;
+      const focus = buildRegenerateFocus(fieldLabel, outputs[fieldKey], existing, componentInstructions);
       const result = await executeAIAction({
         slug: aiActionSlug,
         inputs: { ...inputs, context },
