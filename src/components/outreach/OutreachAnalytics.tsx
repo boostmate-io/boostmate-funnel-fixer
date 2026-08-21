@@ -60,12 +60,21 @@ const OutreachAnalytics = (_props: Props) => {
     const bySource: Record<string, { total: number; interested: number; closed: number }> = {};
     const byChannel: Record<string, { total: number; sent: number; replied: number; interested: number; closed: number }> = {};
 
-    const dailyMap: Record<string, { new: number; sent: number; replied: number; interested: number; closed: number; no_response: number }> = {};
+    const MAX_FU = 6;
+    const dailyMap: Record<string, { new: number; sent: number; followups: number; replied: number; interested: number; closed: number; no_response: number }> = {};
     const touchDay = (v: string) => {
       const k = dayKeyOf(v);
-      if (!dailyMap[k]) dailyMap[k] = { new: 0, sent: 0, replied: 0, interested: 0, closed: 0, no_response: 0 };
+      if (!dailyMap[k]) dailyMap[k] = { new: 0, sent: 0, followups: 0, replied: 0, interested: 0, closed: 0, no_response: 0 };
       return dailyMap[k];
     };
+
+    // Follow-up stage attribution
+    let followupsSentTotal = 0;
+    let contactedTotal = 0;
+    let interestedAfterOpener = 0;
+    const interestedAfterFU: number[] = Array.from({ length: MAX_FU }, () => 0);
+    const reachedStage: number[] = Array.from({ length: MAX_FU }, () => 0);
+
 
     const activeLeadIds = new Set<string>();
 
