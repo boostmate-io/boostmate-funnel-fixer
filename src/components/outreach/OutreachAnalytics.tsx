@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { useOutreachLeads } from "./useOutreachData";
+import { useOutreachLeads, getFollowUpSentAt } from "./useOutreachData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+
 
 interface Props { key?: number; }
 
@@ -59,12 +60,21 @@ const OutreachAnalytics = (_props: Props) => {
     const bySource: Record<string, { total: number; interested: number; closed: number }> = {};
     const byChannel: Record<string, { total: number; sent: number; replied: number; interested: number; closed: number }> = {};
 
-    const dailyMap: Record<string, { new: number; sent: number; replied: number; interested: number; closed: number; no_response: number }> = {};
+    const MAX_FU = 6;
+    const dailyMap: Record<string, { new: number; sent: number; followups: number; replied: number; interested: number; closed: number; no_response: number }> = {};
     const touchDay = (v: string) => {
       const k = dayKeyOf(v);
-      if (!dailyMap[k]) dailyMap[k] = { new: 0, sent: 0, replied: 0, interested: 0, closed: 0, no_response: 0 };
+      if (!dailyMap[k]) dailyMap[k] = { new: 0, sent: 0, followups: 0, replied: 0, interested: 0, closed: 0, no_response: 0 };
       return dailyMap[k];
     };
+
+    // Follow-up stage attribution
+    let followupsSentTotal = 0;
+    let contactedTotal = 0;
+    let interestedAfterOpener = 0;
+    const interestedAfterFU: number[] = Array.from({ length: MAX_FU }, () => 0);
+    const reachedStage: number[] = Array.from({ length: MAX_FU }, () => 0);
+
 
     const activeLeadIds = new Set<string>();
 
@@ -86,6 +96,19 @@ const OutreachAnalytics = (_props: Props) => {
         touchDay(sentAt).sent++;
         activeLeadIds.add(l.id);
       }
+      // Follow-ups sent, bucketed per day of sending
+      let lastFuIndex = 0;
+      for (let i = 1; i <= MAX_FU; i++) {
+        const fuAt = getFollowUpSentAt(l, i);
+        if (!fuAt) continue;
+        lastFuIndex = i;
+        if (inPeriod(fuAt)) {
+          followupsSentTotal++;
+          touchDay(fuAt).followups++;
+          activeLeadIds.add(l.id);
+        }
+      }
+
       if (outcomeIn) {
         if (REPLIED_STATUSES.includes(l.status)) { cumulativeStatus.replied++; touchDay(outcomeAt).replied++; }
         if (INTERESTED_STATUSES.includes(l.status)) { cumulativeStatus.interested++; touchDay(outcomeAt).interested++; }
@@ -94,6 +117,17 @@ const OutreachAnalytics = (_props: Props) => {
         if (l.status === "not_interested") cumulativeStatus.not_interested++;
         if (REPLIED_STATUSES.includes(l.status) || ["no_response", "not_interested"].includes(l.status)) activeLeadIds.add(l.id);
       }
+
+      // Stage attribution: which message earned the interest
+      if (SENT_STATUSES.includes(l.status) && (sentIn || outcomeIn)) {
+        contactedTotal++;
+        for (let i = 1; i <= lastFuIndex; i++) reachedStage[i - 1]++;
+        if (INTERESTED_STATUSES.includes(l.status)) {
+          if (lastFuIndex === 0) interestedAfterOpener++;
+          else interestedAfterFU[lastFuIndex - 1]++;
+        }
+      }
+
 
       // Breakdowns: any lead with activity in this period
       if (!activeLeadIds.has(l.id)) return;
@@ -130,8 +164,34 @@ const OutreachAnalytics = (_props: Props) => {
     const interestedToClosed = totalInterested > 0 ? ((totalClosed / totalInterested) * 100).toFixed(1) : "0";
 
     const daily = Object.entries(dailyMap).sort(([a], [b]) => a.localeCompare(b));
+    const dailyTotals = daily.reduce(
+      (acc, [, d]) => {
+        acc.new += d.new; acc.sent += d.sent; acc.followups += d.followups;
+        acc.replied += d.replied; acc.interested += d.interested;
+        acc.closed += d.closed; acc.no_response += d.no_response;
+        return acc;
+      },
+      { new: 0, sent: 0, followups: 0, replied: 0, interested: 0, closed: 0, no_response: 0 }
+    );
 
-    return { total, cumulativeStatus, bySetupType, bySource, byChannel, sentToReply, replyToInterested, interestedToClosed, daily };
+    const pct = (num: number, den: number) => (den > 0 ? ((num / den) * 100).toFixed(1) : "0");
+    const interestedAfterFUTotal = interestedAfterFU.reduce((a, b) => a + b, 0);
+
+    const stageRates = [
+      { label: "Interested after opener", value: pct(interestedAfterOpener, contactedTotal), count: interestedAfterOpener, base: contactedTotal },
+      { label: "Interested after follow-ups", value: pct(interestedAfterFUTotal, contactedTotal), count: interestedAfterFUTotal, base: contactedTotal },
+      ...interestedAfterFU
+        .map((c, i) => ({
+          label: `After follow-up ${i + 1}`,
+          value: pct(c, reachedStage[i]),
+          count: c,
+          base: reachedStage[i],
+        }))
+        .filter((r) => r.base > 0),
+    ];
+
+    return { total, cumulativeStatus, bySetupType, bySource, byChannel, sentToReply, replyToInterested, interestedToClosed, daily, dailyTotals, stageRates, followupsSentTotal };
+
   }, [leads, period]);
 
 
@@ -194,6 +254,25 @@ const OutreachAnalytics = (_props: Props) => {
         ))}
       </div>
 
+      {/* Interest by message stage */}
+      {stats.stageRates.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Interested by Message Stage</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {stats.stageRates.map((r) => (
+                <div key={r.label} className="rounded-lg border border-border p-3 text-center">
+                  <p className="text-2xl font-bold text-primary">{r.value}%</p>
+                  <p className="text-xs text-muted-foreground mt-1">{r.label}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{r.count} / {r.base}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+
       {/* Daily breakdown */}
       {stats.daily.length > 0 && (
         <Card>
@@ -206,6 +285,7 @@ const OutreachAnalytics = (_props: Props) => {
                     <th className="text-left py-2 px-2 font-medium">Date</th>
                     <th className="text-center py-2 px-2 font-medium">New</th>
                     <th className="text-center py-2 px-2 font-medium">Sent</th>
+                    <th className="text-center py-2 px-2 font-medium">Follow-ups</th>
                     <th className="text-center py-2 px-2 font-medium">Replied</th>
                     <th className="text-center py-2 px-2 font-medium">Interested</th>
                     <th className="text-center py-2 px-2 font-medium">Closed</th>
@@ -218,6 +298,7 @@ const OutreachAnalytics = (_props: Props) => {
                       <td className="py-1.5 px-2 font-medium">{new Date(day).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
                       <td className="text-center py-1.5 px-2">{d.new}</td>
                       <td className="text-center py-1.5 px-2">{d.sent}</td>
+                      <td className="text-center py-1.5 px-2">{d.followups}</td>
                       <td className="text-center py-1.5 px-2">{d.replied}</td>
                       <td className="text-center py-1.5 px-2">{d.interested}</td>
                       <td className="text-center py-1.5 px-2">{d.closed}</td>
@@ -225,7 +306,20 @@ const OutreachAnalytics = (_props: Props) => {
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border font-semibold bg-muted/40">
+                    <td className="py-2 px-2">Total</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.new}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.sent}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.followups}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.replied}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.interested}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.closed}</td>
+                    <td className="text-center py-2 px-2">{stats.dailyTotals.no_response}</td>
+                  </tr>
+                </tfoot>
               </table>
+
             </div>
           </CardContent>
         </Card>
