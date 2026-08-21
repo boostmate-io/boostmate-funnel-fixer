@@ -164,8 +164,34 @@ const OutreachAnalytics = (_props: Props) => {
     const interestedToClosed = totalInterested > 0 ? ((totalClosed / totalInterested) * 100).toFixed(1) : "0";
 
     const daily = Object.entries(dailyMap).sort(([a], [b]) => a.localeCompare(b));
+    const dailyTotals = daily.reduce(
+      (acc, [, d]) => {
+        acc.new += d.new; acc.sent += d.sent; acc.followups += d.followups;
+        acc.replied += d.replied; acc.interested += d.interested;
+        acc.closed += d.closed; acc.no_response += d.no_response;
+        return acc;
+      },
+      { new: 0, sent: 0, followups: 0, replied: 0, interested: 0, closed: 0, no_response: 0 }
+    );
 
-    return { total, cumulativeStatus, bySetupType, bySource, byChannel, sentToReply, replyToInterested, interestedToClosed, daily };
+    const pct = (num: number, den: number) => (den > 0 ? ((num / den) * 100).toFixed(1) : "0");
+    const interestedAfterFUTotal = interestedAfterFU.reduce((a, b) => a + b, 0);
+
+    const stageRates = [
+      { label: "Interested after opener", value: pct(interestedAfterOpener, contactedTotal), count: interestedAfterOpener, base: contactedTotal },
+      { label: "Interested after follow-ups", value: pct(interestedAfterFUTotal, contactedTotal), count: interestedAfterFUTotal, base: contactedTotal },
+      ...interestedAfterFU
+        .map((c, i) => ({
+          label: `After follow-up ${i + 1}`,
+          value: pct(c, reachedStage[i]),
+          count: c,
+          base: reachedStage[i],
+        }))
+        .filter((r) => r.base > 0),
+    ];
+
+    return { total, cumulativeStatus, bySetupType, bySource, byChannel, sentToReply, replyToInterested, interestedToClosed, daily, dailyTotals, stageRates, followupsSentTotal };
+
   }, [leads, period]);
 
 
