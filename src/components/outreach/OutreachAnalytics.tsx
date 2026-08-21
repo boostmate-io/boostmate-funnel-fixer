@@ -96,6 +96,19 @@ const OutreachAnalytics = (_props: Props) => {
         touchDay(sentAt).sent++;
         activeLeadIds.add(l.id);
       }
+      // Follow-ups sent, bucketed per day of sending
+      let lastFuIndex = 0;
+      for (let i = 1; i <= MAX_FU; i++) {
+        const fuAt = getFollowUpSentAt(l, i);
+        if (!fuAt) continue;
+        lastFuIndex = i;
+        if (inPeriod(fuAt)) {
+          followupsSentTotal++;
+          touchDay(fuAt).followups++;
+          activeLeadIds.add(l.id);
+        }
+      }
+
       if (outcomeIn) {
         if (REPLIED_STATUSES.includes(l.status)) { cumulativeStatus.replied++; touchDay(outcomeAt).replied++; }
         if (INTERESTED_STATUSES.includes(l.status)) { cumulativeStatus.interested++; touchDay(outcomeAt).interested++; }
@@ -104,6 +117,17 @@ const OutreachAnalytics = (_props: Props) => {
         if (l.status === "not_interested") cumulativeStatus.not_interested++;
         if (REPLIED_STATUSES.includes(l.status) || ["no_response", "not_interested"].includes(l.status)) activeLeadIds.add(l.id);
       }
+
+      // Stage attribution: which message earned the interest
+      if (SENT_STATUSES.includes(l.status) && (sentIn || outcomeIn)) {
+        contactedTotal++;
+        for (let i = 1; i <= lastFuIndex; i++) reachedStage[i - 1]++;
+        if (INTERESTED_STATUSES.includes(l.status)) {
+          if (lastFuIndex === 0) interestedAfterOpener++;
+          else interestedAfterFU[lastFuIndex - 1]++;
+        }
+      }
+
 
       // Breakdowns: any lead with activity in this period
       if (!activeLeadIds.has(l.id)) return;
