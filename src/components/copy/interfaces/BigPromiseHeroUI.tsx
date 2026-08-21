@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,13 @@ import { Sparkles, RotateCw, Loader2 } from "lucide-react";
 import { executeAIAction } from "@/lib/api/aiActions";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchBlueprintTestimonials,
+  serializeTestimonials,
+  testimonialLabel,
+  type BlueprintTestimonial,
+} from "@/lib/copy/blueprintTestimonials";
 
 interface HeroSectionUIProps {
   componentSlug: string;
@@ -25,10 +32,13 @@ interface HeroSectionUIProps {
   inputs: Record<string, any>;
   outputs: Record<string, any>;
   outputStructure?: Array<{ key: string; label: string; type: string; item_schema?: any[] }>;
+  documentId?: string | null;
+  subAccountId?: string | null;
   onInputsChange: (inputs: Record<string, any>) => void;
   onOutputsChange: (outputs: Record<string, any>) => void;
   onGenerated: () => void;
 }
+
 
 type Option = { value: string; label: string };
 
