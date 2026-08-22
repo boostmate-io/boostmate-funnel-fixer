@@ -216,58 +216,60 @@ export function normalizeOfferDesign(raw: unknown): OfferDesignData {
   if (!raw || typeof raw !== "object") return empty;
   const r = raw as Record<string, any>;
 
-  // Detect legacy format and discard.
-  const hasNewShape = r.angle && typeof r.angle === "object"
-    && r.stack && typeof r.stack === "object"
-    && r.pricing && typeof r.pricing === "object";
+  // Detect legacy format and discard. Sections are handled independently:
+  // a Coach apply can write a single section (e.g. only `angle`) into a fresh
+  // blueprint row, so requiring all three would silently wipe valid data.
+  const angleRaw = r.angle && typeof r.angle === "object" ? r.angle : null;
+  const stackRaw = r.stack && typeof r.stack === "object" ? r.stack : null;
+  const pricingRaw = r.pricing && typeof r.pricing === "object" ? r.pricing : null;
 
-  if (!hasNewShape) return empty;
+  if (!angleRaw && !stackRaw && !pricingRaw) return empty;
 
-  const angleRaw = r.angle || {};
-  const stackRaw = r.stack || {};
-  const pricingRaw = r.pricing || {};
+  const a = angleRaw ?? {};
+  const s = stackRaw ?? {};
+  const pr = pricingRaw ?? {};
 
   return {
     angle: {
       ...empty.angle,
-      ...angleRaw,
+      ...a,
       framework: {
-        name: angleRaw.framework?.name,
-        description: angleRaw.framework?.description,
-        pillars: Array.isArray(angleRaw.framework?.pillars) ? angleRaw.framework.pillars : [],
+        name: a.framework?.name,
+        description: a.framework?.description,
+        pillars: Array.isArray(a.framework?.pillars) ? a.framework.pillars : [],
       },
     },
     stack: {
       ...empty.stack,
-      ...stackRaw,
-      deliverables: Array.isArray(stackRaw.deliverables) ? stackRaw.deliverables : [],
+      ...s,
+      deliverables: Array.isArray(s.deliverables) ? s.deliverables : [],
       // 🆕 handle migration from old string[] templates_resources/support_system to card arrays
-      resources: Array.isArray(stackRaw.resources)
-        ? stackRaw.resources
-        : Array.isArray(stackRaw.templates_resources)
-          ? stackRaw.templates_resources.map((s: string) => ({
-              id: crypto.randomUUID(), name: s, resource_type: s, description: "",
+      resources: Array.isArray(s.resources)
+        ? s.resources
+        : Array.isArray(s.templates_resources)
+          ? s.templates_resources.map((x: string) => ({
+              id: crypto.randomUUID(), name: x, resource_type: x, description: "",
             }))
           : [],
-      support_channels: Array.isArray(stackRaw.support_channels)
-        ? stackRaw.support_channels
-        : Array.isArray(stackRaw.support_system)
-          ? stackRaw.support_system.map((s: string) => ({
-              id: crypto.randomUUID(), name: s, description: "", frequency: "",
+      support_channels: Array.isArray(s.support_channels)
+        ? s.support_channels
+        : Array.isArray(s.support_system)
+          ? s.support_system.map((x: string) => ({
+              id: crypto.randomUUID(), name: x, description: "", frequency: "",
             }))
           : [],
-      bonuses: Array.isArray(stackRaw.bonuses) ? stackRaw.bonuses : [],
-      milestones: Array.isArray(stackRaw.milestones) ? stackRaw.milestones : [],
+      bonuses: Array.isArray(s.bonuses) ? s.bonuses : [],
+      milestones: Array.isArray(s.milestones) ? s.milestones : [],
     },
     pricing: {
       ...empty.pricing,
-      ...pricingRaw,
-      payment_plans: Array.isArray(pricingRaw.payment_plans) ? pricingRaw.payment_plans : [],
-      recurring_offer: pricingRaw.recurring_offer ?? (
-        pricingRaw.recurring_enabled
+      ...pr,
+      payment_plans: Array.isArray(pr.payment_plans) ? pr.payment_plans : [],
+      recurring_offer: pr.recurring_offer ?? (
+        pr.recurring_enabled
           ? {
-              monthly_price: pricingRaw.recurring_price ?? "",
-              interval: pricingRaw.recurring_interval ?? "monthly",
+              monthly_price: pr.recurring_price ?? "",
+              interval: pr.recurring_interval ?? "monthly",
             }
           : undefined
       ),

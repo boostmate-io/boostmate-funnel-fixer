@@ -11,6 +11,7 @@ import {
   BLUEPRINT_FIELD_BY_PATH,
   BLUEPRINT_LISTS,
 } from "@shared/blueprintRegistry";
+import { emptyOfferDesign } from "@/components/business-blueprint/offerDesignTypes";
 
 export interface BlueprintWrite {
   /** Dot-path relative to the blueprint row, e.g. "customer_clarity.avatar_who"
@@ -369,10 +370,15 @@ async function applyBlueprintWritesUnsafe(
     return { applied: ecoApplied, error: loadErr?.message ?? "Blueprint not found" };
   }
 
-  // 2) Build patch column-by-column
+  // 2) Build patch column-by-column. offer_stack is seeded with the full
+  // empty design shape so a Coach write into a fresh row always persists all
+  // three sections (angle/stack/pricing) — readers normalize per section.
   const patch: BlueprintPatch = {};
   for (const column of ROOT_COLUMNS) {
-    patch[column] = { ...(((row as any)[column] as any) ?? {}) };
+    patch[column] =
+      column === "offer_stack"
+        ? { ...emptyOfferDesign(), ...((((row as any)[column] as any) ?? {})) }
+        : { ...(((row as any)[column] as any) ?? {}) };
   }
 
   let applied = 0;
