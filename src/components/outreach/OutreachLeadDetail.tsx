@@ -63,6 +63,8 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
   const [editedMessages, setEditedMessages] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [customInstructions, setCustomInstructions] = useState("");
 
   useEffect(() => { loadLead(); }, [leadId]);
 
