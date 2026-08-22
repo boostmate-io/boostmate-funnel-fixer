@@ -413,7 +413,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
             <OutreachLeadDetail
               leadId={selectedLeadId}
               onBack={() => { setSelectedLeadId(null); refresh(true); }}
-              onGenerate={() => handleGenerate(selectedLeadId)}
+              onGenerate={(instructions) => handleGenerate(selectedLeadId, instructions)}
               generating={generating === selectedLeadId}
               onDeleted={() => { setSelectedLeadId(null); refresh(true); }}
             />
