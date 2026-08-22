@@ -49,7 +49,7 @@ function legacyFuColumn(index: number): string | null {
 interface Props {
   leadId: string;
   onBack: () => void;
-  onGenerate: () => void;
+  onGenerate: (customInstructions?: string) => void | Promise<void>;
   generating: boolean;
   onDeleted: () => void;
 }
