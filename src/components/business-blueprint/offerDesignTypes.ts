@@ -244,32 +244,32 @@ export function normalizeOfferDesign(raw: unknown): OfferDesignData {
       ...s,
       deliverables: Array.isArray(s.deliverables) ? s.deliverables : [],
       // 🆕 handle migration from old string[] templates_resources/support_system to card arrays
-      resources: Array.isArray(stackRaw.resources)
-        ? stackRaw.resources
-        : Array.isArray(stackRaw.templates_resources)
-          ? stackRaw.templates_resources.map((s: string) => ({
-              id: crypto.randomUUID(), name: s, resource_type: s, description: "",
+      resources: Array.isArray(s.resources)
+        ? s.resources
+        : Array.isArray(s.templates_resources)
+          ? s.templates_resources.map((x: string) => ({
+              id: crypto.randomUUID(), name: x, resource_type: x, description: "",
             }))
           : [],
-      support_channels: Array.isArray(stackRaw.support_channels)
-        ? stackRaw.support_channels
-        : Array.isArray(stackRaw.support_system)
-          ? stackRaw.support_system.map((s: string) => ({
-              id: crypto.randomUUID(), name: s, description: "", frequency: "",
+      support_channels: Array.isArray(s.support_channels)
+        ? s.support_channels
+        : Array.isArray(s.support_system)
+          ? s.support_system.map((x: string) => ({
+              id: crypto.randomUUID(), name: x, description: "", frequency: "",
             }))
           : [],
-      bonuses: Array.isArray(stackRaw.bonuses) ? stackRaw.bonuses : [],
-      milestones: Array.isArray(stackRaw.milestones) ? stackRaw.milestones : [],
+      bonuses: Array.isArray(s.bonuses) ? s.bonuses : [],
+      milestones: Array.isArray(s.milestones) ? s.milestones : [],
     },
     pricing: {
       ...empty.pricing,
-      ...pricingRaw,
-      payment_plans: Array.isArray(pricingRaw.payment_plans) ? pricingRaw.payment_plans : [],
-      recurring_offer: pricingRaw.recurring_offer ?? (
-        pricingRaw.recurring_enabled
+      ...pr,
+      payment_plans: Array.isArray(pr.payment_plans) ? pr.payment_plans : [],
+      recurring_offer: pr.recurring_offer ?? (
+        pr.recurring_enabled
           ? {
-              monthly_price: pricingRaw.recurring_price ?? "",
-              interval: pricingRaw.recurring_interval ?? "monthly",
+              monthly_price: pr.recurring_price ?? "",
+              interval: pr.recurring_interval ?? "monthly",
             }
           : undefined
       ),
