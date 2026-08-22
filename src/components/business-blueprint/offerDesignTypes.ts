@@ -225,20 +225,24 @@ export function normalizeOfferDesign(raw: unknown): OfferDesignData {
 
   if (!angleRaw && !stackRaw && !pricingRaw) return empty;
 
+  const a = angleRaw ?? {};
+  const s = stackRaw ?? {};
+  const pr = pricingRaw ?? {};
+
   return {
     angle: {
       ...empty.angle,
-      ...angleRaw,
+      ...a,
       framework: {
-        name: angleRaw.framework?.name,
-        description: angleRaw.framework?.description,
-        pillars: Array.isArray(angleRaw.framework?.pillars) ? angleRaw.framework.pillars : [],
+        name: a.framework?.name,
+        description: a.framework?.description,
+        pillars: Array.isArray(a.framework?.pillars) ? a.framework.pillars : [],
       },
     },
     stack: {
       ...empty.stack,
-      ...stackRaw,
-      deliverables: Array.isArray(stackRaw.deliverables) ? stackRaw.deliverables : [],
+      ...s,
+      deliverables: Array.isArray(s.deliverables) ? s.deliverables : [],
       // 🆕 handle migration from old string[] templates_resources/support_system to card arrays
       resources: Array.isArray(stackRaw.resources)
         ? stackRaw.resources
