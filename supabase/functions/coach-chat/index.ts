@@ -2139,6 +2139,11 @@ Deno.serve(async (req) => {
       context.businessContext.blueprintSnapshot = blueprintRow;
     }
 
+    // Explicit scope switch: when the user names another Blueprint tab/section
+    // in their latest instruction ("fill the Offer Angle tab"), re-scope this
+    // turn to that tab — the single Coach conversation means the UI focus can
+    // lag behind the user's actual request.
+    const effectiveContext = sectionContextOverride(context, messages);
 
     // Load memory facts + handled Blueprint paths + Growth assessment + workspace profile
     const [{ data: memoryRows }, { data: decisionRows }, { data: growthRow }, { data: workspaceSettings }] =
