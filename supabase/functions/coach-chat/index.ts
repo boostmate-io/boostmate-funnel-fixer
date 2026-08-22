@@ -2471,6 +2471,10 @@ Deno.serve(async (req) => {
         text = nl
           ? "Ik heb je vorige voorstel niet kunnen herzien. Kan je aangeven wat er anders moet (bv. taal, toon, lengte)?"
           : "I couldn't revise my previous proposal. Can you say what should change (e.g. language, tone, length)?";
+      } else if (missedWriteIntent) {
+        text = nl
+          ? "Ik begreep dat je Blueprint-velden wilt laten invullen, maar het lukte net niet om geldige Blueprint updates te maken. Vraag het nog eens (bv. \"vul de Offer Angle tab\"), dan zet ik het direct om."
+          : "I understood you want Blueprint fields filled in, but I couldn't create valid Blueprint updates just now. Ask me once more (e.g. \"fill the Offer Angle tab\") and I'll turn it into updates right away.";
       } else {
         text = nl
           ? "Kan je iets specifieker zijn? Ik help je graag verder."
