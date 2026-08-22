@@ -216,16 +216,14 @@ export function normalizeOfferDesign(raw: unknown): OfferDesignData {
   if (!raw || typeof raw !== "object") return empty;
   const r = raw as Record<string, any>;
 
-  // Detect legacy format and discard.
-  const hasNewShape = r.angle && typeof r.angle === "object"
-    && r.stack && typeof r.stack === "object"
-    && r.pricing && typeof r.pricing === "object";
+  // Detect legacy format and discard. Sections are handled independently:
+  // a Coach apply can write a single section (e.g. only `angle`) into a fresh
+  // blueprint row, so requiring all three would silently wipe valid data.
+  const angleRaw = r.angle && typeof r.angle === "object" ? r.angle : null;
+  const stackRaw = r.stack && typeof r.stack === "object" ? r.stack : null;
+  const pricingRaw = r.pricing && typeof r.pricing === "object" ? r.pricing : null;
 
-  if (!hasNewShape) return empty;
-
-  const angleRaw = r.angle || {};
-  const stackRaw = r.stack || {};
-  const pricingRaw = r.pricing || {};
+  if (!angleRaw && !stackRaw && !pricingRaw) return empty;
 
   return {
     angle: {
