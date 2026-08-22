@@ -2425,6 +2425,38 @@ Deno.serve(async (req) => {
       parts.length = 0;
     }
 
+    // General write-intent safety net: the user explicitly asked to fill /
+    // draft / suggest Blueprint fields, but the model produced no
+    // blueprint_writes part (e.g. it answered with quick replies only, or
+    // nothing at all). Retry once with the write tool forced.
+    const missedWriteIntent =
+      !forcedMainOfferStep &&
+      !effectiveContext?.target?.listSection &&
+      (effectiveContext?.scope === "blueprint.section" || effectiveContext?.scope === "global") &&
+      !parts.some((p: any) => p?.type === "blueprint_writes") &&
+      isBlueprintWriteIntent(effectiveContext?.scope, messages, effectiveContext);
+    if (missedWriteIntent) {
+      try {
+        assistantMsg = await fetchCoachCompletion(
+          lovableKey,
+          [
+            ...llmMessages,
+            { role: "user", content: renderWriteIntentRetryPrompt(preferredBlueprintWritePaths(effectiveContext, messages)) },
+          ],
+          tools,
+          forcedBlueprintToolChoice,
+        );
+        assistantText = assistantMsg.content ?? "";
+        toolCalls = assistantMsg.tool_calls ?? [];
+        parts.length = 0;
+        await processToolCalls();
+      } catch (err: any) {
+        if (err?.message === "AI_RATE_LIMIT") return jsonResponse({ error: "AI rate limit reached. Please retry shortly." }, 429);
+        if (err?.message === "AI_CREDITS_EXHAUSTED") return jsonResponse({ error: "AI credits exhausted. Please top up in Settings." }, 402);
+        // Fall through to the targeted fallback text below.
+      }
+    }
+
     if (parts.length === 0) {
       const explicit = explicitLanguageInstruction(messages);
       const uiLocale = (context?.businessContext?.locale ?? "en").toString().toLowerCase().slice(0, 2);
