@@ -2013,6 +2013,15 @@ function isBlueprintWriteIntent(scope: string | undefined, messages: any[], cont
   // Fallback to the raw latest message for cases where our tail extractor
   // trimmed too aggressively.
   if (WRITE_INTENT_RE.test(latest) && BLUEPRINT_AREA_RE.test(latest)) return true;
+  // "suggest the first fields of the Offer Angle tab" — a write request
+  // without a hard write verb, but with an explicit fields+tab reference.
+  if (
+    /\b(suggest|propose|give|show|stel|geef|toon)\b/i.test(latestInstruction) &&
+    /\b(fields?|writes?|updates?|proposals?|suggestions?|velden?|voorstellen?)\b/i.test(latestInstruction) &&
+    (requestedBlueprintSubBlock(messages) || requestedSingleBlueprintPath(messages))
+  ) {
+    return true;
+  }
   if (NOT_FILLED_RE.test(latest) && (WRITE_INTENT_RE.test(recent) || BLUEPRINT_AREA_RE.test(recent))) return true;
 
   // Correction turn: previous assistant proposed writes, and the user is
