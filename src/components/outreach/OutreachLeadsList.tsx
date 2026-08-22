@@ -125,11 +125,11 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
     }
   };
 
-  const handleGenerate = async (leadId: string) => {
+  const handleGenerate = async (leadId: string, customInstructions?: string) => {
     setGenerating(leadId);
     try {
       const { data, error } = await supabase.functions.invoke("generate-outreach-messages", {
-        body: { lead_id: leadId },
+        body: { lead_id: leadId, custom_instructions: customInstructions || undefined },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -413,7 +413,7 @@ const OutreachLeadsList = ({ onRefresh }: Props) => {
             <OutreachLeadDetail
               leadId={selectedLeadId}
               onBack={() => { setSelectedLeadId(null); refresh(true); }}
-              onGenerate={() => handleGenerate(selectedLeadId)}
+              onGenerate={(instructions) => handleGenerate(selectedLeadId, instructions)}
               generating={generating === selectedLeadId}
               onDeleted={() => { setSelectedLeadId(null); refresh(true); }}
             />

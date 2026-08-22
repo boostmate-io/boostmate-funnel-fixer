@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ArrowLeft, Check, CheckCheck, Clock, Copy, Loader2, RefreshCw, Send, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,7 +50,7 @@ function legacyFuColumn(index: number): string | null {
 interface Props {
   leadId: string;
   onBack: () => void;
-  onGenerate: () => void;
+  onGenerate: (customInstructions?: string) => void | Promise<void>;
   generating: boolean;
   onDeleted: () => void;
 }
@@ -62,6 +63,8 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
   const [editedMessages, setEditedMessages] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [customInstructions, setCustomInstructions] = useState("");
 
   useEffect(() => { loadLead(); }, [leadId]);
 
@@ -310,14 +313,42 @@ const OutreachLeadDetail = ({ leadId, onBack, onGenerate, generating, onDeleted 
 
       {/* Action buttons */}
       <div className="flex items-center gap-2">
-        <Button onClick={onGenerate} disabled={generating} variant="outline">
-          {generating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
-          Regenerate All
-        </Button>
+        <Popover open={promptOpen} onOpenChange={setPromptOpen}>
+          <PopoverTrigger asChild>
+            <Button disabled={generating} variant="outline">
+              {generating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+              Regenerate All
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-96 space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Extra instructions (optional)</Label>
+              <Textarea
+                value={customInstructions}
+                onChange={(e) => setCustomInstructions(e.target.value)}
+                rows={4}
+                className="mt-1"
+                placeholder="E.g. Write all messages in Dutch, keep it very short and casual."
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Applies to this lead only (opener + all follow-ups).
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setPromptOpen(false); onGenerate(); }}>
+                Generate without
+              </Button>
+              <Button size="sm" onClick={() => { setPromptOpen(false); onGenerate(customInstructions.trim() || undefined); }}>
+                Generate
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
         <Button onClick={acceptAll} disabled={saving}>
           <CheckCheck className="w-4 h-4 mr-1" /> Accept All
         </Button>
       </div>
+
 
       {/* Messages */}
       <div className="space-y-4">
