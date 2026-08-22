@@ -1306,6 +1306,94 @@ function filterPathsToCurrentTarget(paths: Set<string> | null, context: any): Se
   return new Set([...paths].filter((path) => path === prefix || path.startsWith(`${prefix}.`)));
 }
 
+const KNOWN_ROOT_PREFIXES = [
+  "offer_stack.stack",
+  "offer_stack.pricing",
+  "offer_stack.angle",
+  "offer_ecosystem",
+  "customer_clarity",
+  "growth_system",
+  "proof_authority",
+];
+
+function rootPrefixForPath(path: string): string | null {
+  for (const prefix of KNOWN_ROOT_PREFIXES) {
+    if (path === prefix || path.startsWith(`${prefix}.`)) return prefix;
+  }
+  return null;
+}
+
+/**
+ * The sub-block the user's latest instruction points at. Falls back to the
+ * PREVIOUS user message on complaint/correction turns ("i don't see any field
+ * suggestions?", "no, the other one") — those refer to the request before
+ * them, which is where the tab was named.
+ */
+function effectiveRequestedSubBlock(messages: any[]): { block: string; needleLen: number } | null {
+  const direct = requestedBlueprintSubBlock(messages);
+  if (direct) return direct;
+  const latest = latestInstructionText(messages);
+  if (!NOT_FILLED_RE.test(latest) && !CORRECTION_RE.test(latest)) return null;
+  const userIdxs = messages
+    .map((m: any, i: number) => (m?.role !== "assistant" ? i : -1))
+    .filter((i: number) => i >= 0);
+  if (userIdxs.length < 2) return null;
+  return requestedBlueprintSubBlock([messages[userIdxs[userIdxs.length - 2]]]);
+}
+
+/**
+ * Explicit scope switch, mid-conversation.
+ * The Coach is ONE long-lived conversation: the UI focus (context.target) can
+ * lag behind when the user navigates to another Blueprint tab and simply asks
+ * for it in chat ("fill the Offer Angle tab"). When the latest instruction
+ * explicitly names a different sub-block, re-scope THIS turn to that
+ * sub-block so the Blueprint state truth, the hard tab prefix and the write
+ * sanitizer all agree with the user's request. Pure questions never trigger
+ * this (they lack a write verb / tab word — see requestedBlueprintSubBlock).
+ */
+function sectionContextOverride(context: any, messages: any[]): any {
+  if (context?.scope !== "blueprint.section") return context;
+  if (context?.target?.listSection) return context;
+  const requested = effectiveRequestedSubBlock(messages);
+  if (!requested) return context;
+  const paths = BLUEPRINT_SUB_BLOCK_PATHS[requested.block];
+  if (!paths?.length) return context;
+  const prefix = rootPrefixForPath(paths[0]);
+  if (!prefix) return context;
+
+  const current = resolveActiveSubBlock(context);
+  if (current?.id === requested.block) return context;
+
+  // Guard against source-material mentions: if the instruction also names the
+  // CURRENT sub-block ("write the angle based on the avatar pains"), keep the
+  // UI scope — the named block is input material, not the write target.
+  const instruction = normalizeForMatch(latestInstructionText(messages));
+  const currentAliases = current
+    ? (BLUEPRINT_SUB_BLOCK_ALIASES[current.id] ?? []).map(normalizeForMatch).filter((a) => a.length > 2)
+    : [];
+  if (currentAliases.some((a) => instruction.includes(a))) return context;
+
+  return {
+    ...context,
+    target: {
+      ...context.target,
+      id: `section:${prefix}`,
+      label: SUB_BLOCK_LABEL[requested.block] ?? requested.block,
+      subBlockId: requested.block,
+    },
+  };
+}
+
+function renderWriteIntentRetryPrompt(preferred: Set<string> | null): string {
+  const pathBlock =
+    preferred && preferred.size > 0
+      ? `\n\nUse ONLY these Blueprint paths:\n${[...preferred]
+          .map((p) => `- ${p} — ${BLUEPRINT_FIELD_META[p]?.label ?? p}`)
+          .join("\n")}`
+      : "";
+  return `The user explicitly asked you to fill/draft/suggest Blueprint fields, but your previous reply produced no Blueprint updates. Retry now: you MUST call propose_blueprint_writes with concrete, polished values grounded in the conversation, the remembered facts and the Blueprint snapshot. Do not ask clarifying questions and do not answer with prose or quick replies only.${pathBlock}`;
+}
+
 function preferredBlueprintWritePaths(context: any, messages: any[]): Set<string> | null {
   const instruction = latestInstructionText(messages);
   const mentionsTabWord = TAB_OR_SECTION_RE.test(instruction);
