@@ -11,6 +11,7 @@ import {
   BLUEPRINT_FIELD_BY_PATH,
   BLUEPRINT_LISTS,
 } from "@shared/blueprintRegistry";
+import { emptyOfferDesign } from "@/components/business-blueprint/offerDesignTypes";
 
 export interface BlueprintWrite {
   /** Dot-path relative to the blueprint row, e.g. "customer_clarity.avatar_who"
