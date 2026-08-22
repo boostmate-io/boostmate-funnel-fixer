@@ -23,7 +23,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Not authenticated");
 
-    const { lead_id } = await req.json();
+    const { lead_id, custom_instructions } = await req.json();
     if (!lead_id) throw new Error("lead_id is required");
 
     // Fetch lead
@@ -103,7 +103,12 @@ serve(async (req) => {
       body: JSON.stringify({
         slug: "outreach_messages",
         inputs,
-        extra_instructions: outreachSettings?.ai_prompt_context || undefined,
+        extra_instructions: [
+          outreachSettings?.ai_prompt_context || "",
+          custom_instructions
+            ? `LEAD-SPECIFIC INSTRUCTIONS (highest priority, override defaults):\n${custom_instructions}`
+            : "",
+        ].filter(Boolean).join("\n\n") || undefined,
       }),
     });
 
