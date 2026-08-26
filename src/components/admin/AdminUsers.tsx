@@ -277,13 +277,24 @@ const AdminUsers = () => {
               >
                 {isAdmin ? <><ShieldOff className="w-4 h-4 mr-1" /> Remove Admin</> : <><ShieldCheck className="w-4 h-4 mr-1" /> Grant Admin</>}
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="w-4 h-4 mr-1" /> Delete User
-              </Button>
+              {selectedUser.purge_at ? (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleRestoreUser}
+                  disabled={isRestoring}
+                >
+                  <Undo2 className="w-4 h-4 mr-1" /> {isRestoring ? "Restoring..." : "Cancel Deletion"}
+                </Button>
+              ) : (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" /> Delete User
+                </Button>
+              )}
             </div>
 
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -291,9 +302,33 @@ const AdminUsers = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete user?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete {selectedUser.email} and all associated data. This action cannot be undone.
+                    {selectedUser.email} will be deactivated immediately and permanently deleted after 30 days. You can cancel the deletion any time before then.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                {selectedUser.sub_account_count > 0 && (
+                  <div className="py-2 space-y-3">
+                    <p className="text-sm font-medium text-foreground">
+                      This user owns accounts with workspaces. What should happen to them?
+                    </p>
+                    <RadioGroup
+                      value={subaccountAction}
+                      onValueChange={(v) => setSubaccountAction(v as "delete_all" | "transfer")}
+                    >
+                      <div className="flex items-start space-x-2">
+                        <RadioGroupItem value="delete_all" id="adm-del-all" className="mt-1" />
+                        <Label htmlFor="adm-del-all" className="text-sm font-normal text-muted-foreground">
+                          Delete everything — all workspaces and their data are removed at the purge date.
+                        </Label>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <RadioGroupItem value="transfer" id="adm-transfer" className="mt-1" />
+                        <Label htmlFor="adm-transfer" className="text-sm font-normal text-muted-foreground">
+                          Transfer ownership to another member — workspaces and data are kept.
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
@@ -301,7 +336,7 @@ const AdminUsers = () => {
                     disabled={isDeleting}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    {isDeleting ? "Deleting..." : "Delete"}
+                    {isDeleting ? "Scheduling..." : "Delete after 30 days"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -386,7 +421,10 @@ const AdminUsers = () => {
                       {u.roles.map((r) => (
                         <Badge key={r} variant={r === "admin" ? "default" : "secondary"} className="text-xs">{r}</Badge>
                       ))}
-                      {u.roles.length === 0 && <span className="text-xs text-muted-foreground">—</span>}
+                      {u.purge_at && (
+                        <Badge variant="destructive" className="text-xs">Deleting {format(new Date(u.purge_at), "dd MMM")}</Badge>
+                      )}
+                      {u.roles.length === 0 && !u.purge_at && <span className="text-xs text-muted-foreground">—</span>}
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{format(new Date(u.created_at), "dd MMM yyyy")}</TableCell>
