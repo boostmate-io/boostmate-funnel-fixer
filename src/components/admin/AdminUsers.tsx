@@ -245,8 +245,18 @@ const AdminUsers = () => {
                 {selectedUser.roles.map((r) => (
                   <Badge key={r} variant={r === "admin" ? "default" : "secondary"}>{r}</Badge>
                 ))}
+                {selectedUser.purge_at && (
+                  <Badge variant="destructive">Deletion {format(new Date(selectedUser.purge_at), "dd MMM")}</Badge>
+                )}
               </div>
             </div>
+
+            {selectedUser.purge_at && (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground">
+                This account is deactivated and will be permanently deleted on{" "}
+                <strong>{format(new Date(selectedUser.purge_at), "dd MMM yyyy HH:mm")}</strong>.
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
