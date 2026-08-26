@@ -70,12 +70,17 @@ const NodeLinkedDocuments = ({
 
 
   const load = useCallback(async () => {
+    // Node IDs from seed templates are reused across funnels, so a linked
+    // document must match BOTH the node id and this funnel — otherwise
+    // documents from other funnels built on the same template leak in.
+    let linkedQuery = sb
+      .from("copy_documents")
+      .select("id, name, type, status, updated_at")
+      .eq("funnel_node_id", funnelNodeId)
+      .order("updated_at", { ascending: false });
+    if (funnelId) linkedQuery = linkedQuery.eq("funnel_id", funnelId);
     const [{ data: docs }, { data: fws }, { data: availableDocs }] = await Promise.all([
-      sb
-        .from("copy_documents")
-        .select("id, name, type, status, updated_at")
-        .eq("funnel_node_id", funnelNodeId)
-        .order("updated_at", { ascending: false }),
+      linkedQuery,
       sb.from("copy_frameworks").select("id, name, type, component_slugs").eq("is_active", true),
       !readOnly && subAccountId
         ? sb
@@ -97,7 +102,7 @@ const NodeLinkedDocuments = ({
     } else {
       setThumbnails({});
     }
-  }, [sb, funnelNodeId, subAccountId, documentType, readOnly]);
+  }, [sb, funnelNodeId, funnelId, subAccountId, documentType, readOnly]);
 
   useEffect(() => { load(); }, [load]);
 

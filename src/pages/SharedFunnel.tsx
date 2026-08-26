@@ -110,10 +110,13 @@ const SharedFunnelInner = () => {
     (async () => {
       const trafficIds = localNodes.filter((n) => n.type === "trafficSource").map((n) => n.id);
       if (trafficIds.length === 0) { setTrafficAdThumbnails({}); return; }
-      const { data: docs } = await publicSupabase
+      // Seed-template node IDs are shared across funnels — scope to this funnel.
+      let docQuery = publicSupabase
         .from("copy_documents")
         .select("id, funnel_node_id")
         .in("funnel_node_id", trafficIds);
+      if (funnel?.id) docQuery = docQuery.eq("funnel_id", funnel.id);
+      const { data: docs } = await docQuery;
       if (!docs || docs.length === 0) { if (!cancelled) setTrafficAdThumbnails({}); return; }
       const thumbs = await resolveDocumentThumbnails((docs as any[]).map((d) => d.id), { client: publicSupabase as any });
       const byNode: Record<string, string[]> = {};
@@ -125,7 +128,7 @@ const SharedFunnelInner = () => {
       if (!cancelled) setTrafficAdThumbnails(byNode);
     })();
     return () => { cancelled = true; };
-  }, [localNodes.map((n) => n.type === "trafficSource" ? n.id : "").join("|")]);
+  }, [localNodes.map((n) => n.type === "trafficSource" ? n.id : "").join("|"), funnel?.id]);
 
   useEffect(() => {
     if (!token) return;
