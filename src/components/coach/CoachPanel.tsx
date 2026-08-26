@@ -159,7 +159,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
     if (status !== "idle") return;
     if (seededKeyRef.current === pendingSeed.key) return;
     seededKeyRef.current = pendingSeed.key;
-    void sendMessage(pendingSeed.text);
+    void sendMessage(pendingSeed.text, { origin: "focus" });
   }, [open, pendingSeed, conversationId, status, sendMessage]);
 
   // Re-entry recap: reopening the Coach after a long break asks for a short

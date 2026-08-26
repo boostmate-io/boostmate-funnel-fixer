@@ -77,8 +77,8 @@ export function buildFocusTurnText(
         : `Let's work through the "${label}" section together.`;
     case "walkthrough":
       return nl
-        ? `Laten we samen door de sectie "${label}" lopen en alle velden invullen.`
-        : `Let's work through the "${label}" section together and complete all fields.`;
+        ? `Laten we samen door de sectie "${label}" lopen. Stel me eerst de vragen die je nodig hebt om mij goed te begeleiden.`
+        : `Let's work through the "${label}" section together. Start by asking the questions you need to guide me well.`;
     case "task":
       return nl
         ? `Laten we werken aan "${label}".`

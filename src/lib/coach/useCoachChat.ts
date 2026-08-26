@@ -16,6 +16,7 @@ import type { CoachContext, CoachMessage, CoachMessagePart } from "./types";
 
 type Status = "idle" | "loading" | "sending" | "error";
 export type ProposalDecision = "applied" | "dismissed";
+type CoachTurnOrigin = "user" | "focus";
 
 const isVirtualListPath = (path: string) => /(?:^|\.)new_\d+(?:\.|$)/.test(path);
 
@@ -181,7 +182,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
   );
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, options?: { origin?: CoachTurnOrigin }) => {
       if (!conversationId || !context || !text.trim() || status === "loading" || status === "sending") return;
 
       const userMsg: CoachMessage = {
@@ -205,6 +206,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
           body: {
             conversationId,
             context: ctxWithLocale,
+             turnOrigin: options?.origin ?? "user",
             messages: nextMessages.map((m) => ({
               role: m.role,
               content: m.content,
