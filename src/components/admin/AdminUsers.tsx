@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, ArrowLeft, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Search, ArrowLeft, ShieldCheck, ShieldOff, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
@@ -20,6 +22,7 @@ interface UserRow {
   roles: string[];
   main_account_name?: string;
   sub_account_count: number;
+  purge_at?: string | null;
 }
 
 interface UserMembership {
@@ -41,6 +44,8 @@ const AdminUsers = () => {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [subaccountAction, setSubaccountAction] = useState<"delete_all" | "transfer">("delete_all");
 
   const load = useCallback(async () => {
     setLoading(true);
