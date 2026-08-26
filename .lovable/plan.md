@@ -1,30 +1,37 @@
-# Outreach follow-up meldingen: kalenderdagen + status-gating
+# Voorkom Blueprint-updates bij een lege Coach-start
 
-## Hoe het nu werkt (geverifieerd)
+## Doel
+Wanneer iemand in een nieuwe of bestaande workspace enkel op **AI Coach** klikt, start de Coach met gerichte vragen. De klik zelf mag nooit onmiddellijk een Blueprint-update genereren. Updates blijven wel beschikbaar zodra de gebruiker expliciet vraagt om iets in te vullen of na het gesprek akkoord geeft op een voorstel.
 
-De due-logica zit centraal in `getNextFollowUp` (`useOutreachData.ts`) en wordt gebruikt in de leadlijst, pipeline, draft queue en lead-detail.
+## Bevestigde oorzaak
+- De walkthrough-knop maakt automatisch een focusbericht: `Let's work through ... and complete all fields.`
+- Dat automatische bericht wordt momenteel als een normaal gebruikersbericht naar de Coach gestuurd.
+- De backend herkent `complete` + `Customer Clarity` als expliciete schrijfintentie. Als het model niet meteen schrijft, forceert de safety net alsnog `propose_blueprint_writes`.
+- Daardoor kan de eerste klik een inhoudelijk ongefundeerde update opleveren, ondanks de bestaande promptregel dat het openen van een sectie alleen een uitnodiging tot coaching is.
 
-- Er is geen opener verstuurd (`opener_sent_at` leeg) → geen melding.
-- Anders wordt de eerste follow-up gezocht die nog geen verzendtijdstip heeft (`followups_sent_at` JSON, met fallback op de oude `fu1..fu4_sent_at` kolommen).
-- De due-tijd = tijdstip van de vorige verzending (opener, of de vorige follow-up) + `wait_days` en `wait_hours` uit de settings-template.
-- `isDue` is waar zodra de exacte klok die due-tijd voorbij is.
-- Zodra een follow-up als verzonden is gemarkeerd, schuift de keten door naar de volgende follow-up — dus ja, het herhaalt zich voor alle ingestelde follow-ups tot ze allemaal verstuurd zijn.
+## Aanpak
+1. **Automatische focusbeurten expliciet markeren**
+   - Breid het versturen van Coach-berichten uit met een turn-origin voor automatisch geïnjecteerde focusberichten.
+   - Handmatig getypte berichten en aangeklikte inhoudelijke quick replies blijven gewone gebruikersinstructies.
 
-Twee afwijkingen van de bedoeling:
+2. **Writes blokkeren tijdens de openingsbeurt**
+   - Laat de Coach-backend een gemarkeerde focusstart behandelen als navigatie/contextwisseling, nooit als schrijfintentie.
+   - Schakel voor die beurt zowel de algemene write-intent retry als eventuele geforceerde Blueprint-write uit.
+   - Voeg een harde openingsinstructie toe: start met één of twee relevante groundingvragen en maak nog geen voorstelkaart.
 
-1. **Uren in plaats van kalenderdagen.** Opener op 19/08 om 12:00 met "2 dagen" wordt pas due op 21/08 om 12:00, niet op 21/08 om 00:00.
-2. **Status wordt niet meegewogen.** De badge verschijnt bij elke lead met een verzonden opener, ook bij `replied`, `interested`, `closed`, `not_interested`. De bedoeling is dat opvolging alleen geldt zolang de lead nog niet geantwoord heeft.
+3. **Walkthrough-tekst ondubbelzinnig maken**
+   - Vervang “complete all fields” door taal die duidelijk om begeleiding en vragen vraagt, zonder schrijfwerkwoord dat intent-detectie kan activeren.
+   - Behoud de zichtbare focuswisseling naar het actieve Blueprint-tabblad.
 
-## Wat er verandert
-
-1. **Kalenderdag-berekening.** Due-tijd wordt: dag van de vorige verzending + `wait_days` dagen, teruggezet naar het begin van die dag (00:00 lokale tijd). Een lead met opener op 19/08 12:00 en "2 dagen" is dus vanaf 21/08 00:00 due.
-2. **`wait_hours` blijft werken** als extra offset bovenop die dagstart (bv. 2 dagen + 9 uur = 21/08 09:00). Bij `wait_days = 0` blijft de exacte klok gelden (uren-offset op het echte verzendmoment), zodat "stuur 4 uur later" niet stiekem naar morgen springt.
-3. **Alleen actieve leads krijgen meldingen.** Follow-up badges/filters gelden voor leads met status `sent` (en `new`/`drafted`/`ready_to_send` waar een opener al gemarkeerd is). Bij `replied`, `interested`, `closed`, `no_response`, `not_interested` verschijnt geen due-melding meer.
-
-Omdat alle schermen dezelfde helper gebruiken, werkt dit meteen consistent in de leadlijst, de "follow-up due"-filter, de pipeline-kaarten, de draft queue en het lead-detailpaneel.
+4. **Regressies afdekken**
+   - Nieuwe, lege workspace + klik op Customer Clarity AI Coach: vraag/quick replies, geen `blueprint_writes`.
+   - Bestaande workspace + klik op AI Coach: ook geen automatische write; de Coach gebruikt bestaande context wel in zijn vraag.
+   - Daarna expliciet “Vul deze sectie voor me in”: Blueprint-update wordt nog steeds gegenereerd.
+   - Na coaching “ja, doe maar” of “next”: afgesproken update wordt nog steeds voorgesteld en blijft binnen het actieve tabblad.
+   - Controleer dat Info, veld-Coach, roadmap-Coach en normale handmatige chatberichten niet onbedoeld worden geblokkeerd.
 
 ## Technisch
-
-- `getNextFollowUp` in `src/components/outreach/useOutreachData.ts`: due-berekening vervangen door een `startOfDay(prevSentAt) + wait_days` variant met uren-offset; nieuwe status-gate aan het begin van de functie (afgeleid van `lead.status`).
-- Geen databasewijzigingen; `followups_sent_at` en de legacy `fu*_sent_at` fallback blijven ongewijzigd.
-- Geen wijziging aan de markeer-als-verzonden logica in `OutreachDraftQueue`/`OutreachLeadDetail`.
+- Frontend: `CoachPanel`, `useCoachChat` en de focus-turn aanroep krijgen een klein origin-signaal voor automatisch geïnjecteerde beurten.
+- Backend: `coach-chat` gebruikt dit signaal bij toolkeuze, write-intent-detectie en retrylogica; server-side validatie blijft leidend.
+- Focuscopy: `buildFocusTurnText` wordt aangepast zodat een walkthrough opent met begeleiden/vragen in plaats van “velden invullen”.
+- Geen database- of schemawijziging nodig.
