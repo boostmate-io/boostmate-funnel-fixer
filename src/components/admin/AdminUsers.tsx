@@ -80,6 +80,12 @@ const AdminUsers = () => {
       }
     });
 
+    const { data: deletionRequests } = await supabase
+      .from("account_deletion_requests" as any)
+      .select("user_id, purge_at");
+    const purgeMap = new Map<string, string>();
+    (deletionRequests || []).forEach((r: any) => purgeMap.set(r.user_id, r.purge_at));
+
     const mainIds = Array.from(mainAccountIds);
     const mainNameMap = new Map<string, string>();
     if (mainIds.length > 0) {
@@ -98,6 +104,7 @@ const AdminUsers = () => {
         roles: roleMap.get(au.id) || [],
         main_account_name: mainNameMap.get(userMainMap.get(au.id) || "") || "—",
         sub_account_count: userSubCount.get(au.id) || 0,
+        purge_at: purgeMap.get(au.id) || null,
       };
     });
 
@@ -166,13 +173,17 @@ const AdminUsers = () => {
     setIsDeleting(true);
     try {
       const { data, error } = await supabase.functions.invoke("delete-account", {
-        body: { target_user_id: selectedUser.id },
+        body: { target_user_id: selectedUser.id, subaccount_action: subaccountAction },
       });
 
       if (error) throw error;
+      if (data?.error === "last_admin") {
+        toast.error("This is the only admin account. Grant another user admin rights first.");
+        return;
+      }
       if (data?.error) throw new Error(data.error);
 
-      toast.success("User deleted successfully");
+      toast.success(`User deactivated — permanent deletion on ${format(new Date(data.purge_at), "dd MMM yyyy")}`);
       setSelectedUser(null);
       await refreshWorkspace();
       await load();
@@ -181,6 +192,27 @@ const AdminUsers = () => {
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
+      setSubaccountAction("delete_all");
+    }
+  };
+
+  const handleRestoreUser = async () => {
+    if (!selectedUser) return;
+    setIsRestoring(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-account", {
+        body: { action: "restore", target_user_id: selectedUser.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Deletion canceled — account restored");
+      await refreshWorkspace();
+      await load();
+      setSelectedUser((prev) => prev ? { ...prev, purge_at: null } : null);
+    } catch (err: any) {
+      toast.error(err.message || "Error restoring user");
+    } finally {
+      setIsRestoring(false);
     }
   };
 
