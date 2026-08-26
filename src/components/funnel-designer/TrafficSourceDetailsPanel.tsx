@@ -75,11 +75,14 @@ const TrafficSourceDetailsPanel = ({
     setMetaFramework((fw as any) || null);
 
 
-    const { data: linkedDocs } = await sb
+    // Seed-template node IDs are shared across funnels — scope to this funnel.
+    let linkedQuery = sb
       .from("copy_documents")
       .select("id, name, type, status, updated_at")
       .eq("funnel_node_id", nodeId)
       .order("updated_at", { ascending: false });
+    if (funnelId) linkedQuery = linkedQuery.eq("funnel_id", funnelId);
+    const { data: linkedDocs } = await linkedQuery;
     const linkedList = (linkedDocs || []) as LinkedDocument[];
     setLinked(linkedList);
 

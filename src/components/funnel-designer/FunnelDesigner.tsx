@@ -217,10 +217,13 @@ const FunnelDesigner = ({ onNavigateToOffer, initialFunnel, onBackToList }: Funn
     (async () => {
       const trafficIds = nodes.filter((n) => n.type === "trafficSource").map((n) => n.id);
       if (trafficIds.length === 0) { setTrafficAdThumbnails({}); return; }
-      const { data: docs } = await supabase
+      // Seed-template node IDs are shared across funnels — scope to this funnel.
+      let docQuery = supabase
         .from("copy_documents")
         .select("id, funnel_node_id")
         .in("funnel_node_id", trafficIds);
+      if (currentFunnel?.id) docQuery = docQuery.eq("funnel_id", currentFunnel.id);
+      const { data: docs } = await docQuery;
       if (!docs || docs.length === 0) { if (!cancelled) setTrafficAdThumbnails({}); return; }
       const { resolveDocumentThumbnails } = await import("@/lib/copy/documentThumbnail");
       const thumbs = await resolveDocumentThumbnails((docs as any[]).map((d) => d.id));

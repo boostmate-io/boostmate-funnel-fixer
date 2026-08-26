@@ -80,10 +80,13 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
     (async () => {
       const trafficIds = (nodes || []).filter((n: any) => n.type === "trafficSource").map((n: any) => n.id);
       if (trafficIds.length === 0) { setTrafficAdThumbnails({}); return; }
-      const { data: docs } = await client
+      // Seed-template node IDs are shared across funnels — scope to this funnel.
+      let docQuery = client
         .from("copy_documents")
         .select("id, funnel_node_id")
         .in("funnel_node_id", trafficIds);
+      if (funnelId) docQuery = docQuery.eq("funnel_id", funnelId);
+      const { data: docs } = await docQuery;
       if (!docs || docs.length === 0) { if (!cancelled) setTrafficAdThumbnails({}); return; }
       const { resolveDocumentThumbnails } = await import("@/lib/copy/documentThumbnail");
       const thumbs = await resolveDocumentThumbnails((docs as any[]).map((d) => d.id), { client: client as any });
