@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          created_at: string
+          id: string
+          purge_at: string
+          requested_by: string
+          subaccount_action: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          purge_at: string
+          requested_by: string
+          subaccount_action?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          purge_at?: string
+          requested_by?: string
+          subaccount_action?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       account_invites: {
         Row: {
           created_at: string
@@ -2992,6 +3019,7 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      deletion_purge_dispatch: { Args: never; Returns: undefined }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }

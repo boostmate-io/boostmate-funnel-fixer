@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.deletion_purge_dispatch() FROM PUBLIC, anon, authenticated;

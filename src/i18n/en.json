@@ -128,14 +128,20 @@
       "languageDescription": "Choose your preferred language",
       "deleteAccount": {
         "title": "Delete Account",
-        "description": "Permanently delete your account and all associated data. This action cannot be undone.",
+        "description": "Deactivate your account. It is permanently deleted after 30 days — until then it can be restored.",
         "button": "Delete Account",
         "confirmTitle": "Are you sure?",
-        "confirmDescription": "This will permanently delete your account, all projects, funnels, assets, and data. This cannot be undone.",
+        "confirmDescription": "Your account will be deactivated immediately and permanently deleted after 30 days. Within those 30 days an administrator can restore it.",
+        "subaccountTitle": "What should happen to your workspaces?",
+        "subaccountChoiceDelete": "Delete everything — all workspaces and their data will be removed after 30 days.",
+        "subaccountChoiceTransfer": "Transfer ownership to another member — workspaces and data are kept.",
         "typeConfirm": "Type DELETE to confirm:",
         "cancel": "Cancel",
         "confirmButton": "Delete my account",
-        "deleting": "Deleting..."
+        "deleting": "Scheduling deletion...",
+        "lastAdminError": "You are the only administrator. Grant another user admin rights before deleting your account.",
+        "transferNotPossible": "There is no other member to transfer ownership to.",
+        "scheduled": "Your account is deactivated and will be permanently deleted on {{date}}."
       }
     }
   },

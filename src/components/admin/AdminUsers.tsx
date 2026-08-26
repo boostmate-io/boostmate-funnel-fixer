@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, ArrowLeft, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Search, ArrowLeft, ShieldCheck, ShieldOff, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
@@ -20,6 +22,7 @@ interface UserRow {
   roles: string[];
   main_account_name?: string;
   sub_account_count: number;
+  purge_at?: string | null;
 }
 
 interface UserMembership {
@@ -41,6 +44,8 @@ const AdminUsers = () => {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [subaccountAction, setSubaccountAction] = useState<"delete_all" | "transfer">("delete_all");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,6 +80,12 @@ const AdminUsers = () => {
       }
     });
 
+    const { data: deletionRequests } = await supabase
+      .from("account_deletion_requests" as any)
+      .select("user_id, purge_at");
+    const purgeMap = new Map<string, string>();
+    (deletionRequests || []).forEach((r: any) => purgeMap.set(r.user_id, r.purge_at));
+
     const mainIds = Array.from(mainAccountIds);
     const mainNameMap = new Map<string, string>();
     if (mainIds.length > 0) {
@@ -93,6 +104,7 @@ const AdminUsers = () => {
         roles: roleMap.get(au.id) || [],
         main_account_name: mainNameMap.get(userMainMap.get(au.id) || "") || "—",
         sub_account_count: userSubCount.get(au.id) || 0,
+        purge_at: purgeMap.get(au.id) || null,
       };
     });
 
@@ -161,13 +173,17 @@ const AdminUsers = () => {
     setIsDeleting(true);
     try {
       const { data, error } = await supabase.functions.invoke("delete-account", {
-        body: { target_user_id: selectedUser.id },
+        body: { target_user_id: selectedUser.id, subaccount_action: subaccountAction },
       });
 
       if (error) throw error;
+      if (data?.error === "last_admin") {
+        toast.error("This is the only admin account. Grant another user admin rights first.");
+        return;
+      }
       if (data?.error) throw new Error(data.error);
 
-      toast.success("User deleted successfully");
+      toast.success(`User deactivated — permanent deletion on ${format(new Date(data.purge_at), "dd MMM yyyy")}`);
       setSelectedUser(null);
       await refreshWorkspace();
       await load();
@@ -176,6 +192,27 @@ const AdminUsers = () => {
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
+      setSubaccountAction("delete_all");
+    }
+  };
+
+  const handleRestoreUser = async () => {
+    if (!selectedUser) return;
+    setIsRestoring(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-account", {
+        body: { action: "restore", target_user_id: selectedUser.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Deletion canceled — account restored");
+      await refreshWorkspace();
+      await load();
+      setSelectedUser((prev) => prev ? { ...prev, purge_at: null } : null);
+    } catch (err: any) {
+      toast.error(err.message || "Error restoring user");
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -208,8 +245,18 @@ const AdminUsers = () => {
                 {selectedUser.roles.map((r) => (
                   <Badge key={r} variant={r === "admin" ? "default" : "secondary"}>{r}</Badge>
                 ))}
+                {selectedUser.purge_at && (
+                  <Badge variant="destructive">Deletion {format(new Date(selectedUser.purge_at), "dd MMM")}</Badge>
+                )}
               </div>
             </div>
+
+            {selectedUser.purge_at && (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground">
+                This account is deactivated and will be permanently deleted on{" "}
+                <strong>{format(new Date(selectedUser.purge_at), "dd MMM yyyy HH:mm")}</strong>.
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -230,13 +277,24 @@ const AdminUsers = () => {
               >
                 {isAdmin ? <><ShieldOff className="w-4 h-4 mr-1" /> Remove Admin</> : <><ShieldCheck className="w-4 h-4 mr-1" /> Grant Admin</>}
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="w-4 h-4 mr-1" /> Delete User
-              </Button>
+              {selectedUser.purge_at ? (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleRestoreUser}
+                  disabled={isRestoring}
+                >
+                  <Undo2 className="w-4 h-4 mr-1" /> {isRestoring ? "Restoring..." : "Cancel Deletion"}
+                </Button>
+              ) : (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" /> Delete User
+                </Button>
+              )}
             </div>
 
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -244,9 +302,33 @@ const AdminUsers = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete user?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete {selectedUser.email} and all associated data. This action cannot be undone.
+                    {selectedUser.email} will be deactivated immediately and permanently deleted after 30 days. You can cancel the deletion any time before then.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                {selectedUser.sub_account_count > 0 && (
+                  <div className="py-2 space-y-3">
+                    <p className="text-sm font-medium text-foreground">
+                      This user owns accounts with workspaces. What should happen to them?
+                    </p>
+                    <RadioGroup
+                      value={subaccountAction}
+                      onValueChange={(v) => setSubaccountAction(v as "delete_all" | "transfer")}
+                    >
+                      <div className="flex items-start space-x-2">
+                        <RadioGroupItem value="delete_all" id="adm-del-all" className="mt-1" />
+                        <Label htmlFor="adm-del-all" className="text-sm font-normal text-muted-foreground">
+                          Delete everything — all workspaces and their data are removed at the purge date.
+                        </Label>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <RadioGroupItem value="transfer" id="adm-transfer" className="mt-1" />
+                        <Label htmlFor="adm-transfer" className="text-sm font-normal text-muted-foreground">
+                          Transfer ownership to another member — workspaces and data are kept.
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
@@ -254,7 +336,7 @@ const AdminUsers = () => {
                     disabled={isDeleting}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    {isDeleting ? "Deleting..." : "Delete"}
+                    {isDeleting ? "Scheduling..." : "Delete after 30 days"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -339,7 +421,10 @@ const AdminUsers = () => {
                       {u.roles.map((r) => (
                         <Badge key={r} variant={r === "admin" ? "default" : "secondary"} className="text-xs">{r}</Badge>
                       ))}
-                      {u.roles.length === 0 && <span className="text-xs text-muted-foreground">—</span>}
+                      {u.purge_at && (
+                        <Badge variant="destructive" className="text-xs">Deleting {format(new Date(u.purge_at), "dd MMM")}</Badge>
+                      )}
+                      {u.roles.length === 0 && !u.purge_at && <span className="text-xs text-muted-foreground">—</span>}
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{format(new Date(u.created_at), "dd MMM yyyy")}</TableCell>
