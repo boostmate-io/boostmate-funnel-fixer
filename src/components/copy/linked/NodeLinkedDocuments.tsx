@@ -102,7 +102,7 @@ const NodeLinkedDocuments = ({
     } else {
       setThumbnails({});
     }
-  }, [sb, funnelNodeId, subAccountId, documentType, readOnly]);
+  }, [sb, funnelNodeId, funnelId, subAccountId, documentType, readOnly]);
 
   useEffect(() => { load(); }, [load]);
 

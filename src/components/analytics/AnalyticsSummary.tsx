@@ -99,7 +99,7 @@ const AnalyticsSummaryInner = ({ funnelId, nodes, edges, periodStart, periodEnd,
       if (!cancelled) setTrafficAdThumbnails(byNode);
     })();
     return () => { cancelled = true; };
-  }, [(nodes || []).map((n: any) => n.type === "trafficSource" ? n.id : "").join("|"), client, refreshKey]);
+  }, [(nodes || []).map((n: any) => n.type === "trafficSource" ? n.id : "").join("|"), client, refreshKey, funnelId]);
 
   const { stepAggregates, stepAggregateMap } = useMemo(() => {
     const trackableIds = new Set(nodes.filter(isTrackableNode).map((n: any) => n.id));

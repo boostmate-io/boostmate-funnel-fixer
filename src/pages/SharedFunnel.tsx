@@ -128,7 +128,7 @@ const SharedFunnelInner = () => {
       if (!cancelled) setTrafficAdThumbnails(byNode);
     })();
     return () => { cancelled = true; };
-  }, [localNodes.map((n) => n.type === "trafficSource" ? n.id : "").join("|")]);
+  }, [localNodes.map((n) => n.type === "trafficSource" ? n.id : "").join("|"), funnel?.id]);
 
   useEffect(() => {
     if (!token) return;

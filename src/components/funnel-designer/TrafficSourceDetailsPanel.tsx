@@ -106,7 +106,7 @@ const TrafficSourceDetailsPanel = ({
     } else {
       setThumbnails({});
     }
-  }, [sb, nodeId, readOnly, subAccountId, resolvedSubAccountId]);
+  }, [sb, nodeId, funnelId, readOnly, subAccountId, resolvedSubAccountId]);
 
   useEffect(() => { load(); }, [load]);
 
