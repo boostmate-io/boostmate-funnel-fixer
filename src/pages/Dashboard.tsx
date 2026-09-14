@@ -58,7 +58,7 @@ const Dashboard = () => {
     return () => window.removeEventListener("boostmate:navigate-module", handler);
   }, []);
 
-  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "growth-architecture", "admin-accounts", "admin-ai", "admin-copy", "admin-growth", "outreach", "growth-roadmap", "overview", "settings"];
+  const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "growth-architecture", "admin-accounts", "admin-ai", "admin-copy", "admin-growth", "admin-redirects", "outreach", "growth-roadmap", "overview", "settings"];
 
   usePendingGrowthClaim();
 
