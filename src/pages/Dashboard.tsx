@@ -159,6 +159,11 @@ const Dashboard = () => {
               <AdminPanel category="growth" />
             </div>
           )}
+          {activeModule === "admin-redirects" && (
+            <div className="h-full">
+              <AdminPanel category="redirects" />
+            </div>
+          )}
           {activeModule === "settings" && (
             <>
               <PageHeader

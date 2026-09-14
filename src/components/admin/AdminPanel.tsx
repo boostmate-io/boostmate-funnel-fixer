@@ -62,6 +62,14 @@ const categoryConfig = {
       { value: "build-guides", label: "Build Guides", icon: BookOpen, content: <AdminBuildGuides /> },
     ],
   },
+  redirects: {
+    title: "Redirects",
+    description: "Create and manage short Boostmate redirect links.",
+    defaultTab: "redirects",
+    tabs: [
+      { value: "redirects", label: "Redirects", icon: Link2, content: <AdminRedirects /> },
+    ],
+  },
 };
 
 
