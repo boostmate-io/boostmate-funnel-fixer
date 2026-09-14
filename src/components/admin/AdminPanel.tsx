@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Layers, ShieldCheck, Zap, BookOpen, Puzzle, LayoutList, Milestone, Radio, Workflow } from "lucide-react";
+import { Building2, Users, Layers, ShieldCheck, Zap, BookOpen, Puzzle, LayoutList, Milestone, Radio, Workflow, Link2 } from "lucide-react";
+import AdminRedirects from "./AdminRedirects";
 import AdminMainAccounts from "./AdminMainAccounts";
 import AdminSubAccounts from "./AdminSubAccounts";
 import AdminUsers from "./AdminUsers";
@@ -16,7 +17,7 @@ import AdminGrowthContent from "./AdminGrowthContent";
 
 
 interface AdminPanelProps {
-  category?: "accounts" | "ai" | "copy" | "growth";
+  category?: "accounts" | "ai" | "copy" | "growth" | "redirects";
 }
 
 const categoryConfig = {
@@ -61,6 +62,14 @@ const categoryConfig = {
       { value: "build-guides", label: "Build Guides", icon: BookOpen, content: <AdminBuildGuides /> },
     ],
   },
+  redirects: {
+    title: "Redirects",
+    description: "Create and manage short Boostmate redirect links.",
+    defaultTab: "redirects",
+    tabs: [
+      { value: "redirects", label: "Redirects", icon: Link2, content: <AdminRedirects /> },
+    ],
+  },
 };
 
 
@@ -102,7 +111,7 @@ const AdminPanel = ({ category = "accounts" }: AdminPanelProps) => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className={config.tabs.length === 1 ? "hidden" : undefined}>
           {config.tabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
               <tab.icon className="w-4 h-4" />

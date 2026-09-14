@@ -19,6 +19,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import OAuthConsent from "./pages/OAuthConsent.tsx";
 import PublicAssessment from "./pages/PublicAssessment.tsx";
+import RedirectSlug from "./pages/RedirectSlug.tsx";
 
 import { CoachProvider } from "@/contexts/CoachContext";
 
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/offer/:token" element={<SharedOffer />} />
           <Route path="/blueprint/:token" element={<SharedBlueprint />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/r/:slug" element={<RedirectSlug />} />
           
           <Route path="/.lovable/oauth/consent" element={<WithAuth><OAuthConsent /></WithAuth>} />
           <Route path="/dashboard" element={
