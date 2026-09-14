@@ -111,7 +111,7 @@ const AdminPanel = ({ category = "accounts" }: AdminPanelProps) => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className={config.tabs.length === 1 ? "hidden" : undefined}>
           {config.tabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
               <tab.icon className="w-4 h-4" />
