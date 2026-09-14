@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Layers, ShieldCheck, Zap, BookOpen, Puzzle, LayoutList, Milestone, Radio, Workflow } from "lucide-react";
+import { Building2, Users, Layers, ShieldCheck, Zap, BookOpen, Puzzle, LayoutList, Milestone, Radio, Workflow, Link2 } from "lucide-react";
+import AdminRedirects from "./AdminRedirects";
 import AdminMainAccounts from "./AdminMainAccounts";
 import AdminSubAccounts from "./AdminSubAccounts";
 import AdminUsers from "./AdminUsers";
@@ -16,7 +17,7 @@ import AdminGrowthContent from "./AdminGrowthContent";
 
 
 interface AdminPanelProps {
-  category?: "accounts" | "ai" | "copy" | "growth";
+  category?: "accounts" | "ai" | "copy" | "growth" | "redirects";
 }
 
 const categoryConfig = {

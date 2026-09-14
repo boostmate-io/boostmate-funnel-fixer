@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo-boostmate.svg";
 import logoBadge from "@/assets/logo-badge.png";
-import { BarChart3, LayoutDashboard, GitBranch, Settings, TrendingUp, Users, ChevronsLeft, ChevronsRight, Sparkles, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, Milestone, ChevronDown, ChevronRight, Package, Workflow, Palette, Award, Network } from "lucide-react";
+import { BarChart3, LayoutDashboard, GitBranch, Settings, TrendingUp, Users, ChevronsLeft, ChevronsRight, Sparkles, ShieldCheck, Building2, Building, Send, FileText, Zap, Puzzle, Milestone, ChevronDown, ChevronRight, Package, Workflow, Palette, Award, Network, Link2 } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +17,7 @@ const adminSubItems = [
   { id: "admin-ai", label: "AI", icon: Zap },
   { id: "admin-copy", label: "Copy", icon: Puzzle },
   { id: "admin-growth", label: "Growth Roadmap", icon: Milestone },
+  { id: "admin-redirects", label: "Redirects", icon: Link2 },
 ];
 
 const blueprintSubItems: { id: "customer-clarity" | "offer-design" | "brand-strategy" | "proof-authority"; label: string; icon: typeof Users }[] = [
