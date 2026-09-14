@@ -2810,6 +2810,36 @@ export type Database = {
         }
         Relationships: []
       }
+      redirects: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          destination_url: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          destination_url: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          destination_url?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       seed_templates: {
         Row: {
           brief_structure: Json
@@ -3066,6 +3096,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      resolve_redirect: { Args: { _slug: string }; Returns: string }
     }
     Enums: {
       account_type: "personal" | "agency" | "client"
