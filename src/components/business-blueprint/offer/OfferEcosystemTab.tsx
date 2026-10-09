@@ -30,6 +30,7 @@ import {
 } from "../offerDesignTypes";
 import { useEcosystemOffers, type EcosystemOfferRow } from "../useEcosystemOffers";
 import { getBusinessType } from "../businessTypes";
+import { designToRowValues } from "@/lib/offers/offerRepository";
 
 
 interface Props {
@@ -232,7 +233,7 @@ const OfferCardRow = ({
 const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, saving, businessType, pendingOpenOfferId, onOpenedOffer }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
-  const { offers, addOffer, updateOffer, deleteOffer, tierCounts } = useEcosystemOffers({
+  const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer } = useEcosystemOffers({
     blueprintId,
     offerDesign,
   });
@@ -296,25 +297,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
       // Keep all 3-tab fields inside the offer row's data.design.
       const row = offers.find((o) => o.id === editing.id);
       if (!row) return;
-      const name = next.angle.main_offer_name?.trim() || row.name || "Untitled Core Offer";
-      const description = next.angle.short_description?.trim() || "";
-      const coreOutcome = next.angle.core_outcome?.trim() || "";
-      const price = next.pricing.core_price;
-      const deliveryTypes = Array.from(new Set([
-        ...(next.stack.deliverables ?? []).flatMap((d) => d.delivery_types ?? []),
-        ...(next.stack.support_channels ?? []).map((s) => s.name).filter(Boolean),
-      ]));
-      void updateOffer(editing.id, {
-        name,
-        data: {
-          ...(row.data as any),
-          description,
-          core_outcome: coreOutcome,
-          price: typeof price === "number" ? price : "",
-          delivery_types: deliveryTypes,
-          design: next,
-        } as any,
-      });
+      void updateOffer(editing.id, designToRowValues(next, row as any) as any);
     }
   };
 
@@ -521,7 +504,13 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
 
       <CoreOfferDialog
         open={!!editing}
-        onOpenChange={(o) => { if (!o) setEditing(null); }}
+        onOpenChange={(o) => {
+          if (!o) {
+            // Persist any debounced edits immediately when the editor closes.
+            if (editing && !editing.isPrimary) void flushOffer(editing.id);
+            setEditing(null);
+          }
+        }}
         title={dialogTitle}
         initial={dialogInitial}
         onChange={handleDialogChange}
