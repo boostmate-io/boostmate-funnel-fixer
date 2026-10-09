@@ -30,7 +30,7 @@ describe("summarizeOfferDesign", () => {
   it("falls back to the promise outcome when outcome is empty", () => {
     const d = design();
     d.angle.core_outcome = "";
-    d.angle.core_promise.desired_outcome = "Desired";
+    d.angle.core_promise = { ...(d.angle.core_promise as any), desired_outcome: "Desired" } as any;
     expect(summarizeOfferDesign(d).core_outcome).toBe("Desired");
   });
 
