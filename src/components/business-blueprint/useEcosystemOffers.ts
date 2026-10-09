@@ -57,6 +57,7 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
   const offersRef = useRef<EcosystemOfferRow[]>([]);
   const pending = useRef(new Map<string, RowValues>());
   const timers = useRef(new Map<string, number>());
+  const inFlight = useRef(new Map<string, RowValues>());
 
   const setOffers = useCallback(
     (next: EcosystemOfferRow[] | ((prev: EcosystemOfferRow[]) => EcosystemOfferRow[])) => {
@@ -88,7 +89,7 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
     // Re-apply unsaved local edits so a reload never clobbers in-flight typing.
     setOffers(
       rows.map((r) => {
-        const p = pending.current.get(r.id);
+        const p = pending.current.get(r.id) ?? inFlight.current.get(r.id);
         return p ? { ...r, name: p.name, data: p.data } : r;
       }),
     );
@@ -105,7 +106,9 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
       if (!values) return true;
       pending.current.delete(id);
       syncPendingCount();
+      inFlight.current.set(id, values);
       const { error } = await updateEcosystemOffer(id, values);
+      if (inFlight.current.get(id) === values) inFlight.current.delete(id);
       if (error) {
         // Keep the edit queued (unless newer edits arrived) so it is retried.
         if (!pending.current.has(id)) pending.current.set(id, values);
