@@ -5,6 +5,18 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import {
+  attributionPrefix,
+  blueprintWithoutOfferDesign,
+  hasActiveOfferClaim,
+  offerContextPart,
+  renderActiveOfferSection,
+  renderOfferSwitchNote,
+  renderRelatedOffersSection,
+  resolveActiveOffer,
+  summarizeRelatedOffers,
+  type OfferRowLite,
+} from "../_shared/offerContext.ts";
+import {
   BLUEPRINT_FIELDS,
   BLUEPRINT_SUB_BLOCKS,
   renderBlueprintFieldPathsPrompt,
@@ -833,8 +845,18 @@ The user opened the Coach from ONE specific field: "${context?.target?.label ?? 
     parts.push(`# Current target\n${JSON.stringify(context.target, null, 2)}`);
   }
 
-  if (context?.businessContext?.blueprintSnapshot) {
+  const verifiedActiveOffer = context?.businessContext?.verifiedActiveOffer ?? null;
+  if (verifiedActiveOffer) {
+    parts.push(renderActiveOfferSection(verifiedActiveOffer));
+    const bpRest = blueprintWithoutOfferDesign(context?.businessContext?.blueprintSnapshot);
+    if (bpRest) {
+      parts.push(`# Business Blueprint — broader business context (the Primary Core Offer's Angle/Stack/Pricing are excluded; they do NOT belong to the active offer)\n${JSON.stringify(bpRest, null, 2)}`);
+    }
+  } else if (context?.businessContext?.blueprintSnapshot) {
     parts.push(`# Current Business Blueprint JSON\n${JSON.stringify(context.businessContext.blueprintSnapshot, null, 2)}`);
+  }
+  if (context?.businessContext?.relatedOffersSection) {
+    parts.push(context.businessContext.relatedOffersSection);
   }
 
   const listSection = context?.target?.listSection;
@@ -1123,7 +1145,7 @@ function windowMessagesForModel(messages: any[], keep = 24): { digest: string; r
       const role = m?.role === "assistant" ? "Coach" : "User";
       const text = typeof m?.content === "string" ? m.content.replace(/\s+/g, " ").trim() : "";
       if (!text) return "";
-      return `- ${role}: ${text.slice(0, 220)}${text.length > 220 ? "…" : ""}`;
+      return `- ${attributionPrefix(m)}${role}: ${text.slice(0, 220)}${text.length > 220 ? "…" : ""}`;
     })
     .filter(Boolean);
   // Cap the digest itself so very long histories stay bounded.
@@ -2141,6 +2163,60 @@ Deno.serve(async (req) => {
       context.businessContext.blueprintSnapshot = blueprintRow;
     }
 
+    // ---------------------------------------------------------------------
+    // Active offer (server-verified) + related offers.
+    // The client may claim an active offer; identity always comes from the
+    // DB row, scoped to this conversation's workspace.
+    // ---------------------------------------------------------------------
+    const claimedOffer = context?.businessContext?.activeOffer ?? null;
+    let activeOfferRow: OfferRowLite | null = null;
+    if (hasActiveOfferClaim(claimedOffer) && claimedOffer.id !== "primary") {
+      const { data } = await supabase
+        .from("offers")
+        .select("id,name,tier,source,sub_account_id,blueprint_id,sort_order,data")
+        .eq("id", String(claimedOffer.id))
+        .maybeSingle();
+      activeOfferRow = (data as OfferRowLite | null) ?? null;
+    }
+    const resolvedOffer = resolveActiveOffer(claimedOffer, activeOfferRow, subAccountId);
+    if (resolvedOffer.kind === "rejected") {
+      return jsonResponse({ error: "This offer can't be used in this workspace.", code: resolvedOffer.reason }, 403);
+    }
+    const verifiedOffer = resolvedOffer.kind === "additional" ? resolvedOffer.offer : null;
+    let relatedOfferRows: OfferRowLite[] = [];
+    if (blueprintRow?.id) {
+      const { data } = await supabase
+        .from("offers")
+        .select("id,name,tier,source,sub_account_id,blueprint_id,sort_order,data")
+        .eq("blueprint_id", blueprintRow.id)
+        .eq("sub_account_id", subAccountId)
+        .order("sort_order", { ascending: true });
+      relatedOfferRows = (data as OfferRowLite[] | null) ?? [];
+    }
+    if (context?.businessContext) {
+      // Never forward the untrusted client claim to prompt builders.
+      delete context.businessContext.activeOffer;
+      if (verifiedOffer && blueprintRow) {
+        // All path-state logic (filled/empty checks, pricing, walkthroughs)
+        // must see the ACTIVE offer's design under `offer_stack`, never the
+        // Primary's. The prompt renders the layers separately.
+        context.businessContext.blueprintSnapshot = { ...blueprintRow, offer_stack: verifiedOffer.design };
+      }
+      context.businessContext.verifiedActiveOffer = verifiedOffer;
+      context.businessContext.relatedOffersSection = renderRelatedOffersSection(
+        summarizeRelatedOffers(
+          relatedOfferRows,
+          // Additional offer: exclude itself (Primary stays listed as related).
+          // Primary / no offer: the blueprint_core row mirrors offer_stack.
+          verifiedOffer?.id ?? relatedOfferRows.find((r) => r.source === "blueprint_core")?.id ?? null,
+          blueprintRow?.offer_stack ?? null,
+        ),
+        verifiedOffer?.tier ?? (resolvedOffer.kind === "primary" ? "core" : null),
+      );
+    }
+    const activeOfferPart = offerContextPart(verifiedOffer, resolvedOffer.kind === "primary");
+    const offerSwitchNote = renderOfferSwitchNote(messages, activeOfferPart);
+
     // Explicit scope switch: when the user names another Blueprint tab/section
     // in their latest instruction ("fill the Offer Angle tab"), re-scope this
     // turn to that tab — the single Coach conversation means the UI focus can
@@ -2227,6 +2303,7 @@ The latest user-role message was generated automatically when the user opened th
 - This origin marker overrides any write-like wording in the focus message.`
         : "",
       forcedMainOfferStep ? renderForcedMainOfferBlueprintWritesPrompt(forcedMainOfferStep) : "",
+      offerSwitchNote ?? "",
     ]
       .filter(Boolean)
       .join("\n\n---\n\n");
@@ -2241,11 +2318,12 @@ The latest user-role message was generated automatically when the user opened th
       ...recent.map((m: any) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content:
-          m.role === "assistant"
+          attributionPrefix(m) +
+          (m.role === "assistant"
             ? serializeAssistantForModel(m)
             : typeof m.content === "string"
               ? m.content
-              : "",
+              : ""),
       })),
     ];
 
@@ -2504,7 +2582,7 @@ The latest user-role message was generated automatically when the user opened th
         conversation_id: conversationId,
         role: "user",
         content: lastUser.content ?? "",
-        parts: [{ type: "text", text: lastUser.content ?? "" }],
+        parts: [{ type: "text", text: lastUser.content ?? "" }, ...(activeOfferPart ? [activeOfferPart] : [])],
       });
     }
 
@@ -2514,7 +2592,7 @@ The latest user-role message was generated automatically when the user opened th
         conversation_id: conversationId,
         role: "assistant",
         content: assistantText,
-        parts,
+        parts: activeOfferPart ? [...parts, activeOfferPart] : parts,
       })
       .select("id, role, content, parts, created_at")
       .single();

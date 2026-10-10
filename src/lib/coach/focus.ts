@@ -26,6 +26,8 @@ export interface CoachFocus {
   blueprintSnapshot?: BlueprintRow | null;
   /** Overrides the generated focus turn text. */
   seed?: string;
+  /** Offer the focus belongs to (Offer Editor entry points). */
+  activeOffer?: import("./types").CoachActiveOffer | null;
   onApply?: (value: string) => void;
   onApplyBlueprintWrites?: CoachWritesHandler;
 }

@@ -156,6 +156,7 @@ const GlobalCoachBubble = () => {
         businessContext: {
           ...base.businessContext,
           blueprintSnapshot: focus.blueprintSnapshot ?? base.businessContext.blueprintSnapshot,
+          activeOffer: focus.activeOffer ?? null,
         },
       };
     }

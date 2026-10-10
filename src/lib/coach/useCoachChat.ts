@@ -198,9 +198,17 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
 
       try {
         const currentLocale = (i18n.language ?? "en").split("-")[0];
+        const ao = context.businessContext.activeOffer;
         const ctxWithLocale = {
           ...context,
-          businessContext: { ...context.businessContext, locale: currentLocale },
+          businessContext: {
+            ...context.businessContext,
+            locale: currentLocale,
+            // Serializable claim; identity is re-verified server-side.
+            activeOffer: ao
+              ? { id: ao.id, isPrimary: ao.isPrimary, name: ao.name, tier: ao.tier, draftDesign: ao.getDraftDesign?.() }
+              : undefined,
+          },
         };
         const { data, error: fnErr } = await supabase.functions.invoke("coach-chat", {
           body: {

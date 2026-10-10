@@ -107,6 +107,20 @@ export interface CoachRoadmapSnapshot {
   >;
 }
 
+/**
+ * The specific offer a Coach turn is about. Identity is re-verified by the
+ * server; the client only contributes the (possibly unsaved) draft design.
+ */
+export interface CoachActiveOffer {
+  /** Offer row id, or "primary" for the Blueprint's Primary Core Offer. */
+  id: string;
+  isPrimary: boolean;
+  name: string;
+  tier: string;
+  /** Read at send time — latest editor state, including unsaved edits. */
+  getDraftDesign?: () => unknown;
+}
+
 export interface CoachContext {
   scope: CoachScope;
   target: CoachTarget | null;
@@ -115,6 +129,8 @@ export interface CoachContext {
     subAccountId: string;
     blueprintSnapshot: BlueprintRow | null;
     activeOfferId?: string;
+    /** Offer being edited (Offer Editor entry points only). */
+    activeOffer?: CoachActiveOffer | null;
     routeHint?: string;
     /** UI locale, e.g. "en" or "nl". Coach replies in this language. */
     locale?: string;
