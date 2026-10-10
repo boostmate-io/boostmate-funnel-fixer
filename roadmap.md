@@ -13,4 +13,5 @@
 - [ ] Irresistible Offer Builder
 - [x] Final field matrix for six offer categories (approved)
 - [x] Offer architecture cleanup (options from registry, row type, OfferTier, audits)
-- [ ] Low-Ticket editor configuration (awaiting approval)
+- [x] Tier-aware registry layouts for six categories
+- [ ] Low-Ticket editor (awaiting approval)
