@@ -332,7 +332,14 @@ export function applyBlueprintWrites(
   subAccountId: string,
   writes: BlueprintWrite[],
 ): Promise<{ applied: number; error?: string }> {
-  const run = applyQueue.then(() => applyBlueprintWritesUnsafe(subAccountId, writes));
+  const run = applyQueue.then(async () => {
+    const waits: Promise<boolean>[] = [];
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("blueprint:before-coach-write", {
+      detail: { subAccountId, waitUntil: (promise: Promise<boolean>) => waits.push(promise) },
+    }));
+    if (!(await Promise.all(waits)).every(Boolean)) return { applied: 0, error: "Save pending edits before applying Coach suggestions." };
+    return applyBlueprintWritesUnsafe(subAccountId, writes);
+  });
   applyQueue = run.catch(() => undefined);
   return run;
 }
