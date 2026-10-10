@@ -33,6 +33,18 @@ import {
   calcStackProgress,
 } from "../offerDesignTypes";
 import { getBusinessType } from "../businessTypes";
+import { offerEditorField, offerEditorList } from "../registryUi";
+
+// Offer Stack copy, list-Coach targets and item Coach targets come from the
+// central registry; add/remove, ordering and controls stay in this component.
+export const STACK_LISTS = {
+  deliverables: offerEditorList("offer_stack.stack.deliverables"),
+  resources: offerEditorList("offer_stack.stack.resources"),
+  support_channels: offerEditorList("offer_stack.stack.support_channels"),
+  bonuses: offerEditorList("offer_stack.stack.bonuses"),
+  milestones: offerEditorList("offer_stack.stack.milestones"),
+};
+const TIMELINE = offerEditorField("offer_stack.stack.delivery_timeline");
 
 const newId = () => crypto.randomUUID();
 
@@ -304,28 +316,20 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         {/* Core Deliverables */}
         <BuilderCard
           icon={Package}
-          title="Core Deliverables"
-          description="Main service, coaching or program components."
-          addLabel="Add Deliverable"
+          title={STACK_LISTS.deliverables.title}
+          description={STACK_LISTS.deliverables.description}
+          addLabel={STACK_LISTS.deliverables.addLabel}
           onAdd={addDeliverable}
           onCoach={() =>
             openListCoach({
-              id: "stack_deliverables",
-              label: "Core Deliverables",
-              helper: "Main service, coaching or program components clients receive.",
-              basePath: "offer_stack.stack.deliverables",
-              itemFields: [
-                { key: "name", label: "Name", kind: "text", helper: "Short, benefit-driven deliverable name." },
-                { key: "description", label: "Description", kind: "textarea", helper: "1–2 sentences on what the client gets." },
-              ],
+              ...STACK_LISTS.deliverables.listCoach,
               currentCount: data.deliverables.length,
-              suggestedCount: [3, 5],
               appendItem: appendDeliverable,
               appendItems: appendDeliverables,
             })
           }
           count={data.deliverables.length}
-          emptyText="No deliverables yet. Start with your most valuable component."
+          emptyText={STACK_LISTS.deliverables.emptyText}
         >
           {data.deliverables.length > 0 && (
             <div className="space-y-2">
@@ -333,19 +337,16 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                 <CollapsibleItem
                   key={d.id}
                   title={d.name}
-                  fallbackTitle={`Deliverable ${idx + 1}`}
+                  fallbackTitle={STACK_LISTS.deliverables.fallbackTitle(idx)}
                   defaultOpen={!d.name}
                   onDelete={() => removeDeliverable(d.id)}
                 >
                   <div>
                     <LabelRow
-                      label="Deliverable Name"
+                      label={STACK_LISTS.deliverables.item("name").label}
                       onCoach={() =>
                         openCoach({
-                          id: `offer_stack.stack.deliverables.${d.id}.name`,
-                          label: `Deliverable ${idx + 1} — Name`,
-                          helper: "A short, benefit-driven name for this deliverable.",
-                          placeholder: "e.g. Weekly 1:1 Coaching Calls",
+                          ...STACK_LISTS.deliverables.itemCoach("name", d.id, idx),
                           currentValue: d.name ?? "",
                           apply: (v) => updateDeliverable(d.id, { name: v }),
                         })
@@ -354,19 +355,16 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                     <Input
                       value={d.name}
                       onChange={(e) => updateDeliverable(d.id, { name: e.target.value })}
-                      placeholder="Deliverable name (e.g. Weekly 1:1 Coaching Calls)"
+                      placeholder={STACK_LISTS.deliverables.item("name").placeholder}
                       className="h-9 font-medium"
                     />
                   </div>
                   <div>
                     <LabelRow
-                      label="Description"
+                      label={STACK_LISTS.deliverables.item("description").label}
                       onCoach={() =>
                         openCoach({
-                          id: `offer_stack.stack.deliverables.${d.id}.description`,
-                          label: `Deliverable ${idx + 1} — Description`,
-                          helper: "1–2 sentences describing what the client gets and how it works.",
-                          placeholder: "Short description…",
+                          ...STACK_LISTS.deliverables.itemCoach("description", d.id, idx),
                           currentValue: d.description ?? "",
                           apply: (v) => updateDeliverable(d.id, { description: v }),
                         })
@@ -375,7 +373,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                     <AutoTextarea
                       value={d.description ?? ""}
                       onChange={(e) => updateDeliverable(d.id, { description: e.target.value })}
-                      placeholder="Short description…"
+                      placeholder={STACK_LISTS.deliverables.item("description").placeholder}
                       rows={2}
                       className="resize-none text-sm"
                     />
@@ -393,14 +391,14 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                     </div>
                     <div>
                       <Label className="text-[11px] font-medium text-muted-foreground mb-1 block">
-                        Frequency
+                        {STACK_LISTS.deliverables.item("frequency").label}
                       </Label>
                       <Select
                         value={d.frequency ?? "weekly"}
                         onValueChange={(v) => updateDeliverable(d.id, { frequency: v as DeliveryFrequency })}
                       >
                         <SelectTrigger className="h-9 text-sm">
-                          <SelectValue placeholder="Frequency" />
+                          <SelectValue placeholder={STACK_LISTS.deliverables.item("frequency").placeholder} />
                         </SelectTrigger>
                         <SelectContent>
                           {FREQUENCY_OPTIONS.map((o) => (
@@ -419,29 +417,20 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         {/* Templates & Resources */}
         <BuilderCard
           icon={Library}
-          title="Templates & Resources"
-          description="Add resources included in your offer. Click a quick-add chip to start a card."
-          addLabel="Add Resource"
+          title={STACK_LISTS.resources.title}
+          description={STACK_LISTS.resources.description}
+          addLabel={STACK_LISTS.resources.addLabel}
           onAdd={() => addResource()}
           onCoach={() =>
             openListCoach({
-              id: "stack_resources",
-              label: "Templates & Resources",
-              helper: "Templates, guides, checklists, swipe files included with the offer.",
-              basePath: "offer_stack.stack.resources",
-              itemFields: [
-                { key: "name", label: "Name", kind: "text" },
-                { key: "resource_type", label: "Type", kind: "text", helper: "Template, Ebook, Checklist, Swipe file…" },
-                { key: "description", label: "Description", kind: "textarea", helper: "What's inside and how it's used." },
-              ],
+              ...STACK_LISTS.resources.listCoach,
               currentCount: data.resources.length,
-              suggestedCount: [3, 5],
               appendItem: appendResource,
               appendItems: appendResources,
             })
           }
           count={data.resources.length}
-          emptyText="No resources yet. Quick-add common types below or add a custom resource."
+          emptyText={STACK_LISTS.resources.emptyText}
           emptyAction={
             <div className="space-y-3">
               <QuickAddChips options={RESOURCE_QUICK_PICKS.slice(0, 10)} onPick={(v) => addResource(v)} />
@@ -464,18 +453,16 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                   <CollapsibleItem
                     key={r.id}
                     title={r.name}
-                    fallbackTitle={`Resource ${idx + 1}`}
+                    fallbackTitle={STACK_LISTS.resources.fallbackTitle(idx)}
                     defaultOpen={!r.name}
                     onDelete={() => removeResource(r.id)}
                   >
                     <div>
                       <LabelRow
-                        label="Resource Name"
+                        label={STACK_LISTS.resources.item("name").label}
                         onCoach={() =>
                           openCoach({
-                            id: `offer_stack.stack.resources.${r.id}.name`,
-                            label: `Resource ${idx + 1} — Name`,
-                            helper: "Clear name for this template or resource.",
+                            ...STACK_LISTS.resources.itemCoach("name", r.id, idx),
                             currentValue: r.name ?? "",
                             apply: (v) => updateResource(r.id, { name: v }),
                           })
@@ -484,18 +471,16 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       <Input
                         value={r.name}
                         onChange={(e) => updateResource(r.id, { name: e.target.value })}
-                        placeholder="Resource name"
+                        placeholder={STACK_LISTS.resources.item("name").placeholder}
                         className="h-9 font-medium"
                       />
                     </div>
                     <div>
                       <LabelRow
-                        label="Type"
+                        label={STACK_LISTS.resources.item("resource_type").label}
                         onCoach={() =>
                           openCoach({
-                            id: `offer_stack.stack.resources.${r.id}.resource_type`,
-                            label: `Resource ${idx + 1} — Type`,
-                            helper: "Template, Ebook, Checklist, Swipe file…",
+                            ...STACK_LISTS.resources.itemCoach("resource_type", r.id, idx),
                             currentValue: r.resource_type ?? "",
                             apply: (v) => updateResource(r.id, { resource_type: v }),
                           })
@@ -504,18 +489,16 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       <Input
                         value={r.resource_type ?? ""}
                         onChange={(e) => updateResource(r.id, { resource_type: e.target.value })}
-                        placeholder="Type (Template, Ebook, Checklist…)"
+                        placeholder={STACK_LISTS.resources.item("resource_type").placeholder}
                         className="h-8 text-sm"
                       />
                     </div>
                     <div>
                       <LabelRow
-                        label="Description"
+                        label={STACK_LISTS.resources.item("description").label}
                         onCoach={() =>
                           openCoach({
-                            id: `offer_stack.stack.resources.${r.id}.description`,
-                            label: `Resource ${idx + 1} — Description`,
-                            helper: "Short description of what's inside and how it's used.",
+                            ...STACK_LISTS.resources.itemCoach("description", r.id, idx),
                             currentValue: r.description ?? "",
                             apply: (v) => updateResource(r.id, { description: v }),
                           })
@@ -524,7 +507,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       <AutoTextarea
                         value={r.description ?? ""}
                         onChange={(e) => updateResource(r.id, { description: e.target.value })}
-                        placeholder="Short description…"
+                        placeholder={STACK_LISTS.resources.item("description").placeholder}
                         rows={2}
                         className="resize-none text-sm"
                       />
@@ -543,29 +526,20 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         {/* Support System */}
         <BuilderCard
           icon={MessageCircle}
-          title="Support System"
-          description="How will clients reach you and your team?"
-          addLabel="Add Support Channel"
+          title={STACK_LISTS.support_channels.title}
+          description={STACK_LISTS.support_channels.description}
+          addLabel={STACK_LISTS.support_channels.addLabel}
           onAdd={() => addSupport()}
           onCoach={() =>
             openListCoach({
-              id: "stack_support_channels",
-              label: "Support System",
-              helper: "Channels clients use to reach you (Slack, Voxer, calls…).",
-              basePath: "offer_stack.stack.support_channels",
-              itemFields: [
-                { key: "name", label: "Name", kind: "text", helper: "Channel name (Slack, WhatsApp, Q&A calls…)." },
-                { key: "frequency", label: "Frequency / Availability", kind: "text", helper: "When are you available (e.g. Mon–Fri 9–5)." },
-                { key: "description", label: "Description", kind: "textarea", helper: "What kind of support happens here and typical response time." },
-              ],
+              ...STACK_LISTS.support_channels.listCoach,
               currentCount: data.support_channels.length,
-              suggestedCount: [2, 4],
               appendItem: appendSupport,
               appendItems: appendSupports,
             })
           }
           count={data.support_channels.length}
-          emptyText="No support channels yet. Quick-add common ones or add custom."
+          emptyText={STACK_LISTS.support_channels.emptyText}
           emptyAction={
             <div className="space-y-3">
               <QuickAddChips options={SUPPORT_QUICK_PICKS.slice(0, 8)} onPick={(v) => addSupport(v)} />
@@ -588,18 +562,16 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                   <CollapsibleItem
                     key={s.id}
                     title={s.name}
-                    fallbackTitle={`Support Channel ${idx + 1}`}
+                    fallbackTitle={STACK_LISTS.support_channels.fallbackTitle(idx)}
                     defaultOpen={!s.name}
                     onDelete={() => removeSupport(s.id)}
                   >
                     <div>
                       <LabelRow
-                        label="Channel Name"
+                        label={STACK_LISTS.support_channels.item("name").label}
                         onCoach={() =>
                           openCoach({
-                            id: `offer_stack.stack.support_channels.${s.id}.name`,
-                            label: `Support Channel ${idx + 1} — Name`,
-                            helper: "Which channel do clients use? (Slack, Voxer, Zoom…)",
+                            ...STACK_LISTS.support_channels.itemCoach("name", s.id, idx),
                             currentValue: s.name ?? "",
                             apply: (v) => updateSupport(s.id, { name: v }),
                           })
@@ -608,18 +580,16 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       <Input
                         value={s.name}
                         onChange={(e) => updateSupport(s.id, { name: e.target.value })}
-                        placeholder="Channel name (e.g. Slack)"
+                        placeholder={STACK_LISTS.support_channels.item("name").placeholder}
                         className="h-9 font-medium"
                       />
                     </div>
                     <div>
                       <LabelRow
-                        label="Frequency / Availability"
+                        label={STACK_LISTS.support_channels.item("frequency").label}
                         onCoach={() =>
                           openCoach({
-                            id: `offer_stack.stack.support_channels.${s.id}.frequency`,
-                            label: `Support Channel ${idx + 1} — Frequency`,
-                            helper: "When are you available on this channel?",
+                            ...STACK_LISTS.support_channels.itemCoach("frequency", s.id, idx),
                             currentValue: s.frequency ?? "",
                             apply: (v) => updateSupport(s.id, { frequency: v }),
                           })
@@ -628,18 +598,16 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       <Input
                         value={s.frequency ?? ""}
                         onChange={(e) => updateSupport(s.id, { frequency: e.target.value })}
-                        placeholder="Frequency / availability (e.g. Mon–Fri 9–5 CET)"
+                        placeholder={STACK_LISTS.support_channels.item("frequency").placeholder}
                         className="h-8 text-sm"
                       />
                     </div>
                     <div>
                       <LabelRow
-                        label="Description"
+                        label={STACK_LISTS.support_channels.item("description").label}
                         onCoach={() =>
                           openCoach({
-                            id: `offer_stack.stack.support_channels.${s.id}.description`,
-                            label: `Support Channel ${idx + 1} — Description`,
-                            helper: "What kind of questions are answered here? Expected response time?",
+                            ...STACK_LISTS.support_channels.itemCoach("description", s.id, idx),
                             currentValue: s.description ?? "",
                             apply: (v) => updateSupport(s.id, { description: v }),
                           })
@@ -648,7 +616,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                       <AutoTextarea
                         value={s.description ?? ""}
                         onChange={(e) => updateSupport(s.id, { description: e.target.value })}
-                        placeholder="Short description…"
+                        placeholder={STACK_LISTS.support_channels.item("description").placeholder}
                         rows={2}
                         className="resize-none text-sm"
                       />
@@ -667,29 +635,20 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         {/* Bonuses */}
         <BuilderCard
           icon={Gift}
-          title="Bonuses"
-          description="Additional incentives that tip the decision in your favor."
-          addLabel="Add Bonus"
+          title={STACK_LISTS.bonuses.title}
+          description={STACK_LISTS.bonuses.description}
+          addLabel={STACK_LISTS.bonuses.addLabel}
           onAdd={addBonus}
           onCoach={() =>
             openListCoach({
-              id: "stack_bonuses",
-              label: "Bonuses",
-              helper: "High-value bonuses that tip the buying decision.",
-              basePath: "offer_stack.stack.bonuses",
-              itemFields: [
-                { key: "name", label: "Name", kind: "text", helper: "Punchy bonus name." },
-                { key: "description", label: "Description", kind: "textarea", helper: "What it is and why it's valuable." },
-                { key: "perceived_value", label: "Perceived Value", kind: "text", helper: "Stated dollar value (e.g. €497 value)." },
-              ],
+              ...STACK_LISTS.bonuses.listCoach,
               currentCount: data.bonuses.length,
-              suggestedCount: [2, 4],
               appendItem: appendBonus,
               appendItems: appendBonuses,
             })
           }
           count={data.bonuses.length}
-          emptyText="No bonuses yet. Add 1–3 high-value bonuses to anchor perceived value."
+          emptyText={STACK_LISTS.bonuses.emptyText}
         >
           {data.bonuses.length > 0 && (
             <div className="space-y-2">
@@ -697,18 +656,16 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                 <CollapsibleItem
                   key={b.id}
                   title={b.name}
-                  fallbackTitle={`Bonus ${idx + 1}`}
+                  fallbackTitle={STACK_LISTS.bonuses.fallbackTitle(idx)}
                   defaultOpen={!b.name}
                   onDelete={() => removeBonus(b.id)}
                 >
                   <div>
                     <LabelRow
-                      label="Bonus Title"
+                      label={STACK_LISTS.bonuses.item("name").label}
                       onCoach={() =>
                         openCoach({
-                          id: `offer_stack.stack.bonuses.${b.id}.name`,
-                          label: `Bonus ${idx + 1} — Name`,
-                          helper: "A punchy name for this bonus.",
+                          ...STACK_LISTS.bonuses.itemCoach("name", b.id, idx),
                           currentValue: b.name ?? "",
                           apply: (v) => updateBonus(b.id, { name: v }),
                         })
@@ -717,7 +674,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                     <Input
                       value={b.name}
                       onChange={(e) => updateBonus(b.id, { name: e.target.value })}
-                      placeholder="Bonus name"
+                      placeholder={STACK_LISTS.bonuses.item("name").placeholder}
                       className="h-9 font-medium"
                     />
                   </div>
@@ -733,12 +690,10 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                   </div>
                   <div>
                     <LabelRow
-                      label="Description"
+                      label={STACK_LISTS.bonuses.item("description").label}
                       onCoach={() =>
                         openCoach({
-                          id: `offer_stack.stack.bonuses.${b.id}.description`,
-                          label: `Bonus ${idx + 1} — Description`,
-                          helper: "What is this bonus and why is it valuable?",
+                          ...STACK_LISTS.bonuses.itemCoach("description", b.id, idx),
                           currentValue: b.description ?? "",
                           apply: (v) => updateBonus(b.id, { description: v }),
                         })
@@ -747,19 +702,17 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                     <AutoTextarea
                       value={b.description ?? ""}
                       onChange={(e) => updateBonus(b.id, { description: e.target.value })}
-                      placeholder="Short description…"
+                      placeholder={STACK_LISTS.bonuses.item("description").placeholder}
                       rows={2}
                       className="resize-none text-sm"
                     />
                   </div>
                   <div>
                     <LabelRow
-                      label="Perceived Value"
+                      label={STACK_LISTS.bonuses.item("perceived_value").label}
                       onCoach={() =>
                         openCoach({
-                          id: `offer_stack.stack.bonuses.${b.id}.perceived_value`,
-                          label: `Bonus ${idx + 1} — Perceived Value`,
-                          helper: "The stated dollar value of this bonus (e.g. €497 value).",
+                          ...STACK_LISTS.bonuses.itemCoach("perceived_value", b.id, idx),
                           currentValue: b.perceived_value ?? "",
                           apply: (v) => updateBonus(b.id, { perceived_value: v }),
                         })
@@ -768,7 +721,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                     <Input
                       value={b.perceived_value ?? ""}
                       onChange={(e) => updateBonus(b.id, { perceived_value: e.target.value })}
-                      placeholder="Perceived value (e.g. €497 value)"
+                      placeholder={STACK_LISTS.bonuses.item("perceived_value").placeholder}
                       className="h-9 text-sm"
                     />
                   </div>
@@ -785,9 +738,9 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <Label className="text-lg font-display font-bold text-foreground">Delivery Timeline</Label>
+              <Label className="text-lg font-display font-bold text-foreground">{TIMELINE.label}</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Over what timeframe is the value delivered?
+                {TIMELINE.helper}
               </p>
             </div>
           </div>
@@ -805,29 +758,20 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
         {/* Milestones */}
         <BuilderCard
           icon={Map}
-          title="Milestones"
-          description="The step-by-step journey through your offer."
-          addLabel="Add Milestone"
+          title={STACK_LISTS.milestones.title}
+          description={STACK_LISTS.milestones.description}
+          addLabel={STACK_LISTS.milestones.addLabel}
           onAdd={addMilestone}
           onCoach={() =>
             openListCoach({
-              id: "stack_milestones",
-              label: "Milestones",
-              helper: "The phases clients move through in your offer.",
-              basePath: "offer_stack.stack.milestones",
-              itemFields: [
-                { key: "phase_name", label: "Phase Name", kind: "text", helper: "Short, evocative phase name." },
-                { key: "description", label: "Description", kind: "textarea", helper: "What happens in this phase." },
-                { key: "expected_outcome", label: "Expected Outcome", kind: "textarea", helper: "Concrete result after this phase." },
-              ],
+              ...STACK_LISTS.milestones.listCoach,
               currentCount: data.milestones.length,
-              suggestedCount: [3, 5],
               appendItem: appendMilestone,
               appendItems: appendMilestones,
             })
           }
           count={data.milestones.length}
-          emptyText="Map out the phases your clients move through. Most great programs have 3–5."
+          emptyText={STACK_LISTS.milestones.emptyText}
         >
           {data.milestones.length > 0 && (
             <div className="space-y-2">
@@ -835,7 +779,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                 <CollapsibleItem
                   key={m.id}
                   title={m.phase_name}
-                  fallbackTitle={`Milestone ${idx + 1}`}
+                  fallbackTitle={STACK_LISTS.milestones.fallbackTitle(idx)}
                   leading={
                     <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-[10px] shrink-0">
                       {idx + 1}
@@ -846,12 +790,10 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                 >
                   <div>
                     <LabelRow
-                      label="Phase Name"
+                      label={STACK_LISTS.milestones.item("phase_name").label}
                       onCoach={() =>
                         openCoach({
-                          id: `offer_stack.stack.milestones.${m.id}.phase_name`,
-                          label: `Milestone ${idx + 1} — Phase Name`,
-                          helper: "Short, evocative name for this phase.",
+                          ...STACK_LISTS.milestones.itemCoach("phase_name", m.id, idx),
                           currentValue: m.phase_name ?? "",
                           apply: (v) => updateMilestone(m.id, { phase_name: v }),
                         })
@@ -860,18 +802,16 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                     <Input
                       value={m.phase_name}
                       onChange={(e) => updateMilestone(m.id, { phase_name: e.target.value })}
-                      placeholder="Phase name (e.g. Awareness)"
+                      placeholder={STACK_LISTS.milestones.item("phase_name").placeholder}
                       className="h-9 font-medium"
                     />
                   </div>
                   <div>
                     <LabelRow
-                      label="Description"
+                      label={STACK_LISTS.milestones.item("description").label}
                       onCoach={() =>
                         openCoach({
-                          id: `offer_stack.stack.milestones.${m.id}.description`,
-                          label: `Milestone ${idx + 1} — Description`,
-                          helper: "What happens during this phase?",
+                          ...STACK_LISTS.milestones.itemCoach("description", m.id, idx),
                           currentValue: m.description ?? "",
                           apply: (v) => updateMilestone(m.id, { description: v }),
                         })
@@ -880,19 +820,17 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                     <AutoTextarea
                       value={m.description ?? ""}
                       onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
-                      placeholder="Description"
+                      placeholder={STACK_LISTS.milestones.item("description").placeholder}
                       rows={2}
                       className="resize-none text-sm"
                     />
                   </div>
                   <div>
                     <LabelRow
-                      label="Expected Outcome"
+                      label={STACK_LISTS.milestones.item("expected_outcome").label}
                       onCoach={() =>
                         openCoach({
-                          id: `offer_stack.stack.milestones.${m.id}.expected_outcome`,
-                          label: `Milestone ${idx + 1} — Expected Outcome`,
-                          helper: "The concrete result the client walks away with after this phase.",
+                          ...STACK_LISTS.milestones.itemCoach("expected_outcome", m.id, idx),
                           currentValue: m.expected_outcome ?? "",
                           apply: (v) => updateMilestone(m.id, { expected_outcome: v }),
                         })
@@ -901,7 +839,7 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
                     <AutoTextarea
                       value={m.expected_outcome ?? ""}
                       onChange={(e) => updateMilestone(m.id, { expected_outcome: e.target.value })}
-                      placeholder="Expected outcome"
+                      placeholder={STACK_LISTS.milestones.item("expected_outcome").placeholder}
                       rows={2}
                       className="resize-none text-sm"
                     />
