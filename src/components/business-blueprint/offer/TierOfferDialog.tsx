@@ -153,6 +153,9 @@ export default function TierOfferDialog({
           {tab.sections.map((section) => {
             const main = section.items.filter((i) => i.status !== "optional");
             const extra = section.items.filter((i) => i.status === "optional");
+            // Count visual controls, not paths (framework + guarantee render as one block).
+            const extraCount = extra.filter((i) => i.kind === "relationship" || (!RENDERED_BY_GROUP.has(i.path)
+              && !(FRAMEWORK_PATHS.has(i.path) && i.path !== extra.find((x) => x.kind !== "relationship" && FRAMEWORK_PATHS.has(x.path))?.path))).length;
             return (
               <section key={section.id} data-offer-section={section.id} className="space-y-3">
                 <h3 className="text-base font-display font-bold text-foreground">{section.label}</h3>
@@ -162,7 +165,7 @@ export default function TierOfferDialog({
                     <CollapsibleTrigger className="group flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
                       <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-180" />
                       More options
-                      <Badge variant="secondary" className="text-[10px]">{extra.length}</Badge>
+                      <Badge variant="secondary" className="text-[10px]">{extraCount}</Badge>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-3 space-y-3">
                       {extra.map((i) => renderItem(i, rendered))}
