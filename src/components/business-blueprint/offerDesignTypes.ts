@@ -8,6 +8,7 @@
 // =============================================================================
 
 import { Lightbulb, Layers, DollarSign, Network, type LucideIcon } from "lucide-react";
+import { PAYMENT_PLAN_EDITOR_OPTIONS, GUARANTEE_EDITOR_OPTIONS } from "@shared/blueprintRegistry";
 
 // ---------- Tab 1: Offer Angle ----------------------------------------------
 
@@ -394,22 +395,9 @@ export const FREQUENCY_OPTIONS: { value: DeliveryFrequency; label: string }[] = 
   { value: "ongoing", label: "Ongoing" },
 ];
 
-export const PAYMENT_PLAN_TYPES: { value: PaymentPlanType; label: string }[] = [
-  { value: "full_pay", label: "Full Pay" },
-  { value: "split_2", label: "2 Pay" },
-  { value: "split_3", label: "3 Pay" },
-  { value: "split_6", label: "6 Pay" },
-  { value: "monthly", label: "Monthly" },
-  { value: "custom", label: "Custom" },
-];
-
-export const GUARANTEE_OPTIONS: { value: GuaranteeType; label: string }[] = [
-  { value: "none", label: "No Guarantee" },
-  { value: "refund", label: "Refund Guarantee" },
-  { value: "performance", label: "Performance Guarantee" },
-  { value: "milestone", label: "Milestone Guarantee" },
-  { value: "custom", label: "Custom" },
-];
+// Option labels live in the central registry (editor display labels).
+export const PAYMENT_PLAN_TYPES = PAYMENT_PLAN_EDITOR_OPTIONS as { value: PaymentPlanType; label: string }[];
+export const GUARANTEE_OPTIONS = GUARANTEE_EDITOR_OPTIONS as { value: GuaranteeType; label: string }[];
 
 // ---------- 🆕 SHARED DELIVERY LIBRARY (used across all tabs) ---------------
 

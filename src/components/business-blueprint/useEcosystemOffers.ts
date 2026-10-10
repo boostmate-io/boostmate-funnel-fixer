@@ -33,6 +33,8 @@ export interface EcosystemOfferRow {
     core_outcome?: string;
     delivery_types?: string[];
     price?: number | "";
+    /** Full offer design (Angle/Stack/Pricing); present on additional Core rows. */
+    design?: OfferDesignData;
   };
   user_id: string;
   sub_account_id: string | null;
