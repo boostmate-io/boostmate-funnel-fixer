@@ -8,9 +8,6 @@ import { OfferCoachScopeProvider, type ScopedOfferCoach, type ScopedPersistResul
 import { fieldsForTier } from "@shared/blueprintRegistry";
 import OfferEditorShell, { type OfferSaveStatus, type OfferEditorTab } from "./OfferEditorShell";
 import type { CoachBlueprintWrite } from "@/lib/coach/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import OfferAngleTab from "./OfferAngleTab";
 import OfferStackTab from "./OfferStackTab";
 import PricingTab from "./PricingTab";
@@ -48,10 +45,6 @@ interface Props {
   externalRevision?: number;
 }
 
-/** Clicks/focus/Escape inside the floating AI Coach must not dismiss the editor. */
-const isInsideCoach = (target: EventTarget | null) =>
-  target instanceof Element && !!target.closest("[data-coach-panel]");
-
 export default function CoreOfferDialog({
   open,
   onOpenChange,
@@ -60,7 +53,7 @@ export default function CoreOfferDialog({
   onChange,
   saving,
   offerId = "primary",
-  isPrimary = !scopedOffer,
+  isPrimary,
   initialTab,
   saveStatus,
   flushChanges,
@@ -87,6 +80,14 @@ export default function CoreOfferDialog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalRevision]);
+
+  // Primary Coach writes arrive via the Blueprint; optimistic manual edits do too.
+  useEffect(() => {
+    if (open && !scopedOffer) {
+      dataRef.current = initial;
+      setData(initial);
+    }
+  }, [initial, open, scopedOffer]);
 
 
   const update = (next: OfferDesignData) => {
@@ -126,6 +127,6 @@ export default function CoreOfferDialog({
   };
   const tabs: OfferEditorTab[] = fieldsForTier("core").subBlocks.filter((section) => content[section.id]).map((section) => ({ id: section.id, label: section.label, content: content[section.id] }));
   return <OfferCoachScopeProvider value={coachScope}>
-    <OfferEditorShell open={open} onOpenChange={onOpenChange} offer={{ id: offerId, name: data.angle.main_offer_name || title, category: "Core Offer", primary: isPrimary }} tabs={tabs} initialTab={initialTab} saveStatus={saveStatus ?? (saving ? "saving" : "saved")} flushChanges={flushChanges} />
+    <OfferEditorShell open={open} onOpenChange={onOpenChange} offer={{ id: offerId, name: data.angle.main_offer_name || title, category: "Core Offer", primary: isPrimary ?? !scopedOffer }} tabs={tabs} initialTab={initialTab} saveStatus={saveStatus ?? (saving ? "saving" : "saved")} flushChanges={flushChanges} />
   </OfferCoachScopeProvider>;
 }

@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -230,11 +231,19 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-label="AI Coach"
       data-coach-panel=""
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          onOpenChange(false);
+          document.querySelector<HTMLButtonElement>('[aria-label="Open AI Coach"]')?.focus();
+        }
+      }}
       className={cn(
         "fixed z-50 flex flex-col border border-border bg-card shadow-2xl overflow-hidden animate-in fade-in duration-200",
         fullscreen
@@ -253,22 +262,22 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
           </div>
           <div className="text-[11px] text-muted-foreground truncate">{t.subtitle}</div>
         </div>
-        <button
+        <Button variant="ghost" size="icon"
           type="button"
           aria-label={fullscreen ? t.collapse : t.expand}
           onClick={() => setFullscreen((v) => !v)}
-          className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          className="min-h-11 min-w-11 text-muted-foreground"
         >
           {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost" size="icon"
           type="button"
           aria-label={t.close}
           onClick={() => onOpenChange(false)}
-          className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          className="min-h-11 min-w-11 text-muted-foreground"
         >
           <X className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
 
       {/* Messages */}
@@ -302,6 +311,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
       <div className="border-t bg-card p-3">
         <div className={cn("flex items-end gap-2", fullscreen && "max-w-3xl mx-auto w-full")}>
           <Textarea
+            aria-label="Message AI Coach"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -317,6 +327,8 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
           />
           <Button
             size="icon"
+            aria-label="Send message"
+            className="min-h-11 min-w-11"
             onClick={() => handleSend()}
             disabled={!input.trim() || isBusy}
           >
@@ -329,7 +341,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
         </div>
       </div>
 
-    </div>
+    </div>, document.body
   );
 };
 

@@ -33,6 +33,7 @@ import {
 import { useEcosystemOffers, type EcosystemOfferRow } from "../useEcosystemOffers";
 import { getBusinessType } from "../businessTypes";
 import { designToRowValues } from "@/lib/offers/offerRepository";
+import type { OfferSaveStatus } from "./OfferEditorShell";
 
 
 interface Props {
@@ -40,6 +41,8 @@ interface Props {
   offerDesign: OfferDesignData;
   onChangeOfferDesign?: (patch: Partial<OfferDesignData>) => void;
   saving: boolean;
+  primarySaveStatus?: OfferSaveStatus;
+  flushPrimary?: () => Promise<boolean>;
   businessType?: string;
   pendingOpenOfferId?: string | null;
   onOpenedOffer?: () => void;
@@ -176,10 +179,10 @@ const OfferFieldsEditor = ({
   );
 };
 
-const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, saving, businessType, pendingOpenOfferId, onOpenedOffer }: Props) => {
+const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, saving, primarySaveStatus, flushPrimary, businessType, pendingOpenOfferId, onOpenedOffer }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
-  const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer, applyCoachWrites } = useEcosystemOffers({ blueprintId });
+  const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer, applyCoachWrites, saveStatuses } = useEcosystemOffers({ blueprintId });
   const [coachRevision, setCoachRevision] = useState(0);
   const progress = calcEcosystemProgress(tierCounts);
   const { openCoach, openListCoach, panel } = useOfferCoach(() => ({ offer_ecosystem: offers }));
@@ -445,12 +448,14 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
         open={!!editing}
         onOpenChange={(o) => {
           if (!o) {
-            // Persist any debounced edits immediately when the editor closes.
-            if (editing && !editing.isPrimary) void flushOffer(editing.id);
             setEditing(null);
           }
         }}
         title={dialogTitle}
+        offerId={editing?.id}
+        isPrimary={editing?.isPrimary}
+        saveStatus={editing?.isPrimary ? primarySaveStatus : saveStatuses[editing?.id ?? ""] ?? "saved"}
+        flushChanges={editing?.isPrimary ? flushPrimary : editing ? () => flushOffer(editing.id) : undefined}
         initial={dialogInitial}
         onChange={handleDialogChange}
         scopedOffer={
