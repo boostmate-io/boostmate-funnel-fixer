@@ -61,6 +61,10 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
   const snapshotFor = (): BlueprintRow =>
     (scoped ? { offer_stack: scoped.getDesign() } : buildSnapshot()) as unknown as BlueprintRow;
   const keyFor = (base: string) => (scoped ? `${base}@offer:${scoped.offerId}` : base);
+  // Scoped: the active offer for this Coach turn (re-verified by the server).
+  const activeOffer = scoped
+    ? { id: scoped.offerId, isPrimary: false, name: scoped.offerName, tier: "core", getDraftDesign: () => scoped.getDesign() }
+    : null;
 
   const openCoachField = (spec: OfferCoachSpec) => {
     if (!activeSubAccountId) return;
@@ -85,6 +89,7 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
       target: ctx.target,
       blueprintSnapshot: snapshot,
       onApply: spec.apply,
+      ...(activeOffer ? { activeOffer } : {}),
       // Scoped: an explicit handler so the global Blueprint fallback can never run.
       ...(scoped ? { onApplyBlueprintWrites: (writes: CoachBlueprintWrite[]) => applyScopedWrites(scoped, writes) } : {}),
     });
@@ -114,6 +119,7 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
       mode: "section",
       target: ctx.target,
       blueprintSnapshot: snapshot,
+      ...(activeOffer ? { activeOffer } : {}),
       onApplyBlueprintWrites: (writes) => scoped ? applyScopedWrites(scoped, writes) : applyListWrites(spec, writes),
     });
   };
