@@ -87,7 +87,7 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
       blueprintSnapshot: snapshot,
       onApply: spec.apply,
       // Scoped: an explicit handler so the global Blueprint fallback can never run.
-      ...(scoped ? { onApplyBlueprintWrites: (writes: CoachBlueprintWrite[]) => applyScopedWrites(scoped, writes) } : {}),
+      ...(scoped ? { onApplyBlueprintWrites: (writes: CoachBlueprintWrite[]) => { applyScopedWrites(scoped, writes); } } : {}),
     });
   };
 
