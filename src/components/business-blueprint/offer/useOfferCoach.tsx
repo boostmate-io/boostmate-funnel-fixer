@@ -114,7 +114,7 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
       mode: "section",
       target: ctx.target,
       blueprintSnapshot: snapshot,
-      onApplyBlueprintWrites: (writes) => applyListWrites(spec, writes),
+      onApplyBlueprintWrites: (writes) => scoped ? applyScopedWrites(scoped, writes) : applyListWrites(spec, writes),
     });
   };
 
@@ -163,7 +163,8 @@ async function applyListWrites(spec: OfferListCoachSpec, writes: CoachBlueprintW
     const fieldKey = fieldParts.join(".");
     if (!spec.itemFields.some((f) => f.key === fieldKey)) continue;
     if (!groups.has(itemKey)) groups.set(itemKey, {});
-    groups.get(itemKey)![fieldKey] = String(w.value ?? "");
+    const group = groups.get(itemKey);
+    if (group) group[fieldKey] = String(w.value ?? "");
   }
   const items = [...groups.values()];
   if (spec.appendItems) {

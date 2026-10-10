@@ -15,6 +15,7 @@ import {
   emptyProofAuthority,
   normalizeProofAuthority,
 } from "./proofAuthorityTypes";
+import type { OfferSaveStatus } from "./offer/OfferEditorShell";
 
 export function useBlueprint() {
   const { activeSubAccountId } = useWorkspace();
@@ -25,12 +26,54 @@ export function useBlueprint() {
   const [proofAuthority, setProofAuthority] = useState<ProofAuthorityData>(emptyProofAuthority());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [offerSaveStatus, setOfferSaveStatus] = useState<OfferSaveStatus>("saved");
+  const pendingOffer = useRef<{ id: string; design: OfferDesignData } | null>(null);
+  const offerChain = useRef<Promise<boolean>>(Promise.resolve(true));
   const claritySaveTimer = useRef<number | null>(null);
   const offerSaveTimer = useRef<number | null>(null);
   const growthSaveTimer = useRef<number | null>(null);
   const proofSaveTimer = useRef<number | null>(null);
   const brandSaveTimer = useRef<number | null>(null);
   const loadedForKeyRef = useRef<string | null>(null);
+
+  const flushOfferDesign = useCallback((): Promise<boolean> => {
+    if (offerSaveTimer.current) window.clearTimeout(offerSaveTimer.current);
+    offerSaveTimer.current = null;
+    const run = offerChain.current.catch(() => false).then(async () => {
+      while (pendingOffer.current) {
+        const job = pendingOffer.current;
+        pendingOffer.current = null;
+        setOfferSaveStatus("saving");
+        setSaving(true);
+        let failed = false;
+        try {
+          const { error } = await supabase.from("business_blueprints").update({ offer_stack: job.design as any }).eq("id", job.id);
+          failed = !!error;
+        } catch { failed = true; }
+        setSaving(false);
+        if (failed) {
+          if (!pendingOffer.current) pendingOffer.current = job;
+          setOfferSaveStatus("error");
+          toast.error("Save failed — your changes are kept. Please retry.");
+          return false;
+        }
+      }
+      setOfferSaveStatus("saved");
+      return true;
+    });
+    offerChain.current = run;
+    return run;
+  }, []);
+
+  // A primary Coach write first drains manual edits, then reads the latest row.
+  useEffect(() => {
+    const beforeCoachWrite = (event: Event) => {
+      const detail = (event as CustomEvent<{ subAccountId: string; waitUntil: (promise: Promise<boolean>) => void }>).detail;
+      if (detail.subAccountId === activeSubAccountId) detail.waitUntil(flushOfferDesign());
+    };
+    window.addEventListener("blueprint:before-coach-write", beforeCoachWrite);
+    return () => window.removeEventListener("blueprint:before-coach-write", beforeCoachWrite);
+  }, [activeSubAccountId, flushOfferDesign]);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!activeSubAccountId || !userId) return;
@@ -68,7 +111,7 @@ export function useBlueprint() {
     // Normalize the offer_stack JSON into the v2 structured shape (clean slate
     // for legacy free-text values).
     const normalized = normalizeOfferDesign(row.offer_stack);
-    setOfferDesign(normalized);
+    setOfferDesign(pendingOffer.current?.id === row.id ? pendingOffer.current.design : normalized);
     setProofAuthority(normalizeProofAuthority(row.proof_authority));
     setBlueprint(row);
     if (!silent) setLoading(false);
@@ -98,7 +141,6 @@ export function useBlueprint() {
       // BEFORE the Coach's write and silently overwrite the applied fields.
       for (const timer of [
         claritySaveTimer,
-        offerSaveTimer,
         growthSaveTimer,
         proofSaveTimer,
         brandSaveTimer,
@@ -145,21 +187,15 @@ export function useBlueprint() {
           pricing: { ...prev.pricing, ...(patch.pricing || {}) },
         };
         const blueprintId = blueprint?.id;
+        if (!blueprintId) return prev;
+        pendingOffer.current = { id: blueprintId, design: next };
+        setOfferSaveStatus("pending");
         if (offerSaveTimer.current) window.clearTimeout(offerSaveTimer.current);
-        offerSaveTimer.current = window.setTimeout(async () => {
-          if (!blueprintId) return;
-          setSaving(true);
-          const { error } = await supabase
-            .from("business_blueprints")
-            .update({ offer_stack: next as any })
-            .eq("id", blueprintId);
-          setSaving(false);
-          if (error) toast.error("Save failed");
-        }, 800);
+        offerSaveTimer.current = window.setTimeout(() => void flushOfferDesign(), 800);
         return next;
       });
     },
-    [blueprint?.id],
+    [blueprint?.id, flushOfferDesign],
   );
 
   const updateGrowthSystem = useCallback(
@@ -238,6 +274,8 @@ export function useBlueprint() {
     proofAuthority,
     loading,
     saving,
+    offerSaveStatus,
+    flushOfferDesign,
     updateCustomerClarity,
     updateOfferDesign,
     updateGrowthSystem,

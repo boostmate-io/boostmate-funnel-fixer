@@ -54,6 +54,8 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
   const [offers, setOffersState] = useState<EcosystemOfferRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
+  const [saveStatuses, setSaveStatuses] = useState<Record<string, "pending" | "saving" | "saved" | "error">>({});
+  const setSaveStatus = (id: string, status: "pending" | "saving" | "saved" | "error") => setSaveStatuses((prev) => ({ ...prev, [id]: status }));
 
   // Source of truth for synchronous reads (several updates can land in one tick).
   const offersRef = useRef<EcosystemOfferRow[]>([]);
@@ -113,17 +115,22 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
       pending.current.delete(id);
       syncPendingCount();
       inFlight.current.set(id, values);
-      const { error } = await updateEcosystemOffer(id, values);
+      setSaveStatus(id, "saving");
+      let error: unknown;
+      try { ({ error } = await updateEcosystemOffer(id, values)); }
+      catch (failure) { error = failure; }
       if (inFlight.current.get(id) === values) inFlight.current.delete(id);
       if (error) {
         // Keep the edit queued (unless newer edits arrived) so it is retried.
         if (!pending.current.has(id)) pending.current.set(id, values);
         syncPendingCount();
+        setSaveStatus(id, "error");
         toast.error("Save failed — your changes are kept and will be retried.");
         const retry = window.setTimeout(() => void flushOfferRef.current(id), 5000);
         timers.current.set(id, retry);
         return false;
       }
+      setSaveStatus(id, pending.current.has(id) ? "pending" : "saved");
       emitChange();
       return true;
     },
@@ -221,6 +228,7 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
       };
       setOffers((prev) => prev.map((o) => (o.id === id ? { ...o, ...merged } : o)));
       pending.current.set(id, merged);
+      setSaveStatus(id, "pending");
       syncPendingCount();
       const t = timers.current.get(id);
       if (t) window.clearTimeout(t);
@@ -300,5 +308,6 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
     applyCoachWrites,
     getOffer,
     hasPendingChanges: pendingCount > 0,
+    saveStatuses,
   };
 }

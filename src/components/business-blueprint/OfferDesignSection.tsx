@@ -21,18 +21,21 @@ import OfferAngleTab from "./offer/OfferAngleTab";
 import OfferStackTab from "./offer/OfferStackTab";
 import PricingTab from "./offer/PricingTab";
 import OfferEcosystemTab from "./offer/OfferEcosystemTab";
+import type { OfferSaveStatus } from "./offer/OfferEditorShell";
 
 interface Props {
   blueprintId: string | null;
   data: OfferDesignData;
   onChange: (patch: Partial<OfferDesignData>) => void;
   saving: boolean;
+  primarySaveStatus?: OfferSaveStatus;
+  flushPrimary?: () => Promise<boolean>;
   businessType?: string;
   pendingOpenOfferId?: string | null;
   onOpenedOffer?: () => void;
 }
 
-const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType, pendingOpenOfferId, onOpenedOffer }: Props) => {
+const OfferDesignSection = ({ blueprintId, data, onChange, saving, primarySaveStatus, flushPrimary, businessType, pendingOpenOfferId, onOpenedOffer }: Props) => {
   const [active, setActive] = useState<OfferTab>("angle");
 
   useEffect(() => {
@@ -127,6 +130,8 @@ const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType,
             blueprintId={blueprintId}
             offerDesign={data}
             onChangeOfferDesign={onChange}
+            primarySaveStatus={primarySaveStatus}
+            flushPrimary={flushPrimary}
             saving={saving}
             businessType={businessType}
             pendingOpenOfferId={pendingOpenOfferId ?? null}

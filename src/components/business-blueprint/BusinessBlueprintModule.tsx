@@ -40,7 +40,7 @@ const BusinessBlueprintModule = () => {
   const [pendingOpenOfferId, setPendingOpenOfferId] = useState<string | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const { blueprint, offerDesign, proofAuthority, loading, saving, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, updateProofAuthority, updateBrandStrategy, setShareToken } = useBlueprint();
+  const { blueprint, offerDesign, proofAuthority, loading, saving, offerSaveStatus, flushOfferDesign, updateCustomerClarity, updateOfferDesign, updateGrowthSystem, updateProofAuthority, updateBrandStrategy, setShareToken } = useBlueprint();
   const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
   const { activeSubAccount, activeSubAccountId } = useWorkspace() as any;
 
@@ -223,6 +223,8 @@ const BusinessBlueprintModule = () => {
             blueprintId={blueprint.id}
             data={offerData}
             onChange={updateOfferDesign}
+            primarySaveStatus={offerSaveStatus}
+            flushPrimary={flushOfferDesign}
             saving={saving}
             businessType={settings.business_type}
             pendingOpenOfferId={pendingOpenOfferId}

@@ -70,4 +70,14 @@ describe("useOfferCoach — scoped additional Core Offer", () => {
     expect(scope.persistWrites).toHaveBeenCalledWith(writes);
     expect(res).toEqual({ appliedPaths: ["offer_stack.angle.core_outcome"] });
   });
+
+  it("list writes use the same validated scoped persistence instead of local append callbacks", async () => {
+    const { result } = renderHook(() => useOfferCoach(() => ({})), { wrapper });
+    result.current.openListCoach(listSpec);
+    const [focus] = openCoachSpy.mock.calls[0];
+    const writes = [{ path: "offer_stack.angle.framework.pillars.0.name", label: "Name", value: "Pillar" }];
+    await focus.onApplyBlueprintWrites(writes);
+    expect(scope.persistWrites).toHaveBeenCalledWith(writes);
+    expect(listSpec.appendItem).not.toHaveBeenCalled();
+  });
 });
