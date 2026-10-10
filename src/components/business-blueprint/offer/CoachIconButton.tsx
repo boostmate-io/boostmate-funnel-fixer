@@ -5,6 +5,7 @@
 
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useOfferCoachEnabled } from "./OfferCoachScope";
 
 interface Props {
   onClick: () => void;
@@ -12,8 +13,9 @@ interface Props {
   compact?: boolean;
 }
 
-const CoachIconButton = ({ onClick, label = "AI Coach", compact = false }: Props) => (
-  <Button
+const CoachIconButton = ({ onClick, label = "AI Coach", compact = false }: Props) => {
+  if (!useOfferCoachEnabled()) return null;
+  return <Button
     type="button"
     size="sm"
     variant="ghost"
@@ -27,7 +29,7 @@ const CoachIconButton = ({ onClick, label = "AI Coach", compact = false }: Props
   >
     <Sparkles className="w-3.5 h-3.5" />
     {!compact && <span>{label}</span>}
-  </Button>
-);
+  </Button>;
+};
 
 export default CoachIconButton;

@@ -34,7 +34,8 @@ export interface ScopedOfferCoach {
   persistWrites: (writes: CoachBlueprintWrite[]) => Promise<ScopedPersistResult>;
 }
 
-export type OfferCoachScopeValue = { mode: "primary" } | ScopedOfferCoach;
+/** "disabled": category editors without approved Coach support (no Coach entry points). */
+export type OfferCoachScopeValue = { mode: "primary" } | { mode: "disabled" } | ScopedOfferCoach;
 
 const PRIMARY: OfferCoachScopeValue = { mode: "primary" };
 const Ctx = createContext<OfferCoachScopeValue>(PRIMARY);
@@ -48,3 +49,10 @@ export const OfferCoachScopeProvider = ({
 }) => <Ctx.Provider value={value ?? PRIMARY}>{children}</Ctx.Provider>;
 
 export const useOfferCoachScope = () => useContext(Ctx);
+
+const DISABLED: OfferCoachScopeValue = { mode: "disabled" };
+/** Hides every Offer Design Coach entry point inside (no prompts, no write-backs). */
+export const OfferCoachDisabled = ({ children }: { children: ReactNode }) => (
+  <Ctx.Provider value={DISABLED}>{children}</Ctx.Provider>
+);
+export const useOfferCoachEnabled = () => useContext(Ctx).mode !== "disabled";
