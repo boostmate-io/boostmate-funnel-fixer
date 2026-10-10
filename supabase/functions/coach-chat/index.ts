@@ -2141,6 +2141,60 @@ Deno.serve(async (req) => {
       context.businessContext.blueprintSnapshot = blueprintRow;
     }
 
+    // ---------------------------------------------------------------------
+    // Active offer (server-verified) + related offers.
+    // The client may claim an active offer; identity always comes from the
+    // DB row, scoped to this conversation's workspace.
+    // ---------------------------------------------------------------------
+    const claimedOffer = context?.businessContext?.activeOffer ?? null;
+    let activeOfferRow: OfferRowLite | null = null;
+    if (hasActiveOfferClaim(claimedOffer) && claimedOffer.id !== "primary") {
+      const { data } = await supabase
+        .from("offers")
+        .select("id,name,tier,source,sub_account_id,blueprint_id,sort_order,data")
+        .eq("id", String(claimedOffer.id))
+        .maybeSingle();
+      activeOfferRow = (data as OfferRowLite | null) ?? null;
+    }
+    const resolvedOffer = resolveActiveOffer(claimedOffer, activeOfferRow, subAccountId);
+    if (resolvedOffer.kind === "rejected") {
+      return jsonResponse({ error: "This offer can't be used in this workspace.", code: resolvedOffer.reason }, 403);
+    }
+    const verifiedOffer = resolvedOffer.kind === "additional" ? resolvedOffer.offer : null;
+    let relatedOfferRows: OfferRowLite[] = [];
+    if (blueprintRow?.id) {
+      const { data } = await supabase
+        .from("offers")
+        .select("id,name,tier,source,sub_account_id,blueprint_id,sort_order,data")
+        .eq("blueprint_id", blueprintRow.id)
+        .eq("sub_account_id", subAccountId)
+        .order("sort_order", { ascending: true });
+      relatedOfferRows = (data as OfferRowLite[] | null) ?? [];
+    }
+    if (context?.businessContext) {
+      // Never forward the untrusted client claim to prompt builders.
+      delete context.businessContext.activeOffer;
+      if (verifiedOffer && blueprintRow) {
+        // All path-state logic (filled/empty checks, pricing, walkthroughs)
+        // must see the ACTIVE offer's design under `offer_stack`, never the
+        // Primary's. The prompt renders the layers separately.
+        context.businessContext.blueprintSnapshot = { ...blueprintRow, offer_stack: verifiedOffer.design };
+      }
+      context.businessContext.verifiedActiveOffer = verifiedOffer;
+      context.businessContext.relatedOffersSection = renderRelatedOffersSection(
+        summarizeRelatedOffers(
+          relatedOfferRows,
+          verifiedOffer?.id ?? (resolvedOffer.kind === "primary"
+            ? relatedOfferRows.find((r) => r.source === "blueprint_core")?.id ?? null
+            : relatedOfferRows.find((r) => r.source === "blueprint_core")?.id ?? null),
+          blueprintRow?.offer_stack ?? null,
+        ),
+        verifiedOffer?.tier ?? (resolvedOffer.kind === "primary" ? "core" : null),
+      );
+    }
+    const activeOfferPart = offerContextPart(verifiedOffer, resolvedOffer.kind === "primary");
+    const offerSwitchNote = renderOfferSwitchNote(messages, activeOfferPart);
+
     // Explicit scope switch: when the user names another Blueprint tab/section
     // in their latest instruction ("fill the Offer Angle tab"), re-scope this
     // turn to that tab — the single Coach conversation means the UI focus can
