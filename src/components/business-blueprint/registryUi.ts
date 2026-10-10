@@ -25,6 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  getBlueprintFieldByPath,
   getRegistrySubBlock,
   renderLabel,
   type LabelTokens,
@@ -84,3 +85,29 @@ export function subBlockFields(tabId: string, subBlockId: string, tokens?: Parti
 export function subBlockOf(tabId: string, subBlockId: string): RegistrySubBlock | undefined {
   return getRegistrySubBlock(tabId, subBlockId);
 }
+
+/**
+ * Offer Editor field copy resolved from the central registry: display copy
+ * plus the exact AI Coach target (id = registry path). Throws for unknown
+ * paths so a renamed registry field fails loudly in tests, not silently in UI.
+ */
+export function offerEditorField(path: string, tokens?: Partial<LabelTokens>) {
+  const field = getBlueprintFieldByPath(path);
+  if (!field) throw new Error(`Unknown registry field: ${path}`);
+  const r = (s?: string) => (s == null ? undefined : renderLabel(s, tokens));
+  const e = field.editor ?? {};
+  const label = r(e.label) ?? field.label;
+  return {
+    path: field.path,
+    label,
+    helper: r(e.helper),
+    placeholder: r(e.placeholder ?? field.placeholder),
+    coach: {
+      id: field.path,
+      label: r(e.coach?.label) ?? label,
+      helper: r(e.coach?.helper),
+      placeholder: r(e.coach?.placeholder),
+    },
+  };
+}
+export type OfferEditorFieldCopy = ReturnType<typeof offerEditorField>;

@@ -64,10 +64,25 @@ export type OfferControlKey =
   | "guarantee-type"
   | "billing-interval";
 
+/**
+ * Editor presentation copy for the Offer Editor (optional, additive).
+ * Strings may use label tokens ({noun}, {Noun}, …). `coach` holds the exact
+ * label/helper/placeholder the field's AI Coach button sends as its target —
+ * kept separate so editor copy can evolve without changing Coach input.
+ * Never read by Coach prompts, write-back validation or progress.
+ */
+export interface OfferEditorCopy {
+  label?: string;
+  helper?: string;
+  placeholder?: string;
+  coach?: { label?: string; helper?: string; placeholder?: string };
+}
+
 export interface EditorFieldMeta {
   valueType?: FieldValueType;
   enumValues?: EnumValue[];
   control?: OfferControlKey;
+  editor?: OfferEditorCopy;
 }
 
 export interface RegistryField extends EditorFieldMeta {
@@ -208,6 +223,7 @@ interface FieldOpts {
   enumValues?: EnumValue[];
   control?: OfferControlKey;
   editorOnly?: boolean;
+  editor?: OfferEditorCopy;
 }
 
 /** Only copy editor metadata keys that are actually set (keeps objects lean). */
@@ -216,6 +232,7 @@ const editorMeta = (opts: FieldOpts) => ({
   ...(opts.enumValues ? { enumValues: opts.enumValues } : {}),
   ...(opts.control ? { control: opts.control } : {}),
   ...(opts.editorOnly ? { editorOnly: true } : {}),
+  ...(opts.editor ? { editor: opts.editor } : {}),
 });
 
 const f = (
@@ -539,46 +556,56 @@ const OFFER_DESIGN_TAB: RegistryTab = {
       ],
       fields: [
         f("offer_stack.angle.main_offer_name", "Main Offer Name", "text", {
+          editor: {label:"Main Offer Name",helper:"What is your flagship offer called?",placeholder:"e.g. The Confidence Reset, Lead Engine 90, Scale Sprint…",coach:{label:"Main Offer Name",helper:"Short, 3–6 words. Just the name of your flagship offer.",placeholder:"e.g. The Confidence Reset, Lead Engine 90…"}},
           helper: "Short, 3-6 words, name only",
           aliases: ["main offer name", "offer name", "flagship name", "naam aanbod"],
         }),
         f("offer_stack.angle.short_description", "Short Offer Description", "textarea", {
+          editor: {label:"Short Offer Description",helper:"1–2 sentences explaining what the offer actually is.",placeholder:"e.g. A 90-day coaching program that helps {noun} rebuild confidence after toxic relationships.",coach:{label:"Short Offer Description",helper:"1–2 sentences explaining what the offer actually is.",placeholder:"e.g. A 90-day coaching program that helps {noun}…"}},
           helper: "1-2 sentences",
           aliases: ["short offer description", "offer description", "korte beschrijving"],
         }),
         f("offer_stack.angle.core_outcome", "Core Outcome", "textarea", {
+          editor: {label:"Core Outcome",helper:"The primary transformation result.",placeholder:"e.g. Rebuild self-trust and confidently attract healthy relationships.",coach:{label:"Core Outcome",helper:"The primary transformation result in 1 sentence.",placeholder:"e.g. Rebuild self-trust and confidently attract healthy relationships."}},
           helper: "Primary transformation result, 1 sentence",
           aliases: ["core outcome", "primary outcome", "main outcome", "hoofdresultaat"],
         }),
         f("offer_stack.angle.angle_new_vehicle", "New Vehicle", "textarea", {
+          editor: {label:"New Vehicle",helper:"What makes your method genuinely new compared to what they already tried?",placeholder:"e.g. The first 90-day program that combines somatic work with strategic positioning…",coach:{label:"New Vehicle",helper:"What makes your method genuinely new compared to what they already tried?"}},
           helper: "What makes the method genuinely NEW",
           aliases: ["new vehicle", "new method", "nieuw voertuig", "nieuwe methode"],
           countsTowardProgress: false,
         }),
         f("offer_stack.angle.angle_better_results", "Better Results", "textarea", {
+          editor: {label:"Better Results",helper:"Why does your method produce better results?",placeholder:"e.g. Because we combine strategy with implementation in the same week…",coach:{label:"Better Results",helper:"Why does your method produce better results?"}},
           helper: "Why the method produces BETTER results",
           aliases: ["better results", "betere resultaten"],
           countsTowardProgress: false,
         }),
         f("offer_stack.angle.angle_faster_outcome", "Faster Outcome", "textarea", {
+          editor: {label:"Faster Outcome",helper:"How do clients get results faster?",placeholder:"e.g. We compress 6 months of trial-and-error into 30 days of guided execution…",coach:{label:"Faster Outcome",helper:"How do clients get results faster?"}},
           helper: "How clients get results FASTER",
           aliases: ["faster outcome", "faster results", "sneller resultaat"],
           countsTowardProgress: false,
         }),
         f("offer_stack.angle.angle_easier_process", "Easier Process", "textarea", {
+          editor: {label:"Easier Process",helper:"How do you make the process feel easier?",placeholder:"e.g. Done-with-you templates, weekly accountability, no guesswork…",coach:{label:"Easier Process",helper:"How do you make the process feel easier?"}},
           helper: "How the process is made EASIER",
           aliases: ["easier process", "eenvoudiger proces", "makkelijker proces"],
           countsTowardProgress: false,
         }),
         f("offer_stack.angle.framework.name", "Framework / Method Name", "text", {
+          editor: {label:"Framework Name",placeholder:"e.g. The Confidence Reset Method",coach:{label:"Framework Name",helper:"A memorable name for your signature method. 2–5 words. Ownable.",placeholder:"e.g. The Confidence Reset Method"}},
           helper: "Memorable name for the signature method, 2-5 words",
           aliases: ["framework method name", "method name", "framework naam", "methode naam"],
         }),
         f("offer_stack.angle.framework.description", "Framework — Brief Description", "text", {
+          editor: {label:"Brief Description",placeholder:"What makes it unique and why it works",coach:{label:"Framework — Brief Description",helper:"One line describing what makes the framework unique and why it works.",placeholder:"What makes it unique and why it works"}},
           helper: "One line describing what makes the framework unique and why it works",
           aliases: ["framework description", "brief description", "framework beschrijving", "methode beschrijving"],
         }),
         f("offer_stack.angle.core_promise.desired_outcome", "Desired Outcome (Core Promise)", "text", {
+          editor: {label:"Desired Outcome",placeholder:"e.g. Rebuild confidence and self-trust",coach:{label:"Desired Outcome (Core Promise)",helper:"The specific transformation the client walks away with. Short and concrete.",placeholder:"e.g. Rebuild confidence and self-trust"}},
           helper: "Specific transformation the client walks away with",
           aliases: ["desired outcome", "promise outcome", "gewenste uitkomst"],
         }),
@@ -593,6 +620,7 @@ const OFFER_DESIGN_TAB: RegistryTab = {
           countsTowardProgress: false,
         }),
         f("offer_stack.angle.core_promise.guarantee", "Guarantee / Risk Reversal", "text", {
+          editor: {label:"Guarantee / Risk Reversal",placeholder:"e.g. Final payment waived if no progress",coach:{label:"Guarantee / Risk Reversal",helper:"A concrete promise that removes the buyer's risk. One sentence.",placeholder:"e.g. Final payment waived if no progress"}},
           helper: "Optional risk reversal promise, one sentence",
           aliases: ["guarantee", "risk reversal", "garantie", "risico omkering"],
           countsTowardProgress: false,

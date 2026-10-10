@@ -12,6 +12,11 @@ import { AutoTextarea } from "@/components/ui/auto-textarea";
 import CoachIconButton from "./CoachIconButton";
 import CollapsibleItem from "./CollapsibleItem";
 import type { SignatureFramework, FrameworkPillar } from "../offerDesignTypes";
+import { offerEditorField } from "../registryUi";
+
+// Framework name/description copy + Coach targets come from the registry.
+const FW_NAME = offerEditorField("offer_stack.angle.framework.name");
+const FW_DESC = offerEditorField("offer_stack.angle.framework.description");
 import type { AngleCoachSpec } from "./OfferAngleTab";
 
 const newId = () => crypto.randomUUID();
@@ -64,17 +69,14 @@ const FrameworkSection = ({ value, onChange, onCoach, onCoachPillars }: Props) =
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <Label className="text-xs font-medium text-muted-foreground block">
-                Framework Name
+                {FW_NAME.label}
               </Label>
               {onCoach && (
                 <CoachIconButton
                   compact
                   onClick={() =>
                     onCoach({
-                      id: "offer_stack.angle.framework.name",
-                      label: "Framework Name",
-                      helper: "A memorable name for your signature method. 2–5 words. Ownable.",
-                      placeholder: "e.g. The Confidence Reset Method",
+                      ...FW_NAME.coach,
                       currentValue: framework.name ?? "",
                       apply: (v) => update({ name: v }),
                     })
@@ -85,24 +87,21 @@ const FrameworkSection = ({ value, onChange, onCoach, onCoachPillars }: Props) =
             <Input
               value={framework.name ?? ""}
               onChange={(e) => update({ name: e.target.value })}
-              placeholder="e.g. The Confidence Reset Method"
+              placeholder={FW_NAME.placeholder}
               className="h-9"
             />
           </div>
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <Label className="text-xs font-medium text-muted-foreground block">
-                Brief Description
+                {FW_DESC.label}
               </Label>
               {onCoach && (
                 <CoachIconButton
                   compact
                   onClick={() =>
                     onCoach({
-                      id: "offer_stack.angle.framework.description",
-                      label: "Framework — Brief Description",
-                      helper: "One line describing what makes the framework unique and why it works.",
-                      placeholder: "What makes it unique and why it works",
+                      ...FW_DESC.coach,
                       currentValue: framework.description ?? "",
                       apply: (v) => update({ description: v }),
                     })
@@ -113,7 +112,7 @@ const FrameworkSection = ({ value, onChange, onCoach, onCoachPillars }: Props) =
             <Input
               value={framework.description ?? ""}
               onChange={(e) => update({ description: e.target.value })}
-              placeholder="What makes it unique and why it works"
+              placeholder={FW_DESC.placeholder}
               className="h-9"
             />
           </div>
