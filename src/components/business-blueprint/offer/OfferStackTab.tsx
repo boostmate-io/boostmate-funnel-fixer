@@ -54,7 +54,13 @@ interface Props {
   saving: boolean;
   businessType?: string;
   embedded?: boolean;
+  /** Render only these blocks (category editors). Default: all. */
+  only?: StackBlock[];
+  /** Render without the section header (embedded inside another layout). */
+  bare?: boolean;
 }
+
+export type StackBlock = "deliverables" | "resources" | "support_channels" | "bonuses" | "timeline" | "milestones";
 
 /** Small helper: label row with a compact Coach icon on the right. */
 const LabelRow = ({
@@ -70,7 +76,8 @@ const LabelRow = ({
   </div>
 );
 
-const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
+const OfferStackTab = ({ data, onChange, saving, businessType, embedded, only, bare }: Props) => {
+  const show = (b: StackBlock) => !only || only.includes(b);
   const bt = getBusinessType(businessType);
   const noun = bt.customerNoun;
   const progress = calcStackProgress(data);
@@ -299,21 +306,10 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
     </div>
   );
 
-  return (
-    <SectionShell
-      icon={Layers}
-      title="Offer Stack"
-      description="Define exactly what people receive when they buy."
-      progress={progress}
-      saving={saving}
-      embedded={embedded}
-      helpButton={<>
-          <SectionHelpCoach sectionId="offer_design.stack" sectionLabel="Offer Design — Stack" />
-          <SectionHelpCoach variant="walkthrough" sectionId="offer_design.stack" sectionLabel="Offer Design — Stack" />
-        </>}
-    >
+  const body = (
       <div className="space-y-5">
         {/* Core Deliverables */}
+        {show("deliverables") && (
         <BuilderCard
           icon={Package}
           title={STACK_LISTS.deliverables.title}
@@ -413,8 +409,10 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
             </div>
           )}
         </BuilderCard>
+        )}
 
         {/* Templates & Resources */}
+        {show("resources") && (
         <BuilderCard
           icon={Library}
           title={STACK_LISTS.resources.title}
@@ -522,8 +520,10 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
             </div>
           )}
         </BuilderCard>
+        )}
 
         {/* Support System */}
+        {show("support_channels") && (
         <BuilderCard
           icon={MessageCircle}
           title={STACK_LISTS.support_channels.title}
@@ -631,8 +631,10 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
             </div>
           )}
         </BuilderCard>
+        )}
 
         {/* Bonuses */}
+        {show("bonuses") && (
         <BuilderCard
           icon={Gift}
           title={STACK_LISTS.bonuses.title}
@@ -730,8 +732,10 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
             </div>
           )}
         </BuilderCard>
+        )}
 
         {/* Delivery Timeline */}
+        {show("timeline") && (
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
@@ -754,8 +758,10 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
             />
           </div>
         </div>
+        )}
 
         {/* Milestones */}
+        {show("milestones") && (
         <BuilderCard
           icon={Map}
           title={STACK_LISTS.milestones.title}
@@ -849,8 +855,25 @@ const OfferStackTab = ({ data, onChange, saving, businessType, embedded }: Props
             </div>
           )}
         </BuilderCard>
+        )}
       </div>
+  );
 
+  if (bare) return <>{body}{panel}</>;
+  return (
+    <SectionShell
+      icon={Layers}
+      title="Offer Stack"
+      description="Define exactly what people receive when they buy."
+      progress={progress}
+      saving={saving}
+      embedded={embedded}
+      helpButton={<>
+          <SectionHelpCoach sectionId="offer_design.stack" sectionLabel="Offer Design — Stack" />
+          <SectionHelpCoach variant="walkthrough" sectionId="offer_design.stack" sectionLabel="Offer Design — Stack" />
+        </>}
+    >
+      {body}
       {panel}
     </SectionShell>
   );
