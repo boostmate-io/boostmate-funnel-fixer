@@ -29,7 +29,8 @@ import { emptyOfferDesign } from "../offerDesignTypes";
 const extraDesign = emptyOfferDesign();
 extraDesign.angle.main_offer_name = "het";
 extraDesign.angle.core_outcome = "keep me";
-const rows = () => [
+let store: any[] = [];
+const seed = () => [
   { id: "primary-1", name: "Primary", tier: "core", source: "blueprint_core", blueprint_id: "bp", sort_order: 0, data: {}, user_id: "u1", sub_account_id: "ws-1" },
   { id: "extra-1", name: "het", tier: "core", source: "blueprint_manual", blueprint_id: "bp", sort_order: 1, data: { design: structuredClone(extraDesign) }, user_id: "u1", sub_account_id: "ws-1" },
 ];
@@ -37,7 +38,7 @@ vi.mock("@/lib/offers/offerRepository", async (orig) => {
   const real: any = await orig();
   return {
     ...real,
-    fetchEcosystemOffers: vi.fn(async () => ({ rows: rows(), error: null })),
+    fetchEcosystemOffers: vi.fn(async () => ({ rows: structuredClone(store), error: null })),
     updateEcosystemOffer: (...a: any[]) => updateSpy(...a),
     insertEcosystemOffer: vi.fn(), deleteEcosystemOffer: vi.fn(),
   };
@@ -76,7 +77,11 @@ async function openExtraAndCoach() {
 }
 
 beforeEach(() => {
-  updateSpy.mockReset().mockResolvedValue({ error: null });
+  store = seed();
+  updateSpy.mockReset().mockImplementation(async (id: string, values: any) => {
+    store = store.map((r) => (r.id === id ? { ...r, ...structuredClone(values) } : r));
+    return { error: null };
+  });
   applyBlueprintWritesSpy.mockReset();
 });
 
