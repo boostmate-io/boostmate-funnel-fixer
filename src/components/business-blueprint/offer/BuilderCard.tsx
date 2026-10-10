@@ -9,6 +9,7 @@
 
 import { Plus, Sparkles, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useOfferCoachEnabled } from "./OfferCoachScope";
 
 interface Props {
   icon?: LucideIcon;
@@ -35,6 +36,7 @@ const BuilderCard = ({
   count,
   children,
 }: Props) => {
+  if (!useOfferCoachEnabled()) onCoach = undefined;
   const isEmpty = !children || (Array.isArray(children) && children.length === 0);
 
   return (

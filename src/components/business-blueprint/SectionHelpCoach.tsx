@@ -50,7 +50,7 @@ const SectionHelpCoach = ({
   // Temporarily hidden inside additional Core Offer editors: its context and
   // write-backs are Blueprint-wide (Primary Core Offer).
   const offerScope = useOfferCoachScope();
-  if (offerScope.mode === "scoped") return null;
+  if (offerScope.mode !== "primary") return null;
 
   const handleClick = () => {
     if (!context) return;

@@ -728,6 +728,10 @@ const OFFER_DESIGN_TAB: RegistryTab = {
       progress: { mode: "custom", ruleId: "offer.stack" },
       appliesToTiers: ["core"],
       editorFields: [
+        ef("offer_stack.stack.delivery_types", "Delivery Type", "text", {
+          valueType: "string[]", control: "delivery-types",
+          editor: { placeholder: "How is it delivered?" },
+        }),
         ef("offer_stack.stack.touch_level", "High-Touch Level", "text", {
           valueType: "string[]", enumValues: TOUCH_LEVEL_VALUES, control: "touch-level",
           editor: { helper: "How hands-on is this offer?" },
@@ -1366,8 +1370,8 @@ const lst = (path: string, status: OfferFieldStatus, editor?: OfferListEditorCop
 const rel = (relationship: OfferRelationshipType, label: string): OfferLayoutItem =>
   ({ kind: "relationship", relationship, status: "optional", label });
 const sec = (id: string, label: string, items: OfferLayoutItem[]): OfferLayoutSection => ({ id, label, items });
-/** Delivery types live on the offer row summary for every tier. */
-const DELIVERY = (status: OfferFieldStatus): OfferLayoutItem => ({ kind: "field", path: "data.delivery_types", status });
+/** Offer-level delivery types in the design; synced into the row summary. */
+const DELIVERY = (status: OfferFieldStatus): OfferLayoutItem => fld("stack.delivery_types", status);
 const NAME: OfferLayoutItem = fld("angle.main_offer_name", "min", {
   label: "Offer Name", helper: "Short, evocative name for this offer.", placeholder: "Offer name",
 });

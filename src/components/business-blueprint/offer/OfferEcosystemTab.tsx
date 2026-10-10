@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import SectionShell from "./SectionShell";
 import SectionHelpCoach from "../SectionHelpCoach";
 import CoreOfferDialog from "./CoreOfferDialog";
+import TierOfferDialog from "./TierOfferDialog";
 import OfferSummaryCard from "./OfferSummaryCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -32,7 +33,10 @@ import {
 } from "../offerDesignTypes";
 import { useEcosystemOffers, type EcosystemOfferRow } from "../useEcosystemOffers";
 import { getBusinessType } from "../businessTypes";
-import { designToRowValues } from "@/lib/offers/offerRepository";
+import { designForRow, designToRowValues } from "@/lib/offers/offerRepository";
+
+/** Non-Core categories already served by the Universal Offer Editor. */
+const UNIVERSAL_EDITOR_TIERS: EcosystemTier[] = ["low_ticket"];
 import type { OfferSaveStatus } from "./OfferEditorShell";
 
 
@@ -202,16 +206,22 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   const [editing, setEditing] = useState<{ id: string; isPrimary: boolean } | null>(null);
   const [editingSimpleId, setEditingSimpleId] = useState<string | null>(null);
   const editingSimple = offers.find((o) => o.id === editingSimpleId) ?? null;
+  const [editingTier, setEditingTier] = useState<{ id: string; initial: OfferDesignData } | null>(null);
+  const editingTierRow = editingTier ? offers.find((o) => o.id === editingTier.id) ?? null : null;
 
   /** Open the existing editor that fits this offer (Core dialog vs. field dialog). */
   const openEditor = (offer: EcosystemOfferRow) => {
     if (offer.tier === "core") setEditing({ id: offer.id, isPrimary: offer.source === "blueprint_core" });
+    // Seeded in memory from the summary when no design exists — no write on open.
+    else if (UNIVERSAL_EDITOR_TIERS.includes(offer.tier)) setEditingTier({ id: offer.id, initial: designForRow(offer) });
     else setEditingSimpleId(offer.id);
   };
 
   const handleAddSimple = async (tier: EcosystemTier) => {
     const id = await addOffer(tier);
-    if (id) setEditingSimpleId(id);
+    if (!id) return;
+    if (UNIVERSAL_EDITOR_TIERS.includes(tier)) setEditingTier({ id, initial: designForRow({ name: "Untitled Offer", data: {} as any }) });
+    else setEditingSimpleId(id);
   };
 
   // Deep-link: open a specific offer's editor once the row is available in state
@@ -443,6 +453,25 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {editingTier && editingTierRow && (
+        <TierOfferDialog
+          open
+          onOpenChange={(o) => { if (!o) setEditingTier(null); }}
+          tier={editingTierRow.tier}
+          categoryLabel={ECOSYSTEM_TIERS.find((t) => t.id === editingTierRow.tier)?.label ?? "Offer"}
+          offerId={editingTierRow.id}
+          initial={editingTier.initial}
+          onChange={(next) => {
+            const row = offers.find((o) => o.id === editingTier.id);
+            // Design is the source of truth; summary fields are derived from it.
+            if (row) void updateOffer(row.id, designToRowValues(next, row as any, "Untitled Offer") as any);
+          }}
+          saveStatus={saveStatuses[editingTierRow.id] ?? "saved"}
+          flushChanges={() => flushOffer(editingTierRow.id)}
+          businessType={businessType}
+        />
+      )}
 
       <CoreOfferDialog
         open={!!editing}

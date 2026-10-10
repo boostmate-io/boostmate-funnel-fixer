@@ -48,6 +48,12 @@ export interface OfferAngleData {
   framework?: SignatureFramework;
   // Structured promise builder
   core_promise?: CoreTransformationPromise;
+  // Category editor fields (non-Core tiers; editor-only in the registry)
+  problem_solved?: string;
+  quick_win?: string;
+  offer_format?: string;
+  next_step_cta?: string;
+  premium_mode?: string;
 }
 
 // ---------- Tab 2: Offer Stack ----------------------------------------------
@@ -102,6 +108,8 @@ export interface OfferStackData {
   delivery_timeline: TimeframeOption | "";
   delivery_timeline_custom?: string;
   milestones: MilestoneCard[];
+  /** Offer-level delivery types chosen directly (category editors). */
+  delivery_types?: string[];
 }
 
 // ---------- Tab 3: Pricing --------------------------------------------------

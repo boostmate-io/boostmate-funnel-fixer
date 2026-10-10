@@ -26,9 +26,10 @@ import {
 } from "../offerDesignTypes";
 import { getBusinessType } from "../businessTypes";
 import { offerEditorField, offerEditorList } from "../registryUi";
+import type { OfferTier } from "@shared/blueprintRegistry";
 
 // Field semantics + copy come from the central Blueprint Field Registry.
-const CORE_PRICE = offerEditorField("offer_stack.pricing.core_price");
+const CORE_PRICE_CORE = offerEditorField("offer_stack.pricing.core_price");
 const GUARANTEE_TYPE = offerEditorField("offer_stack.pricing.guarantee_type");
 const GUARANTEE_DETAILS = offerEditorField("offer_stack.pricing.guarantee_details");
 const PLANS_PATH = "offer_stack.pricing.payment_plans";
@@ -41,7 +42,15 @@ interface Props {
   saving: boolean;
   businessType?: string;
   embedded?: boolean;
+  /** Render only these blocks (category editors). Default: all. */
+  only?: PricingBlock[];
+  /** Render without the section header (embedded inside another layout). */
+  bare?: boolean;
+  /** Category for tier-specific registry wording (Core: omit). */
+  tier?: OfferTier;
 }
+
+export type PricingBlock = "core_price" | "payment_plans" | "guarantee";
 
 const numberOrEmpty = (raw: string): number | "" => {
   if (raw.trim() === "") return "";
@@ -62,7 +71,9 @@ const LabelRow = ({
   </div>
 );
 
-const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) => {
+const PricingTab = ({ data, onChange, saving, businessType, embedded, only, bare, tier }: Props) => {
+  const show = (b: PricingBlock) => !only || only.includes(b);
+  const CORE_PRICE = tier ? offerEditorField("offer_stack.pricing.core_price", undefined, tier) : CORE_PRICE_CORE;
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
   const progress = calcPricingProgress(data);
@@ -137,22 +148,10 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
       ? "Pricing is taking shape. Keep layering options."
       : null;
 
-  return (
-    <SectionShell
-      icon={DollarSign}
-      title="Pricing"
-      description="Monetize your offer with confidence — anchored, flexible and risk-reversed."
-      progress={progress}
-      saving={saving}
-      embedded={embedded}
-      helpButton={<>
-          <SectionHelpCoach sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />
-          <SectionHelpCoach variant="walkthrough" sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />
-        </>}
-    >
+  const body = (
       <div className="space-y-5">
         {/* Core Price */}
-        <div className="rounded-xl border border-border bg-card p-5">
+        {show("core_price") && <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
@@ -175,10 +174,10 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
               className="h-10 text-lg font-semibold"
             />
           </div>
-        </div>
+        </div>}
 
         {/* Payment Plans */}
-        <BuilderCard
+        {show("payment_plans") && <BuilderCard
           title={PLANS.title}
           description={PLANS.description}
           addLabel={PLANS.addLabel}
@@ -278,13 +277,13 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
               ))}
             </div>
           )}
-        </BuilderCard>
+        </BuilderCard>}
 
         {/* Premium Upgrade and Recurring Option removed per V3 spec. */}
 
 
         {/* Guarantee */}
-        <div className="rounded-xl border border-border bg-card p-5">
+        {show("guarantee") && <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
               <Shield className="w-4 h-4" />
@@ -332,9 +331,25 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
               </div>
             )}
           </div>
-        </div>
+        </div>}
       </div>
+  );
 
+  if (bare) return <>{body}{panel}</>;
+  return (
+    <SectionShell
+      icon={DollarSign}
+      title="Pricing"
+      description="Monetize your offer with confidence — anchored, flexible and risk-reversed."
+      progress={progress}
+      saving={saving}
+      embedded={embedded}
+      helpButton={<>
+          <SectionHelpCoach sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />
+          <SectionHelpCoach variant="walkthrough" sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />
+        </>}
+    >
+      {body}
       {panel}
     </SectionShell>
   );

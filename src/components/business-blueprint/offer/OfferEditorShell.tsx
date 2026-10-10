@@ -17,10 +17,12 @@ interface Props {
   initialTab?: string;
   saveStatus?: OfferSaveStatus;
   flushChanges?: () => Promise<boolean>;
+  /** Hide the header Coach button (categories without approved Coach support). */
+  coachAvailable?: boolean;
 }
 
 /** Presentation only: persistence and field configuration belong to the caller. */
-export default function OfferEditorShell({ open, onOpenChange, offer, tabs, initialTab, saveStatus = "saved", flushChanges }: Props) {
+export default function OfferEditorShell({ open, onOpenChange, offer, tabs, initialTab, saveStatus = "saved", flushChanges, coachAvailable = true }: Props) {
   const coach = useOptionalCoach();
   const companion = !!coach?.open;
   const [active, setActive] = useState(initialTab ?? tabs[0]?.id ?? "");
@@ -76,7 +78,7 @@ export default function OfferEditorShell({ open, onOpenChange, offer, tabs, init
                 {offer.primary && <Badge variant="secondary">Primary</Badge>}
               </div>
             </div>
-            {coach && <Button ref={coachButton} variant="outline" size="icon" className="min-h-11 min-w-11" aria-label={companion ? "Close AI Coach" : "Open AI Coach"} onClick={() => companion ? coach.closeCoach() : coach.openCoach()}><MessageCircle className="h-4 w-4" /></Button>}
+            {coach && coachAvailable && <Button ref={coachButton} variant="outline" size="icon" className="min-h-11 min-w-11" aria-label={companion ? "Close AI Coach" : "Open AI Coach"} onClick={() => companion ? coach.closeCoach() : coach.openCoach()}><MessageCircle className="h-4 w-4" /></Button>}
             <Button variant="ghost" size="icon" className="min-h-11 min-w-11 rounded-full bg-muted/80" aria-label="Close offer editor" disabled={closing} onClick={() => void close()}><X className="h-4 w-4" /></Button>
           </header>
           <Tabs value={active} onValueChange={setActive} className="flex min-h-0 flex-1 flex-col">
