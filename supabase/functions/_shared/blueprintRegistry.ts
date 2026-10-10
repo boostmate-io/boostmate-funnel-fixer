@@ -76,6 +76,8 @@ export interface OfferEditorCopy {
   helper?: string;
   placeholder?: string;
   coach?: { label?: string; helper?: string; placeholder?: string };
+  /** Editor display labels for enum options (Coach keeps `enumValues`). */
+  options?: EnumValue[];
 }
 
 export interface EditorFieldMeta {
@@ -347,6 +349,24 @@ export const GUARANTEE_TYPE_VALUES: EnumValue[] = [
   { value: "refund", label: "Refund" },
   { value: "performance", label: "Performance" },
   { value: "milestone", label: "Milestone" },
+  { value: "custom", label: "Custom" },
+];
+
+/** Editor display labels (Pricing tab wording); Coach keeps the *_VALUES labels. */
+export const PAYMENT_PLAN_EDITOR_OPTIONS: EnumValue[] = [
+  { value: "full_pay", label: "Full Pay" },
+  { value: "split_2", label: "2 Pay" },
+  { value: "split_3", label: "3 Pay" },
+  { value: "split_6", label: "6 Pay" },
+  { value: "monthly", label: "Monthly" },
+  { value: "custom", label: "Custom" },
+];
+
+export const GUARANTEE_EDITOR_OPTIONS: EnumValue[] = [
+  { value: "none", label: "No Guarantee" },
+  { value: "refund", label: "Refund Guarantee" },
+  { value: "performance", label: "Performance Guarantee" },
+  { value: "milestone", label: "Milestone Guarantee" },
   { value: "custom", label: "Custom" },
 ];
 
@@ -760,12 +780,35 @@ const OFFER_DESIGN_TAB: RegistryTab = {
           "Payment Plans",
           "Payment Plan",
           [
-            { key: "type", label: "Type", kind: "text", helper: "One of: full_pay | split_2 | split_3 | split_6 | monthly | custom", valueType: "enum", enumValues: PAYMENT_PLAN_TYPE_VALUES, control: "payment-plan-type" },
-            { key: "custom_label", label: "Label", kind: "text", helper: "Short plan name, e.g. 'Pay in Full', '3-Pay'" },
-            { key: "amount", label: "Amount", kind: "text", helper: "Numeric amount for this plan in workspace currency, e.g. 997. Numbers only.", valueType: "number", control: "currency-amount" },
-            { key: "duration", label: "Duration", kind: "text", helper: "How long the plan runs, e.g. '3 months', '12 weeks'" },
+            { key: "type", label: "Type", kind: "text", helper: "One of: full_pay | split_2 | split_3 | split_6 | monthly | custom", valueType: "enum", enumValues: PAYMENT_PLAN_TYPE_VALUES, control: "payment-plan-type",
+              editor: { options: PAYMENT_PLAN_EDITOR_OPTIONS } },
+            { key: "custom_label", label: "Label", kind: "text", helper: "Short plan name, e.g. 'Pay in Full', '3-Pay'",
+              editor: { placeholder: "Plan label", coach: { label: "Payment Plan {n} — Label", helper: "Short, clear label for this custom plan." } } },
+            { key: "amount", label: "Amount", kind: "text", helper: "Numeric amount for this plan in workspace currency, e.g. 997. Numbers only.", valueType: "number", control: "currency-amount",
+              editor: { placeholder: "Amount" } },
+            { key: "duration", label: "Duration", kind: "text", helper: "How long the plan runs, e.g. '3 months', '12 weeks'",
+              editor: { placeholder: "Duration (e.g. 3 months)", coach: { label: "Payment Plan {n} — Duration", helper: "How long does the plan run?" } } },
           ],
-          { aiIndexedCount: 3, suggestedCount: [2, 3] },
+          {
+            aiIndexedCount: 3, suggestedCount: [2, 3],
+            editor: {
+              title: "Payment Plans",
+              description: "Lower the upfront barrier with flexible options.",
+              addLabel: "Add Payment Plan",
+              emptyText: "No plans yet. Most offers convert better with at least 2 options (e.g. Full Pay + 3-Pay).",
+              coach: {
+                id: "pricing_payment_plans",
+                label: "Payment Plans",
+                helper: "Flexible payment options that lower the upfront barrier. Propose concrete plans WITH a numeric amount in {cur} for every plan — never leave the amount blank.",
+              },
+              coachItemFields: [
+                { key: "type", label: "Plan Type", kind: "text", helper: "One of: full_pay | split_2 | split_3 | split_6 | monthly | custom." },
+                { key: "custom_label", label: "Plan Label", kind: "text", helper: "Short plan name (e.g. 'Pay in Full', '3-Pay')." },
+                { key: "amount", label: "Amount", kind: "text", helper: "Numeric amount in {cur}, e.g. 997. Numbers only, no currency symbol." },
+                { key: "duration", label: "Duration", kind: "text", helper: "How long the plan runs (e.g. '3 months', '12 weeks')." },
+              ],
+            },
+          },
         ),
       ],
       fields: [
@@ -773,11 +816,13 @@ const OFFER_DESIGN_TAB: RegistryTab = {
           helper: "Numeric headline price for the main offer, e.g. 2500. Numbers only.",
           aliases: ["core price", "headline price", "main price", "kernprijs", "hoofdprijs"],
           valueType: "number", control: "currency-amount",
+          editor: { label: "Core Price", helper: "The headline price for your main offer.", placeholder: "2500" },
         }),
         f("offer_stack.pricing.guarantee_type", "Guarantee Type", "text", {
           helper: "One of: none | refund | performance | milestone | custom",
           aliases: ["guarantee type", "type garantie", "risk reversal type"],
           valueType: "enum", enumValues: GUARANTEE_TYPE_VALUES, control: "guarantee-type",
+          editor: { label: "Risk Reversal / Guarantee", helper: "How you remove the risk of saying yes.", options: GUARANTEE_EDITOR_OPTIONS },
         }),
         f("offer_stack.pricing.guarantee_custom", "Guarantee — Custom Label", "text", {
           helper: "Short label when guarantee_type = custom",
@@ -787,6 +832,11 @@ const OFFER_DESIGN_TAB: RegistryTab = {
         f("offer_stack.pricing.guarantee_details", "Guarantee Details / Terms", "textarea", {
           helper: "Concrete, buyer-friendly terms of the guarantee",
           aliases: ["guarantee details", "guarantee terms", "risk reversal details"],
+          editor: {
+            label: "Guarantee Details / Terms",
+            placeholder: 'e.g. "Complete all modules and attend weekly calls. If you don\'t see measurable progress within 90 days, we continue coaching for free."',
+            coach: { helper: "The concrete terms of the guarantee. Clear, specific, buyer-friendly." },
+          },
         }),
       ],
     },
