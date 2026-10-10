@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useCoach } from "@/contexts/CoachContext";
 import { buildBlueprintSectionContext } from "@/lib/coach/buildContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useOfferCoachScope } from "./offer/OfferCoachScope";
 
 interface Props {
   /** Stable id used by the coach engine, e.g. "customer_clarity.avatar". */
@@ -46,6 +47,10 @@ const SectionHelpCoach = ({
   );
 
   const walkthrough = variant === "walkthrough";
+  // Temporarily hidden inside additional Core Offer editors: its context and
+  // write-backs are Blueprint-wide (Primary Core Offer).
+  const offerScope = useOfferCoachScope();
+  if (offerScope.mode === "scoped") return null;
 
   const handleClick = () => {
     if (!context) return;
