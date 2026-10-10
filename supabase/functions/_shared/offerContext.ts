@@ -264,7 +264,8 @@ export function attributionPrefix(m: any): string {
  */
 export function renderOfferSwitchNote(messages: any[], active: OfferContextPart | null): string | null {
   if (!active) return null;
-  for (let i = messages.length - 1; i >= 0; i--) {
+  // The final message is the current turn — inspect what came before it.
+  for (let i = messages.length - 2; i >= 0; i--) {
     const oc = messageOfferContext(messages[i]);
     if (!oc) {
       if (active.isPrimary) continue;
