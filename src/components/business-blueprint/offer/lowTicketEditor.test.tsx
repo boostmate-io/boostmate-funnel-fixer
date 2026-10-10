@@ -76,7 +76,7 @@ describe("Low-Ticket opens in the Universal Offer Editor", () => {
     expect(within(dialog).getByLabelText("Problem Solved")).toBeTruthy();
     expect(within(dialog).getByLabelText("Quick Win / Immediate Value")).toBeTruthy();
     expect(within(dialog).getByText("Core Deliverables")).toBeTruthy();
-    expect(within(dialog).getByText("Price")).toBeTruthy();
+    expect(within(dialog).getAllByText("Price").length).toBe(2);
     expect(within(dialog).getByText("Video call")).toBeTruthy();
     // Optional fields live under "More options" but are reachable
     const more = within(dialog).getAllByText("More options");
