@@ -14,4 +14,5 @@
 - [x] Final field matrix for six offer categories (approved)
 - [x] Offer architecture cleanup (options from registry, row type, OfferTier, audits)
 - [x] Tier-aware registry layouts for six categories
-- [ ] Low-Ticket editor (awaiting approval)
+- [x] Low-Ticket editor in the Universal Offer Editor
+- [ ] Next category (awaiting approval)
