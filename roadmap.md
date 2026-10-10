@@ -5,6 +5,7 @@
 - [x] Task A: Coach writes scoped to the open additional Core Offer; Section Help hidden there
 - [x] Task B: toFieldDef forwards registry editor metadata
 - [ ] Offer Editor shell (3 tabs, 1200px / 92vh desktop, fullscreen mobile)
+- [ ] Companion Coach above editor; keyboard/mobile interaction, safe close, regression tests and live verification
 - [ ] Link tabs to registry (simple fields first)
 - [ ] Universal Offer Editor (Core tabs + simple editor), no empty records on Add
 - [ ] Coach writes targeted at specific offers; expose recurring/premium fields to Coach
