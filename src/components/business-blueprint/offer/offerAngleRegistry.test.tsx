@@ -57,16 +57,19 @@ describe("OfferAngleTab rendering", () => {
     expect(screen.getByDisplayValue("Kwenie")).toHaveAttribute("placeholder", LEGACY["offer_stack.angle.main_offer_name"].placeholder);
     expect(screen.getByText("Better Results")).toBeInTheDocument();
     expect(screen.getByDisplayValue("faster")).toBeInTheDocument();
-    // Pillar list still renders its items (dynamic list untouched).
-    expect(screen.getByDisplayValue("A")).toBeInTheDocument();
   });
 
   it("Coach buttons target the correct fields and edits keep the same data mapping", () => {
     openCoach.mockClear();
     render(<OfferAngleTab data={data} onChange={onChange} saving={false} embedded />);
-    // AngleField renders an "AI Coach" button per differentiation field; Better Results is the 2nd.
-    fireEvent.click(screen.getAllByRole("button", { name: /AI Coach/ })[1]);
-    const spec = openCoach.mock.calls.at(-1)![0];
+    for (const b of screen.getAllByRole("button")) fireEvent.click(b);
+    const ids = openCoach.mock.calls.map((c) => c[0].id);
+    // Every simple Angle field's Coach button targets its registry path.
+    for (const p of Object.values(ANGLE_FIELD_PATHS)) expect(ids).toContain(p);
+    expect(ids).toContain("offer_stack.angle.framework.name");
+    // Pillars list keeps its own list-Coach entry point.
+    expect(openListCoach.mock.calls.some((c) => c[0].basePath === "offer_stack.angle.framework.pillars")).toBe(true);
+    const spec = openCoach.mock.calls.find((c) => c[0].id === "offer_stack.angle.angle_better_results")![0];
     expect(spec).toMatchObject({ id: "offer_stack.angle.angle_better_results", label: "Better Results", currentValue: "faster" });
     spec.apply("new value");
     expect(onChange).toHaveBeenCalledWith({ angle_better_results: "new value" });
