@@ -27,8 +27,17 @@ export interface CoachFocus {
   /** Overrides the generated focus turn text. */
   seed?: string;
   onApply?: (value: string) => void;
-  onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  onApplyBlueprintWrites?: CoachWritesHandler;
 }
+
+/** Optional result of a write handler. When returned, only `appliedPaths` are
+ *  marked Applied; other writes are shown as "Not applied". Throw on failure. */
+export interface CoachWritesOutcome {
+  appliedPaths: string[];
+}
+export type CoachWritesHandler = (
+  writes: CoachBlueprintWrite[],
+) => Promise<CoachWritesOutcome | void> | CoachWritesOutcome | void;
 
 /** Derive a focus from an already-built CoachContext. */
 export function focusFromContext(

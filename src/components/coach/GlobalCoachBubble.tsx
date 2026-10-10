@@ -168,6 +168,7 @@ const GlobalCoachBubble = () => {
       const res = await applyBlueprintWrites(activeSubAccountId, writes);
       if (res.error) {
         toast.error(`Kon Blueprint niet bijwerken: ${res.error}`);
+        throw new Error(res.error);
       } else {
         toast.success(`${res.applied} veld(en) bijgewerkt`);
         const { data } = await supabase
