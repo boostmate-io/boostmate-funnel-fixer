@@ -63,10 +63,11 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (rErr || !route) return json(404, { error: "route_not_found" });
 
-  const { data: isMember } = await admin.rpc("is_sub_account_member", {
-    _user_id: userId, _sub_id: route.sub_account_id,
-  });
-  if (!isMember) return json(403, { error: "not_a_member" });
+  const [{ data: isMember }, { data: isAppAdmin }] = await Promise.all([
+    admin.rpc("is_sub_account_member", { _user_id: userId, _sub_id: route.sub_account_id }),
+    admin.rpc("is_app_admin", { _user_id: userId }),
+  ]);
+  if (!isMember && !isAppAdmin) return json(403, { error: "not_a_member" });
 
   // 2. Idempotent
   if (route.funnel_id) {
