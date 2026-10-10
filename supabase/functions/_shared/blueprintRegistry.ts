@@ -34,7 +34,43 @@ export type BlueprintFieldKind =
   | "bullet-list"
   | "colors";
 
-export interface RegistryField {
+// ---- Offer Editor metadata (optional, additive) ----------------------------
+// None of these are read by the AI Coach prompts, write-back validation or
+// progress calculations. They describe value semantics for editors.
+
+/** Offer categories (mirrors EcosystemTier in the UI layer). */
+export type OfferTier = "free" | "low_ticket" | "mid_ticket" | "core" | "premium" | "continuity";
+export const OFFER_TIERS: OfferTier[] = ["free", "low_ticket", "mid_ticket", "core", "premium", "continuity"];
+
+/** Semantic value type of a field. Defaults to "string" when omitted. */
+export type FieldValueType = "string" | "number" | "boolean" | "enum" | "string[]";
+
+export interface EnumValue {
+  value: string;
+  label: string;
+}
+
+/**
+ * Name of a specialised editor control. The registry only names it; the
+ * editor owns the name → component mapping. No UI logic lives here.
+ */
+export type OfferControlKey =
+  | "timeframe"
+  | "delivery-frequency"
+  | "delivery-types"
+  | "currency-amount"
+  | "toggle"
+  | "payment-plan-type"
+  | "guarantee-type"
+  | "billing-interval";
+
+export interface EditorFieldMeta {
+  valueType?: FieldValueType;
+  enumValues?: EnumValue[];
+  control?: OfferControlKey;
+}
+
+export interface RegistryField extends EditorFieldMeta {
   /** Dot-path into the business_blueprints JSON. */
   path: string;
   /** Leaf key alone (e.g. "avatar_who"). */
@@ -54,13 +90,20 @@ export interface RegistryField {
   aliases: string[];
   aiWritable: boolean;
   countsTowardProgress: boolean;
+  /**
+   * Editor-only definition: excluded from BLUEPRINT_FIELDS, the Coach prompts,
+   * write-back validation and progress. Only lives in `editorFields`.
+   */
+  editorOnly?: boolean;
 }
 
-export interface RegistryListItemField {
+export interface RegistryListItemField extends EditorFieldMeta {
   key: string;
   label: string;
   kind: "text" | "textarea";
   helper?: string;
+  /** Editor-only item fields are declared in `editorItemFields`; defaults true. */
+  aiWritable?: boolean;
 }
 
 export interface RegistryList {
@@ -77,6 +120,11 @@ export interface RegistryList {
   /** How many indexed item paths are exposed to the Coach. */
   aiIndexedCount: number;
   suggestedCount?: [number, number];
+  /**
+   * Item fields that editors render but the Coach never sees (not expanded
+   * into BLUEPRINT_FIELDS, not in prompts).
+   */
+  editorItemFields?: RegistryListItemField[];
 }
 
 export type ProgressRule =
@@ -97,6 +145,10 @@ export interface RegistrySubBlock {
   fields: RegistryField[];
   lists: RegistryList[];
   progress: ProgressRule;
+  /** Offer categories this sub-block applies to (Offer Design only). */
+  appliesToTiers?: OfferTier[] | "all";
+  /** Editor-only fields (see RegistryField.editorOnly). */
+  editorFields?: RegistryField[];
 }
 
 export interface RegistryTab {
@@ -152,7 +204,19 @@ interface FieldOpts {
   aliases?: string[];
   aiWritable?: boolean;
   countsTowardProgress?: boolean;
+  valueType?: FieldValueType;
+  enumValues?: EnumValue[];
+  control?: OfferControlKey;
+  editorOnly?: boolean;
 }
+
+/** Only copy editor metadata keys that are actually set (keeps objects lean). */
+const editorMeta = (opts: FieldOpts) => ({
+  ...(opts.valueType ? { valueType: opts.valueType } : {}),
+  ...(opts.enumValues ? { enumValues: opts.enumValues } : {}),
+  ...(opts.control ? { control: opts.control } : {}),
+  ...(opts.editorOnly ? { editorOnly: true } : {}),
+});
 
 const f = (
   path: string,
@@ -174,7 +238,12 @@ const f = (
   aliases: [leafKey(path), ...(opts.aliases ?? [])],
   aiWritable: opts.aiWritable ?? true,
   countsTowardProgress: opts.countsTowardProgress ?? true,
+  ...editorMeta(opts),
 });
+
+/** Editor-only field: never Coach-visible, never counts toward progress. */
+const ef = (path: string, label: string, kind: BlueprintFieldKind, opts: FieldOpts = {}): RegistryField =>
+  f(path, label, kind, { ...opts, aiWritable: false, countsTowardProgress: false, editorOnly: true });
 
 const list = (
   basePath: string,
@@ -187,6 +256,7 @@ const list = (
     countsTowardProgress?: boolean;
     aiIndexedCount?: number;
     suggestedCount?: [number, number];
+    editorItemFields?: RegistryListItemField[];
   } = {},
 ): RegistryList => ({
   id: basePath,
@@ -199,7 +269,64 @@ const list = (
   countsTowardProgress: opts.countsTowardProgress ?? true,
   aiIndexedCount: opts.aiIndexedCount ?? 3,
   suggestedCount: opts.suggestedCount,
+  ...(opts.editorItemFields ? { editorItemFields: opts.editorItemFields } : {}),
 });
+
+// -----------------------------------------------------------------------------
+// Offer enum value sets (must match the unions in offerDesignTypes.ts — tested)
+// -----------------------------------------------------------------------------
+
+export const TIMEFRAME_VALUES: EnumValue[] = [
+  { value: "7_days", label: "7 days" },
+  { value: "30_days", label: "30 days" },
+  { value: "60_days", label: "60 days" },
+  { value: "90_days", label: "90 days" },
+  { value: "6_months", label: "6 months" },
+  { value: "12_months", label: "12 months" },
+  { value: "custom", label: "Custom" },
+];
+
+export const DELIVERY_FREQUENCY_VALUES: EnumValue[] = [
+  { value: "one_time", label: "One-time" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "biweekly", label: "Bi-weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "ongoing", label: "Ongoing" },
+];
+
+export const PAYMENT_PLAN_TYPE_VALUES: EnumValue[] = [
+  { value: "full_pay", label: "Pay in Full" },
+  { value: "split_2", label: "2 Payments" },
+  { value: "split_3", label: "3 Payments" },
+  { value: "split_6", label: "6 Payments" },
+  { value: "monthly", label: "Monthly" },
+  { value: "custom", label: "Custom" },
+];
+
+export const GUARANTEE_TYPE_VALUES: EnumValue[] = [
+  { value: "none", label: "None" },
+  { value: "refund", label: "Refund" },
+  { value: "performance", label: "Performance" },
+  { value: "milestone", label: "Milestone" },
+  { value: "custom", label: "Custom" },
+];
+
+export const BILLING_INTERVAL_VALUES: EnumValue[] = [
+  { value: "monthly", label: "Monthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "yearly", label: "Yearly" },
+];
+
+const DELIVERY_TYPES_ITEM: RegistryListItemField = {
+  key: "delivery_types",
+  label: "Delivery Types",
+  kind: "text",
+  valueType: "string[]",
+  control: "delivery-types",
+  aiWritable: false,
+};
 
 // -----------------------------------------------------------------------------
 // Shared option sets
@@ -397,6 +524,7 @@ const OFFER_DESIGN_TAB: RegistryTab = {
       ],
       iconKey: "Compass",
       progress: { mode: "custom", ruleId: "offer.angle" },
+      appliesToTiers: ["core"],
       lists: [
         list(
           "offer_stack.angle.framework.pillars",
@@ -457,6 +585,7 @@ const OFFER_DESIGN_TAB: RegistryTab = {
         f("offer_stack.angle.core_promise.timeframe", "Timeframe (Core Promise)", "text", {
           helper: "Use one of: 7_days, 30_days, 60_days, 90_days, 6_months, 12_months, custom",
           aliases: ["promise timeframe", "timeframe", "termijn", "tijdspanne"],
+          valueType: "enum", enumValues: TIMEFRAME_VALUES, control: "timeframe",
         }),
         f("offer_stack.angle.core_promise.timeframe_custom", "Timeframe — Custom Label", "text", {
           helper: "Short custom label when timeframe = custom",
@@ -482,6 +611,7 @@ const OFFER_DESIGN_TAB: RegistryTab = {
       ],
       iconKey: "Layers",
       progress: { mode: "custom", ruleId: "offer.stack" },
+      appliesToTiers: ["core"],
       lists: [
         list(
           "offer_stack.stack.deliverables",
@@ -490,9 +620,9 @@ const OFFER_DESIGN_TAB: RegistryTab = {
           [
             { key: "name", label: "Name", kind: "text", helper: "Short, benefit-driven name for a core deliverable" },
             { key: "description", label: "Description", kind: "textarea", helper: "1-2 sentences describing what the client receives and how it works" },
-            { key: "frequency", label: "Frequency", kind: "text", helper: "One of: one_time | daily | weekly | biweekly | monthly | quarterly | ongoing" },
+            { key: "frequency", label: "Frequency", kind: "text", helper: "One of: one_time | daily | weekly | biweekly | monthly | quarterly | ongoing", valueType: "enum", enumValues: DELIVERY_FREQUENCY_VALUES, control: "delivery-frequency" },
           ],
-          { aiIndexedCount: 3, suggestedCount: [3, 5] },
+          { aiIndexedCount: 3, suggestedCount: [3, 5], editorItemFields: [DELIVERY_TYPES_ITEM] },
         ),
         list(
           "offer_stack.stack.resources",
@@ -525,7 +655,7 @@ const OFFER_DESIGN_TAB: RegistryTab = {
             { key: "description", label: "Description", kind: "textarea", helper: "Why this bonus accelerates or simplifies the result" },
             { key: "perceived_value", label: "Perceived Value", kind: "text", helper: "Concrete value signal, e.g. €500 value or saves 10 hours" },
           ],
-          { aiIndexedCount: 2, suggestedCount: [2, 4] },
+          { aiIndexedCount: 2, suggestedCount: [2, 4], editorItemFields: [DELIVERY_TYPES_ITEM] },
         ),
         list(
           "offer_stack.stack.milestones",
@@ -543,6 +673,7 @@ const OFFER_DESIGN_TAB: RegistryTab = {
         f("offer_stack.stack.delivery_timeline", "Delivery Timeline", "text", {
           helper: "Use one of: 7_days, 30_days, 60_days, 90_days, 6_months, 12_months, custom",
           aliases: ["delivery timeline", "program timeline", "delivery timeframe", "doorlooptijd"],
+          valueType: "enum", enumValues: TIMEFRAME_VALUES, control: "timeframe",
         }),
         f("offer_stack.stack.delivery_timeline_custom", "Delivery Timeline — Custom Label", "text", {
           helper: "Short custom label when delivery_timeline = custom",
@@ -558,15 +689,31 @@ const OFFER_DESIGN_TAB: RegistryTab = {
       aliases: ["pricing", "pricing tab", "prijzen", "prijstab"],
       iconKey: "Euro",
       progress: { mode: "custom", ruleId: "offer.pricing" },
+      appliesToTiers: ["core"],
+      // Editor-only for now: hidden from Coach prompts / write-backs (temporary).
+      editorFields: [
+        ef("offer_stack.pricing.recurring_enabled", "Recurring Offer Enabled", "text", { valueType: "boolean", control: "toggle" }),
+        ef("offer_stack.pricing.recurring_offer.name", "Recurring Offer — Name", "text"),
+        ef("offer_stack.pricing.recurring_offer.monthly_price", "Recurring Offer — Price", "text", { valueType: "number", control: "currency-amount" }),
+        ef("offer_stack.pricing.recurring_offer.description", "Recurring Offer — Description", "textarea"),
+        ef("offer_stack.pricing.recurring_offer.ongoing_value", "Recurring Offer — Ongoing Value", "textarea"),
+        ef("offer_stack.pricing.recurring_offer.delivery_types", "Recurring Offer — Delivery Types", "text", { valueType: "string[]", control: "delivery-types" }),
+        ef("offer_stack.pricing.recurring_offer.interval", "Recurring Offer — Billing Interval", "text", { valueType: "enum", enumValues: BILLING_INTERVAL_VALUES, control: "billing-interval" }),
+        ef("offer_stack.pricing.premium_enabled", "Premium Upgrade Enabled", "text", { valueType: "boolean", control: "toggle" }),
+        ef("offer_stack.pricing.premium_upgrade.name", "Premium Upgrade — Name", "text"),
+        ef("offer_stack.pricing.premium_upgrade.price", "Premium Upgrade — Price", "text", { valueType: "number", control: "currency-amount" }),
+        ef("offer_stack.pricing.premium_upgrade.description", "Premium Upgrade — Description", "textarea"),
+        ef("offer_stack.pricing.premium_upgrade.additional_value", "Premium Upgrade — Additional Value", "textarea"),
+      ],
       lists: [
         list(
           "offer_stack.pricing.payment_plans",
           "Payment Plans",
           "Payment Plan",
           [
-            { key: "type", label: "Type", kind: "text", helper: "One of: full_pay | split_2 | split_3 | split_6 | monthly | custom" },
+            { key: "type", label: "Type", kind: "text", helper: "One of: full_pay | split_2 | split_3 | split_6 | monthly | custom", valueType: "enum", enumValues: PAYMENT_PLAN_TYPE_VALUES, control: "payment-plan-type" },
             { key: "custom_label", label: "Label", kind: "text", helper: "Short plan name, e.g. 'Pay in Full', '3-Pay'" },
-            { key: "amount", label: "Amount", kind: "text", helper: "Numeric amount for this plan in workspace currency, e.g. 997. Numbers only." },
+            { key: "amount", label: "Amount", kind: "text", helper: "Numeric amount for this plan in workspace currency, e.g. 997. Numbers only.", valueType: "number", control: "currency-amount" },
             { key: "duration", label: "Duration", kind: "text", helper: "How long the plan runs, e.g. '3 months', '12 weeks'" },
           ],
           { aiIndexedCount: 3, suggestedCount: [2, 3] },
@@ -576,10 +723,12 @@ const OFFER_DESIGN_TAB: RegistryTab = {
         f("offer_stack.pricing.core_price", "Core Price", "text", {
           helper: "Numeric headline price for the main offer, e.g. 2500. Numbers only.",
           aliases: ["core price", "headline price", "main price", "kernprijs", "hoofdprijs"],
+          valueType: "number", control: "currency-amount",
         }),
         f("offer_stack.pricing.guarantee_type", "Guarantee Type", "text", {
           helper: "One of: none | refund | performance | milestone | custom",
           aliases: ["guarantee type", "type garantie", "risk reversal type"],
+          valueType: "enum", enumValues: GUARANTEE_TYPE_VALUES, control: "guarantee-type",
         }),
         f("offer_stack.pricing.guarantee_custom", "Guarantee — Custom Label", "text", {
           helper: "Short label when guarantee_type = custom",
@@ -601,6 +750,7 @@ const OFFER_DESIGN_TAB: RegistryTab = {
       aliases: ["offer ecosystem", "ecosystem", "offer ladder", "value ladder", "aanbodladder"],
       iconKey: "Network",
       progress: { mode: "custom", ruleId: "offer.ecosystem" },
+      appliesToTiers: "all",
       lists: [],
       fields: [],
     },
@@ -970,6 +1120,74 @@ export const BLUEPRINT_FIELD_BY_KEY: Record<string, RegistryField> = Object.from
 );
 
 export const BLUEPRINT_LISTS: RegistryList[] = BLUEPRINT_SUB_BLOCK_LIST.flatMap((sb) => sb.lists);
+
+// =============================================================================
+// OFFER EDITOR LOOKUPS (not used by Coach prompts, write-backs or progress)
+// =============================================================================
+
+/** Blueprint JSON column holding the Primary Core Offer design. */
+export const OFFER_DESIGN_ROOT = "offer_stack";
+
+/**
+ * Strip the Blueprint storage root so a path becomes offer-relative
+ * ("offer_stack.pricing.core_price" → "pricing.core_price"). The repository
+ * maps relative paths to storage (blueprint vs offers.data.design).
+ */
+export function offerRelativePath(path: string): string {
+  const prefix = `${OFFER_DESIGN_ROOT}.`;
+  return path.startsWith(prefix) ? path.slice(prefix.length) : path;
+}
+
+/**
+ * Summary fields every ecosystem offer row has (offers.name + offers.data.*).
+ * Paths are relative to the offer row. Coach access to these still goes
+ * through the existing offer_ecosystem.<tier>.new_<n>.<field> mechanism.
+ */
+export const OFFER_ITEM_FIELDS: RegistryField[] = [
+  f("name", "Offer Name", "text", {
+    helper: "Short, evocative name for this offer.", placeholder: "Offer name",
+    aiWritable: true, countsTowardProgress: false,
+  }),
+  f("data.description", "Description", "textarea", {
+    helper: "What this offer is in 1–2 sentences.", placeholder: "What this offer is in 1–2 sentences…",
+    aiWritable: true, countsTowardProgress: false,
+  }),
+  f("data.core_outcome", "Core Outcome", "text", {
+    helper: "What the buyer walks away with.", placeholder: "What the buyer walks away with",
+    aiWritable: true, countsTowardProgress: false,
+  }),
+  f("data.price", "Price", "text", {
+    valueType: "number", control: "currency-amount", aiWritable: false, countsTowardProgress: false,
+  }),
+  f("data.delivery_types", "Delivery Type", "text", {
+    placeholder: "How is it delivered?", valueType: "string[]", control: "delivery-types",
+    aiWritable: false, countsTowardProgress: false,
+  }),
+];
+
+const appliesTo = (sb: RegistrySubBlock, tier: OfferTier) =>
+  sb.appliesToTiers === "all" || (sb.appliesToTiers ?? []).includes(tier);
+
+/**
+ * Category-specific editor configuration. Today: Core gets the full
+ * Angle / Stack / Pricing design; every tier gets the offer item fields.
+ */
+export function fieldsForTier(tier: OfferTier): {
+  subBlocks: RegistrySubBlock[];
+  itemFields: RegistryField[];
+} {
+  const offerTab = getRegistryTab("offer_design");
+  const subBlocks = (offerTab?.subBlocks ?? []).filter(
+    (sb) => sb.id !== "ecosystem" && appliesTo(sb, tier),
+  );
+  return { subBlocks, itemFields: OFFER_ITEM_FIELDS };
+}
+
+/** Every Offer Design field definition, including editor-only ones. */
+export function offerDesignFieldsForEditor(): RegistryField[] {
+  const offerTab = getRegistryTab("offer_design");
+  return (offerTab?.subBlocks ?? []).flatMap((sb) => [...sb.fields, ...(sb.editorFields ?? [])]);
+}
 
 export function getBlueprintFieldByPath(path: string): RegistryField | undefined {
   return BLUEPRINT_FIELD_BY_PATH[path];

@@ -36,7 +36,7 @@ const WRITABLE_LIST_PREFIXES = BLUEPRINT_LISTS.filter((l) => l.aiWritable).map((
  * targets an item of a registry-declared repeatable list at ANY index
  * (the registry only enumerates the first N indices for the prompt).
  */
-function isWritablePath(path: string): boolean {
+export function isWritablePath(path: string): boolean {
   const field = BLUEPRINT_FIELD_BY_PATH[path];
   if (field) return field.aiWritable;
   return WRITABLE_LIST_PREFIXES.some((prefix) => /^\d+\./.test(path.slice(prefix.length + 1)) && path.startsWith(`${prefix}.`));
