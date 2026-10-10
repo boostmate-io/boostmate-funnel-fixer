@@ -5,7 +5,11 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import {
-  attributionPrefix,
+  BUSINESS_LAYER_HEADING,
+  filterHistoryForOffer,
+  renderHistoryIsolationNote,
+  replayPrefix,
+  shouldIsolateOfferHistory,
   blueprintWithoutOfferDesign,
   hasActiveOfferClaim,
   offerContextPart,
@@ -850,7 +854,7 @@ The user opened the Coach from ONE specific field: "${context?.target?.label ?? 
     parts.push(renderActiveOfferSection(verifiedActiveOffer));
     const bpRest = blueprintWithoutOfferDesign(context?.businessContext?.blueprintSnapshot);
     if (bpRest) {
-      parts.push(`# Business Blueprint — broader business context (the Primary Core Offer's Angle/Stack/Pricing are excluded; they do NOT belong to the active offer)\n${JSON.stringify(bpRest, null, 2)}`);
+      parts.push(`${BUSINESS_LAYER_HEADING}\n${JSON.stringify(bpRest, null, 2)}`);
     }
   } else if (context?.businessContext?.blueprintSnapshot) {
     parts.push(`# Current Business Blueprint JSON\n${JSON.stringify(context.businessContext.blueprintSnapshot, null, 2)}`);
@@ -1134,7 +1138,7 @@ function renderForcedMainOfferRetryPrompt(step: MainOfferWalkthroughStep) {
 // short rolling digest so a single long-lived Coach conversation never blows
 // past the model's context window.
 // -----------------------------------------------------------------------------
-function windowMessagesForModel(messages: any[], keep = 24): { digest: string; recent: any[] } {
+function windowMessagesForModel(messages: any[], keep = 24, markUnattributed = false): { digest: string; recent: any[] } {
   if (!Array.isArray(messages) || messages.length <= keep) {
     return { digest: "", recent: messages ?? [] };
   }
@@ -1145,7 +1149,7 @@ function windowMessagesForModel(messages: any[], keep = 24): { digest: string; r
       const role = m?.role === "assistant" ? "Coach" : "User";
       const text = typeof m?.content === "string" ? m.content.replace(/\s+/g, " ").trim() : "";
       if (!text) return "";
-      return `- ${attributionPrefix(m)}${role}: ${text.slice(0, 220)}${text.length > 220 ? "…" : ""}`;
+      return `- ${replayPrefix(m, markUnattributed)}${role}: ${text.slice(0, 220)}${text.length > 220 ? "…" : ""}`;
     })
     .filter(Boolean);
   // Cap the digest itself so very long histories stay bounded.
@@ -2309,16 +2313,28 @@ The latest user-role message was generated automatically when the user opened th
       .join("\n\n---\n\n");
     // The Coach is ONE long-lived conversation per workspace, so the history
     // is bounded: recent turns verbatim + a condensed digest of older ones.
-    const { digest, recent } = windowMessagesForModel(messages);
+    // Model-only history isolation: field/section help on an additional offer
+    // sees only that offer's turns (+ the current one). Storage and the
+    // visible transcript are untouched.
+    const isolateHistory = shouldIsolateOfferHistory({
+      scope: effectiveContext?.scope ?? context?.scope,
+      hasVerifiedAdditionalOffer: !!verifiedOffer,
+      latestUserText: latestUserText(messages),
+    });
+    const isolated = isolateHistory && verifiedOffer ? filterHistoryForOffer(messages, verifiedOffer.id) : null;
+    const modelHistory = isolated ? isolated.kept : messages;
+    const isolationNote = isolated && verifiedOffer ? renderHistoryIsolationNote(isolated.excluded, verifiedOffer) : null;
+    const markUnattributed = !!verifiedOffer && !isolated;
+    const { digest, recent } = windowMessagesForModel(modelHistory, 24, markUnattributed);
     const llmMessages: any[] = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: isolationNote ? `${systemPrompt}\n\n---\n\n${isolationNote}` : systemPrompt },
       ...(digest
         ? [{ role: "system", content: `# Earlier in this conversation (condensed)\n${digest}` }]
         : []),
       ...recent.map((m: any) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content:
-          attributionPrefix(m) +
+          replayPrefix(m, markUnattributed) +
           (m.role === "assistant"
             ? serializeAssistantForModel(m)
             : typeof m.content === "string"

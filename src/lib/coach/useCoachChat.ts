@@ -189,7 +189,20 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
         id: `local-${Date.now()}`,
         role: "user",
         content: text,
-        parts: [{ type: "text", text }],
+        parts: [
+          { type: "text", text },
+          // Attribute in-session turns so model-side history isolation keeps
+          // them (the server re-tags persisted rows with the verified offer).
+          ...(context.businessContext.activeOffer
+            ? [{
+                type: "offer_context",
+                offerId: context.businessContext.activeOffer.id,
+                offerName: context.businessContext.activeOffer.name,
+                tier: context.businessContext.activeOffer.tier,
+                isPrimary: context.businessContext.activeOffer.isPrimary,
+              } as unknown as CoachMessagePart]
+            : []),
+        ],
       };
       const nextMessages = [...messages, userMsg];
       setMessages(nextMessages);
