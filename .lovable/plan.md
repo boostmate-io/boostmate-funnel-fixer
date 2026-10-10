@@ -1,107 +1,115 @@
-# Plan: Universal Offer Editor, built from the Core Offer editor
+# Universal Offer Editor — six offer categories (analysis and plan)
 
-Planning only. No database changes, no change to the simple-tier popup, and no second field-definition system. Every step can ship on its own and keeps today's behaviour.
+Planning only. No code, UI, schema or Coach changes until approved.
 
-## Current state
+## 1. Current editor architecture
 
-- **`CoreOfferDialog`** shows Angle, Stack and Pricing stacked in one scroll (`embedded` mode). It reads its data once when it opens and calls `onChange` with the full design on every edit.
-- **Where data goes:** the primary offer is written to the Blueprint (`onChangeOfferDesign`), and `usePrimaryOfferSync` then updates the offer record. Extra Core offers are written to `offers.data.design` plus their summary (`designToRowValues` → `updateEcosystemOffer`, with a short save delay).
-- **Coach entry points in the tabs:**
-  - field Coach and list Coach go through `useOfferCoach`;
-  - section help goes through `SectionHelpCoach`.
-- **Coach risk found:** when the Coach's open request has no `onApplyBlueprintWrites`, `GlobalCoachBubble` falls back to `applyBlueprintWrites(subAccount, writes)`. That fallback writes `offer_stack.*` to the Blueprint, i.e. the Primary offer. It's reachable from field-mode Coach proposals and from `SectionHelpCoach` while an extra Core offer is open. This must be closed in step 3, before anything else touches extra Core offers.
+```text
+OfferEcosystemTab
+ ├─ OfferSummaryCard (read-only, any tier)            reusable
+ ├─ tier === "core" → CoreOfferDialog
+ │     └─ OfferEditorShell (tabs, save status, flush) reusable
+ │         └─ tabs = fieldsForTier("core") → Angle / Stack / Pricing (hardcoded map)
+ └─ other tiers → simple Dialog + OfferFieldsEditor (5 hand-written fields)
+Storage: Primary → business_blueprints.offer_stack
+         every other offer → offers row (summary in data.*, Core design in data.design)
+Coach:   scopedOfferWrites → only offer_stack.{angle,stack,pricing}.*
+         offerContext → Core-shaped angle checks; other tiers summarized only
+```
 
-## Components
+Reusable as-is: OfferEditorShell, OfferSummaryCard, offerEditorField/offerEditorList, offerRelativePath, the repository/debounced queue, active-offer verification, attribution guard.
 
-| New | Purpose |
-|---|---|
-| `offer/editor/OfferEditorShell.tsx` | Popup shell: header (title, tier label, Primary badge), configurable tabs, scrolling body, save status, Done/close handling. Knows nothing about fields. |
-| `offer/editor/OfferEditorContext.tsx` | Provides `{ offerRef, tier, isPrimary, coachMode }` to everything inside the editor. |
-| `offer/editor/useOfferEditorState.ts` | Holds the working copy, saves through the offer data layer, and exposes `status: idle / saving / saved / error` plus `flush()`. Reloads from outside changes (Coach) without overwriting fields being typed in. |
-| `offer/editor/coreTabs.ts` | Core tab config built from `fieldsForTier("core").subBlocks` (angle → stack → pricing) plus each tab's component and progress function. |
+Core-coupled:
+- `fieldsForTier()`: every non-core tier gets zero sub-blocks by construction (all three are `appliesToTiers: ["core"]`).
+- CoreOfferDialog: calls `fieldsForTier("core")`, has a fixed tab map and the "Core Offer" label.
+- OfferEcosystemTab: tier branch in `openEditor`, the hand-written OfferFieldsEditor (not registry-driven), and Core-only `dialogInitial`.
+- The three tabs are written against `OfferDesignData`. Their copy is labelled for the Primary ("Main Offer Name", "The headline price for your main offer.").
+- `scopedOfferWrites`, `isOfferUndefined` and `renderActiveOfferSection` assume the Core schema.
+- `EcosystemOfferRow.data` type omits `design`; it is read via `any`.
+- `offer_relationships` exists but is only used by Growth Architecture, not by the editor.
 
-| Refactored | Change |
-|---|---|
-| `registryUi.ts` | `toFieldDef` also passes `valueType`, `enumValues`, `control`, `editorOnly` (optional). Existing outputs stay the same. |
-| `CoreOfferDialog.tsx` | Becomes a thin wrapper: `OfferEditorShell` + the Core tabs. Keeps the same props during the transition. |
-| `useOfferCoach.tsx`, `SectionHelpCoach.tsx` | Read `OfferEditorContext`. On extra Core offers, Coach writes are routed to the current offer or blocked (step 3). |
-| `offerRepository.ts` | Small `saveOfferDesign(ref, design)` that hides the primary vs extra difference. It already exists; the editor will use it. |
+## 2. Proposed configuration per category
 
-**Reused unchanged:** `OfferAngleTab`, `OfferStackTab`, `PricingTab` (`embedded` mode), `FrameworkSection`, `DeliveryTypePicker`, the builder cards, `AngleField`, `CoachIconButton`, `usePrimaryOfferSync`, `useEcosystemOffers`, the summary helper, and all progress functions.
+Approach: reuse the same three sub-blocks and choose **which fields/lists** apply per tier, instead of new tabs. "Req" = needed for the card/progress; everything else optional.
 
-## Steps
+| Area | Free | Low-Ticket | Mid-Ticket | Core | Premium | Continuity |
+|---|---|---|---|---|---|---|
+| Name, short description | Req | Req | Req | Req | Req | Req |
+| Core outcome / promise | Req | Req | Req | Req | Req | Req |
+| Problem solved / quick win (new) | Req | Req | opt | — | — | — |
+| Better Results / Faster / Easier | — | opt (1) | opt | full | full | — |
+| New Vehicle, Signature Framework | — | — | opt | full | opt (reuses Core) | — |
+| Deliverables list | 1–2 (format) | 1–3 | full | full | full | per-cycle |
+| Resources list | opt | opt | opt | full | opt | opt |
+| Support System | — | — | opt | full | full (access level) | full |
+| Bonuses | — | opt (order bump) | opt | full | opt | — |
+| Milestones / Delivery Timeline | — | — | opt | full | opt | — |
+| Price | none (free) | Req | Req | Req | Req | Req recurring |
+| Payment plans | — | — | opt | full | full | — |
+| Guarantee | — | opt | opt | full | opt | cancel terms |
+| Billing interval, ongoing value | — | — | — | — | — | Req (existing recurring fields) |
+| Delivery types | Req | Req | Req | Req | Req | Req |
+| Ecosystem role (new) | leads into | ascends to | ascends to | primary/alt | upgrade from | retention |
 
-### Step 1: pass the new details through `toFieldDef`
-- Add the optional `valueType`, `enumValues`, `control`, `editorOnly` to the returned field description. No caller reads them yet.
-- **Done when:**
-  - the Clarity, Brand and Proof screens look and behave the same (their field descriptions are snapshot-tested);
-  - the 31 existing tests pass.
+Tabs per tier: Free and Low-Ticket get **one** "Offer" tab (fields drawn from Angle/Stack/Pricing). Mid-Ticket and Premium get Angle/Stack/Pricing with fewer fields. Continuity gets Angle + "Membership" (stack fields per cycle) + Pricing (recurring). Core is unchanged.
 
-### Step 2: the editor shell, wrapping today's popup
-- Build `OfferEditorShell`, then switch `CoreOfferDialog` to it with three tabs (Angle / Stack / Pricing) instead of one long scroll.
-- Each tab shows its progress % using the existing functions. Tabs are only hidden, never unmounted while the editor is open, so typing and list state survive tab switches.
-- **Footer** shows "Saving…", "Saved" or "Not saved, retry". Done saves first:
-  - extra Core offers call `flushOffer`;
-  - primary offers rely on the Blueprint autosave and show its `saving` flag.
-- **Desktop:** about 1200px wide, 92% screen height. **Mobile:** full screen with tabs that scroll sideways.
-- Optional `initialTab` prop (no callers yet).
-- **Done when:**
-  - every field from the stacked popup is present in exactly one tab;
-  - edits to the primary offer reach the Blueprint and the offer record (sync unchanged);
-  - edits to an extra Core offer reach `data.design` and its summary;
-  - closing during a pending save keeps the edit;
-  - progress numbers in the tabs and the section header are unchanged;
-  - no other screen changes.
+## 3. Missing registry definitions
 
-### Step 3: protect the Primary offer while editing an extra Core offer (before any further change)
-- `OfferEditorContext.coachMode`:
-  - `"primary"`: today's behaviour;
-  - `"scoped"`: an extra Core offer.
-- **In scoped mode:**
-  - field and list Coach keep working, because they already apply through local callbacks to the open offer;
-  - every Coach request also gets an `onApplyBlueprintWrites` that only accepts `offer_stack.*` paths and writes them into the open offer's working copy. It never calls `applyBlueprintWrites`, so the global fallback can't be reached;
-  - `SectionHelpCoach` (explain/walkthrough) is hidden, or shown read-only with no writes (decision below);
-  - the Coach's context shows this offer's design, not the primary offer's.
-- **Done when (tests):**
-  - with a scoped editor open, a Coach proposal for `offer_stack.pricing.core_price` changes the open offer and leaves the Blueprint untouched;
-  - in primary mode the behaviour is byte-identical to today;
-  - no path in scoped mode reaches `applyBlueprintWrites`.
+- Per-field/list tier applicability (today only per sub-block): optional `appliesToTiers` on fields and lists, defaulting to the sub-block value. Core outputs stay identical.
+- Per-tier editor copy overrides (e.g. "Offer Name" instead of "Main Offer Name") as additive `editor.byTier`.
+- New editor-level fields: `problem_solved` / `quick_win` (Free, Low), `lead_magnet_format` (Free, enum), `access_level` (Premium), `cancellation_terms` (Continuity), `ecosystem_role` relationship (rendered from offer_relationships, not stored in design).
+- Reuse the existing Continuity fields: `recurring_offer.monthly_price`, `interval`, `ongoing_value`.
+- A per-tier "tab layout" description (which sub-block fields form which tab) in the registry, so `fieldsForTier(tier)` returns tabs for every tier.
 
-### Step 4: one entry point for opening the editor, with tab support
-- `openOfferEditor({ offerId | "primary", tab? })`, built on the existing `boostmate:open-offer-design` link with an optional `tab` added. Sidebar, Coach and funnel links keep working; without `tab`, Angle opens.
-- `"primary"` uses the primary record, or the Blueprint data if no record exists yet.
-- **Done when:**
-  - every existing link opens the same offer as before;
-  - `{ offerId: "primary", tab: "pricing" }` opens straight on Pricing.
+## 4. Data storage and compatibility
 
-### Step 5: link the tabs to the field list, simple fields first
-- Inside each tab, swap fixed labels, helpers and placeholders of simple text fields for registry lookups (`offerDesignFieldsForEditor()` / `toFieldDef`). Keep the same components and layout.
-- Order: Angle text fields → framework name/description → guarantee details → stack timeline → pricing core price / guarantee type (using `enumValues`).
-- Lists (pillars, deliverables, bonuses, milestones, payment plans) and special controls stay as they are; only their labels/helpers may come from the list's item fields.
-- Coach ids already match registry paths (drift test); they are then read from the field list too.
-- **Done when (per sub-block, its own change):**
-  - screenshot comparison shows the same text and layout;
-  - the drift test count of hand-written paths goes down;
-  - Coach prompts are byte-identical;
-  - progress is unchanged.
+- Keep the existing split: the Primary stays in Blueprint storage; all other offers keep their row and ID, and their extended design goes into `offers.data.design` (same shape as Core, with only the applicable keys filled). No schema change needed.
+- Summary fields (`data.description`, `core_outcome`, `price`, `delivery_types`) remain the card/funnel source. When a design exists, keep them synced from it with one owner (the repository), as the Primary sync does — never two writers.
+- Risks:
+  - Existing non-core rows have no `design`. Seed it on first open from the summary fields, without writing until the user edits.
+  - The `data.price` vs `design.pricing.core_price` overlap needs one rule: design wins and the summary is updated.
+  - Changing a tier on an existing offer must keep its ID and funnel links. Hide but keep data for fields that don't apply to the new tier.
+  - Fix the `EcosystemOfferRow.data` type to include `design`.
+- Relationships: use `offer_relationships` (already secured by workspace) rather than new design fields.
 
-### Step 6: ready for other categories (no visible change)
-- `OfferEditorShell` gets its tabs from `fieldsForTier(tier)`. Only Core has tabs today; other tiers keep the simple popup until you choose to switch them.
-- The future Irresistible Offer Builder reuses `OfferEditorContext`, `useOfferEditorState` and the same tab components in a guided layout.
-- **Done when:** `fieldsForTier` drives the Core tab list, and changing a tier's `appliesToTiers` in the field list is the only edit needed to add a tab for that tier.
+## 5. AI Coach considerations
 
-## Compatibility risks
+- Active-offer context already carries `tier`. Extend server verification to non-core rows with no other change.
+- `scopedOfferWrites`: replace the fixed `angle|stack|pricing` set with "path is in `fieldsForTier(row.tier)`". This is a tier guard derived from the registry and stricter than today.
+- `isOfferUndefined` needs per-tier defining fields (e.g. Free: description + outcome + format).
+- Keep the editor-only fields (recurring/premium) non-writable until a separate approval; Continuity would need them writable.
+- History isolation and attribution already work by offer ID and need no tier change.
+- Section Help stays hidden for non-primary offers until per-tier section prompts exist.
 
-- **Coach writing to the wrong offer.** Mitigation: step 3 comes before any other change to extra Core offers, with tests.
-- **Coach changes not showing while the editor is open.** Today the popup reads its data once. Mitigation: `useOfferEditorState` takes in outside updates and keeps fields with unsaved typing.
-- **Losing state when switching tabs.** Mitigation: tabs are hidden, not unmounted.
-- **Two save paths** (Blueprint autosave vs offer save delay). Mitigation: one status view that reads `saving` (primary) or `hasPendingChanges` plus errors (extra).
-- **Sync ownership.** The editor never writes the primary offer record directly; it always goes through the Blueprint, and `usePrimaryOfferSync` stays the only owner.
-- **Brand-new Blueprint with no primary record yet.** The editor opens from Blueprint data; the sync creates the record.
-- **Old links without a tab** default to Angle.
+## 6. Remaining duplicated metadata
 
-## Decisions needed
+- **Remove:**
+  - `PAYMENT_PLAN_TYPES` / `GUARANTEE_OPTIONS` in offerDesignTypes: point them at the registry editor options.
+  - Hand-written labels in OfferFieldsEditor: use `OFFER_ITEM_FIELDS`.
+  - The older `src/lib/blueprintFields.ts` list: audit its consumers.
+  - The local `OfferTier` copy in offerContext.ts: import from the registry.
+- **Keep, guarded by tests:** `coachItemFields`, the separate list-Coach wording.
+- **Legitimate presentation:** tab titles/descriptions, progress feedback messages, icons.
+- **Specialized UI (stay in components):** delivery-type picker, quick-add chips, frequency options, currency inputs, plan-type normalization, timeline controls.
 
-1. In scoped mode (extra Core offers), should field and list Coach stay available, with writes routed to the open offer (recommended), or be hidden entirely?
-2. Section help (explain/walkthrough) in scoped mode: hide it (recommended for now), or show it without the ability to apply changes?
-3. Editor size: large popup on desktop (recommended), or full screen everywhere?
+## 7. Incremental roadmap
+
+1. Cleanup: remove the true duplicates above and fix the row type. Tests only, no visible change.
+2. Registry: optional field/list `appliesToTiers` and per-tier tab layout, plus copy overrides. Core snapshot tests must stay byte-identical.
+3. Make CoreOfferDialog tier-driven (rename to OfferDialog): tabs from `fieldsForTier(tier)`; tabs hide fields that don't apply. Core unchanged.
+4. First non-core tier: **Low-Ticket**, Coach off. Seed design from summary; one summary sync owner. Verify cards, funnel links and IDs.
+5. Free, Mid-Ticket and Premium, one at a time.
+6. Continuity, including the recurring-field decision.
+7. Coach per tier: tier-aware write guard, undefined detection, then field/list help per tier.
+8. Ecosystem role/relationships in the editor using `offer_relationships`.
+9. Retire OfferFieldsEditor.
+
+## 8. Decisions needed
+
+1. Approve the per-tier field matrix above (especially Mid-Ticket vs Premium depth).
+2. Should the simple tiers (Free, Low) use a single tab or the three-tab layout with fewer fields?
+3. Summary vs design: confirm "design is the source; summary is synced from it".
+4. Tier change on an existing offer: keep hidden data (recommended) or clear it?
+5. Continuity: make the recurring fields AI-writable when Continuity is supported?
+6. Should progress per non-core tier count toward Blueprint progress? (Today it doesn't.)
+7. Show ecosystem relationships inside the editor, or keep them only in Growth Architecture?
