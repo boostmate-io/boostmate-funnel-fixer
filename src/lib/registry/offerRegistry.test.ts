@@ -147,7 +147,9 @@ const SCAN = [
 ];
 const readAll = (p: string): string[] => {
   const abs = path.join(SRC, p);
-  if (fs.statSync(abs).isFile()) return [fs.readFileSync(abs, "utf8")];
+  // Strip comments so doc examples are not treated as live paths.
+  const strip = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  if (fs.statSync(abs).isFile()) return [strip(fs.readFileSync(abs, "utf8"))];
   return fs.readdirSync(abs).filter((f) => /\.tsx?$/.test(f) && !f.includes(".test.")).flatMap((f) => readAll(path.join(p, f)));
 };
 
