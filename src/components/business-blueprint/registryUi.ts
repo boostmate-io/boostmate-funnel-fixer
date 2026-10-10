@@ -68,6 +68,11 @@ export function toFieldDef(field: RegistryField, tokens?: Partial<LabelTokens>) 
     suggestions: field.suggestions,
     fullWidth: field.fullWidth,
     rows: field.rows,
+    // Optional editor metadata — only present when the registry sets it.
+    ...(field.valueType ? { valueType: field.valueType } : {}),
+    ...(field.enumValues ? { enumValues: field.enumValues } : {}),
+    ...(field.control ? { control: field.control } : {}),
+    ...(field.editorOnly ? { editorOnly: true as const } : {}),
   };
 }
 

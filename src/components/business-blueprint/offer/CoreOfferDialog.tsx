@@ -3,7 +3,8 @@
 // fields for editing one core offer at a time.
 // =============================================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { OfferCoachScopeProvider, type ScopedOfferCoach } from "./OfferCoachScope";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,6 +29,8 @@ interface Props {
   onChange: (next: OfferDesignData) => void;
   saving?: boolean;
   businessType?: string;
+  /** Set for additional Core Offers: scopes all Coach actions to this offer. */
+  scopedOffer?: { id: string; name: string } | null;
 }
 
 export default function CoreOfferDialog({
@@ -38,8 +41,11 @@ export default function CoreOfferDialog({
   onChange,
   saving,
   businessType,
+  scopedOffer,
 }: Props) {
   const [data, setData] = useState<OfferDesignData>(initial ?? emptyOfferDesign());
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
   // Re-seed when reopened with a different offer
   useEffect(() => {
@@ -48,9 +54,26 @@ export default function CoreOfferDialog({
   }, [open]);
 
   const update = (next: OfferDesignData) => {
+    dataRef.current = next;
     setData(next);
     onChange(next);
   };
+  const updateRef = useRef(update);
+  updateRef.current = update;
+
+  const coachScope = useMemo<ScopedOfferCoach | null>(
+    () =>
+      scopedOffer
+        ? {
+            mode: "scoped",
+            offerId: scopedOffer.id,
+            offerName: scopedOffer.name || "this offer",
+            getDesign: () => dataRef.current,
+            applyDesign: (next) => updateRef.current(next),
+          }
+        : null,
+    [scopedOffer?.id, scopedOffer?.name],
+  );
 
   const updateAngle = (patch: Partial<OfferAngleData>) =>
     update({ ...data, angle: { ...data.angle, ...patch } });
@@ -69,6 +92,7 @@ export default function CoreOfferDialog({
           <DialogTitle className="text-xl font-display">{title}</DialogTitle>
         </DialogHeader>
 
+        <OfferCoachScopeProvider value={coachScope}>
         <div key={open ? "open" : "closed"} className="flex-1 overflow-y-auto">
           <div className="px-4 py-4 space-y-6">
             <OfferAngleTab
@@ -94,6 +118,7 @@ export default function CoreOfferDialog({
             />
           </div>
         </div>
+        </OfferCoachScopeProvider>
 
         <DialogFooter className="px-6 py-3 border-t border-border shrink-0">
           <Button onClick={() => onOpenChange(false)}>Done</Button>
