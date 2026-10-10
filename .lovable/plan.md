@@ -1,115 +1,153 @@
-# Universal Offer Editor — six offer categories (analysis and plan)
+# Universal Offer Editor — final field setup for six categories
 
-Planning only. No code, UI, schema or Coach changes until approved.
+Planning only. Nothing is implemented until approved.
 
-## 1. Current editor architecture
+## Status labels (never block saving)
 
-```text
-OfferEcosystemTab
- ├─ OfferSummaryCard (read-only, any tier)            reusable
- ├─ tier === "core" → CoreOfferDialog
- │     └─ OfferEditorShell (tabs, save status, flush) reusable
- │         └─ tabs = fieldsForTier("core") → Angle / Stack / Pricing (hardcoded map)
- └─ other tiers → simple Dialog + OfferFieldsEditor (5 hand-written fields)
-Storage: Primary → business_blueprints.offer_stack
-         every other offer → offers row (summary in data.*, Core design in data.design)
-Coach:   scopedOfferWrites → only offer_stack.{angle,stack,pricing}.*
-         offerContext → Core-shaped angle checks; other tiers summarized only
-```
+- **Min**: needed to create the offer. Only the Name is required for every category; Price is also Min for paid categories.
+- **Rec**: recommended. Counts toward the editor's own progress hint.
+- **Opt**: optional or advanced. Shown collapsed under "More options" and not counted.
 
-Reusable as-is: OfferEditorShell, OfferSummaryCard, offerEditorField/offerEditorList, offerRelativePath, the repository/debounced queue, active-offer verification, attribution guard.
+Progress is shown inside the editor only. Non-primary offers never affect overall Blueprint progress.
 
-Core-coupled:
-- `fieldsForTier()`: every non-core tier gets zero sub-blocks by construction (all three are `appliesToTiers: ["core"]`).
-- CoreOfferDialog: calls `fieldsForTier("core")`, has a fixed tab map and the "Core Offer" label.
-- OfferEcosystemTab: tier branch in `openEditor`, the hand-written OfferFieldsEditor (not registry-driven), and Core-only `dialogInitial`.
-- The three tabs are written against `OfferDesignData`. Their copy is labelled for the Primary ("Main Offer Name", "The headline price for your main offer.").
-- `scopedOfferWrites`, `isOfferUndefined` and `renderActiveOfferSection` assume the Core schema.
-- `EcosystemOfferRow.data` type omits `design`; it is read via `any`.
-- `offer_relationships` exists but is only used by Growth Architecture, not by the editor.
+Registry reuse: "existing" means an existing `offer_stack.*` field or list, reused by its relative path (`offerRelativePath`). New fields are added to the same registry as editor-only (not Coach-writable) until approved separately.
 
-## 2. Proposed configuration per category
+## Shared building blocks (used across categories)
 
-Approach: reuse the same three sub-blocks and choose **which fields/lists** apply per tier, instead of new tabs. "Req" = needed for the card/progress; everything else optional.
+| Building block | Source | Control |
+|---|---|---|
+| Name, Short Description, Core Outcome | existing Angle fields | text / textarea |
+| Signature Framework (name, description, pillars) | existing Angle fields and list | existing FrameworkSection |
+| New Vehicle, Better/Faster/Easier Results | existing Angle fields | text |
+| Deliverables, Resources, Support System, Bonuses, Milestones | existing Stack lists | existing list builders, delivery-type picker, frequency, perceived value |
+| Delivery Timeline | existing Stack field | timeline control |
+| Core Price, Payment Plans, Guarantee | existing Pricing fields and list | currency input, plan-type select, guarantee select |
+| Recurring name/price/interval/ongoing value/delivery types | existing editor-only Pricing fields | currency, billing-interval select, delivery-type picker |
+| Delivery Types summary | existing ecosystem item field | delivery-type picker |
+| **New** `problem_solved` | new field | textarea |
+| **New** `quick_win` (immediate value) | new field | textarea |
+| **New** `offer_format` | new enum field | select |
+| **New** `next_step_cta` | new field | text |
+| **New** `cancellation_terms` | new field | textarea |
+| **New** `premium_mode` (standalone / upgrade of a Core) | new enum field | segmented toggle |
+| **New** `touch_level` (high-touch options) | new string list | chips (1:1, done-with-you, done-for-you, VIP day, priority access) |
+| Ecosystem relationships | existing `offer_relationships` | relationship selector (existing component) |
 
-| Area | Free | Low-Ticket | Mid-Ticket | Core | Premium | Continuity |
-|---|---|---|---|---|---|---|
-| Name, short description | Req | Req | Req | Req | Req | Req |
-| Core outcome / promise | Req | Req | Req | Req | Req | Req |
-| Problem solved / quick win (new) | Req | Req | opt | — | — | — |
-| Better Results / Faster / Easier | — | opt (1) | opt | full | full | — |
-| New Vehicle, Signature Framework | — | — | opt | full | opt (reuses Core) | — |
-| Deliverables list | 1–2 (format) | 1–3 | full | full | full | per-cycle |
-| Resources list | opt | opt | opt | full | opt | opt |
-| Support System | — | — | opt | full | full (access level) | full |
-| Bonuses | — | opt (order bump) | opt | full | opt | — |
-| Milestones / Delivery Timeline | — | — | opt | full | opt | — |
-| Price | none (free) | Req | Req | Req | Req | Req recurring |
-| Payment plans | — | — | opt | full | full | — |
-| Guarantee | — | opt | opt | full | opt | cancel terms |
-| Billing interval, ongoing value | — | — | — | — | — | Req (existing recurring fields) |
-| Delivery types | Req | Req | Req | Req | Req | Req |
-| Ecosystem role (new) | leads into | ascends to | ascends to | primary/alt | upgrade from | retention |
+## 1. Free — one tab: "Offer"
 
-Tabs per tier: Free and Low-Ticket get **one** "Offer" tab (fields drawn from Angle/Stack/Pricing). Mid-Ticket and Premium get Angle/Stack/Pricing with fewer fields. Continuity gets Angle + "Membership" (stack fields per cycle) + Pricing (recurring). Core is unchanged.
+| Section | Field / list | Status | Reuse / new |
+|---|---|---|---|
+| Basics | Name | Min | existing |
+| | Format (PDF, assessment, webinar, challenge, consultation, mini-course, other) | Rec | **new** `offer_format` |
+| | Short Description | Rec | existing |
+| Value | Problem Solved | Rec | **new** |
+| | Quick Win / Immediate Value | Rec | **new** |
+| | Core Outcome | Opt | existing |
+| What's included | Deliverables (max 3 suggested) | Opt | existing list |
+| | Delivery Types | Rec | existing |
+| Next step | Next-step CTA | Opt | **new** `next_step_cta` |
+| | Leads into (offer) | Opt | `offer_relationships` "leads_into" |
 
-## 3. Missing registry definitions
+No pricing. Price is stored as free.
 
-- Per-field/list tier applicability (today only per sub-block): optional `appliesToTiers` on fields and lists, defaulting to the sub-block value. Core outputs stay identical.
-- Per-tier editor copy overrides (e.g. "Offer Name" instead of "Main Offer Name") as additive `editor.byTier`.
-- New editor-level fields: `problem_solved` / `quick_win` (Free, Low), `lead_magnet_format` (Free, enum), `access_level` (Premium), `cancellation_terms` (Continuity), `ecosystem_role` relationship (rendered from offer_relationships, not stored in design).
-- Reuse the existing Continuity fields: `recurring_offer.monthly_price`, `interval`, `ongoing_value`.
-- A per-tier "tab layout" description (which sub-block fields form which tab) in the registry, so `fieldsForTier(tier)` returns tabs for every tier.
+## 2. Low-Ticket — one tab: "Offer"
 
-## 4. Data storage and compatibility
+| Section | Field / list | Status | Reuse / new |
+|---|---|---|---|
+| Basics | Name | Min | existing |
+| | Short Description | Rec | existing |
+| Value | Problem Solved | Rec | **new** |
+| | Quick Win | Rec | **new** |
+| | Core Outcome | Rec | existing |
+| | Signature Framework | Opt | existing |
+| What's included | Deliverables | Rec | existing list |
+| | Bonuses (order bump) | Opt | existing list |
+| | Delivery Types | Rec | existing |
+| Price | Core Price | Min | existing (currency) |
+| | Guarantee type and details | Opt | existing |
+| Next step | Ascends to (offer) | Opt | `offer_relationships` "ascends_to" |
 
-- Keep the existing split: the Primary stays in Blueprint storage; all other offers keep their row and ID, and their extended design goes into `offers.data.design` (same shape as Core, with only the applicable keys filled). No schema change needed.
-- Summary fields (`data.description`, `core_outcome`, `price`, `delivery_types`) remain the card/funnel source. When a design exists, keep them synced from it with one owner (the repository), as the Primary sync does — never two writers.
-- Risks:
-  - Existing non-core rows have no `design`. Seed it on first open from the summary fields, without writing until the user edits.
-  - The `data.price` vs `design.pricing.core_price` overlap needs one rule: design wins and the summary is updated.
-  - Changing a tier on an existing offer must keep its ID and funnel links. Hide but keep data for fields that don't apply to the new tier.
-  - Fix the `EcosystemOfferRow.data` type to include `design`.
-- Relationships: use `offer_relationships` (already secured by workspace) rather than new design fields.
+## 3. Mid-Ticket — Offer Angle / Offer Stack / Pricing
 
-## 5. AI Coach considerations
+| Tab | Field / list | Status |
+|---|---|---|
+| Angle | Name | Min |
+| | Short Description, Core Outcome | Rec |
+| | Problem Solved | Rec (**new**) |
+| | Signature Framework | Opt |
+| | New Vehicle, Better/Faster/Easier | Opt |
+| Stack | Deliverables | Rec |
+| | Resources, Support System, Bonuses | Opt |
+| | Milestones, Delivery Timeline | Opt |
+| Pricing | Core Price | Min |
+| | Payment Plans, Guarantee | Opt |
+| Relationships | Ascends to / downsell from | Opt |
 
-- Active-offer context already carries `tier`. Extend server verification to non-core rows with no other change.
-- `scopedOfferWrites`: replace the fixed `angle|stack|pricing` set with "path is in `fieldsForTier(row.tier)`". This is a tier guard derived from the registry and stricter than today.
-- `isOfferUndefined` needs per-tier defining fields (e.g. Free: description + outcome + format).
-- Keep the editor-only fields (recurring/premium) non-writable until a separate approval; Continuity would need them writable.
-- History isolation and attribution already work by offer ID and need no tier change.
-- Section Help stays hidden for non-primary offers until per-tier section prompts exist.
+All fields are existing except Problem Solved.
 
-## 6. Remaining duplicated metadata
+## 4. Core — unchanged (Angle / Stack / Pricing)
 
-- **Remove:**
-  - `PAYMENT_PLAN_TYPES` / `GUARANTEE_OPTIONS` in offerDesignTypes: point them at the registry editor options.
-  - Hand-written labels in OfferFieldsEditor: use `OFFER_ITEM_FIELDS`.
-  - The older `src/lib/blueprintFields.ts` list: audit its consumers.
-  - The local `OfferTier` copy in offerContext.ts: import from the registry.
-- **Keep, guarded by tests:** `coachItemFields`, the separate list-Coach wording.
-- **Legitimate presentation:** tab titles/descriptions, progress feedback messages, icons.
-- **Specialized UI (stay in components):** delivery-type picker, quick-add chips, frequency options, currency inputs, plan-type normalization, timeline controls.
+Current fields, status and behavior are kept exactly as they are. The only change is that the "Main Offer" wording becomes "Offer" for non-primary Core offers, as a per-tier wording override. Relationships are added later as optional.
 
-## 7. Incremental roadmap
+## 5. Premium — Offer Angle / Offer Stack / Pricing
 
-1. Cleanup: remove the true duplicates above and fix the row type. Tests only, no visible change.
-2. Registry: optional field/list `appliesToTiers` and per-tier tab layout, plus copy overrides. Core snapshot tests must stay byte-identical.
-3. Make CoreOfferDialog tier-driven (rename to OfferDialog): tabs from `fieldsForTier(tier)`; tabs hide fields that don't apply. Core unchanged.
-4. First non-core tier: **Low-Ticket**, Coach off. Seed design from summary; one summary sync owner. Verify cards, funnel links and IDs.
-5. Free, Mid-Ticket and Premium, one at a time.
-6. Continuity, including the recurring-field decision.
-7. Coach per tier: tier-aware write guard, undefined detection, then field/list help per tier.
-8. Ecosystem role/relationships in the editor using `offer_relationships`.
-9. Retire OfferFieldsEditor.
+| Tab | Field / list | Status | Notes |
+|---|---|---|---|
+| Angle | Premium type: standalone or upgrade of a Core offer | Rec | **new** `premium_mode` |
+| | Upgrades from (Core offer) | Opt, shown when the type is "upgrade" | `offer_relationships` "ascends_to" (reverse) |
+| | Name | Min | |
+| | Short Description, Core Outcome | Rec | |
+| | Signature Framework | Opt | its own; never inherited from the Core |
+| | New Vehicle, Better/Faster/Easier | Opt | |
+| Stack | High-touch level | Rec | **new** `touch_level` chips |
+| | Deliverables, Support System | Rec | existing |
+| | Bonuses, Resources, Milestones, Timeline | Opt | existing |
+| Pricing | Core Price | Min | |
+| | Payment Plans, Guarantee | Opt | |
 
-## 8. Decisions needed
+The existing editor-only `premium_upgrade.*` fields (which live on a Core offer) stay where they are. Whether to retire them is an open decision (see below).
 
-1. Approve the per-tier field matrix above (especially Mid-Ticket vs Premium depth).
-2. Should the simple tiers (Free, Low) use a single tab or the three-tab layout with fewer fields?
-3. Summary vs design: confirm "design is the source; summary is synced from it".
-4. Tier change on an existing offer: keep hidden data (recommended) or clear it?
-5. Continuity: make the recurring fields AI-writable when Continuity is supported?
-6. Should progress per non-core tier count toward Blueprint progress? (Today it doesn't.)
-7. Show ecosystem relationships inside the editor, or keep them only in Growth Architecture?
+## 6. Continuity — Offer Angle / Delivery & Value / Pricing
+
+| Tab | Field / list | Status | Reuse / new |
+|---|---|---|---|
+| Angle | Name | Min | existing |
+| | Short Description | Rec | existing |
+| | Ongoing Value (why stay) | Rec | existing `recurring_offer.ongoing_value` |
+| | Core Outcome | Opt | existing |
+| Delivery & Value | Recurring deliverables (each with frequency) | Rec | existing Deliverables list and frequency control |
+| | Support System | Opt | existing list |
+| | Resources | Opt | existing list |
+| | Delivery Types | Rec | existing |
+| Pricing | Recurring Price | Min | existing `recurring_offer.monthly_price` |
+| | Billing Interval | Rec | existing `recurring_offer.interval` |
+| | Cancellation Terms | Rec | **new** |
+| | Guarantee | Opt | existing |
+| Relationships | Retention for (offer) | Opt | `offer_relationships` "retention" |
+
+## New registry definitions (all editor-only for now)
+
+`problem_solved`, `quick_win`, `offer_format` (enum), `next_step_cta`, `cancellation_terms`, `premium_mode` (enum), `touch_level` (string list).
+
+Also needed:
+- Per-field/list tier applicability.
+- Per-tier status (Min/Rec/Opt).
+- Per-tier tab layout, including the single "Offer" tab and "Delivery & Value".
+- Per-tier wording overrides.
+
+All of this is additive and covered by snapshot tests, so Core prompts stay byte-identical.
+
+## Storage
+
+- Design data is saved in `offers.data.design` under the same paths for every category. Summary fields are synced from the design by the repository.
+- Fields hidden after a category change stay saved.
+- The Primary is unchanged.
+
+## Decisions still needing approval
+
+1. Premium upgrades: retire the Core-side `premium_upgrade.*` fields in favour of a separate Premium offer linked as an upgrade (recommended), or keep both?
+2. Continuity: reuse the `recurring_offer.*` paths inside the Continuity offer's own design (recommended), or rename them to neutral paths?
+3. Free format list: are the six formats plus "Other" enough?
+4. Should "Next-step CTA" be free text, or chosen only from existing offers through relationships?
+5. Which category should go first after cleanup? Recommended: Low-Ticket.
+6. Coach write permissions for the new fields and the non-core categories (separate approval, as agreed).
