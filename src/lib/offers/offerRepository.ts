@@ -124,3 +124,65 @@ export async function saveOfferDesign(ref: OfferRef, design: OfferDesignData) {
     designToRowValues(design, (current ?? {}) as any),
   );
 }
+
+// ---- Primary Core Offer summary row (one per blueprint) ---------------------
+
+const isUniqueViolation = (e: { code?: string } | null) => e?.code === "23505";
+
+/**
+ * Create or update the single primary Core Offer row for a blueprint.
+ * Never deletes/recreates: an existing row is always updated in place so its
+ * id (and funnel links) are preserved. A concurrent insert that hits the
+ * unique index falls back to updating the row that won the race.
+ * Skips the write when the stored values are already identical.
+ */
+export async function upsertPrimaryOffer(args: {
+  blueprintId: string;
+  subAccountId: string;
+  userId: string;
+  name: string;
+  data: Record<string, unknown>;
+}): Promise<{ row: EcosystemOfferRow | null; changed: boolean; error: unknown }> {
+  const { blueprintId, name, data } = args;
+  const findExisting = () =>
+    supabase
+      .from("offers")
+      .select(OFFER_ROW_COLUMNS)
+      .eq("blueprint_id", blueprintId)
+      .eq("source", "blueprint_core")
+      .limit(1)
+      .maybeSingle();
+
+  const updateExisting = async (existing: EcosystemOfferRow) => {
+    const same =
+      existing.name === name && JSON.stringify(existing.data ?? {}) === JSON.stringify(data);
+    if (same) return { row: existing, changed: false, error: null };
+    const { error } = await updateEcosystemOffer(existing.id, { name, data });
+    return {
+      row: error ? null : ({ ...existing, name, data } as EcosystemOfferRow),
+      changed: !error,
+      error,
+    };
+  };
+
+  const { data: found, error: findErr } = await findExisting();
+  if (findErr) return { row: null, changed: false, error: findErr };
+  if (found) return updateExisting(found as unknown as EcosystemOfferRow);
+
+  const { row, error } = await insertEcosystemOffer({
+    name,
+    tier: "core",
+    source: "blueprint_core",
+    blueprint_id: blueprintId,
+    sub_account_id: args.subAccountId,
+    user_id: args.userId,
+    sort_order: 100,
+    data,
+  });
+  if (!error && row) return { row, changed: true, error: null };
+  if (isUniqueViolation(error as any)) {
+    const { data: winner } = await findExisting();
+    if (winner) return updateExisting(winner as unknown as EcosystemOfferRow);
+  }
+  return { row: null, changed: false, error };
+}

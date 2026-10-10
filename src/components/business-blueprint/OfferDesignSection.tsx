@@ -41,7 +41,7 @@ const OfferDesignSection = ({ blueprintId, data, onChange, saving, businessType,
 
   // We piggyback on useEcosystemOffers here so the sub-tab nav can show ecosystem
   // progress even when the user is not on the ecosystem tab.
-  const { tierCounts } = useEcosystemOffers({ blueprintId, offerDesign: data });
+  const { tierCounts } = useEcosystemOffers({ blueprintId });
 
   const tabProgress: Record<OfferTab, number> = {
     angle: calcAngleProgress(data.angle),

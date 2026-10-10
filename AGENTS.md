@@ -1,0 +1,1 @@
+- Primary Core Offer → Ecosystem row sync runs only via `usePrimaryOfferSync` mounted in BusinessBlueprintModule, writing through `upsertPrimaryOffer` (offerRepository). Why: multiple sync owners caused duplicate writes and dropped edits; DB enforces one primary per blueprint.

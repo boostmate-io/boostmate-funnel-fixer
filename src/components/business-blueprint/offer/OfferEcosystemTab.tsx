@@ -233,10 +233,7 @@ const OfferCardRow = ({
 const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, saving, businessType, pendingOpenOfferId, onOpenedOffer }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
-  const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer } = useEcosystemOffers({
-    blueprintId,
-    offerDesign,
-  });
+  const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer } = useEcosystemOffers({ blueprintId });
   const progress = calcEcosystemProgress(tierCounts);
   const { openCoach, openListCoach, panel } = useOfferCoach(() => ({ offer_ecosystem: offers }));
 
