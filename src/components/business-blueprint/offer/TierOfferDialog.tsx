@@ -154,8 +154,8 @@ export default function TierOfferDialog({
             const main = section.items.filter((i) => i.status !== "optional");
             const extra = section.items.filter((i) => i.status === "optional");
             // Count visual controls, not paths (framework + guarantee render as one block).
-            const extraCount = extra.filter((i) => i.kind === "relationship" || (!RENDERED_BY_GROUP.has(i.path)
-              && !(FRAMEWORK_PATHS.has(i.path) && i.path !== extra.find((x) => x.kind !== "relationship" && FRAMEWORK_PATHS.has(x.path)) as { path: string } | undefined)?.path)).length;
+            const extraCount = new Set(extra.map((i) => i.kind === "relationship" ? `rel:${i.relationship}`
+              : FRAMEWORK_PATHS.has(i.path) ? "framework" : RENDERED_BY_GROUP.has(i.path) ? "" : i.path).filter(Boolean)).size;
             return (
               <section key={section.id} data-offer-section={section.id} className="space-y-3">
                 <h3 className="text-base font-display font-bold text-foreground">{section.label}</h3>
