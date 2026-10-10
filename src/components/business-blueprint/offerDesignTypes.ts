@@ -108,6 +108,8 @@ export interface OfferStackData {
   delivery_timeline: TimeframeOption | "";
   delivery_timeline_custom?: string;
   milestones: MilestoneCard[];
+  /** Offer-level delivery types chosen directly (category editors). */
+  delivery_types?: string[];
 }
 
 // ---------- Tab 3: Pricing --------------------------------------------------

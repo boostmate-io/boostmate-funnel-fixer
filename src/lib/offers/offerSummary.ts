@@ -37,6 +37,7 @@ export function summarizeOfferDesign(design: OfferDesignData): OfferSummary {
 
   const delivery_types = Array.from(
     new Set([
+      ...(stack.delivery_types ?? []),
       ...(stack.deliverables ?? []).flatMap((d) => d?.delivery_types ?? []),
       ...(stack.support_channels ?? []).map((s) => s?.name).filter(Boolean),
     ]),

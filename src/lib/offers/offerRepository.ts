@@ -97,12 +97,33 @@ export async function loadOfferDesign(ref: OfferRef): Promise<OfferDesignData> {
 export function designToRowValues(
   design: OfferDesignData,
   existing: { name?: string; data?: Record<string, unknown> },
+  fallbackName = "Untitled Core Offer",
 ) {
   const s = summarizeOfferDesign(design);
   return {
-    name: s.name || existing.name || "Untitled Core Offer",
+    name: s.name || existing.name || fallbackName,
     data: { ...summaryToRowData(existing.data, s), design },
   };
+}
+
+/**
+ * Editor design for a non-primary offer row: the stored design when present,
+ * otherwise one seeded (in memory only) from the row's summary fields.
+ * Nothing is written — the row only changes once the user edits.
+ */
+export function designForRow(row: Pick<EcosystemOfferRow, "name" | "data">): OfferDesignData {
+  const stored = (row.data as any)?.design;
+  if (stored) return normalizeOfferDesign(stored);
+  const d = emptyOfferDesign();
+  const data = (row.data ?? {}) as EcosystemOfferRow["data"];
+  const price = data.price;
+  d.angle.main_offer_name = row.name ?? "";
+  d.angle.short_description = data.description ?? "";
+  d.angle.core_outcome = data.core_outcome ?? "";
+  // Missing price stays "" (incomplete draft) — never coerced to 0.
+  d.pricing.core_price = typeof price === "number" && Number.isFinite(price) ? price : "";
+  d.stack.delivery_types = Array.isArray(data.delivery_types) ? [...data.delivery_types] : [];
+  return d;
 }
 
 /** Persist a full design. Primary → blueprint column; others → offer row. */
