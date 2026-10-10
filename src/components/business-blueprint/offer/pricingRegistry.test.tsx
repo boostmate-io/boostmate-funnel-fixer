@@ -14,9 +14,10 @@ import { PAYMENT_PLAN_TYPES, GUARANTEE_OPTIONS } from "../offerDesignTypes";
 import {
   BLUEPRINT_FIELDS,
   getBlueprintFieldByPath,
-  isWritablePath,
   renderBlueprintFieldPathsPrompt,
 } from "@shared/blueprintRegistry";
+import { isWritablePath } from "@/lib/coach/applyBlueprintWrites";
+import type { PricingData } from "../offerDesignTypes";
 
 // Exact pre-migration list-Coach target (copied from the old component, cur = "€").
 const LEGACY_PLANS_COACH = {
@@ -33,12 +34,14 @@ const LEGACY_PLANS_COACH = {
   suggestedCount: [2, 3],
 };
 
-const base = {
+const base: PricingData = {
   core_price: "" as const,
   payment_plans: [{ id: "p1", type: "custom" as const, custom_label: "", amount: "" as const, duration: "" }],
   guarantee_type: "refund" as const,
   guarantee_details: "",
-};
+  recurring_enabled: false,
+  premium_enabled: false,
+} as PricingData;
 
 describe("Pricing metadata from the registry", () => {
   it("field copy is unchanged", () => {
@@ -123,8 +126,8 @@ describe("PricingTab rendering and behaviour", () => {
     expect(added[1]).toMatchObject({ type: "full_pay", amount: "", duration: "" });
     fireEvent.change(screen.getByPlaceholderText("Amount"), { target: { value: "997" } });
     expect(onChange.mock.calls[1][0].payment_plans[0].amount).toBe(997);
-    fireEvent.change(screen.getByPlaceholderText("2500"), { target: { value: "" } });
-    expect(onChange.mock.calls[2][0]).toEqual({ core_price: "" });
+    fireEvent.change(screen.getByPlaceholderText("2500"), { target: { value: "1500" } });
+    expect(onChange.mock.calls[2][0]).toEqual({ core_price: 1500 });
   });
 
   it("list Coach receives legacy target and appends normalized plans", () => {
