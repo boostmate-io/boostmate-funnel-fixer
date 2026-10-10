@@ -62,7 +62,10 @@ export type OfferControlKey =
   | "toggle"
   | "payment-plan-type"
   | "guarantee-type"
-  | "billing-interval";
+  | "billing-interval"
+  | "offer-format"
+  | "premium-mode"
+  | "touch-level";
 
 /**
  * Editor presentation copy for the Offer Editor (optional, additive).
@@ -370,6 +373,30 @@ export const GUARANTEE_EDITOR_OPTIONS: EnumValue[] = [
   { value: "custom", label: "Custom" },
 ];
 
+/** Free-offer formats (configurable here only). */
+export const OFFER_FORMAT_VALUES: EnumValue[] = [
+  { value: "pdf", label: "PDF" },
+  { value: "assessment", label: "Assessment" },
+  { value: "webinar", label: "Webinar" },
+  { value: "challenge", label: "Challenge" },
+  { value: "consultation", label: "Consultation" },
+  { value: "mini_course", label: "Mini-Course" },
+  { value: "other", label: "Other" },
+];
+
+export const PREMIUM_MODE_VALUES: EnumValue[] = [
+  { value: "standalone", label: "Standalone premium offer" },
+  { value: "upgrade", label: "Upgrade of a Core Offer" },
+];
+
+export const TOUCH_LEVEL_VALUES: EnumValue[] = [
+  { value: "one_on_one", label: "1:1" },
+  { value: "done_with_you", label: "Done-with-you" },
+  { value: "done_for_you", label: "Done-for-you" },
+  { value: "vip_day", label: "VIP day" },
+  { value: "priority_access", label: "Priority access" },
+];
+
 export const BILLING_INTERVAL_VALUES: EnumValue[] = [
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly" },
@@ -582,6 +609,26 @@ const OFFER_DESIGN_TAB: RegistryTab = {
       iconKey: "Compass",
       progress: { mode: "custom", ruleId: "offer.angle" },
       appliesToTiers: ["core"],
+      // Category editor fields (non-Core tiers). Editor-only: hidden from Coach prompts/write-backs.
+      editorFields: [
+        ef("offer_stack.angle.offer_format", "Offer Format", "text", {
+          valueType: "enum", enumValues: OFFER_FORMAT_VALUES, control: "offer-format",
+          editor: { helper: "What kind of offer is this?" },
+        }),
+        ef("offer_stack.angle.problem_solved", "Problem Solved", "textarea", {
+          editor: { helper: "The specific problem this offer solves.", placeholder: "e.g. Not knowing which leads are worth following up" },
+        }),
+        ef("offer_stack.angle.quick_win", "Quick Win / Immediate Value", "textarea", {
+          editor: { helper: "The fast, tangible result buyers get right away.", placeholder: "e.g. A ready-to-use follow-up script in 10 minutes" },
+        }),
+        ef("offer_stack.angle.next_step_cta", "Next-Step CTA", "text", {
+          editor: { helper: "What should people do after this offer?", placeholder: "e.g. Book a free strategy call" },
+        }),
+        ef("offer_stack.angle.premium_mode", "Premium Type", "text", {
+          valueType: "enum", enumValues: PREMIUM_MODE_VALUES, control: "premium-mode",
+          editor: { helper: "A standalone premium offer, or an upgrade of an existing Core Offer." },
+        }),
+      ],
       lists: [
         list(
           "offer_stack.angle.framework.pillars",
@@ -680,6 +727,12 @@ const OFFER_DESIGN_TAB: RegistryTab = {
       iconKey: "Layers",
       progress: { mode: "custom", ruleId: "offer.stack" },
       appliesToTiers: ["core"],
+      editorFields: [
+        ef("offer_stack.stack.touch_level", "High-Touch Level", "text", {
+          valueType: "string[]", enumValues: TOUCH_LEVEL_VALUES, control: "touch-level",
+          editor: { helper: "How hands-on is this offer?" },
+        }),
+      ],
       lists: [
         list(
           "offer_stack.stack.deliverables",
@@ -773,6 +826,9 @@ const OFFER_DESIGN_TAB: RegistryTab = {
         ef("offer_stack.pricing.premium_upgrade.price", "Premium Upgrade — Price", "text", { valueType: "number", control: "currency-amount" }),
         ef("offer_stack.pricing.premium_upgrade.description", "Premium Upgrade — Description", "textarea"),
         ef("offer_stack.pricing.premium_upgrade.additional_value", "Premium Upgrade — Additional Value", "textarea"),
+        ef("offer_stack.pricing.cancellation_terms", "Cancellation Terms", "textarea", {
+          editor: { helper: "How and when members can cancel.", placeholder: "e.g. Cancel anytime before the next billing date" },
+        }),
       ],
       lists: [
         list(
@@ -1274,12 +1330,179 @@ const appliesTo = (sb: RegistrySubBlock, tier: OfferTier) =>
 export function fieldsForTier(tier: OfferTier): {
   subBlocks: RegistrySubBlock[];
   itemFields: RegistryField[];
+  /** Per-tier editor layout (tabs → sections → items). */
+  layout: OfferTierLayout;
 } {
   const offerTab = getRegistryTab("offer_design");
   const subBlocks = (offerTab?.subBlocks ?? []).filter(
     (sb) => sb.id !== "ecosystem" && appliesTo(sb, tier),
   );
-  return { subBlocks, itemFields: OFFER_ITEM_FIELDS };
+  return { subBlocks, itemFields: OFFER_ITEM_FIELDS, layout: OFFER_TIER_LAYOUTS[tier] };
+}
+
+// -----------------------------------------------------------------------------
+// Per-tier Offer Editor layouts (editor-only; never read by Coach prompts,
+// write-back validation or Blueprint progress). Items reference existing
+// definitions by path — no field metadata is duplicated here.
+// Status is completion guidance only: only the offer name is required to save.
+// -----------------------------------------------------------------------------
+
+export type OfferFieldStatus = "min" | "recommended" | "optional";
+export type OfferRelationshipType = "ascends_to" | "leads_into" | "retention" | "downsell";
+
+export type OfferLayoutItem =
+  | { kind: "field"; path: string; status: OfferFieldStatus; editor?: OfferEditorCopy }
+  | { kind: "list"; path: string; status: OfferFieldStatus; editor?: OfferListEditorCopy }
+  | { kind: "relationship"; relationship: OfferRelationshipType; status: OfferFieldStatus; label: string };
+
+export interface OfferLayoutSection { id: string; label: string; items: OfferLayoutItem[] }
+export interface OfferLayoutTab { id: string; label: string; sections: OfferLayoutSection[] }
+export interface OfferTierLayout { tier: OfferTier; tabs: OfferLayoutTab[] }
+
+const fld = (path: string, status: OfferFieldStatus, editor?: OfferEditorCopy): OfferLayoutItem =>
+  ({ kind: "field", path: `offer_stack.${path}`, status, ...(editor ? { editor } : {}) });
+const lst = (path: string, status: OfferFieldStatus, editor?: OfferListEditorCopy): OfferLayoutItem =>
+  ({ kind: "list", path: `offer_stack.${path}`, status, ...(editor ? { editor } : {}) });
+const rel = (relationship: OfferRelationshipType, label: string): OfferLayoutItem =>
+  ({ kind: "relationship", relationship, status: "optional", label });
+const sec = (id: string, label: string, items: OfferLayoutItem[]): OfferLayoutSection => ({ id, label, items });
+/** Delivery types live on the offer row summary for every tier. */
+const DELIVERY = (status: OfferFieldStatus): OfferLayoutItem => ({ kind: "field", path: "data.delivery_types", status });
+const NAME: OfferLayoutItem = fld("angle.main_offer_name", "min", {
+  label: "Offer Name", helper: "Short, evocative name for this offer.", placeholder: "Offer name",
+});
+const SHORT_DESC = (s: OfferFieldStatus) => fld("angle.short_description", s, {
+  label: "Short Description", helper: "What this offer is in 1–2 sentences.",
+});
+const FRAMEWORK = (s: OfferFieldStatus) => [fld("angle.framework.name", s), fld("angle.framework.description", s), lst("angle.framework.pillars", s)];
+const ANGLES = (s: OfferFieldStatus) => [
+  fld("angle.angle_new_vehicle", s), fld("angle.angle_better_results", s),
+  fld("angle.angle_faster_outcome", s), fld("angle.angle_easier_process", s),
+];
+
+/** Core layout mirrors the existing sub-blocks exactly (all fields + lists, same order). */
+function coreLayout(): OfferTierLayout {
+  const tab = BLUEPRINT_REGISTRY.find((t) => t.id === "offer_design");
+  const tabs = (tab?.subBlocks ?? [])
+    .filter((sb) => sb.id !== "ecosystem")
+    .map((sb) => ({
+      id: sb.id,
+      label: sb.label,
+      sections: [sec(sb.id, sb.label, [
+        ...sb.fields.map((f): OfferLayoutItem => ({
+          kind: "field", path: f.path,
+          status: f.path === "offer_stack.angle.main_offer_name" ? "min" : f.countsTowardProgress ? "recommended" : "optional",
+        })),
+        ...sb.lists.map((l): OfferLayoutItem => ({ kind: "list", path: l.basePath, status: l.countsTowardProgress ? "recommended" : "optional" })),
+      ])],
+    }));
+  return { tier: "core", tabs };
+}
+
+const STANDARD_TABS = { angle: "Offer Angle", stack: "Offer Stack", pricing: "Pricing" } as const;
+
+export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
+  free: {
+    tier: "free",
+    tabs: [{ id: "offer", label: "Offer", sections: [
+      sec("basics", "Basics", [NAME, fld("angle.offer_format", "recommended"), SHORT_DESC("recommended")]),
+      sec("value", "Value", [fld("angle.problem_solved", "recommended"), fld("angle.quick_win", "recommended"), fld("angle.core_outcome", "optional")]),
+      sec("included", "What's included", [lst("stack.deliverables", "optional"), DELIVERY("recommended")]),
+      sec("next_step", "Next step", [fld("angle.next_step_cta", "optional"), rel("leads_into", "Leads into")]),
+    ] }],
+  },
+  low_ticket: {
+    tier: "low_ticket",
+    tabs: [{ id: "offer", label: "Offer", sections: [
+      sec("basics", "Basics", [NAME, SHORT_DESC("recommended")]),
+      sec("value", "Value", [
+        fld("angle.problem_solved", "recommended"), fld("angle.quick_win", "recommended"),
+        fld("angle.core_outcome", "recommended"), ...FRAMEWORK("optional"),
+      ]),
+      sec("included", "What's included", [lst("stack.deliverables", "recommended"), lst("stack.bonuses", "optional"), DELIVERY("recommended")]),
+      sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price" }), fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
+      sec("next_step", "Next step", [rel("ascends_to", "Ascends to")]),
+    ] }],
+  },
+  mid_ticket: {
+    tier: "mid_ticket",
+    tabs: [
+      { id: "angle", label: STANDARD_TABS.angle, sections: [
+        sec("basics", "Basics", [NAME, SHORT_DESC("recommended"), fld("angle.core_outcome", "recommended"), fld("angle.problem_solved", "recommended")]),
+        sec("framework", "Signature Framework", FRAMEWORK("optional")),
+        sec("angles", "Offer Angles", ANGLES("optional")),
+      ] },
+      { id: "stack", label: STANDARD_TABS.stack, sections: [
+        sec("deliverables", "Deliverables", [lst("stack.deliverables", "recommended")]),
+        sec("extras", "Resources, support & bonuses", [lst("stack.resources", "optional"), lst("stack.support_channels", "optional"), lst("stack.bonuses", "optional")]),
+        sec("timeline", "Milestones & timeline", [lst("stack.milestones", "optional"), fld("stack.delivery_timeline", "optional")]),
+      ] },
+      { id: "pricing", label: STANDARD_TABS.pricing, sections: [
+        sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price" }), lst("pricing.payment_plans", "optional")]),
+        sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
+        sec("relationships", "Ecosystem", [rel("ascends_to", "Ascends to"), rel("downsell", "Downsell from")]),
+      ] },
+    ],
+  },
+  core: coreLayout(),
+  premium: {
+    tier: "premium",
+    tabs: [
+      { id: "angle", label: STANDARD_TABS.angle, sections: [
+        sec("type", "Premium type", [fld("angle.premium_mode", "recommended"), rel("ascends_to", "Upgrades from")]),
+        sec("basics", "Basics", [NAME, SHORT_DESC("recommended"), fld("angle.core_outcome", "recommended")]),
+        sec("framework", "Signature Framework", FRAMEWORK("optional")),
+        sec("angles", "Offer Angles", ANGLES("optional")),
+      ] },
+      { id: "stack", label: STANDARD_TABS.stack, sections: [
+        sec("touch", "High-touch delivery", [fld("stack.touch_level", "recommended"), lst("stack.deliverables", "recommended"), lst("stack.support_channels", "recommended")]),
+        sec("extras", "Extras", [lst("stack.bonuses", "optional"), lst("stack.resources", "optional")]),
+        sec("timeline", "Milestones & timeline", [lst("stack.milestones", "optional"), fld("stack.delivery_timeline", "optional")]),
+      ] },
+      { id: "pricing", label: STANDARD_TABS.pricing, sections: [
+        sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price" }), lst("pricing.payment_plans", "optional")]),
+        sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
+      ] },
+    ],
+  },
+  continuity: {
+    tier: "continuity",
+    tabs: [
+      { id: "angle", label: STANDARD_TABS.angle, sections: [
+        sec("basics", "Basics", [NAME, SHORT_DESC("recommended"), fld("pricing.recurring_offer.ongoing_value", "recommended", { label: "Ongoing Value", helper: "Why members stay, month after month." }), fld("angle.core_outcome", "optional")]),
+      ] },
+      { id: "delivery", label: "Delivery & Value", sections: [
+        sec("recurring", "Recurring deliverables", [lst("stack.deliverables", "recommended"), DELIVERY("recommended")]),
+        sec("support", "Support & resources", [lst("stack.support_channels", "optional"), lst("stack.resources", "optional")]),
+      ] },
+      { id: "pricing", label: STANDARD_TABS.pricing, sections: [
+        sec("billing", "Billing", [
+          fld("pricing.recurring_offer.monthly_price", "min", { label: "Recurring Price" }),
+          fld("pricing.recurring_offer.interval", "recommended", { label: "Billing Interval" }),
+          fld("pricing.cancellation_terms", "recommended"),
+        ]),
+        sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
+        sec("relationships", "Ecosystem", [rel("retention", "Retention for")]),
+      ] },
+    ],
+  },
+};
+
+/** Layout items of a tier in deterministic order (tab → section → item). */
+export function offerLayoutItems(tier: OfferTier): OfferLayoutItem[] {
+  return OFFER_TIER_LAYOUTS[tier].tabs.flatMap((t) => t.sections.flatMap((s) => s.items));
+}
+
+/** Completion status of a field/list path for a tier (undefined = not in that tier). */
+export function offerFieldStatus(tier: OfferTier, path: string): OfferFieldStatus | undefined {
+  const item = offerLayoutItems(tier).find((i) => i.kind !== "relationship" && i.path === path);
+  return item?.status;
+}
+
+/** Tier-specific editor copy override for a path, if any. */
+export function offerTierEditorOverride(tier: OfferTier, path: string): OfferEditorCopy | undefined {
+  const item = offerLayoutItems(tier).find((i) => i.kind === "field" && i.path === path);
+  return item && item.kind === "field" ? item.editor : undefined;
 }
 
 /** Every Offer Design field definition, including editor-only ones. */
