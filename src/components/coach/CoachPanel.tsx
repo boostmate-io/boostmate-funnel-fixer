@@ -187,6 +187,17 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
     await sendMessage(value);
   };
 
+  const blockedMsg = nl
+    ? "Dit voorstel hoort bij een ander aanbod en is niet toegepast."
+    : "This suggestion was made for a different offer and was not applied.";
+  const notifyBlocked = () => toast.error(blockedMsg);
+  const guardFor = (m: CoachMessage) =>
+    guardWritesForMessage(onApplyBlueprintWrites, m, context, notifyBlocked);
+  const applyFor = (m: CoachMessage) => (value: string) => {
+    if (!canApplyAcrossOffers(messageOfferId(m), currentOfferId(context))) return notifyBlocked();
+    handleApply(value);
+  };
+
   const handleApply = (value: string) => {
     onApply?.(value);
     // Stay open: the conversation continues naturally into the next field.
@@ -210,9 +221,10 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
           .flatMap((p: any) => p.writes as CoachBlueprintWrite[])
           .filter((w) => !handled[w.path]);
         if (pending.length === 0) continue;
-        if (!onApplyBlueprintWrites) break;
+        const guarded = guardFor(m);
+        if (!guarded) break;
         try {
-          const res = await onApplyBlueprintWrites(pending);
+          const res = await guarded(pending);
           const ok = res ? new Set(res.appliedPaths) : null;
           recordDecision(m.id, ok ? pending.filter((w) => ok.has(w.path)) : pending, "applied");
           await handleSend(
@@ -288,8 +300,8 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
               key={m.id}
               message={m}
               onQuickReply={(r) => void handleQuickReply(r)}
-              onApply={handleApply}
-              onApplyBlueprintWrites={onApplyBlueprintWrites}
+              onApply={applyFor(m)}
+              onApplyBlueprintWrites={guardFor(m)}
               onApplyGrowthDecision={onApplyGrowthDecision}
               initialDecisions={{ ...(decisions["__any__"] ?? {}), ...(decisions[m.id] ?? {}) }}
               onDecision={(writes, decision) => recordDecision(m.id, writes, decision)}
