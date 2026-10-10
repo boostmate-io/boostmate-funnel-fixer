@@ -10,7 +10,8 @@
 // No Deno / network imports: this file is imported by vitest as well.
 // =============================================================================
 
-export type OfferTier = "free" | "low_ticket" | "mid_ticket" | "core" | "premium" | "continuity";
+import type { OfferTier } from "./blueprintRegistry.ts";
+export type { OfferTier };
 
 /** What the client claims (untrusted). */
 export interface ClaimedActiveOffer {

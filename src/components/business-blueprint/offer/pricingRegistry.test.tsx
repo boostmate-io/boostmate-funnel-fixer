@@ -150,3 +150,17 @@ describe("PricingTab rendering and behaviour", () => {
     expect(typeof appendItems).toBe("function");
   });
 });
+
+describe("legacy option exports are sourced from the registry", () => {
+  it("keeps identical values/labels and the same array instance", async () => {
+    const reg = await import("@shared/blueprintRegistry");
+    expect(PAYMENT_PLAN_TYPES).toBe(reg.PAYMENT_PLAN_EDITOR_OPTIONS);
+    expect(GUARANTEE_OPTIONS).toBe(reg.GUARANTEE_EDITOR_OPTIONS);
+    expect(PAYMENT_PLAN_TYPES.map((o) => `${o.value}:${o.label}`)).toEqual([
+      "full_pay:Full Pay", "split_2:2 Pay", "split_3:3 Pay", "split_6:6 Pay", "monthly:Monthly", "custom:Custom",
+    ]);
+    expect(GUARANTEE_OPTIONS.map((o) => `${o.value}:${o.label}`)).toEqual([
+      "none:No Guarantee", "refund:Refund Guarantee", "performance:Performance Guarantee", "milestone:Milestone Guarantee", "custom:Custom",
+    ]);
+  });
+});
