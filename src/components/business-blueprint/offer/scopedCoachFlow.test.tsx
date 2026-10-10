@@ -86,7 +86,7 @@ describe("Coach Apply on an additional Core Offer", () => {
     const { panel, onChangePrimary } = await openExtraAndCoach();
 
     fireEvent.pointerDown(panel); // clicking in the Coach must not dismiss the editor
-    fireEvent.click(within(panel).getByTitle(/apply/i));
+    fireEvent.click(within(panel).getByLabelText("Apply this field"));
 
     await waitFor(() => expect(within(panel).getByText("Applied")).toBeInTheDocument());
     const dialog = screen.getByRole("dialog", { name: /Lead Engine 90|het/ });
@@ -104,8 +104,8 @@ describe("Coach Apply on an additional Core Offer", () => {
   it("does not show Applied when every path is rejected", async () => {
     setWrites([{ path: "customer_clarity.avatar_who", label: "Avatar", value: "x" }]);
     const { panel } = await openExtraAndCoach();
-    fireEvent.click(within(panel).getByTitle(/apply/i));
-    await waitFor(() => expect(within(panel).getByTitle(/apply/i)).not.toBeDisabled());
+    fireEvent.click(within(panel).getByLabelText("Apply this field"));
+    await waitFor(() => expect(within(panel).getByLabelText("Apply this field")).not.toBeDisabled());
     expect(within(panel).queryByText("Applied")).toBeNull();
     expect(updateSpy).not.toHaveBeenCalled();
   });
@@ -114,9 +114,9 @@ describe("Coach Apply on an additional Core Offer", () => {
     updateSpy.mockResolvedValue({ error: { message: "boom" } });
     setWrites([{ path: "offer_stack.angle.main_offer_name", label: "Main Offer Name", value: "X" }]);
     const { panel } = await openExtraAndCoach();
-    fireEvent.click(within(panel).getByTitle(/apply/i));
+    fireEvent.click(within(panel).getByLabelText("Apply this field"));
     await waitFor(() => expect(updateSpy).toHaveBeenCalled());
-    await waitFor(() => expect(within(panel).getByTitle(/apply/i)).not.toBeDisabled());
+    await waitFor(() => expect(within(panel).getByLabelText("Apply this field")).not.toBeDisabled());
     expect(within(panel).queryByText("Applied")).toBeNull();
   });
 });

@@ -17,12 +17,16 @@ const w = (path: string, value: string) => ({ path, label: path, value });
 
 function makeScope(initial: OfferDesignData) {
   let design = structuredClone(initial);
-  const applyDesign = vi.fn((next: OfferDesignData) => { design = next; });
   const scope: ScopedOfferCoach = {
     mode: "scoped", offerId: "extra-1", offerName: "Extra",
-    getDesign: () => design, applyDesign,
+    getDesign: () => design,
+    persistWrites: vi.fn(async (writes) => {
+      const r = applyScopedOfferWrites(design, writes);
+      design = r.next;
+      return { appliedPaths: r.applied.map((x) => x.path), rejected: r.rejected, saved: true };
+    }),
   };
-  return { scope, applyDesign, get: () => design };
+  return { scope, get: () => design };
 }
 
 beforeEach(() => applyBlueprintWritesSpy.mockReset());
@@ -93,5 +97,18 @@ describe("applyScopedWrites outcome reporting", () => {
   it("returns only accepted paths on partial success", async () => {
     const scope = mk({ appliedPaths: ["a"], rejected: [{ write: w("b", ""), reason: "not_writable" }], saved: true });
     await expect(applyScopedWrites(scope, [])).resolves.toEqual({ appliedPaths: ["a"] });
+  });
+});
+
+describe("scoped Coach write-back (additional Core Offer)", () => {
+  it("persists only valid writes to the open offer, never the Blueprint", async () => {
+    const { scope, get } = makeScope(emptyOfferDesign());
+    const res = await applyScopedWrites(scope, [
+      w("offer_stack.angle.main_offer_name", "Extra v2"),
+      w("customer_clarity.avatar_who", "should be rejected"),
+    ]);
+    expect(res).toEqual({ appliedPaths: ["offer_stack.angle.main_offer_name"] });
+    expect(get().angle.main_offer_name).toBe("Extra v2");
+    expect(applyBlueprintWritesSpy).not.toHaveBeenCalled();
   });
 });
