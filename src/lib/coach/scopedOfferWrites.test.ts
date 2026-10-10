@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const applyBlueprintWritesSpy = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() } }));
 vi.mock("@/lib/coach/applyBlueprintWrites", async (orig) => {
   const real: any = await orig();
   return { ...real, applyBlueprintWrites: (...a: any[]) => applyBlueprintWritesSpy(...a) };
@@ -76,30 +76,22 @@ describe("applyScopedOfferWrites (pure)", () => {
   });
 });
 
-describe("scoped Coach write-back (additional Core Offer)", () => {
-  it("updates only the open offer and never reaches the Blueprint fallback", async () => {
-    const primary = emptyOfferDesign();
-    primary.angle.main_offer_name = "Primary";
-    const primarySnap = JSON.stringify(primary);
-
-    const { scope, applyDesign, get } = makeScope(emptyOfferDesign());
-    const res = applyScopedWrites(scope, [
-      w("offer_stack.angle.main_offer_name", "Extra v2"),
-      w("customer_clarity.avatar_who", "should be rejected"),
-    ]);
-
-    expect(res).toEqual({ applied: 1, rejected: 1 });
-    expect(applyDesign).toHaveBeenCalledTimes(1);
-    expect(get().angle.main_offer_name).toBe("Extra v2");
-    expect(JSON.stringify(primary)).toBe(primarySnap);
+describe("applyScopedWrites outcome reporting", () => {
+  const mk = (res: any) => ({
+    mode: "scoped" as const, offerId: "extra-1", offerName: "Extra",
+    getDesign: () => emptyOfferDesign(), persistWrites: vi.fn(async () => res),
+  });
+  it("throws when every write is rejected (card must not show Applied)", async () => {
+    const scope = mk({ appliedPaths: [], rejected: [{ write: w("x.y", "z"), reason: "not_offer_design_path" }], saved: false });
+    await expect(applyScopedWrites(scope, [w("x.y", "z")])).rejects.toThrow();
     expect(applyBlueprintWritesSpy).not.toHaveBeenCalled();
   });
-
-  it("does nothing when every write is invalid", () => {
-    const { scope, applyDesign } = makeScope(emptyOfferDesign());
-    const res = applyScopedWrites(scope, [w("proof_authority.x", "y")]);
-    expect(res).toEqual({ applied: 0, rejected: 1 });
-    expect(applyDesign).not.toHaveBeenCalled();
-    expect(applyBlueprintWritesSpy).not.toHaveBeenCalled();
+  it("throws when the save failed (retryable)", async () => {
+    const scope = mk({ appliedPaths: ["offer_stack.angle.hook_x"], rejected: [], saved: false });
+    await expect(applyScopedWrites(scope, [])).rejects.toThrow();
+  });
+  it("returns only accepted paths on partial success", async () => {
+    const scope = mk({ appliedPaths: ["a"], rejected: [{ write: w("b", ""), reason: "not_writable" }], saved: true });
+    await expect(applyScopedWrites(scope, [])).resolves.toEqual({ appliedPaths: ["a"] });
   });
 });

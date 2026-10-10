@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 const openCoachSpy = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
-vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() } }));
 vi.mock("@/contexts/CoachContext", () => ({ useCoach: () => ({ openCoach: openCoachSpy }) }));
 vi.mock("@/contexts/WorkspaceContext", () => ({ useWorkspace: () => ({ activeSubAccountId: "ws-1" }) }));
 
@@ -42,7 +42,8 @@ describe("useOfferCoach — scoped additional Core Offer", () => {
   design.angle.main_offer_name = "Extra";
   const scope: ScopedOfferCoach = {
     mode: "scoped", offerId: "extra-1", offerName: "Extra",
-    getDesign: () => design, applyDesign: vi.fn(),
+    getDesign: () => design,
+    persistWrites: vi.fn(async (writes: any[]) => ({ appliedPaths: writes.map((w) => w.path), rejected: [], saved: true })),
   };
   const wrapper = ({ children }: { children: ReactNode }) => (
     <OfferCoachScopeProvider value={scope}>{children}</OfferCoachScopeProvider>
@@ -64,9 +65,9 @@ describe("useOfferCoach — scoped additional Core Offer", () => {
     const { result } = renderHook(() => useOfferCoach(() => ({})), { wrapper });
     result.current.openCoach(fieldSpec);
     const [focus] = openCoachSpy.mock.calls[0];
-    await focus.onApplyBlueprintWrites([{ path: "offer_stack.angle.core_outcome", label: "", value: "Result" }]);
-    expect(scope.applyDesign).toHaveBeenCalledWith(expect.objectContaining({
-      angle: expect.objectContaining({ core_outcome: "Result", main_offer_name: "Extra" }),
-    }));
+    const writes = [{ path: "offer_stack.angle.core_outcome", label: "", value: "Result" }];
+    const res = await focus.onApplyBlueprintWrites(writes);
+    expect(scope.persistWrites).toHaveBeenCalledWith(writes);
+    expect(res).toEqual({ appliedPaths: ["offer_stack.angle.core_outcome"] });
   });
 });
