@@ -60,7 +60,7 @@ beforeEach(() => {
 describe("Low-Ticket opens in the Universal Offer Editor", () => {
   it("shows one Offer tab with the registry sections in order", async () => {
     const dialog = await openLowTicket();
-    expect(within(dialog).getByText("Low-Ticket Offer", { exact: false })).toBeTruthy();
+    expect(within(dialog).getByText("Low Ticket Offers")).toBeTruthy();
     const tabs = within(dialog).getAllByRole("tab").map((t) => t.textContent);
     expect(tabs).toEqual(["Offer"]);
     const sections = [...dialog.querySelectorAll("[data-offer-section]")].map((s) => s.getAttribute("data-offer-section"));
