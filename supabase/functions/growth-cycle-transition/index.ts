@@ -104,15 +104,13 @@ Deno.serve(async (req) => {
   // Membership check (belt-and-suspenders — the RPC also enforces it, but we
   // want a clean 403 before we spend a round-trip).
   const service = createClient(supabaseUrl, serviceKey);
-  const { data: member, error: memberErr } = await service
-    .from("account_memberships")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("sub_account_id", input.sub_account_id)
-    .limit(1)
-    .maybeSingle();
-  if (memberErr) return json(500, { error: "membership_check_failed" });
-  if (!member) return json(403, { error: "not_a_member" });
+  // Same trusted checks as RLS: workspace member (incl. main-account owners) or app admin.
+  const [{ data: member, error: memberErr }, { data: isAdmin, error: adminErr }] = await Promise.all([
+    service.rpc("is_sub_account_member", { _user_id: userId, _sub_id: input.sub_account_id }),
+    service.rpc("is_app_admin", { _user_id: userId }),
+  ]);
+  if (memberErr || adminErr) return json(500, { error: "membership_check_failed" });
+  if (!member && !isAdmin) return json(403, { error: "not_a_member" });
 
   // set_workspace_state uses a separate RPC (not part of cycle transitions).
   if (input.action === "set_workspace_state") {
