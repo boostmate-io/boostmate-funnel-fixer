@@ -24,6 +24,20 @@ import {
   calcAngleProgress,
 } from "../offerDesignTypes";
 import { getBusinessType } from "../businessTypes";
+import { offerEditorField } from "../registryUi";
+
+/** Offer Angle simple fields — copy + Coach targets come from the registry. */
+export const ANGLE_FIELD_PATHS = {
+  main_offer_name: "offer_stack.angle.main_offer_name",
+  short_description: "offer_stack.angle.short_description",
+  core_outcome: "offer_stack.angle.core_outcome",
+  angle_new_vehicle: "offer_stack.angle.angle_new_vehicle",
+  angle_better_results: "offer_stack.angle.angle_better_results",
+  angle_faster_outcome: "offer_stack.angle.angle_faster_outcome",
+  angle_easier_process: "offer_stack.angle.angle_easier_process",
+  desired_outcome: "offer_stack.angle.core_promise.desired_outcome",
+  guarantee: "offer_stack.angle.core_promise.guarantee",
+} as const;
 
 interface Props {
   data: OfferAngleData;
@@ -54,6 +68,10 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
   const bt = getBusinessType(businessType);
   const noun = bt.customerNoun;
   const progress = calcAngleProgress(data);
+  const tokens = { noun };
+  const F = Object.fromEntries(
+    Object.entries(ANGLE_FIELD_PATHS).map(([k, p]) => [k, offerEditorField(p, tokens)]),
+  ) as Record<keyof typeof ANGLE_FIELD_PATHS, ReturnType<typeof offerEditorField>>;
   const { openCoach, openListCoach, panel } = useOfferCoach(() => ({
     offer_stack: { angle: data },
   }));
@@ -134,16 +152,13 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
       <div className="rounded-xl border border-border bg-card p-5 mb-4">
         <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
           <div>
-            <Label className="text-lg font-display font-bold text-foreground">Main Offer Name</Label>
-            <p className="text-xs text-muted-foreground mt-1">What is your flagship offer called?</p>
+            <Label className="text-lg font-display font-bold text-foreground">{F.main_offer_name.label}</Label>
+            <p className="text-xs text-muted-foreground mt-1">{F.main_offer_name.helper}</p>
           </div>
           <CoachIconButton
             onClick={() =>
               openCoach({
-                id: "offer_stack.angle.main_offer_name",
-                label: "Main Offer Name",
-                helper: "Short, 3–6 words. Just the name of your flagship offer.",
-                placeholder: "e.g. The Confidence Reset, Lead Engine 90…",
+                ...F.main_offer_name.coach,
                 currentValue: data.main_offer_name ?? "",
                 apply: (value) => onChange({ main_offer_name: value }),
               })
@@ -153,7 +168,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
         <Input
           value={data.main_offer_name ?? ""}
           onChange={(e) => onChange({ main_offer_name: e.target.value })}
-          placeholder="e.g. The Confidence Reset, Lead Engine 90, Scale Sprint…"
+          placeholder={F.main_offer_name.placeholder}
           className="h-10"
         />
       </div>
@@ -164,15 +179,12 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           <div className="flex items-start justify-between gap-3 mb-1.5">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-primary" />
-              <Label className="text-lg font-display font-bold text-foreground">Short Offer Description</Label>
+              <Label className="text-lg font-display font-bold text-foreground">{F.short_description.label}</Label>
             </div>
             <CoachIconButton
               onClick={() =>
                 openCoach({
-                  id: "offer_stack.angle.short_description",
-                  label: "Short Offer Description",
-                  helper: "1–2 sentences explaining what the offer actually is.",
-                  placeholder: `e.g. A 90-day coaching program that helps ${noun}…`,
+                  ...F.short_description.coach,
                   currentValue: data.short_description ?? "",
                   apply: (value) => onChange({ short_description: value }),
                 })
@@ -180,12 +192,12 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
             />
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            1–2 sentences explaining what the offer actually is.
+            {F.short_description.helper}
           </p>
           <AutoTextarea
             value={data.short_description ?? ""}
             onChange={(e) => onChange({ short_description: e.target.value })}
-            placeholder={`e.g. A 90-day coaching program that helps ${noun} rebuild confidence after toxic relationships.`}
+            placeholder={F.short_description.placeholder}
             rows={3}
             className="resize-none text-sm"
           />
@@ -194,15 +206,12 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           <div className="flex items-start justify-between gap-3 mb-1.5">
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4 text-primary" />
-              <Label className="text-lg font-display font-bold text-foreground">Core Outcome</Label>
+              <Label className="text-lg font-display font-bold text-foreground">{F.core_outcome.label}</Label>
             </div>
             <CoachIconButton
               onClick={() =>
                 openCoach({
-                  id: "offer_stack.angle.core_outcome",
-                  label: "Core Outcome",
-                  helper: "The primary transformation result in 1 sentence.",
-                  placeholder: "e.g. Rebuild self-trust and confidently attract healthy relationships.",
+                  ...F.core_outcome.coach,
                   currentValue: data.core_outcome ?? "",
                   apply: (value) => onChange({ core_outcome: value }),
                 })
@@ -210,12 +219,12 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
             />
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            The primary transformation result.
+            {F.core_outcome.helper}
           </p>
           <AutoTextarea
             value={data.core_outcome ?? ""}
             onChange={(e) => onChange({ core_outcome: e.target.value })}
-            placeholder="e.g. Rebuild self-trust and confidently attract healthy relationships."
+            placeholder={F.core_outcome.placeholder}
             rows={3}
             className="resize-none text-sm"
           />
@@ -230,64 +239,56 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
       </div>
       <div className="space-y-4 mb-6">
         <AngleField
-          label="New Vehicle"
-          helper="What makes your method genuinely new compared to what they already tried?"
-          placeholder="e.g. The first 90-day program that combines somatic work with strategic positioning…"
+          label={F.angle_new_vehicle.label}
+          helper={F.angle_new_vehicle.helper}
+          placeholder={F.angle_new_vehicle.placeholder}
           value={data.angle_new_vehicle ?? ""}
           onChange={(v) => onChange({ angle_new_vehicle: v })}
           onCoach={() =>
             openCoach({
-              id: "offer_stack.angle.angle_new_vehicle",
-              label: "New Vehicle",
-              helper: "What makes your method genuinely new compared to what they already tried?",
+              ...F.angle_new_vehicle.coach,
               currentValue: data.angle_new_vehicle ?? "",
               apply: (v) => onChange({ angle_new_vehicle: v }),
             })
           }
         />
         <AngleField
-          label="Better Results"
-          helper="Why does your method produce better results?"
-          placeholder="e.g. Because we combine strategy with implementation in the same week…"
+          label={F.angle_better_results.label}
+          helper={F.angle_better_results.helper}
+          placeholder={F.angle_better_results.placeholder}
           value={data.angle_better_results ?? ""}
           onChange={(v) => onChange({ angle_better_results: v })}
           onCoach={() =>
             openCoach({
-              id: "offer_stack.angle.angle_better_results",
-              label: "Better Results",
-              helper: "Why does your method produce better results?",
+              ...F.angle_better_results.coach,
               currentValue: data.angle_better_results ?? "",
               apply: (v) => onChange({ angle_better_results: v }),
             })
           }
         />
         <AngleField
-          label="Faster Outcome"
-          helper="How do clients get results faster?"
-          placeholder="e.g. We compress 6 months of trial-and-error into 30 days of guided execution…"
+          label={F.angle_faster_outcome.label}
+          helper={F.angle_faster_outcome.helper}
+          placeholder={F.angle_faster_outcome.placeholder}
           value={data.angle_faster_outcome ?? ""}
           onChange={(v) => onChange({ angle_faster_outcome: v })}
           onCoach={() =>
             openCoach({
-              id: "offer_stack.angle.angle_faster_outcome",
-              label: "Faster Outcome",
-              helper: "How do clients get results faster?",
+              ...F.angle_faster_outcome.coach,
               currentValue: data.angle_faster_outcome ?? "",
               apply: (v) => onChange({ angle_faster_outcome: v }),
             })
           }
         />
         <AngleField
-          label="Easier Process"
-          helper="How do you make the process feel easier?"
-          placeholder="e.g. Done-with-you templates, weekly accountability, no guesswork…"
+          label={F.angle_easier_process.label}
+          helper={F.angle_easier_process.helper}
+          placeholder={F.angle_easier_process.placeholder}
           value={data.angle_easier_process ?? ""}
           onChange={(v) => onChange({ angle_easier_process: v })}
           onCoach={() =>
             openCoach({
-              id: "offer_stack.angle.angle_easier_process",
-              label: "Easier Process",
-              helper: "How do you make the process feel easier?",
+              ...F.angle_easier_process.coach,
               currentValue: data.angle_easier_process ?? "",
               apply: (v) => onChange({ angle_easier_process: v }),
             })
@@ -336,16 +337,13 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
           <div className="md:col-span-2">
             <div className="flex items-center justify-between mb-1.5">
               <Label className="text-xs font-medium text-muted-foreground block">
-                Desired Outcome
+                {F.desired_outcome.label}
               </Label>
               <CoachIconButton
                 compact
                 onClick={() =>
                   openCoach({
-                    id: "offer_stack.angle.core_promise.desired_outcome",
-                    label: "Desired Outcome (Core Promise)",
-                    helper: "The specific transformation the client walks away with. Short and concrete.",
-                    placeholder: "e.g. Rebuild confidence and self-trust",
+                    ...F.desired_outcome.coach,
                     currentValue: promise?.desired_outcome ?? "",
                     apply: (v) => updatePromise({ desired_outcome: v }),
                   })
@@ -355,7 +353,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
             <Input
               value={promise?.desired_outcome ?? ""}
               onChange={(e) => updatePromise({ desired_outcome: e.target.value })}
-              placeholder="e.g. Rebuild confidence and self-trust"
+              placeholder={F.desired_outcome.placeholder}
               className="h-9"
             />
           </div>
@@ -378,16 +376,13 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
             <div className="flex items-center justify-between mb-1.5">
               <Label className="text-xs font-medium text-muted-foreground block flex items-center gap-1.5">
                 <Shield className="w-3 h-3" />
-                Guarantee / Risk Reversal <span className="text-muted-foreground/60">(optional)</span>
+                {F.guarantee.label} <span className="text-muted-foreground/60">(optional)</span>
               </Label>
               <CoachIconButton
                 compact
                 onClick={() =>
                   openCoach({
-                    id: "offer_stack.angle.core_promise.guarantee",
-                    label: "Guarantee / Risk Reversal",
-                    helper: "A concrete promise that removes the buyer's risk. One sentence.",
-                    placeholder: "e.g. Final payment waived if no progress",
+                    ...F.guarantee.coach,
                     currentValue: promise?.guarantee ?? "",
                     apply: (v) => updatePromise({ guarantee: v }),
                   })
@@ -397,7 +392,7 @@ const OfferAngleTab = ({ data, onChange, saving, businessType, embedded }: Props
             <Input
               value={promise?.guarantee ?? ""}
               onChange={(e) => updatePromise({ guarantee: e.target.value })}
-              placeholder="e.g. Final payment waived if no progress"
+              placeholder={F.guarantee.placeholder}
               className="h-9"
             />
           </div>
