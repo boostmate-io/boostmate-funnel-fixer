@@ -118,7 +118,7 @@ describe("Coach Apply on an additional Core Offer", () => {
     expect(screen.getByDisplayValue("Scoped name")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Scoped name" })).toBeNull());
-    fireEvent.click(await screen.findByText("Scoped name"));
+    fireEvent.click((await screen.findAllByText("Scoped name"))[0]);
     expect(await screen.findByDisplayValue("Scoped name")).toBeVisible();
     expect(screen.getByDisplayValue("Manual outcome")).toBeVisible();
     expect(store.find((row) => row.id === "extra-1").data.design.angle.core_outcome).toBe("Manual outcome");
