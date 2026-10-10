@@ -5,7 +5,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { OfferCoachScopeProvider, type ScopedOfferCoach, type ScopedPersistResult } from "./OfferCoachScope";
-import { useOptionalCoach } from "@/contexts/CoachContext";
+import { fieldsForTier } from "@shared/blueprintRegistry";
+import OfferEditorShell, { type OfferSaveStatus, type OfferEditorTab } from "./OfferEditorShell";
 import type { CoachBlueprintWrite } from "@/lib/coach/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,11 @@ interface Props {
   /** Called with the latest full data on every change (debounced upstream). */
   onChange: (next: OfferDesignData) => void;
   saving?: boolean;
+  offerId?: string;
+  isPrimary?: boolean;
+  initialTab?: string;
+  saveStatus?: OfferSaveStatus;
+  flushChanges?: () => Promise<boolean>;
   businessType?: string;
   /** Set for additional Core Offers: scopes all Coach actions to this offer. */
   scopedOffer?: {
@@ -53,11 +59,15 @@ export default function CoreOfferDialog({
   initial,
   onChange,
   saving,
+  offerId = "primary",
+  isPrimary = !scopedOffer,
+  initialTab,
+  saveStatus,
+  flushChanges,
   businessType,
   scopedOffer,
   externalRevision = 0,
 }: Props) {
-  const coachOpen = !!useOptionalCoach()?.open;
   const [data, setData] = useState<OfferDesignData>(initial ?? emptyOfferDesign());
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -99,66 +109,23 @@ export default function CoreOfferDialog({
             persistWrites: scopedOffer.persistWrites,
           }
         : null,
-    [scopedOffer?.id, scopedOffer?.name],
+    [scopedOffer?.id, scopedOffer?.name, scopedOffer?.persistWrites],
   );
 
   const updateAngle = (patch: Partial<OfferAngleData>) =>
-    update({ ...data, angle: { ...data.angle, ...patch } });
+    update({ ...dataRef.current, angle: { ...dataRef.current.angle, ...patch } });
   const updateStack = (patch: Partial<OfferStackData>) =>
-    update({ ...data, stack: { ...data.stack, ...patch } });
+    update({ ...dataRef.current, stack: { ...dataRef.current.stack, ...patch } });
   const updatePricing = (patch: Partial<PricingData>) =>
-    update({ ...data, pricing: { ...data.pricing, ...patch } });
+    update({ ...dataRef.current, pricing: { ...dataRef.current.pricing, ...patch } });
 
-  return (
-    // Non-modal while the Coach is open so its panel stays clickable/typeable
-    // (no focus trap); outside clicks elsewhere still dismiss the editor.
-    <Dialog open={open} onOpenChange={onOpenChange} modal={!coachOpen}>
-      <DialogContent
-        className="max-w-5xl p-0 gap-0 max-h-[92vh] flex flex-col"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onInteractOutside={(e) => {
-          if (isInsideCoach(e.target)) e.preventDefault();
-        }}
-        onEscapeKeyDown={(e) => {
-          if (isInsideCoach(e.target) || isInsideCoach(document.activeElement)) e.preventDefault();
-        }}
-      >
-        <DialogHeader className="px-6 py-4 border-b border-border shrink-0">
-          <DialogTitle className="text-xl font-display">{title}</DialogTitle>
-        </DialogHeader>
-
-        <OfferCoachScopeProvider value={coachScope}>
-        <div key={open ? "open" : "closed"} className="flex-1 overflow-y-auto">
-          <div className="px-4 py-4 space-y-6">
-            <OfferAngleTab
-              data={data.angle}
-              onChange={updateAngle}
-              saving={!!saving}
-              businessType={businessType}
-              embedded
-            />
-            <OfferStackTab
-              data={data.stack}
-              onChange={updateStack}
-              saving={!!saving}
-              businessType={businessType}
-              embedded
-            />
-            <PricingTab
-              data={data.pricing}
-              onChange={updatePricing}
-              saving={!!saving}
-              businessType={businessType}
-              embedded
-            />
-          </div>
-        </div>
-        </OfferCoachScopeProvider>
-
-        <DialogFooter className="px-6 py-3 border-t border-border shrink-0">
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  const content: Record<string, React.ReactNode> = {
+    angle: <OfferAngleTab data={data.angle} onChange={updateAngle} saving={!!saving} businessType={businessType} embedded />,
+    stack: <OfferStackTab data={data.stack} onChange={updateStack} saving={!!saving} businessType={businessType} embedded />,
+    pricing: <PricingTab data={data.pricing} onChange={updatePricing} saving={!!saving} businessType={businessType} embedded />,
+  };
+  const tabs: OfferEditorTab[] = fieldsForTier("core").subBlocks.filter((section) => content[section.id]).map((section) => ({ id: section.id, label: section.label, content: content[section.id] }));
+  return <OfferCoachScopeProvider value={coachScope}>
+    <OfferEditorShell open={open} onOpenChange={onOpenChange} offer={{ id: offerId, name: data.angle.main_offer_name || title, category: "Core Offer", primary: isPrimary }} tabs={tabs} initialTab={initialTab} saveStatus={saveStatus ?? (saving ? "saving" : "saved")} flushChanges={flushChanges} />
+  </OfferCoachScopeProvider>;
 }
