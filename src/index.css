@@ -7,7 +7,7 @@
 /* Companion editor layers are local; unrelated dialogs retain their defaults. */
 .offer-editor-backdrop { background: hsl(var(--foreground) / 0.35); }
 .offer-editor-shell { inset: 0; width: 100%; height: 100dvh; }
-body:has([data-offer-editor]) [data-coach-panel] { z-index: 60; pointer-events: auto; }
+body:has([data-offer-editor]) [data-coach-panel] { z-index: 60; pointer-events: auto; animation: none; }
 body:has([data-offer-editor]) [data-coach-panel] {
   inset: auto 0 0; width: 100%; max-width: none; height: 55dvh; max-height: 55dvh; border-radius: 0;
 }
