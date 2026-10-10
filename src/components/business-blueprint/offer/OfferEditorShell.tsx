@@ -56,7 +56,10 @@ export default function OfferEditorShell({ open, onOpenChange, offer, tabs, init
           data-offer-editor=""
           data-coach-companion={companion ? "open" : "closed"}
           className="offer-editor-shell fixed z-50 flex flex-col overflow-hidden border border-border bg-background shadow-lg"
-          onInteractOutside={(event) => { if (companion) event.preventDefault(); }}
+          onPointerDownOutside={(event) => {
+            if (event.target instanceof Element && event.target.closest("[data-coach-panel]")) event.preventDefault();
+          }}
+          onFocusOutside={(event) => { if (companion) event.preventDefault(); }}
           onEscapeKeyDown={(event) => {
             if (companion) {
               event.preventDefault();
