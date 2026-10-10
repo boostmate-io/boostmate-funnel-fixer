@@ -11,4 +11,5 @@
 - [ ] Universal Offer Editor (Core tabs + simple editor), no empty records on Add
 - [ ] Coach writes targeted at specific offers; expose recurring/premium fields to Coach
 - [ ] Irresistible Offer Builder
-- [ ] Final field matrix for six offer categories (planning only, awaiting approval)
+- [x] Final field matrix for six offer categories (approved)
+- [ ] Offer architecture cleanup (options from registry, row type, OfferTier, audits)
