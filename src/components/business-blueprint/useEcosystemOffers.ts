@@ -14,7 +14,12 @@ import {
   fetchEcosystemOffers,
   insertEcosystemOffer,
   updateEcosystemOffer,
+  designToRowValues,
 } from "@/lib/offers/offerRepository";
+import { applyScopedOfferWrites } from "@/lib/coach/scopedOfferWrites";
+import type { CoachBlueprintWrite } from "@/lib/coach/types";
+import { emptyOfferDesign, type OfferDesignData } from "./offerDesignTypes";
+import type { ScopedPersistResult } from "./offer/OfferCoachScope";
 
 export interface EcosystemOfferRow {
   id: string;
@@ -230,6 +235,34 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
     [load, emitChange, setOffers],
   );
 
+  /**
+   * Coach write-back for ONE additional Core Offer, keyed by ID.
+   * Reads the latest local row (which already includes pending manual edits),
+   * applies only validated offer-design paths, then goes through the same
+   * debounced queue (updateOffer) and flushes it — no second save path.
+   */
+  const applyCoachWrites = useCallback(
+    async (id: string, writes: CoachBlueprintWrite[]): Promise<ScopedPersistResult> => {
+      const row = offersRef.current.find((o) => o.id === id);
+      if (!row || row.source === "blueprint_core" || row.tier !== "core") {
+        return {
+          appliedPaths: [],
+          rejected: writes.map((write) => ({ write, reason: "offer_not_found" as const })),
+          saved: false,
+        };
+      }
+      const design = ((row.data as any)?.design as OfferDesignData | undefined) ?? emptyOfferDesign();
+      const { next, applied, rejected } = applyScopedOfferWrites(design, writes);
+      if (!applied.length) return { appliedPaths: [], rejected, saved: false };
+      await updateOffer(id, designToRowValues(next, row as any) as any);
+      const saved = await flushOffer(id);
+      return { appliedPaths: applied.map((w) => w.path), rejected, saved };
+    },
+    [updateOffer, flushOffer],
+  );
+
+  const getOffer = useCallback((id: string) => offersRef.current.find((o) => o.id === id), []);
+
   const tierCounts = offers.reduce((acc, o) => {
     acc[o.tier] = (acc[o.tier] || 0) + 1;
     return acc;
@@ -245,6 +278,8 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
     reload: load,
     flushOffer,
     flushAll,
+    applyCoachWrites,
+    getOffer,
     hasPendingChanges: pendingCount > 0,
   };
 }
