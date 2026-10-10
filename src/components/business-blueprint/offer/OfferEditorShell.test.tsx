@@ -10,8 +10,9 @@ function Companion() {
 }
 function Harness({ flush = async () => true }: { flush?: () => Promise<boolean> }) {
   const [open, setOpen] = useState(true);
+  const [name, setName] = useState("Extra");
   return <CoachProvider><OfferEditorShell open={open} onOpenChange={setOpen} offer={{ id: "extra", name: "Extra", category: "Core Offer", primary: false }} flushChanges={flush} tabs={[
-    { id: "angle", label: "Offer Angle", content: <input aria-label="Offer name" defaultValue="Extra" /> },
+    { id: "angle", label: "Offer Angle", content: <input aria-label="Offer name" value={name} onChange={(event) => setName(event.target.value)} /> },
     { id: "stack", label: "Offer Stack", content: <p>Deliverables</p> },
     { id: "pricing", label: "Pricing", content: <p>Payment plans</p> },
   ]} /><Companion /></CoachProvider>;

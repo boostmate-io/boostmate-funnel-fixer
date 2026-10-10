@@ -106,6 +106,26 @@ describe("Coach Apply on an additional Core Offer", () => {
     expect(applyBlueprintWritesSpy).not.toHaveBeenCalled();
   });
 
+  it("preserves pending manual fields, tabs and persisted data on reopening", async () => {
+    setWrites([{ path: "offer_stack.angle.main_offer_name", label: "Main Offer Name", value: "Scoped name" }]);
+    const { panel, onChangePrimary } = await openExtraAndCoach();
+    fireEvent.change(screen.getByDisplayValue("keep me"), { target: { value: "Manual outcome" } });
+    fireEvent.click(screen.getByRole("tab", { name: "Pricing" }));
+    fireEvent.click(within(panel).getByLabelText("Apply this field"));
+    await waitFor(() => expect(within(panel).getByText("Applied")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("tab", { name: "Offer Angle" }));
+    expect(screen.getByDisplayValue("Manual outcome")).toBeVisible();
+    expect(screen.getByDisplayValue("Scoped name")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Scoped name" })).toBeNull());
+    fireEvent.click(await screen.findByText("Scoped name"));
+    expect(await screen.findByDisplayValue("Scoped name")).toBeVisible();
+    expect(screen.getByDisplayValue("Manual outcome")).toBeVisible();
+    expect(store.find((row) => row.id === "extra-1").data.design.angle.core_outcome).toBe("Manual outcome");
+    expect(onChangePrimary).not.toHaveBeenCalled();
+    expect(updateSpy.mock.calls.every(([id]) => id === "extra-1")).toBe(true);
+  });
+
   it("does not show Applied when every path is rejected", async () => {
     setWrites([{ path: "customer_clarity.avatar_who", label: "Avatar", value: "x" }]);
     const { panel } = await openExtraAndCoach();
