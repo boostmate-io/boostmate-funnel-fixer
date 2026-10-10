@@ -75,7 +75,7 @@ describe("prompt layers", () => {
   });
 
   it("a mostly empty offer is told not to inherit another offer's framework", () => {
-    expect(renderActiveOfferSection(offer)).toMatch(/new and mostly empty/);
+    expect(renderActiveOfferSection(offer)).toMatch(/UNDEFINED OFFER/);
   });
 
   it("other offers appear only as related context, active excluded", () => {
@@ -119,7 +119,7 @@ describe("conversation attribution and switching", () => {
   });
 
   it("no switch note while staying on the same offer", () => {
-    expect(renderOfferSwitchNote([...history, { role: "user", parts: [nowPart] }], nowPart)).toBeNull();
+    expect(renderOfferSwitchNote([...history, { role: "assistant", parts: [nowPart] }, { role: "user", parts: [nowPart] }], nowPart)).toBeNull();
   });
 });
 
