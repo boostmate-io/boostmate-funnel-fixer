@@ -99,8 +99,12 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
 
   // ---- Debounced saving -------------------------------------------------------
 
-  const flushOffer = useCallback(
-    async (id: string) => {
+  // Per-offer save chain: saves for one offer never overlap, so an older
+  // in-flight save can never land after (and overwrite) a newer one.
+  const chains = useRef(new Map<string, Promise<boolean>>());
+
+  const flushOfferNow = useCallback(
+    async (id: string): Promise<boolean> => {
       const t = timers.current.get(id);
       if (t) window.clearTimeout(t);
       timers.current.delete(id);
@@ -116,7 +120,7 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
         if (!pending.current.has(id)) pending.current.set(id, values);
         syncPendingCount();
         toast.error("Save failed — your changes are kept and will be retried.");
-        const retry = window.setTimeout(() => void flushOffer(id), 5000);
+        const retry = window.setTimeout(() => void flushOfferRef.current(id), 5000);
         timers.current.set(id, retry);
         return false;
       }
@@ -125,6 +129,21 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
     },
     [emitChange],
   );
+
+  const flushOffer = useCallback(
+    (id: string): Promise<boolean> => {
+      const prev = chains.current.get(id) ?? Promise.resolve(true);
+      const next = prev.catch(() => false).then(() => flushOfferNow(id));
+      chains.current.set(id, next);
+      void next.finally(() => {
+        if (chains.current.get(id) === next) chains.current.delete(id);
+      });
+      return next;
+    },
+    [flushOfferNow],
+  );
+  const flushOfferRef = useRef(flushOffer);
+  flushOfferRef.current = flushOffer;
 
   const flushAll = useCallback(async () => {
     const ids = Array.from(pending.current.keys());

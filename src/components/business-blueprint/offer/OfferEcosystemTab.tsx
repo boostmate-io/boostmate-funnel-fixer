@@ -179,7 +179,8 @@ const OfferFieldsEditor = ({
 const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, saving, businessType, pendingOpenOfferId, onOpenedOffer }: Props) => {
   const { symbol: cur } = useCurrency();
   const bt = getBusinessType(businessType);
-  const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer } = useEcosystemOffers({ blueprintId });
+  const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer, applyCoachWrites } = useEcosystemOffers({ blueprintId });
+  const [coachRevision, setCoachRevision] = useState(0);
   const progress = calcEcosystemProgress(tierCounts);
   const { openCoach, openListCoach, panel } = useOfferCoach(() => ({ offer_ecosystem: offers }));
 
@@ -454,9 +455,19 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
         onChange={handleDialogChange}
         scopedOffer={
           editing && !editing.isPrimary
-            ? { id: editing.id, name: offers.find((o) => o.id === editing.id)?.name ?? "" }
+            ? {
+                id: editing.id,
+                name: offers.find((o) => o.id === editing.id)?.name ?? "",
+                persistWrites: async (writes) => {
+                  const offerId = editing.id;
+                  const res = await applyCoachWrites(offerId, writes);
+                  if (res.appliedPaths.length) setCoachRevision((r) => r + 1);
+                  return res;
+                },
+              }
             : null
         }
+        externalRevision={coachRevision}
         saving={saving}
         businessType={businessType}
       />

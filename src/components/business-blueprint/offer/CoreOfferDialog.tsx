@@ -4,7 +4,9 @@
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { OfferCoachScopeProvider, type ScopedOfferCoach } from "./OfferCoachScope";
+import { OfferCoachScopeProvider, type ScopedOfferCoach, type ScopedPersistResult } from "./OfferCoachScope";
+import { useOptionalCoach } from "@/contexts/CoachContext";
+import type { CoachBlueprintWrite } from "@/lib/coach/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -30,8 +32,19 @@ interface Props {
   saving?: boolean;
   businessType?: string;
   /** Set for additional Core Offers: scopes all Coach actions to this offer. */
-  scopedOffer?: { id: string; name: string } | null;
+  scopedOffer?: {
+    id: string;
+    name: string;
+    /** Persist Coach writes to this offer by ID (independent of this dialog). */
+    persistWrites: (writes: CoachBlueprintWrite[]) => Promise<ScopedPersistResult>;
+  } | null;
+  /** Bump to re-seed local state from `initial` (e.g. after a Coach write). */
+  externalRevision?: number;
 }
+
+/** Clicks/focus/Escape inside the floating AI Coach must not dismiss the editor. */
+const isInsideCoach = (target: EventTarget | null) =>
+  target instanceof Element && !!target.closest("[data-coach-panel]");
 
 export default function CoreOfferDialog({
   open,
@@ -42,7 +55,9 @@ export default function CoreOfferDialog({
   saving,
   businessType,
   scopedOffer,
+  externalRevision = 0,
 }: Props) {
+  const coachOpen = !!useOptionalCoach()?.open;
   const [data, setData] = useState<OfferDesignData>(initial ?? emptyOfferDesign());
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -52,6 +67,19 @@ export default function CoreOfferDialog({
     if (open) setData(initial ?? emptyOfferDesign());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Coach wrote to this offer (persisted by ID) — show it immediately.
+  useEffect(() => {
+    if (open && externalRevision) {
+      const next = initial ?? emptyOfferDesign();
+      dataRef.current = next;
+      setData(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalRevision]);
+
+  const persistRef = useRef(scopedOffer?.persistWrites);
+  persistRef.current = scopedOffer?.persistWrites;
 
   const update = (next: OfferDesignData) => {
     dataRef.current = next;
@@ -69,7 +97,10 @@ export default function CoreOfferDialog({
             offerId: scopedOffer.id,
             offerName: scopedOffer.name || "this offer",
             getDesign: () => dataRef.current,
-            applyDesign: (next) => updateRef.current(next),
+            persistWrites: (writes) =>
+              persistRef.current
+                ? persistRef.current(writes)
+                : Promise.resolve({ appliedPaths: [], rejected: [], saved: false }),
           }
         : null,
     [scopedOffer?.id, scopedOffer?.name],
@@ -83,10 +114,18 @@ export default function CoreOfferDialog({
     update({ ...data, pricing: { ...data.pricing, ...patch } });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    // Non-modal while the Coach is open so its panel stays clickable/typeable
+    // (no focus trap); outside clicks elsewhere still dismiss the editor.
+    <Dialog open={open} onOpenChange={onOpenChange} modal={!coachOpen}>
       <DialogContent
         className="max-w-5xl p-0 gap-0 max-h-[92vh] flex flex-col"
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onInteractOutside={(e) => {
+          if (isInsideCoach(e.target)) e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          if (isInsideCoach(e.target) || isInsideCoach(document.activeElement)) e.preventDefault();
+        }}
       >
         <DialogHeader className="px-6 py-4 border-b border-border shrink-0">
           <DialogTitle className="text-xl font-display">{title}</DialogTitle>
