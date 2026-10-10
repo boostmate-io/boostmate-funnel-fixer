@@ -22,11 +22,16 @@ import {
   type PaymentPlan,
   type PaymentPlanType,
   type GuaranteeType,
-  PAYMENT_PLAN_TYPES,
-  GUARANTEE_OPTIONS,
   calcPricingProgress,
 } from "../offerDesignTypes";
 import { getBusinessType } from "../businessTypes";
+import { offerEditorField, offerEditorList } from "../registryUi";
+
+// Field semantics + copy come from the central Blueprint Field Registry.
+const CORE_PRICE = offerEditorField("offer_stack.pricing.core_price");
+const GUARANTEE_TYPE = offerEditorField("offer_stack.pricing.guarantee_type");
+const GUARANTEE_DETAILS = offerEditorField("offer_stack.pricing.guarantee_details");
+const PLANS_PATH = "offer_stack.pricing.payment_plans";
 
 const newId = () => crypto.randomUUID();
 
@@ -65,6 +70,8 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
 
   // Refs so Coach-captured callbacks always read the LATEST data/onChange,
   // not the snapshot from the render when the Coach button was clicked.
+  const PLANS = offerEditorList(PLANS_PATH, { cur });
+  const planTypeOptions = PLANS.item("type").options ?? [];
   const dataRef = useLatestRef(data);
   const onChangeRef = useLatestRef(onChange);
 
@@ -152,8 +159,8 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                 <DollarSign className="w-4 h-4" />
               </div>
               <div>
-                <Label className="text-lg font-display font-bold text-foreground">Core Price</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">The headline price for your main offer.</p>
+                <Label className="text-lg font-display font-bold text-foreground">{CORE_PRICE.label}</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">{CORE_PRICE.helper}</p>
               </div>
             </div>
           </div>
@@ -164,7 +171,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
               inputMode="decimal"
               value={data.core_price === "" ? "" : data.core_price}
               onChange={(e) => onChange({ core_price: numberOrEmpty(e.target.value) })}
-              placeholder="2500"
+              placeholder={CORE_PRICE.placeholder}
               className="h-10 text-lg font-semibold"
             />
           </div>
@@ -172,30 +179,21 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
 
         {/* Payment Plans */}
         <BuilderCard
-          title="Payment Plans"
-          description="Lower the upfront barrier with flexible options."
-          addLabel="Add Payment Plan"
+          title={PLANS.title}
+          description={PLANS.description}
+          addLabel={PLANS.addLabel}
           onAdd={addPlan}
           onCoach={() =>
             openListCoach({
-              id: "pricing_payment_plans",
-              label: "Payment Plans",
-              helper: `Flexible payment options that lower the upfront barrier. Propose concrete plans WITH a numeric amount in ${cur} for every plan — never leave the amount blank.`,
-              basePath: "offer_stack.pricing.payment_plans",
-              itemFields: [
-                { key: "type", label: "Plan Type", kind: "text", helper: "One of: full_pay | split_2 | split_3 | split_6 | monthly | custom." },
-                { key: "custom_label", label: "Plan Label", kind: "text", helper: "Short plan name (e.g. 'Pay in Full', '3-Pay')." },
-                { key: "amount", label: "Amount", kind: "text", helper: `Numeric amount in ${cur}, e.g. 997. Numbers only, no currency symbol.` },
-                { key: "duration", label: "Duration", kind: "text", helper: "How long the plan runs (e.g. '3 months', '12 weeks')." },
-              ],
+              ...PLANS.listCoach,
+              suggestedCount: PLANS.listCoach.suggestedCount ?? [2, 3],
               currentCount: data.payment_plans.length,
-              suggestedCount: [2, 3],
               appendItem: appendPlan,
               appendItems: appendPlans,
             })
           }
           count={data.payment_plans.length}
-          emptyText="No plans yet. Most offers convert better with at least 2 options (e.g. Full Pay + 3-Pay)."
+          emptyText={PLANS.emptyText}
         >
           {data.payment_plans.length > 0 && (
             <div className="space-y-2">
@@ -207,7 +205,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {PAYMENT_PLAN_TYPES.map((o) => (
+                        {planTypeOptions.map((o) => (
                           <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                         ))}
                       </SelectContent>
@@ -217,16 +215,14 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                         <Input
                           value={p.custom_label ?? ""}
                           onChange={(e) => updatePlan(p.id, { custom_label: e.target.value })}
-                          placeholder="Plan label"
+                          placeholder={PLANS.item("custom_label").placeholder}
                           className="h-8 text-sm"
                         />
                         <CoachIconButton
                           compact
                           onClick={() =>
                             openCoach({
-                              id: `offer_stack.pricing.payment_plans.${p.id}.custom_label`,
-                              label: `Payment Plan ${idx + 1} — Label`,
-                              helper: "Short, clear label for this custom plan.",
+                              ...PLANS.itemCoach("custom_label", p.id, idx),
                               currentValue: p.custom_label ?? "",
                               apply: (v) => updatePlan(p.id, { custom_label: v }),
                             })
@@ -243,7 +239,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                         inputMode="decimal"
                         value={p.amount === "" ? "" : p.amount}
                         onChange={(e) => updatePlan(p.id, { amount: numberOrEmpty(e.target.value) })}
-                        placeholder="Amount"
+                        placeholder={PLANS.item("amount").placeholder}
                         className="h-9 text-sm"
                       />
                     </div>
@@ -253,16 +249,14 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                       <Input
                         value={p.duration ?? ""}
                         onChange={(e) => updatePlan(p.id, { duration: e.target.value })}
-                        placeholder="Duration (e.g. 3 months)"
+                        placeholder={PLANS.item("duration").placeholder}
                         className="h-9 text-sm"
                       />
                       <CoachIconButton
                         compact
                         onClick={() =>
                           openCoach({
-                            id: `offer_stack.pricing.payment_plans.${p.id}.duration`,
-                            label: `Payment Plan ${idx + 1} — Duration`,
-                            helper: "How long does the plan run?",
+                            ...PLANS.itemCoach("duration", p.id, idx),
                             currentValue: p.duration ?? "",
                             apply: (v) => updatePlan(p.id, { duration: v }),
                           })
@@ -296,8 +290,8 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
               <Shield className="w-4 h-4" />
             </div>
             <div>
-              <Label className="text-lg font-display font-bold text-foreground">Risk Reversal / Guarantee</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">How you remove the risk of saying yes.</p>
+              <Label className="text-lg font-display font-bold text-foreground">{GUARANTEE_TYPE.label}</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">{GUARANTEE_TYPE.helper}</p>
             </div>
           </div>
           <div className="space-y-3 max-w-2xl">
@@ -310,7 +304,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {GUARANTEE_OPTIONS.map((o) => (
+                  {(GUARANTEE_TYPE.options ?? []).map((o) => (
                     <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -319,12 +313,10 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
             {data.guarantee_type !== "none" && (
               <div>
                 <LabelRow
-                  label="Guarantee Details / Terms"
+                  label={GUARANTEE_DETAILS.label}
                   onCoach={() =>
                     openCoach({
-                      id: "offer_stack.pricing.guarantee_details",
-                      label: "Guarantee Details / Terms",
-                      helper: "The concrete terms of the guarantee. Clear, specific, buyer-friendly.",
+                      ...GUARANTEE_DETAILS.coach,
                       currentValue: data.guarantee_details ?? "",
                       apply: (v) => onChange({ guarantee_details: v }),
                     })
@@ -333,9 +325,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded }: Props) =
                 <AutoTextarea
                   value={data.guarantee_details ?? ""}
                   onChange={(e) => onChange({ guarantee_details: e.target.value })}
-                  placeholder={
-                    'e.g. "Complete all modules and attend weekly calls. If you don\'t see measurable progress within 90 days, we continue coaching for free."'
-                  }
+                  placeholder={GUARANTEE_DETAILS.placeholder}
                   rows={4}
                   className="resize-none text-sm"
                 />
