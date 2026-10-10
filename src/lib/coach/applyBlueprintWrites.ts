@@ -51,7 +51,7 @@ const BOOLEAN_PATHS = new Set([
 ]);
 
 
-function coerceForPath(path: string, value: any): any {
+export function coerceForPath(path: string, value: any): any {
   if (BOOLEAN_PATHS.has(path)) {
     if (typeof value === "boolean") return value;
     const s = String(value ?? "").trim().toLowerCase();
@@ -67,7 +67,7 @@ function coerceForPath(path: string, value: any): any {
   return value;
 }
 
-function setDeep(target: Record<string, any>, segments: string[], value: any) {
+export function setDeep(target: Record<string, any>, segments: string[], value: any) {
   let cursor = target;
   for (let i = 0; i < segments.length - 1; i++) {
     const key = segments[i];
@@ -81,7 +81,7 @@ function setDeep(target: Record<string, any>, segments: string[], value: any) {
 }
 
 
-function normalizeFrameworkPillars(patch: BlueprintPatch) {
+export function normalizeFrameworkPillars(patch: BlueprintPatch) {
   const pillars = (patch.offer_stack as any)?.angle?.framework?.pillars;
   if (!Array.isArray(pillars)) return;
   (patch.offer_stack as any).angle.framework.pillars = Array.from(
@@ -97,7 +97,7 @@ function normalizeFrameworkPillars(patch: BlueprintPatch) {
   );
 }
 
-function normalizeOfferStackLists(patch: BlueprintPatch) {
+export function normalizeOfferStackLists(patch: BlueprintPatch) {
   const stack = (patch.offer_stack as any)?.stack;
   if (!stack || typeof stack !== "object") return;
 
@@ -148,7 +148,7 @@ function normalizeOfferStackLists(patch: BlueprintPatch) {
   }
 }
 
-function normalizePricingLists(patch: BlueprintPatch) {
+export function normalizePricingLists(patch: BlueprintPatch) {
   const pricing = (patch.offer_stack as any)?.pricing;
   if (!pricing || typeof pricing !== "object") return;
 

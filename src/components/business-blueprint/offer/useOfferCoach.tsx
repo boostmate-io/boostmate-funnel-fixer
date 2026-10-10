@@ -19,6 +19,9 @@ import {
 } from "@/lib/coach/buildContext";
 import type { BlueprintRow } from "../types";
 import type { CoachBlueprintWrite } from "@/lib/coach/types";
+import { toast } from "sonner";
+import { applyScopedOfferWrites } from "@/lib/coach/scopedOfferWrites";
+import { useOfferCoachScope, type ScopedOfferCoach } from "./OfferCoachScope";
 
 export interface OfferCoachSpec {
   id: string;
@@ -52,10 +55,17 @@ export interface OfferListCoachSpec {
 export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
   const { activeSubAccountId } = useWorkspace();
   const { openCoach } = useCoach();
+  const scope = useOfferCoachScope();
+  const scoped = scope.mode === "scoped" ? scope : null;
+
+  // Scoped (additional Core Offer): context = that offer's full design.
+  const snapshotFor = (): BlueprintRow =>
+    (scoped ? { offer_stack: scoped.getDesign() } : buildSnapshot()) as unknown as BlueprintRow;
+  const keyFor = (base: string) => (scoped ? `${base}@offer:${scoped.offerId}` : base);
 
   const openCoachField = (spec: OfferCoachSpec) => {
     if (!activeSubAccountId) return;
-    const snapshot = buildSnapshot() as unknown as BlueprintRow;
+    const snapshot = snapshotFor();
     const ctx = buildBlueprintFieldContext(
       {
         id: spec.id,
@@ -68,20 +78,22 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
       activeSubAccountId,
     );
     openCoach({
-      key: `offer-field:${spec.id}`,
-      label: spec.label,
+      key: keyFor(`offer-field:${spec.id}`),
+      label: scoped ? `${spec.label} — ${scoped.offerName}` : spec.label,
       scope: ctx.scope,
       intent: ctx.intent,
       mode: "field",
       target: ctx.target,
       blueprintSnapshot: snapshot,
       onApply: spec.apply,
+      // Scoped: an explicit handler so the global Blueprint fallback can never run.
+      ...(scoped ? { onApplyBlueprintWrites: (writes: CoachBlueprintWrite[]) => { applyScopedWrites(scoped, writes); } } : {}),
     });
   };
 
   const openListCoach = (spec: OfferListCoachSpec) => {
     if (!activeSubAccountId) return;
-    const snapshot = buildSnapshot() as unknown as BlueprintRow;
+    const snapshot = snapshotFor();
     const ctx = buildBlueprintListSectionContext(
       {
         id: spec.id,
@@ -96,8 +108,8 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
       activeSubAccountId,
     );
     openCoach({
-      key: `offer-list:${spec.id}`,
-      label: spec.label,
+      key: keyFor(`offer-list:${spec.id}`),
+      label: scoped ? `${spec.label} — ${scoped.offerName}` : spec.label,
       scope: ctx.scope,
       intent: ctx.intent,
       mode: "section",
@@ -108,6 +120,18 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
   };
 
   return { openCoach: openCoachField, openListCoach, panel: null };
+}
+
+/** Apply Coach writes to the scoped offer only; reject everything else. */
+export function applyScopedWrites(scoped: ScopedOfferCoach, writes: CoachBlueprintWrite[]) {
+  const { next, applied, rejected } = applyScopedOfferWrites(scoped.getDesign(), writes);
+  if (applied.length) scoped.applyDesign(next);
+  if (rejected.length) {
+    toast.error(
+      `${rejected.length} suggestion(s) not applied — they don't belong to "${scoped.offerName}".`,
+    );
+  }
+  return { applied: applied.length, rejected: rejected.length };
 }
 
 /** Group `<basePath>.new_<n>.<field>` writes back into whole items. */

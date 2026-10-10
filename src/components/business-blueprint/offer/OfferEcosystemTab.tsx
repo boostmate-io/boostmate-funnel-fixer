@@ -452,6 +452,11 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
         title={dialogTitle}
         initial={dialogInitial}
         onChange={handleDialogChange}
+        scopedOffer={
+          editing && !editing.isPrimary
+            ? { id: editing.id, name: offers.find((o) => o.id === editing.id)?.name ?? "" }
+            : null
+        }
         saving={saving}
         businessType={businessType}
       />

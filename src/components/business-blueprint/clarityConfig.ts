@@ -24,6 +24,11 @@ export interface FieldDef {
   suggestions?: string[];
   fullWidth?: boolean;
   rows?: number;
+  /** Optional registry editor metadata (forwarded by toFieldDef). */
+  valueType?: import("@shared/blueprintRegistry").FieldValueType;
+  enumValues?: import("@shared/blueprintRegistry").EnumValue[];
+  control?: import("@shared/blueprintRegistry").OfferControlKey;
+  editorOnly?: boolean;
 }
 
 export interface SubBlockConfig {
