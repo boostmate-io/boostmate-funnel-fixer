@@ -25,6 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  BLUEPRINT_LISTS,
   getBlueprintFieldByPath,
   getRegistrySubBlock,
   renderLabel,
@@ -111,3 +112,52 @@ export function offerEditorField(path: string, tokens?: Partial<LabelTokens>) {
   };
 }
 export type OfferEditorFieldCopy = ReturnType<typeof offerEditorField>;
+
+/**
+ * Offer Editor copy for a registry LIST (Offer Stack builders): card copy,
+ * the exact list-Coach target, and per-item field copy + Coach targets.
+ */
+export function offerEditorList(basePath: string) {
+  const list = BLUEPRINT_LISTS.find((l) => l.basePath === basePath);
+  if (!list?.editor) throw new Error(`Unknown registry list: ${basePath}`);
+  const e = list.editor;
+  const items = [...list.itemFields, ...(list.editorItemFields ?? [])];
+  const n = (s: string | undefined, idx: number) => s?.replace(/\{n\}/g, String(idx + 1));
+  const itemField = (key: string) => {
+    const f = items.find((i) => i.key === key);
+    if (!f) throw new Error(`Unknown list item field: ${basePath}.${key}`);
+    return f;
+  };
+  return {
+    basePath,
+    title: e.title ?? list.label,
+    description: e.description,
+    addLabel: e.addLabel,
+    emptyText: e.emptyText,
+    fallbackTitle: (idx: number) => n(e.itemFallbackTitle, idx) ?? `${list.itemLabel} ${idx + 1}`,
+    listCoach: {
+      id: e.coach?.id ?? basePath,
+      label: e.coach?.label ?? list.label,
+      helper: e.coach?.helper,
+      basePath,
+      itemFields: e.coachItemFields ?? list.itemFields.map(({ key, label, kind, helper }) => ({ key, label, kind, helper })),
+      suggestedCount: list.suggestedCount,
+    },
+    /** Display copy for one item field. */
+    item: (key: string) => {
+      const f = itemField(key);
+      return { label: f.editor?.label ?? f.label, placeholder: f.editor?.placeholder };
+    },
+    /** Exact Coach target for one item field of one list item (by item id). */
+    itemCoach: (key: string, itemId: string, idx: number) => {
+      const f = itemField(key);
+      const c = f.editor?.coach ?? {};
+      return {
+        id: `${basePath}.${itemId}.${key}`,
+        label: n(c.label, idx) ?? `${list.itemLabel} ${idx + 1} — ${f.label}`,
+        helper: c.helper,
+        ...(c.placeholder ? { placeholder: c.placeholder } : {}),
+      };
+    },
+  };
+}
