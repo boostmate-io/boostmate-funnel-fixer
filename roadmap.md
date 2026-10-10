@@ -12,4 +12,5 @@
 - [ ] Coach writes targeted at specific offers; expose recurring/premium fields to Coach
 - [ ] Irresistible Offer Builder
 - [x] Final field matrix for six offer categories (approved)
-- [ ] Offer architecture cleanup (options from registry, row type, OfferTier, audits)
+- [x] Offer architecture cleanup (options from registry, row type, OfferTier, audits)
+- [ ] Low-Ticket editor configuration (awaiting approval)
