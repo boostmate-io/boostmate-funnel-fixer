@@ -103,6 +103,8 @@ export function offerEditorField(path: string, tokens?: Partial<LabelTokens>) {
     label,
     helper: r(e.helper),
     placeholder: r(e.placeholder ?? field.placeholder),
+    /** Editor option labels for enum controls (falls back to registry enum). */
+    options: e.options ?? field.enumValues,
     coach: {
       id: field.path,
       label: r(e.coach?.label) ?? label,
@@ -117,12 +119,14 @@ export type OfferEditorFieldCopy = ReturnType<typeof offerEditorField>;
  * Offer Editor copy for a registry LIST (Offer Stack builders): card copy,
  * the exact list-Coach target, and per-item field copy + Coach targets.
  */
-export function offerEditorList(basePath: string) {
+export function offerEditorList(basePath: string, vars: Record<string, string> = {}) {
   const list = BLUEPRINT_LISTS.find((l) => l.basePath === basePath);
   if (!list?.editor) throw new Error(`Unknown registry list: ${basePath}`);
   const e = list.editor;
   const items = [...list.itemFields, ...(list.editorItemFields ?? [])];
   const n = (s: string | undefined, idx: number) => s?.replace(/\{n\}/g, String(idx + 1));
+  // Runtime vars (e.g. {cur}) for Coach copy; unknown placeholders stay literal.
+  const v = (s: string | undefined) => s?.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
   const itemField = (key: string) => {
     const f = items.find((i) => i.key === key);
     if (!f) throw new Error(`Unknown list item field: ${basePath}.${key}`);
@@ -138,15 +142,16 @@ export function offerEditorList(basePath: string) {
     listCoach: {
       id: e.coach?.id ?? basePath,
       label: e.coach?.label ?? list.label,
-      helper: e.coach?.helper,
+      helper: v(e.coach?.helper),
       basePath,
-      itemFields: e.coachItemFields ?? list.itemFields.map(({ key, label, kind, helper }) => ({ key, label, kind, helper })),
+      itemFields: (e.coachItemFields ?? list.itemFields.map(({ key, label, kind, helper }) => ({ key, label, kind, helper })))
+        .map((f) => (f.helper ? { ...f, helper: v(f.helper) } : f)),
       suggestedCount: list.suggestedCount,
     },
     /** Display copy for one item field. */
     item: (key: string) => {
       const f = itemField(key);
-      return { label: f.editor?.label ?? f.label, placeholder: f.editor?.placeholder };
+      return { label: f.editor?.label ?? f.label, placeholder: f.editor?.placeholder, options: f.editor?.options ?? f.enumValues };
     },
     /** Exact Coach target for one item field of one list item (by item id). */
     itemCoach: (key: string, itemId: string, idx: number) => {
