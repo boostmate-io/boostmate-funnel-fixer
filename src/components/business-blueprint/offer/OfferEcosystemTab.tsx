@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  Network, Trash2, Sparkles, Lock, Pencil, ChevronDown, ChevronRight, Plus,
+  Network, Sparkles, Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import SectionShell from "./SectionShell";
 import SectionHelpCoach from "../SectionHelpCoach";
 import CoreOfferDialog from "./CoreOfferDialog";
+import OfferSummaryCard from "./OfferSummaryCard";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import DeliveryTypePicker from "./DeliveryTypePicker";
 import CoachIconButton from "./CoachIconButton";
@@ -49,78 +51,25 @@ const numberOrEmpty = (raw: string): number | "" => {
   return Number.isFinite(n) ? n : "";
 };
 
-const OfferCardRow = ({
+// Existing per-offer fields (unchanged) — now shown in a dialog instead of inline.
+const OfferFieldsEditor = ({
   offer,
   onUpdate,
-  onDelete,
-  isCore,
   cur,
   openCoach,
   tierLabel,
-  allOffers,
 }: {
   offer: EcosystemOfferRow;
   onUpdate: (patch: Partial<Pick<EcosystemOfferRow, "name" | "data">>) => void;
-  onDelete: () => void;
-  isCore: boolean;
   cur: string;
   openCoach: (spec: OfferCoachSpec) => void;
   tierLabel: string;
-  allOffers: EcosystemOfferRow[];
 }) => {
-  const [open, setOpen] = useState(false);
   const coachId = (field: string) => `offer_stack.ecosystem.${offer.id}.${field}`;
-  const canCoach = !isCore;
-  const hasName = !!(offer.name || "").trim();
-
+  const canCoach = true;
+  const isCore = false;
   return (
-    <div className="rounded-lg border border-border bg-background overflow-hidden">
-      {/* Read-only header — mirrors the Name field live */}
-      <div className="flex items-center gap-2 p-3">
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className="flex-1 min-w-0 flex items-center gap-2 text-left"
-          aria-label="Toggle details"
-        >
-          {open ? <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />}
-          <span
-            className={`min-w-0 truncate text-sm font-medium ${
-              hasName ? "text-foreground" : "text-muted-foreground italic"
-            }`}
-          >
-            {hasName ? offer.name : "Untitled Offer"}
-          </span>
-        </button>
-        {typeof offer.data?.price === "number" && offer.data.price > 0 && (
-          <Badge variant="secondary" className="text-xs tabular-nums shrink-0">
-            {cur}{offer.data.price.toLocaleString()}
-          </Badge>
-        )}
-        {isCore ? (
-          <Badge variant="outline" className="gap-1 text-[10px] shrink-0">
-            <Lock className="w-3 h-3" />
-            Auto-synced
-          </Badge>
-        ) : (
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onDelete}
-            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
-
-      {open && (
-        <div className="px-3 pb-3 pt-1 border-t border-border/50 space-y-3">
-          {isCore && (
-            <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
-              <Pencil className="w-3 h-3" />
-              Core offer is auto-generated from tabs 1–3. Edit those tabs to update it.
-            </p>
-          )}
+    <div className="space-y-3">
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <Label className="text-xs font-medium text-muted-foreground block">Offer Name</Label>
@@ -223,9 +172,6 @@ const OfferCardRow = ({
               placeholder="How is it delivered?"
             />
           </div>
-          
-        </div>
-      )}
     </div>
   );
 };
@@ -250,13 +196,26 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   };
 
   const [editing, setEditing] = useState<{ id: string; isPrimary: boolean } | null>(null);
+  const [editingSimpleId, setEditingSimpleId] = useState<string | null>(null);
+  const editingSimple = offers.find((o) => o.id === editingSimpleId) ?? null;
+
+  /** Open the existing editor that fits this offer (Core dialog vs. field dialog). */
+  const openEditor = (offer: EcosystemOfferRow) => {
+    if (offer.tier === "core") setEditing({ id: offer.id, isPrimary: offer.source === "blueprint_core" });
+    else setEditingSimpleId(offer.id);
+  };
+
+  const handleAddSimple = async (tier: EcosystemTier) => {
+    const id = await addOffer(tier);
+    if (id) setEditingSimpleId(id);
+  };
 
   // Deep-link: open a specific offer's editor once the row is available in state
   useEffect(() => {
     if (!pendingOpenOfferId) return;
     const row = offers.find((o) => o.id === pendingOpenOfferId);
     if (!row) return;
-    setEditing({ id: row.id, isPrimary: false });
+    openEditor(row);
     onOpenedOffer?.();
   }, [pendingOpenOfferId, offers, onOpenedOffer]);
 
@@ -387,7 +346,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => addOffer(tier.id)}
+                      onClick={() => handleAddSimple(tier.id)}
                       className="gap-1.5 h-8"
                       disabled={!blueprintId}
                     >
@@ -397,7 +356,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                 )}
               </div>
 
-              <div className="p-4 space-y-2">
+              <div className="p-4">
                 {tierOffers.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-center">
                     <p className="text-sm text-muted-foreground mb-3">{tier.emptyHint}</p>
@@ -429,75 +388,57 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                       </Button>
                     )}
                   </div>
-                ) : isCoreSection ? (
-                  tierOffers.map((offer) => {
-                    const isPrimary = offer.source === "blueprint_core";
-                    return (
-                      <div
-                        key={offer.id}
-                        className="flex items-center gap-2 p-3 rounded-lg border border-border bg-background"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-sm truncate">{offer.name}</span>
-                            {typeof offer.data?.price === "number" && offer.data.price > 0 && (
-                              <Badge variant="secondary" className="text-xs tabular-nums">
-                                {cur}{offer.data.price.toLocaleString()}
-                              </Badge>
-                            )}
-                            {isPrimary && (
-                              <Badge variant="outline" className="gap-1 text-[10px]">
-                                <Lock className="w-3 h-3" />
-                                Primary (synced with tabs)
-                              </Badge>
-                            )}
-                          </div>
-                          {offer.data?.description && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{offer.data.description}</p>
-                          )}
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1.5 h-8 shrink-0"
-                          onClick={() => setEditing({ id: offer.id, isPrimary })}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          Edit
-                        </Button>
-                        {!isPrimary && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => deleteOffer(offer.id)}
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    );
-                  })
                 ) : (
-                  tierOffers.map((offer) => (
-                    <OfferCardRow
-                      key={offer.id}
-                      offer={offer}
-                      isCore={false}
-                      cur={cur}
-                      onUpdate={(patch) => updateOffer(offer.id, patch)}
-                      onDelete={() => deleteOffer(offer.id)}
-                      openCoach={openCoach}
-                      tierLabel={tier.label}
-                      allOffers={offers}
-                    />
-                  ))
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {tierOffers.map((offer) => (
+                      <OfferSummaryCard
+                        key={offer.id}
+                        offer={offer}
+                        cur={cur}
+                        onEdit={() => openEditor(offer)}
+                        onDelete={() => deleteOffer(offer.id)}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
           );
         })}
       </div>
+
+      <Dialog
+        open={!!editingSimple}
+        onOpenChange={(o) => {
+          if (!o) {
+            if (editingSimpleId) void flushOffer(editingSimpleId);
+            setEditingSimpleId(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="font-display">
+              {ECOSYSTEM_TIERS.find((t) => t.id === editingSimple?.tier)?.label ?? "Offer"} — Edit Offer
+            </DialogTitle>
+          </DialogHeader>
+          {editingSimple && (
+            <OfferFieldsEditor
+              offer={editingSimple}
+              cur={cur}
+              onUpdate={(patch) => updateOffer(editingSimple.id, patch)}
+              openCoach={openCoach}
+              tierLabel={ECOSYSTEM_TIERS.find((t) => t.id === editingSimple.tier)?.label ?? ""}
+            />
+          )}
+          <DialogFooter>
+            <Button onClick={() => {
+              if (editingSimpleId) void flushOffer(editingSimpleId);
+              setEditingSimpleId(null);
+            }}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CoreOfferDialog
         open={!!editing}
