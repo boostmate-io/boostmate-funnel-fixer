@@ -75,10 +75,11 @@ describe("OfferStackTab rendering and behaviour", () => {
     }
     expect(screen.getByDisplayValue("€497")).toBeInTheDocument();
 
-    for (const b of screen.getAllByRole("button")) {
-      try { fireEvent.click(b); } catch (e) { console.log("CLICKERR", b.textContent, String(e)); }
+    // Expand every item, then click every Coach entry point.
+    for (const t of ["Deliverable 1", "Resource 1", "Support Channel 1", "Bonus 1", "Milestone 1"]) {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(t) }));
     }
-    console.log("LISTCALLS", openListCoach.mock.calls.length); console.log("BTNS", screen.getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label")).join("|"), openCoach.mock.calls.length);
+    for (const b of screen.getAllByRole("button", { name: /AI Coach/ })) fireEvent.click(b);
     const listIds = openListCoach.mock.calls.map((c) => c[0].id);
     expect(listIds).toEqual(expect.arrayContaining(["stack_deliverables", "stack_resources", "stack_support_channels", "stack_bonuses", "stack_milestones"]));
     const fieldIds = openCoach.mock.calls.map((c) => c[0].id);
