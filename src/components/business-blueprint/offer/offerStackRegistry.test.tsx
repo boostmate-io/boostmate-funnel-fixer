@@ -10,6 +10,7 @@ vi.mock("../SectionHelpCoach", () => ({ default: () => null }));
 import OfferStackTab, { STACK_LISTS } from "./OfferStackTab";
 import { renderBlueprintFieldPathsPrompt } from "@shared/blueprintRegistry";
 
+// Items open when empty, so every item Coach button renders.
 // Exact pre-migration list-Coach targets (copied from the old component).
 const LEGACY_LIST_COACH = {
   deliverables: { id: "stack_deliverables", label: "Core Deliverables", helper: "Main service, coaching or program components clients receive.", basePath: "offer_stack.stack.deliverables", suggestedCount: [3, 5], itemFields: [{ key: "name", label: "Name", kind: "text", helper: "Short, benefit-driven deliverable name." }, { key: "description", label: "Description", kind: "textarea", helper: "1–2 sentences on what the client gets." }] },
@@ -56,11 +57,11 @@ describe("Offer Stack metadata from the registry", () => {
 
 describe("OfferStackTab rendering and behaviour", () => {
   const data = {
-    deliverables: [{ id: "d1", name: "Calls", description: "", delivery_types: [], frequency: "weekly" }],
-    resources: [{ id: "r1", name: "Guide", resource_type: "Ebook", description: "" }],
-    support_channels: [{ id: "s1", name: "Slack", description: "", frequency: "" }],
-    bonuses: [{ id: "b1", name: "Bonus A", description: "", perceived_value: "€497" }],
-    milestones: [{ id: "m1", phase_name: "Phase 1", description: "", expected_outcome: "" }],
+    deliverables: [{ id: "d1", name: "", description: "", delivery_types: [], frequency: "weekly" }],
+    resources: [{ id: "r1", name: "", resource_type: "Ebook", description: "" }],
+    support_channels: [{ id: "s1", name: "", description: "", frequency: "" }],
+    bonuses: [{ id: "b1", name: "", description: "", perceived_value: "€497" }],
+    milestones: [{ id: "m1", phase_name: "", description: "", expected_outcome: "" }],
     delivery_timeline: "90_days",
   } as never;
 
@@ -89,7 +90,7 @@ describe("OfferStackTab rendering and behaviour", () => {
     const pv = openCoach.mock.calls.find((c) => c[0].id === "offer_stack.stack.bonuses.b1.perceived_value")![0];
     onChange.mockClear();
     pv.apply("€997");
-    expect(onChange).toHaveBeenCalledWith({ bonuses: [{ id: "b1", name: "Bonus A", description: "", perceived_value: "€997" }] });
+    expect(onChange).toHaveBeenCalledWith({ bonuses: [{ id: "b1", name: "", description: "", perceived_value: "€997" }] });
     // List-Coach append keeps the same item shape.
     const del = openListCoach.mock.calls.find((c) => c[0].id === "stack_deliverables")![0];
     expect(del.currentCount).toBe(1);
