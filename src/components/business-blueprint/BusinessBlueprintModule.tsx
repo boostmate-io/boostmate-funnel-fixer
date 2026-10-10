@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { useBlueprint } from "./useBlueprint";
 import { useWorkspaceSettings } from "./useWorkspaceSettings";
 import { useEcosystemOffers } from "./useEcosystemOffers";
+import { usePrimaryOfferSync } from "./usePrimaryOfferSync";
 import { useFunnelMappings } from "./useFunnelMappings";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { calculateClarityProgress, type SectionId } from "./types";
@@ -43,10 +44,9 @@ const BusinessBlueprintModule = () => {
   const { settings, loading: loadingSettings, update: updateSettings } = useWorkspaceSettings();
   const { activeSubAccount, activeSubAccountId } = useWorkspace() as any;
 
-  const { offers, tierCounts } = useEcosystemOffers({
-    blueprintId: blueprint?.id ?? null,
-    offerDesign: offerDesign,
-  });
+  const { offers, tierCounts } = useEcosystemOffers({ blueprintId: blueprint?.id ?? null });
+  // Single owner of the primary Core Offer → Ecosystem row sync.
+  usePrimaryOfferSync(blueprint?.id ?? null, offerDesign);
   const { mappings } = useFunnelMappings(blueprint?.id ?? null);
 
   useEffect(() => {

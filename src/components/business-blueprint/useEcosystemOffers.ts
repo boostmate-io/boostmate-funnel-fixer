@@ -8,15 +8,13 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
-import type { OfferDesignData, EcosystemTier } from "./offerDesignTypes";
-import { isSummaryEmpty, summarizeOfferDesign, summaryToRowData } from "@/lib/offers/offerSummary";
+import type { EcosystemTier } from "./offerDesignTypes";
 import {
   deleteEcosystemOffer,
   fetchEcosystemOffers,
   insertEcosystemOffer,
   updateEcosystemOffer,
 } from "@/lib/offers/offerRepository";
-import { supabase } from "@/integrations/supabase/client";
 
 export interface EcosystemOfferRow {
   id: string;
@@ -37,21 +35,20 @@ export interface EcosystemOfferRow {
 
 interface UseEcosystemOffersArgs {
   blueprintId: string | null;
-  offerDesign: OfferDesignData;
+  /** @deprecated ignored — primary sync is owned by usePrimaryOfferSync. */
+  offerDesign?: unknown;
 }
 
 type RowValues = { name: string; data: EcosystemOfferRow["data"] };
 
 const SAVE_DEBOUNCE_MS = 800;
 
-export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOffersArgs) {
+export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
   const { user } = useAuth();
   const { activeSubAccountId } = useWorkspace();
   const [offers, setOffersState] = useState<EcosystemOfferRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
-  const lastSyncedCoreSignature = useRef<string>("");
-  const coreSyncInFlight = useRef<boolean>(false);
 
   // Source of truth for synchronous reads (several updates can land in one tick).
   const offersRef = useRef<EcosystemOfferRow[]>([]);
@@ -160,79 +157,7 @@ export function useEcosystemOffers({ blueprintId, offerDesign }: UseEcosystemOff
     return () => window.removeEventListener("boostmate:ecosystem-offers-changed", handler);
   }, [blueprintId, load]);
 
-  // ---- Auto-sync the Core offer from blueprint Angle + Stack + Pricing ------
-  useEffect(() => {
-    if (!blueprintId || !user || !activeSubAccountId) return;
-
-    const summary = summarizeOfferDesign(offerDesign);
-    if (isSummaryEmpty(summary)) return;
-
-    const signature = JSON.stringify({
-      name: summary.name,
-      description: summary.description,
-      coreOutcome: summary.core_outcome,
-      price: summary.price,
-      deliveryTypes: summary.delivery_types,
-      blueprintId,
-    });
-    if (signature === lastSyncedCoreSignature.current) return;
-
-    const existingCore = offers.find((o) => o.source === "blueprint_core");
-    const name = summary.name || "Untitled Core Offer";
-    const data = summaryToRowData({}, summary) as EcosystemOfferRow["data"];
-
-    const sync = async () => {
-      if (coreSyncInFlight.current) return;
-      coreSyncInFlight.current = true;
-      try {
-        // Re-check DB for an existing core to avoid duplicate inserts under
-        // races (state may be stale).
-        const { data: existingRows } = await supabase
-          .from("offers")
-          .select("id")
-          .eq("blueprint_id", blueprintId)
-          .eq("source", "blueprint_core")
-          .limit(1);
-        const existingId = existingRows?.[0]?.id ?? existingCore?.id;
-
-        if (existingId) {
-          const { error } = await updateEcosystemOffer(existingId, { name, data });
-          if (!error) {
-            lastSyncedCoreSignature.current = signature;
-            setOffers((prev) =>
-              prev.some((o) => o.id === existingId)
-                ? prev.map((o) => (o.id === existingId ? { ...o, name, data } : o))
-                : prev,
-            );
-            emitChange();
-          }
-        } else {
-          const { row, error } = await insertEcosystemOffer({
-            name,
-            tier: "core",
-            source: "blueprint_core",
-            blueprint_id: blueprintId,
-            sub_account_id: activeSubAccountId,
-            user_id: user.id,
-            sort_order: 100,
-            data,
-          });
-          if (!error && row) {
-            lastSyncedCoreSignature.current = signature;
-            setOffers((prev) => (prev.some((o) => o.id === row.id) ? prev : [...prev, row]));
-            emitChange();
-          } else if (error) {
-            await load();
-          }
-        }
-      } finally {
-        coreSyncInFlight.current = false;
-      }
-    };
-
-    const timer = window.setTimeout(sync, 600);
-    return () => window.clearTimeout(timer);
-  }, [blueprintId, user, activeSubAccountId, offerDesign, offers, load, setOffers, emitChange]);
+  // Primary Core Offer sync lives in usePrimaryOfferSync (single owner).
 
   // ---- CRUD for manual offers ---------------------------------------------
 
