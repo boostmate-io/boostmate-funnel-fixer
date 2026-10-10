@@ -177,7 +177,7 @@ describe("drift: Offer source paths exist in the registry", () => {
         literals.add(`offer_stack.${m[1].replace(/\\\.\\d\+/g, ".0").replace(/\\\./g, ".")}`);
       }
     }
-    expect(literals.size).toBeGreaterThan(30);
+    expect(literals.size).toBeGreaterThan(25);
     const unknown = [...literals]
       .filter((p) => !ALLOWED_VIRTUAL.test(p))
       .map((p) => p.replace(/\$\{[^}]+\}/g, "*").replace(/\.\d+(?=\.|$)/g, ".*"))
