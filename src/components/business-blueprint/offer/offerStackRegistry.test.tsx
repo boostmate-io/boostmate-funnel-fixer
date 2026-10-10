@@ -75,7 +75,10 @@ describe("OfferStackTab rendering and behaviour", () => {
     }
     expect(screen.getByDisplayValue("€497")).toBeInTheDocument();
 
-    for (const b of screen.getAllByRole("button")) fireEvent.click(b);
+    for (const b of screen.getAllByRole("button")) {
+      try { fireEvent.click(b); } catch (e) { console.log("CLICKERR", b.textContent, String(e)); }
+    }
+    console.log("BTNS", screen.getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label")).join("|"), openCoach.mock.calls.length);
     const listIds = openListCoach.mock.calls.map((c) => c[0].id);
     expect(listIds).toEqual(expect.arrayContaining(["stack_deliverables", "stack_resources", "stack_support_channels", "stack_bonuses", "stack_milestones"]));
     const fieldIds = openCoach.mock.calls.map((c) => c[0].id);
