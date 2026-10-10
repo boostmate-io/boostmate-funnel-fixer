@@ -78,8 +78,6 @@ export default function CoreOfferDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalRevision]);
 
-  const persistRef = useRef(scopedOffer?.persistWrites);
-  persistRef.current = scopedOffer?.persistWrites;
 
   const update = (next: OfferDesignData) => {
     dataRef.current = next;
@@ -97,10 +95,8 @@ export default function CoreOfferDialog({
             offerId: scopedOffer.id,
             offerName: scopedOffer.name || "this offer",
             getDesign: () => dataRef.current,
-            persistWrites: (writes) =>
-              persistRef.current
-                ? persistRef.current(writes)
-                : Promise.resolve({ appliedPaths: [], rejected: [], saved: false }),
+            // Captured per offer ID: keeps working after this dialog closes.
+            persistWrites: scopedOffer.persistWrites,
           }
         : null,
     [scopedOffer?.id, scopedOffer?.name],
