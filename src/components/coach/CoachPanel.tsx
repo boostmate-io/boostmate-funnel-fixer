@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Send, Sparkles, Loader2, Check, X, Maximize2, Minimize2 } from "lucide-react";
 import { useCoachChat } from "@/lib/coach/useCoachChat";
-import { buildResumeTurnText } from "@/lib/coach/focus";
+import { buildResumeTurnText, type CoachWritesHandler } from "@/lib/coach/focus";
 import type { CoachContext, CoachMessage, CoachMessagePart, CoachBlueprintWrite, CoachGrowthDecision } from "@/lib/coach/types";
 import { cn } from "@/lib/utils";
 
@@ -613,7 +613,7 @@ function BlueprintWritesCard({
   const pendingIndices = states
     .map((s, i) => (s === "pending" ? i : -1))
     .filter((i) => i >= 0);
-  const allHandled = states.every((s) => s === "applied" || s === "dismissed");
+  const allHandled = states.every((s) => s === "applied" || s === "dismissed" || s === "rejected");
 
   const handleApplyOne = async (i: number) => {
     if (!onApplyAll || states[i] !== "pending") return;
