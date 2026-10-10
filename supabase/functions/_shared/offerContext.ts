@@ -118,17 +118,26 @@ const isBlank = (v: unknown): boolean => {
   return false;
 };
 
-/** True when the offer design carries (almost) nothing yet. */
-export function isDesignMostlyEmpty(design: Record<string, any> | null | undefined): boolean {
+/**
+ * True when the offer's DEFINING fields are all empty: Short Offer
+ * Description, Core Outcome, Core Transformation Promise and Signature
+ * Framework. A name or isolated differentiation fields don't count.
+ */
+export function isOfferUndefined(design: Record<string, any> | null | undefined): boolean {
   const angle = design?.angle ?? {};
-  const keys = ["main_offer_name", "core_outcome", "short_description", "angle_new_vehicle", "angle_better_results", "framework"];
-  const filled = keys.filter((k) => !isBlank(angle[k])).length;
-  return filled <= 1 && isBlank(design?.stack) && isBlank(design?.pricing?.core_price);
+  return (
+    isBlank(angle.short_description) &&
+    isBlank(angle.core_outcome) &&
+    isBlank(angle.core_promise) &&
+    isBlank(angle.framework)
+  );
 }
+/** @deprecated kept as alias — use isOfferUndefined. */
+export const isDesignMostlyEmpty = isOfferUndefined;
 
 export function renderActiveOfferSection(offer: VerifiedActiveOffer): string {
   const tier = TIER_LABELS[offer.tier] ?? offer.tier;
-  const empty = isDesignMostlyEmpty(offer.design);
+  const empty = isOfferUndefined(offer.design);
   return [
     "# ACTIVE OFFER — authoritative working context",
     `You are working on ONE specific offer: "${offer.name}" (id ${offer.id}, ${tier}, additional offer — NOT the Primary Core Offer).`,
@@ -138,7 +147,13 @@ export function renderActiveOfferSection(offer: VerifiedActiveOffer): string {
       ? "The design below is the editor's current state and may include unsaved draft edits; treat it as the latest truth for this offer."
       : "",
     empty
-      ? "This offer is new and mostly empty. Do NOT fill it with another offer's framework, name, promise, angle or deliverables. Ground it with targeted questions about THIS offer first."
+      ? [
+          "## UNDEFINED OFFER — discovery first",
+          "This offer's defining fields (Short Offer Description, Core Outcome, Core Transformation Promise, Signature Framework) are all empty. The offer has NOT been defined yet.",
+          "- Do NOT assume an audience, method, framework, transformation or outcome for it, and do NOT borrow them from another offer or from earlier conversation.",
+          "- Start with 1–3 focused discovery questions (who exactly is this offer for, what concrete result it delivers, how it differs from the user's other offers).",
+          "- Do not propose field values until the user has answered; never invent details to fill gaps.",
+        ].join("\n")
       : "",
     "## Active offer design JSON",
     JSON.stringify(offer.design ?? {}, null, 2),
@@ -205,6 +220,13 @@ export function renderRelatedOffersSection(related: RelatedOfferSummary[], activ
   ].join("\n");
 }
 
+/** Heading for the Blueprint layer when an additional offer is active. */
+export const BUSINESS_LAYER_HEADING =
+  "# Business Blueprint — BUSINESS-LEVEL context (not facts about the active offer)\n" +
+  "These are facts about the business as a whole. The Primary Core Offer's Angle/Stack/Pricing are excluded. " +
+  "Whether the active offer serves the same audience, solves the same problem or uses the same approach is UNCONFIRMED: " +
+  "use these facts to ask sharper questions or to label suggestions as assumptions (\"based on your business audience…\"), never as established facts about this offer.";
+
 // ---- Conversation attribution ----------------------------------------------
 
 export interface OfferContextPart {
@@ -244,7 +266,15 @@ export function renderOfferSwitchNote(messages: any[], active: OfferContextPart 
   if (!active) return null;
   for (let i = messages.length - 1; i >= 0; i--) {
     const oc = messageOfferContext(messages[i]);
-    if (!oc) continue;
+    if (!oc) {
+      if (active.isPrimary) continue;
+      return [
+        "# OFFER SWITCH",
+        `You are now working on "${active.offerName}" (id ${active.offerId}).`,
+        "Earlier messages in this conversation are unattributed and may concern a different offer. Their names, frameworks, audiences and promises are NOT facts about this offer.",
+        "Briefly acknowledge which offer you're working on and continue from its own data.",
+      ].join("\n");
+    }
     if (oc.offerId === active.offerId) return null;
     const prev = oc.isPrimary ? "the Primary Core Offer" : `"${oc.offerName}" (id ${oc.offerId})`;
     const now = active.isPrimary ? "the Primary Core Offer" : `"${active.offerName}" (id ${active.offerId})`;
@@ -256,4 +286,58 @@ export function renderOfferSwitchNote(messages: any[], active: OfferContextPart 
     ].join("\n");
   }
   return null;
+}
+
+// ---- History isolation for offer-targeted turns -----------------------------
+
+const ECOSYSTEM_RE =
+  /\b(ecosystem|ecosysteem|other offers?|andere offers?|andere aanbod(en)?|all (my )?offers|alle offers|value ladder|waardeladder|lead ?magnet|upsell|cross-?sell|downsell|continuity|work together|samenwerken|customer journey|klantreis)\b/i;
+
+/** Does the latest user message ask about the ecosystem / cross-offer strategy? */
+export function isEcosystemQuestion(text: string): boolean {
+  return ECOSYSTEM_RE.test(String(text ?? ""));
+}
+
+/**
+ * Should the model's history be isolated to the active offer? Only for
+ * field/section assistance on a verified additional offer, and not when the
+ * user explicitly asks a cross-offer / ecosystem question.
+ */
+export function shouldIsolateOfferHistory(args: {
+  scope: string | null | undefined;
+  hasVerifiedAdditionalOffer: boolean;
+  latestUserText: string;
+}): boolean {
+  if (!args.hasVerifiedAdditionalOffer) return false;
+  if (args.scope !== "blueprint.field" && args.scope !== "blueprint.section") return false;
+  return !isEcosystemQuestion(args.latestUserText);
+}
+
+/**
+ * Model-only history filter. Keeps messages attributed to the active offer
+ * plus the final (current) message; drops other offers and unlabelled legacy
+ * messages. Storage and the visible transcript are untouched.
+ */
+export function filterHistoryForOffer(messages: any[], activeOfferId: string): { kept: any[]; excluded: number } {
+  if (!Array.isArray(messages) || messages.length === 0) return { kept: [], excluded: 0 };
+  const last = messages[messages.length - 1];
+  const kept = messages.slice(0, -1).filter((m) => messageOfferContext(m)?.offerId === activeOfferId);
+  kept.push(last);
+  return { kept, excluded: messages.length - kept.length };
+}
+
+/** Prefix for unlabelled messages when history is NOT isolated. */
+export function replayPrefix(m: any, markUnattributed: boolean): string {
+  const p = attributionPrefix(m);
+  if (p || !markUnattributed) return p;
+  return "[Unattributed earlier message — may concern a different offer] ";
+}
+
+export function renderHistoryIsolationNote(excluded: number, offer: { id: string; name: string }): string | null {
+  if (excluded <= 0) return null;
+  return [
+    "# CONVERSATION HISTORY — isolated to the active offer",
+    `${excluded} earlier message(s) about other offers or unattributed topics were omitted from your context for this turn.`,
+    `Only messages about "${offer.name}" (id ${offer.id}) are shown. Do NOT assume names, frameworks, audiences, methods or promises discussed elsewhere apply to this offer; if you need them, ask.`,
+  ].join("\n");
 }
