@@ -121,6 +121,23 @@ export interface RegistryListItemField extends EditorFieldMeta {
   aiWritable?: boolean;
 }
 
+/**
+ * Offer Editor copy for a dynamic list (optional, additive; never read by
+ * Coach prompts, write-back validation or progress). `coach` is the exact
+ * list-Coach target the section button sends; `coachItemFields` keeps the
+ * list-Coach item order/wording verbatim.
+ */
+export interface OfferListEditorCopy {
+  title?: string;
+  description?: string;
+  addLabel?: string;
+  emptyText?: string;
+  /** Collapsed item fallback title; `{n}` = 1-based position. */
+  itemFallbackTitle?: string;
+  coach?: { id: string; label?: string; helper?: string };
+  coachItemFields?: { key: string; label: string; kind?: "text" | "textarea"; helper?: string }[];
+}
+
 export interface RegistryList {
   id: string;
   /** Dot-path of the array itself, e.g. "offer_stack.stack.deliverables". */
@@ -140,6 +157,7 @@ export interface RegistryList {
    * into BLUEPRINT_FIELDS, not in prompts).
    */
   editorItemFields?: RegistryListItemField[];
+  editor?: OfferListEditorCopy;
 }
 
 export type ProgressRule =
@@ -274,6 +292,7 @@ const list = (
     aiIndexedCount?: number;
     suggestedCount?: [number, number];
     editorItemFields?: RegistryListItemField[];
+    editor?: OfferListEditorCopy;
   } = {},
 ): RegistryList => ({
   id: basePath,
@@ -287,6 +306,7 @@ const list = (
   aiIndexedCount: opts.aiIndexedCount ?? 3,
   suggestedCount: opts.suggestedCount,
   ...(opts.editorItemFields ? { editorItemFields: opts.editorItemFields } : {}),
+  ...(opts.editor ? { editor: opts.editor } : {}),
 });
 
 // -----------------------------------------------------------------------------
@@ -646,59 +666,60 @@ const OFFER_DESIGN_TAB: RegistryTab = {
           "Core Deliverables",
           "Deliverable",
           [
-            { key: "name", label: "Name", kind: "text", helper: "Short, benefit-driven name for a core deliverable" },
-            { key: "description", label: "Description", kind: "textarea", helper: "1-2 sentences describing what the client receives and how it works" },
-            { key: "frequency", label: "Frequency", kind: "text", helper: "One of: one_time | daily | weekly | biweekly | monthly | quarterly | ongoing", valueType: "enum", enumValues: DELIVERY_FREQUENCY_VALUES, control: "delivery-frequency" },
+            { key: "name", editor: {"label": "Deliverable Name", "placeholder": "Deliverable name (e.g. Weekly 1:1 Coaching Calls)", "coach": {"label": "Deliverable {n} — Name", "helper": "A short, benefit-driven name for this deliverable.", "placeholder": "e.g. Weekly 1:1 Coaching Calls"}}, label: "Name", kind: "text", helper: "Short, benefit-driven name for a core deliverable" },
+            { key: "description", editor: {"label": "Description", "placeholder": "Short description…", "coach": {"label": "Deliverable {n} — Description", "helper": "1–2 sentences describing what the client gets and how it works.", "placeholder": "Short description…"}}, label: "Description", kind: "textarea", helper: "1-2 sentences describing what the client receives and how it works" },
+            { key: "frequency", editor: {"label": "Frequency", "placeholder": "Frequency"}, label: "Frequency", kind: "text", helper: "One of: one_time | daily | weekly | biweekly | monthly | quarterly | ongoing", valueType: "enum", enumValues: DELIVERY_FREQUENCY_VALUES, control: "delivery-frequency" },
           ],
-          { aiIndexedCount: 3, suggestedCount: [3, 5], editorItemFields: [DELIVERY_TYPES_ITEM] },
+          { editor: {"title": "Core Deliverables", "description": "Main service, coaching or program components.", "addLabel": "Add Deliverable", "emptyText": "No deliverables yet. Start with your most valuable component.", "itemFallbackTitle": "Deliverable {n}", "coach": {"id": "stack_deliverables", "label": "Core Deliverables", "helper": "Main service, coaching or program components clients receive."}, "coachItemFields": [{"key": "name", "label": "Name", "kind": "text", "helper": "Short, benefit-driven deliverable name."}, {"key": "description", "label": "Description", "kind": "textarea", "helper": "1–2 sentences on what the client gets."}]}, aiIndexedCount: 3, suggestedCount: [3, 5], editorItemFields: [DELIVERY_TYPES_ITEM] },
         ),
         list(
           "offer_stack.stack.resources",
           "Templates & Resources",
           "Resource",
           [
-            { key: "name", label: "Name", kind: "text", helper: "Clear name for a template, guide, checklist, swipe file or resource" },
-            { key: "resource_type", label: "Type", kind: "text", helper: "Template, guide, checklist, swipe file, workbook, calculator, etc." },
-            { key: "description", label: "Description", kind: "textarea", helper: "What is inside the resource and how the client uses it" },
+            { key: "name", editor: {"label": "Resource Name", "placeholder": "Resource name", "coach": {"label": "Resource {n} — Name", "helper": "Clear name for this template or resource."}}, label: "Name", kind: "text", helper: "Clear name for a template, guide, checklist, swipe file or resource" },
+            { key: "resource_type", editor: {"label": "Type", "placeholder": "Type (Template, Ebook, Checklist…)", "coach": {"label": "Resource {n} — Type", "helper": "Template, Ebook, Checklist, Swipe file…"}}, label: "Type", kind: "text", helper: "Template, guide, checklist, swipe file, workbook, calculator, etc." },
+            { key: "description", editor: {"label": "Description", "placeholder": "Short description…", "coach": {"label": "Resource {n} — Description", "helper": "Short description of what's inside and how it's used."}}, label: "Description", kind: "textarea", helper: "What is inside the resource and how the client uses it" },
           ],
-          { aiIndexedCount: 3, suggestedCount: [3, 5] },
+          { editor: {"title": "Templates & Resources", "description": "Add resources included in your offer. Click a quick-add chip to start a card.", "addLabel": "Add Resource", "emptyText": "No resources yet. Quick-add common types below or add a custom resource.", "itemFallbackTitle": "Resource {n}", "coach": {"id": "stack_resources", "label": "Templates & Resources", "helper": "Templates, guides, checklists, swipe files included with the offer."}, "coachItemFields": [{"key": "name", "label": "Name", "kind": "text"}, {"key": "resource_type", "label": "Type", "kind": "text", "helper": "Template, Ebook, Checklist, Swipe file…"}, {"key": "description", "label": "Description", "kind": "textarea", "helper": "What's inside and how it's used."}]}, aiIndexedCount: 3, suggestedCount: [3, 5] },
         ),
         list(
           "offer_stack.stack.support_channels",
           "Support System",
           "Support Channel",
           [
-            { key: "name", label: "Name", kind: "text", helper: "Name of the support channel or access point" },
-            { key: "description", label: "Description", kind: "textarea", helper: "What support the client gets and when to use it" },
-            { key: "frequency", label: "Frequency", kind: "text", helper: "How often this support is available" },
+            { key: "name", editor: {"label": "Channel Name", "placeholder": "Channel name (e.g. Slack)", "coach": {"label": "Support Channel {n} — Name", "helper": "Which channel do clients use? (Slack, Voxer, Zoom…)"}}, label: "Name", kind: "text", helper: "Name of the support channel or access point" },
+            { key: "description", editor: {"label": "Description", "placeholder": "Short description…", "coach": {"label": "Support Channel {n} — Description", "helper": "What kind of questions are answered here? Expected response time?"}}, label: "Description", kind: "textarea", helper: "What support the client gets and when to use it" },
+            { key: "frequency", editor: {"label": "Frequency / Availability", "placeholder": "Frequency / availability (e.g. Mon–Fri 9–5 CET)", "coach": {"label": "Support Channel {n} — Frequency", "helper": "When are you available on this channel?"}}, label: "Frequency", kind: "text", helper: "How often this support is available" },
           ],
-          { aiIndexedCount: 2, suggestedCount: [2, 4] },
+          { editor: {"title": "Support System", "description": "How will clients reach you and your team?", "addLabel": "Add Support Channel", "emptyText": "No support channels yet. Quick-add common ones or add custom.", "itemFallbackTitle": "Support Channel {n}", "coach": {"id": "stack_support_channels", "label": "Support System", "helper": "Channels clients use to reach you (Slack, Voxer, calls…)."}, "coachItemFields": [{"key": "name", "label": "Name", "kind": "text", "helper": "Channel name (Slack, WhatsApp, Q&A calls…)."}, {"key": "frequency", "label": "Frequency / Availability", "kind": "text", "helper": "When are you available (e.g. Mon–Fri 9–5)."}, {"key": "description", "label": "Description", "kind": "textarea", "helper": "What kind of support happens here and typical response time."}]}, aiIndexedCount: 2, suggestedCount: [2, 4] },
         ),
         list(
           "offer_stack.stack.bonuses",
           "Bonuses",
           "Bonus",
           [
-            { key: "name", label: "Name", kind: "text", helper: "Short, value-driven bonus name" },
-            { key: "description", label: "Description", kind: "textarea", helper: "Why this bonus accelerates or simplifies the result" },
-            { key: "perceived_value", label: "Perceived Value", kind: "text", helper: "Concrete value signal, e.g. €500 value or saves 10 hours" },
+            { key: "name", editor: {"label": "Bonus Title", "placeholder": "Bonus name", "coach": {"label": "Bonus {n} — Name", "helper": "A punchy name for this bonus."}}, label: "Name", kind: "text", helper: "Short, value-driven bonus name" },
+            { key: "description", editor: {"label": "Description", "placeholder": "Short description…", "coach": {"label": "Bonus {n} — Description", "helper": "What is this bonus and why is it valuable?"}}, label: "Description", kind: "textarea", helper: "Why this bonus accelerates or simplifies the result" },
+            { key: "perceived_value", editor: {"label": "Perceived Value", "placeholder": "Perceived value (e.g. €497 value)", "coach": {"label": "Bonus {n} — Perceived Value", "helper": "The stated dollar value of this bonus (e.g. €497 value)."}}, label: "Perceived Value", kind: "text", helper: "Concrete value signal, e.g. €500 value or saves 10 hours" },
           ],
-          { aiIndexedCount: 2, suggestedCount: [2, 4], editorItemFields: [DELIVERY_TYPES_ITEM] },
+          { editor: {"title": "Bonuses", "description": "Additional incentives that tip the decision in your favor.", "addLabel": "Add Bonus", "emptyText": "No bonuses yet. Add 1–3 high-value bonuses to anchor perceived value.", "itemFallbackTitle": "Bonus {n}", "coach": {"id": "stack_bonuses", "label": "Bonuses", "helper": "High-value bonuses that tip the buying decision."}, "coachItemFields": [{"key": "name", "label": "Name", "kind": "text", "helper": "Punchy bonus name."}, {"key": "description", "label": "Description", "kind": "textarea", "helper": "What it is and why it's valuable."}, {"key": "perceived_value", "label": "Perceived Value", "kind": "text", "helper": "Stated dollar value (e.g. €497 value)."}]}, aiIndexedCount: 2, suggestedCount: [2, 4], editorItemFields: [DELIVERY_TYPES_ITEM] },
         ),
         list(
           "offer_stack.stack.milestones",
           "Delivery Milestones",
           "Milestone",
           [
-            { key: "phase_name", label: "Phase Name", kind: "text", helper: "Short phase or milestone name" },
-            { key: "description", label: "Description", kind: "textarea", helper: "What happens in this phase" },
-            { key: "expected_outcome", label: "Expected Outcome", kind: "textarea", helper: "What the client can expect to achieve by the end of this phase" },
+            { key: "phase_name", editor: {"label": "Phase Name", "placeholder": "Phase name (e.g. Awareness)", "coach": {"label": "Milestone {n} — Phase Name", "helper": "Short, evocative name for this phase."}}, label: "Phase Name", kind: "text", helper: "Short phase or milestone name" },
+            { key: "description", editor: {"label": "Description", "placeholder": "Description", "coach": {"label": "Milestone {n} — Description", "helper": "What happens during this phase?"}}, label: "Description", kind: "textarea", helper: "What happens in this phase" },
+            { key: "expected_outcome", editor: {"label": "Expected Outcome", "placeholder": "Expected outcome", "coach": {"label": "Milestone {n} — Expected Outcome", "helper": "The concrete result the client walks away with after this phase."}}, label: "Expected Outcome", kind: "textarea", helper: "What the client can expect to achieve by the end of this phase" },
           ],
-          { aiIndexedCount: 3, suggestedCount: [3, 5] },
+          { editor: {"title": "Milestones", "description": "The step-by-step journey through your offer.", "addLabel": "Add Milestone", "emptyText": "Map out the phases your clients move through. Most great programs have 3–5.", "itemFallbackTitle": "Milestone {n}", "coach": {"id": "stack_milestones", "label": "Milestones", "helper": "The phases clients move through in your offer."}, "coachItemFields": [{"key": "phase_name", "label": "Phase Name", "kind": "text", "helper": "Short, evocative phase name."}, {"key": "description", "label": "Description", "kind": "textarea", "helper": "What happens in this phase."}, {"key": "expected_outcome", "label": "Expected Outcome", "kind": "textarea", "helper": "Concrete result after this phase."}]}, aiIndexedCount: 3, suggestedCount: [3, 5] },
         ),
       ],
       fields: [
         f("offer_stack.stack.delivery_timeline", "Delivery Timeline", "text", {
+          editor: {"label":"Delivery Timeline","helper":"Over what timeframe is the value delivered?"},
           helper: "Use one of: 7_days, 30_days, 60_days, 90_days, 6_months, 12_months, custom",
           aliases: ["delivery timeline", "program timeline", "delivery timeframe", "doorlooptijd"],
           valueType: "enum", enumValues: TIMEFRAME_VALUES, control: "timeframe",
