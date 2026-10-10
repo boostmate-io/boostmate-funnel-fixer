@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Send, Sparkles, Loader2, Check, X, Maximize2, Minimize2 } from "lucide-react";
 import { useCoachChat } from "@/lib/coach/useCoachChat";
-import { buildResumeTurnText } from "@/lib/coach/focus";
+import { buildResumeTurnText, type CoachWritesHandler } from "@/lib/coach/focus";
 import type { CoachContext, CoachMessage, CoachMessagePart, CoachBlueprintWrite, CoachGrowthDecision } from "@/lib/coach/types";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,7 @@ interface Props {
   /** Called when the user clicks "Replace field" on a proposed answer. */
   onApply?: (value: string) => void;
   /** Called when the user clicks "Apply all" on a batch blueprint-writes proposal. */
-  onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  onApplyBlueprintWrites?: CoachWritesHandler;
   /** Called when the user accepts a Coach-proposed Growth Roadmap decision. */
   onApplyGrowthDecision?: (decision: CoachGrowthDecision) => Promise<void> | void;
   /** When the panel opens with a fresh (empty) conversation, auto-send this
@@ -211,8 +211,9 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
         if (pending.length === 0) continue;
         if (!onApplyBlueprintWrites) break;
         try {
-          await onApplyBlueprintWrites(pending);
-          recordDecision(m.id, pending, "applied");
+          const res = await onApplyBlueprintWrites(pending);
+          const ok = res ? new Set(res.appliedPaths) : null;
+          recordDecision(m.id, ok ? pending.filter((w) => ok.has(w.path)) : pending, "applied");
           await handleSend(
             nl
               ? `${reply}. Ik heb je voorstel net toegepast op de Blueprint. Ga verder met het eerstvolgende veld dat nu nog leeg is.`
@@ -233,6 +234,7 @@ const CoachPanel = ({ open, onOpenChange, context, onApply, onApplyBlueprintWrit
     <div
       role="dialog"
       aria-label="AI Coach"
+      data-coach-panel=""
       className={cn(
         "fixed z-50 flex flex-col border border-border bg-card shadow-2xl overflow-hidden animate-in fade-in duration-200",
         fullscreen
@@ -347,7 +349,7 @@ function MessageBubble({
   message: CoachMessage;
   onQuickReply: (r: string) => void;
   onApply: (value: string) => void;
-  onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  onApplyBlueprintWrites?: CoachWritesHandler;
   onApplyGrowthDecision?: (decision: CoachGrowthDecision) => Promise<void> | void;
   initialDecisions?: Record<string, "applied" | "dismissed">;
   onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
@@ -388,7 +390,7 @@ function PartRenderer({
   isUser: boolean;
   onQuickReply: (r: string) => void;
   onApply: (value: string) => void;
-  onApplyBlueprintWrites?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  onApplyBlueprintWrites?: CoachWritesHandler;
   onApplyGrowthDecision?: (decision: CoachGrowthDecision) => Promise<void> | void;
   initialDecisions?: Record<string, "applied" | "dismissed">;
   onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
@@ -567,7 +569,7 @@ function GrowthDecisionCard({
   );
 }
 
-type ItemState = "pending" | "applying" | "applied" | "dismissed";
+type ItemState = "pending" | "applying" | "applied" | "dismissed" | "rejected";
 
 function BlueprintWritesCard({
   writes,
@@ -578,7 +580,7 @@ function BlueprintWritesCard({
 }: {
   writes: CoachBlueprintWrite[];
   reasoning?: string;
-  onApplyAll?: (writes: CoachBlueprintWrite[]) => Promise<void> | void;
+  onApplyAll?: CoachWritesHandler;
   initialDecisions?: Record<string, "applied" | "dismissed">;
   onDecision?: (writes: CoachBlueprintWrite[], decision: "applied" | "dismissed") => void;
 }) {
@@ -611,15 +613,16 @@ function BlueprintWritesCard({
   const pendingIndices = states
     .map((s, i) => (s === "pending" ? i : -1))
     .filter((i) => i >= 0);
-  const allHandled = states.every((s) => s === "applied" || s === "dismissed");
+  const allHandled = states.every((s) => s === "applied" || s === "dismissed" || s === "rejected");
 
   const handleApplyOne = async (i: number) => {
     if (!onApplyAll || states[i] !== "pending") return;
     setAt(i, "applying");
     try {
-      await onApplyAll([writes[i]]);
-      setAt(i, "applied");
-      onDecision?.([writes[i]], "applied");
+      const res = await onApplyAll([writes[i]]);
+      const accepted = !res || res.appliedPaths.includes(writes[i].path);
+      setAt(i, accepted ? "applied" : "rejected");
+      if (accepted) onDecision?.([writes[i]], "applied");
     } catch {
       setAt(i, "pending");
     }
@@ -637,9 +640,15 @@ function BlueprintWritesCard({
     const targets = pendingIndices.map((i) => writes[i]);
     setStates((prev) => prev.map((s) => (s === "pending" ? "applying" : s)));
     try {
-      await onApplyAll(targets);
-      setStates((prev) => prev.map((s) => (s === "applying" ? "applied" : s)));
-      onDecision?.(targets, "applied");
+      const res = await onApplyAll(targets);
+      const ok = res ? new Set(res.appliedPaths) : null;
+      setStates((prev) =>
+        prev.map((s, i) =>
+          s !== "applying" ? s : !ok || ok.has(writes[i].path) ? "applied" : "rejected",
+        ),
+      );
+      const accepted = ok ? targets.filter((t) => ok.has(t.path)) : targets;
+      if (accepted.length) onDecision?.(accepted, "applied");
     } catch {
       setStates((prev) => prev.map((s) => (s === "applying" ? "pending" : s)));
     } finally {
@@ -693,6 +702,10 @@ function BlueprintWritesCard({
                   {isApplied ? (
                     <Badge variant="secondary" className="text-[10px]">
                       Applied
+                    </Badge>
+                  ) : s === "rejected" ? (
+                    <Badge variant="destructive" className="text-[10px]">
+                      Not applied
                     </Badge>
                   ) : (
                     <>

@@ -14,7 +14,12 @@ import {
   fetchEcosystemOffers,
   insertEcosystemOffer,
   updateEcosystemOffer,
+  designToRowValues,
 } from "@/lib/offers/offerRepository";
+import { applyScopedOfferWrites } from "@/lib/coach/scopedOfferWrites";
+import type { CoachBlueprintWrite } from "@/lib/coach/types";
+import { emptyOfferDesign, type OfferDesignData } from "./offerDesignTypes";
+import type { ScopedPersistResult } from "./offer/OfferCoachScope";
 
 export interface EcosystemOfferRow {
   id: string;
@@ -94,8 +99,12 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
 
   // ---- Debounced saving -------------------------------------------------------
 
-  const flushOffer = useCallback(
-    async (id: string) => {
+  // Per-offer save chain: saves for one offer never overlap, so an older
+  // in-flight save can never land after (and overwrite) a newer one.
+  const chains = useRef(new Map<string, Promise<boolean>>());
+
+  const flushOfferNow = useCallback(
+    async (id: string): Promise<boolean> => {
       const t = timers.current.get(id);
       if (t) window.clearTimeout(t);
       timers.current.delete(id);
@@ -111,7 +120,7 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
         if (!pending.current.has(id)) pending.current.set(id, values);
         syncPendingCount();
         toast.error("Save failed — your changes are kept and will be retried.");
-        const retry = window.setTimeout(() => void flushOffer(id), 5000);
+        const retry = window.setTimeout(() => void flushOfferRef.current(id), 5000);
         timers.current.set(id, retry);
         return false;
       }
@@ -120,6 +129,21 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
     },
     [emitChange],
   );
+
+  const flushOffer = useCallback(
+    (id: string): Promise<boolean> => {
+      const prev = chains.current.get(id) ?? Promise.resolve(true);
+      const next = prev.catch(() => false).then(() => flushOfferNow(id));
+      chains.current.set(id, next);
+      void next.finally(() => {
+        if (chains.current.get(id) === next) chains.current.delete(id);
+      });
+      return next;
+    },
+    [flushOfferNow],
+  );
+  const flushOfferRef = useRef(flushOffer);
+  flushOfferRef.current = flushOffer;
 
   const flushAll = useCallback(async () => {
     const ids = Array.from(pending.current.keys());
@@ -230,6 +254,34 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
     [load, emitChange, setOffers],
   );
 
+  /**
+   * Coach write-back for ONE additional Core Offer, keyed by ID.
+   * Reads the latest local row (which already includes pending manual edits),
+   * applies only validated offer-design paths, then goes through the same
+   * debounced queue (updateOffer) and flushes it — no second save path.
+   */
+  const applyCoachWrites = useCallback(
+    async (id: string, writes: CoachBlueprintWrite[]): Promise<ScopedPersistResult> => {
+      const row = offersRef.current.find((o) => o.id === id);
+      if (!row || row.source === "blueprint_core" || row.tier !== "core") {
+        return {
+          appliedPaths: [],
+          rejected: writes.map((write) => ({ write, reason: "offer_not_found" as const })),
+          saved: false,
+        };
+      }
+      const design = ((row.data as any)?.design as OfferDesignData | undefined) ?? emptyOfferDesign();
+      const { next, applied, rejected } = applyScopedOfferWrites(design, writes);
+      if (!applied.length) return { appliedPaths: [], rejected, saved: false };
+      await updateOffer(id, designToRowValues(next, row as any) as any);
+      const saved = await flushOffer(id);
+      return { appliedPaths: applied.map((w) => w.path), rejected, saved };
+    },
+    [updateOffer, flushOffer],
+  );
+
+  const getOffer = useCallback((id: string) => offersRef.current.find((o) => o.id === id), []);
+
   const tierCounts = offers.reduce((acc, o) => {
     acc[o.tier] = (acc[o.tier] || 0) + 1;
     return acc;
@@ -245,6 +297,8 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
     reload: load,
     flushOffer,
     flushAll,
+    applyCoachWrites,
+    getOffer,
     hasPendingChanges: pendingCount > 0,
   };
 }

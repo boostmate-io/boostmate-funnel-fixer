@@ -64,4 +64,9 @@ export function useCoach(): CoachApi {
   return ctx;
 }
 
+/** Same as useCoach but returns null outside a provider (e.g. isolated tests). */
+export function useOptionalCoach(): CoachApi | null {
+  return useContext(Ctx);
+}
+
 export type { CoachFocus };

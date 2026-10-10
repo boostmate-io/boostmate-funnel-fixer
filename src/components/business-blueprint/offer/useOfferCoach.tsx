@@ -20,7 +20,6 @@ import {
 import type { BlueprintRow } from "../types";
 import type { CoachBlueprintWrite } from "@/lib/coach/types";
 import { toast } from "sonner";
-import { applyScopedOfferWrites } from "@/lib/coach/scopedOfferWrites";
 import { useOfferCoachScope, type ScopedOfferCoach } from "./OfferCoachScope";
 
 export interface OfferCoachSpec {
@@ -87,7 +86,7 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
       blueprintSnapshot: snapshot,
       onApply: spec.apply,
       // Scoped: an explicit handler so the global Blueprint fallback can never run.
-      ...(scoped ? { onApplyBlueprintWrites: (writes: CoachBlueprintWrite[]) => { applyScopedWrites(scoped, writes); } } : {}),
+      ...(scoped ? { onApplyBlueprintWrites: (writes: CoachBlueprintWrite[]) => applyScopedWrites(scoped, writes) } : {}),
     });
   };
 
@@ -122,16 +121,34 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
   return { openCoach: openCoachField, openListCoach, panel: null };
 }
 
-/** Apply Coach writes to the scoped offer only; reject everything else. */
-export function applyScopedWrites(scoped: ScopedOfferCoach, writes: CoachBlueprintWrite[]) {
-  const { next, applied, rejected } = applyScopedOfferWrites(scoped.getDesign(), writes);
-  if (applied.length) scoped.applyDesign(next);
-  if (rejected.length) {
+/**
+ * Apply Coach writes to the scoped offer only; reject everything else.
+ * Resolves with the accepted paths only after they were saved; throws when
+ * nothing was accepted or the save failed (the card then stays retryable).
+ */
+export async function applyScopedWrites(scoped: ScopedOfferCoach, writes: CoachBlueprintWrite[]) {
+  const res = await scoped.persistWrites(writes);
+  const accepted = res.appliedPaths.length;
+  const rejected = res.rejected.length;
+  if (!accepted) {
+    const missing = res.rejected.some((r) => r.reason === "offer_not_found");
     toast.error(
-      `${rejected.length} suggestion(s) not applied — they don't belong to "${scoped.offerName}".`,
+      missing
+        ? `Could not find "${scoped.offerName}" — nothing was applied.`
+        : `Not applied — this suggestion doesn't belong to "${scoped.offerName}".`,
     );
+    throw new Error("scoped_writes_rejected");
   }
-  return { applied: applied.length, rejected: rejected.length };
+  if (!res.saved) {
+    // useEcosystemOffers already shows a save-failed toast and keeps retrying.
+    throw new Error("scoped_writes_save_failed");
+  }
+  if (rejected) {
+    toast.warning(`${accepted} of ${accepted + rejected} suggestion(s) applied to "${scoped.offerName}". ${rejected} didn't belong to this offer.`);
+  } else {
+    toast.success(`Updated "${scoped.offerName}"`);
+  }
+  return { appliedPaths: res.appliedPaths };
 }
 
 /** Group `<basePath>.new_<n>.<field>` writes back into whole items. */

@@ -10,15 +10,28 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import type { OfferDesignData } from "../offerDesignTypes";
+import type { CoachBlueprintWrite } from "@/lib/coach/types";
+import type { ScopedRejectReason } from "@/lib/coach/scopedOfferWrites";
+
+/** Result of persisting Coach writes to one offer (by ID). */
+export interface ScopedPersistResult {
+  appliedPaths: string[];
+  rejected: { write: CoachBlueprintWrite; reason: ScopedRejectReason | "offer_not_found" }[];
+  /** True only when the accepted writes were saved to the database. */
+  saved: boolean;
+}
 
 export interface ScopedOfferCoach {
   mode: "scoped";
   offerId: string;
   offerName: string;
-  /** Latest design of the scoped offer (read at call time). */
+  /** Latest design of the scoped offer (read at call time) — Coach context. */
   getDesign: () => OfferDesignData;
-  /** Persist a new design for the scoped offer. */
-  applyDesign: (next: OfferDesignData) => void;
+  /**
+   * Validate + apply Coach writes to this offer ID and persist them.
+   * Must not depend on the editor being open.
+   */
+  persistWrites: (writes: CoachBlueprintWrite[]) => Promise<ScopedPersistResult>;
 }
 
 export type OfferCoachScopeValue = { mode: "primary" } | ScopedOfferCoach;
