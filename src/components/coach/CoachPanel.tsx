@@ -17,6 +17,8 @@ import { useCoachChat } from "@/lib/coach/useCoachChat";
 import { buildResumeTurnText, type CoachWritesHandler } from "@/lib/coach/focus";
 import type { CoachContext, CoachMessage, CoachMessagePart, CoachBlueprintWrite, CoachGrowthDecision } from "@/lib/coach/types";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { canApplyAcrossOffers, currentOfferId, guardWritesForMessage, messageOfferId } from "@/lib/coach/offerAttribution";
 
 interface Props {
   open: boolean;
