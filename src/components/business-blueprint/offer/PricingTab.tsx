@@ -148,19 +148,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded, only, bare
       ? "Pricing is taking shape. Keep layering options."
       : null;
 
-  return (
-    <SectionShell
-      icon={DollarSign}
-      title="Pricing"
-      description="Monetize your offer with confidence — anchored, flexible and risk-reversed."
-      progress={progress}
-      saving={saving}
-      embedded={embedded}
-      helpButton={<>
-          <SectionHelpCoach sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />
-          <SectionHelpCoach variant="walkthrough" sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />
-        </>}
-    >
+  const body = (
       <div className="space-y-5">
         {/* Core Price */}
         {show("core_price") && <div className="rounded-xl border border-border bg-card p-5">
@@ -186,7 +174,7 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded, only, bare
               className="h-10 text-lg font-semibold"
             />
           </div>
-        </div>
+        </div>}
 
         {/* Payment Plans */}
         {show("payment_plans") && <BuilderCard
@@ -343,9 +331,25 @@ const PricingTab = ({ data, onChange, saving, businessType, embedded, only, bare
               </div>
             )}
           </div>
-        </div>
+        </div>}
       </div>
+  );
 
+  if (bare) return <>{body}{panel}</>;
+  return (
+    <SectionShell
+      icon={DollarSign}
+      title="Pricing"
+      description="Monetize your offer with confidence — anchored, flexible and risk-reversed."
+      progress={progress}
+      saving={saving}
+      embedded={embedded}
+      helpButton={<>
+          <SectionHelpCoach sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />
+          <SectionHelpCoach variant="walkthrough" sectionId="offer_design.pricing" sectionLabel="Offer Design — Pricing" />
+        </>}
+    >
+      {body}
       {panel}
     </SectionShell>
   );
