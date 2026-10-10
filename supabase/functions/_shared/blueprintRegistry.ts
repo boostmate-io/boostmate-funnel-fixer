@@ -1511,6 +1511,21 @@ export function offerDesignFieldsForEditor(): RegistryField[] {
   return (offerTab?.subBlocks ?? []).flatMap((sb) => [...sb.fields, ...(sb.editorFields ?? [])]);
 }
 
+/**
+ * Editor lookup: Coach-visible fields, editor-only Offer Design fields and
+ * offer row item fields. Use for editors only — never for Coach validation.
+ */
+export function getOfferEditorFieldByPath(path: string): RegistryField | undefined {
+  return BLUEPRINT_FIELD_BY_PATH[path]
+    ?? offerDesignFieldsForEditor().find((f) => f.path === path)
+    ?? OFFER_ITEM_FIELDS.find((f) => f.path === path);
+}
+
+/** Tab structure for a tier (tabs → sections → items). */
+export function offerTabsForTier(tier: OfferTier): OfferLayoutTab[] {
+  return OFFER_TIER_LAYOUTS[tier].tabs;
+}
+
 export function getBlueprintFieldByPath(path: string): RegistryField | undefined {
   return BLUEPRINT_FIELD_BY_PATH[path];
 }
