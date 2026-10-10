@@ -26,8 +26,10 @@ import {
 } from "lucide-react";
 import {
   BLUEPRINT_LISTS,
-  getBlueprintFieldByPath,
+  getOfferEditorFieldByPath,
   getRegistrySubBlock,
+  offerTierEditorOverride,
+  type OfferTier,
   renderLabel,
   type LabelTokens,
   type RegistryField,
@@ -92,11 +94,13 @@ export function subBlockOf(tabId: string, subBlockId: string): RegistrySubBlock 
  * plus the exact AI Coach target (id = registry path). Throws for unknown
  * paths so a renamed registry field fails loudly in tests, not silently in UI.
  */
-export function offerEditorField(path: string, tokens?: Partial<LabelTokens>) {
-  const field = getBlueprintFieldByPath(path);
+export function offerEditorField(path: string, tokens?: Partial<LabelTokens>, tier?: OfferTier) {
+  const field = getOfferEditorFieldByPath(path);
   if (!field) throw new Error(`Unknown registry field: ${path}`);
   const r = (s?: string) => (s == null ? undefined : renderLabel(s, tokens));
-  const e = field.editor ?? {};
+  // Tier override (non-Core editors) layered over the field's own editor copy.
+  const o = tier ? offerTierEditorOverride(tier, path) : undefined;
+  const e = { ...(field.editor ?? {}), ...(o ?? {}), coach: { ...(field.editor?.coach ?? {}), ...(o?.coach ?? {}) } };
   const label = r(e.label) ?? field.label;
   return {
     path: field.path,
