@@ -1,6 +1,8 @@
 // =============================================================================
 // AddRouteDialog — pick system, source (optional), target, PRIMARY channel.
-// Offer-to-offer routes are constrained to existing offer_relationships.
+// Offer-to-offer routes use an existing offer_relationship (source → target);
+// a missing one can be created inline, only after an explicit click. A route
+// is a separate record: deleting it never deletes the relationship.
 // On save: inserts the route, then inserts one growth_architecture_channels
 // row with is_primary = true.
 // =============================================================================
@@ -24,6 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+import { OFFER_RELATIONSHIP_TYPES, type OfferRelationshipType } from "@shared/blueprintRegistry";
 import { supabase } from "@/integrations/supabase/client";
 import type { EcosystemOfferRow } from "../useEcosystemOffers";
 import {
@@ -32,6 +36,8 @@ import {
   type GrowthArchStatus,
   type OfferRelationshipRow,
 } from "@/lib/growth-architecture/hooks";
+
+const REL_TYPES = Object.keys(OFFER_RELATIONSHIP_TYPES) as OfferRelationshipType[];
 
 interface Props {
   open: boolean;
@@ -46,11 +52,16 @@ interface Props {
     notes: string | null;
   }) => Promise<string | null>;
   onCreated?: () => void;
+  /** Creates a missing relationship (useOfferRelationships().add). */
+  onCreateRelationship?: (p: { source_offer_id: string; target_offer_id: string; relationship_type: OfferRelationshipType }) => Promise<string | null>;
+  /** Current workspace; offers outside it can't be linked. */
+  workspaceId?: string | null;
 }
 
 const EXTERNAL = "__external__";
 
-const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate, onCreated }: Props) => {
+const AddRouteDialog = ({ open, onOpenChange, offers: allOffers, relationships, onCreate, onCreated, onCreateRelationship, workspaceId }: Props) => {
+  const offers = workspaceId === undefined ? allOffers : allOffers.filter((o) => o.sub_account_id === workspaceId);
   const { rows: systems } = useGrowthSystemsCatalog();
   const { rows: channels } = useAcquisitionChannels();
 
@@ -60,22 +71,35 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate, o
   const [primaryChannelId, setPrimaryChannelId] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [relType, setRelType] = useState<OfferRelationshipType>("ascends_to");
+  const [creatingRel, setCreatingRel] = useState(false);
 
   const isExternal = sourceId === EXTERNAL;
 
-  const validTargets = useMemo(() => {
-    if (isExternal) return offers;
-    const targets = new Set(
-      relationships.filter((r) => r.source_offer_id === sourceId).map((r) => r.target_offer_id),
-    );
-    return offers.filter((o) => targets.has(o.id));
-  }, [isExternal, sourceId, offers, relationships]);
+  // Any other workspace offer can be a target; the route needs a matching relationship.
+  const validTargets = useMemo(
+    () => (isExternal ? offers : offers.filter((o) => o.id !== sourceId)),
+    [isExternal, sourceId, offers],
+  );
+  const existingRels = !isExternal && targetId
+    ? relationships.filter((r) => r.source_offer_id === sourceId && r.target_offer_id === targetId)
+    : [];
+  const needsRelationship = !isExternal && !!targetId && existingRels.length === 0;
 
   const canSave =
     !!systemId &&
     !!targetId &&
     !!primaryChannelId &&
-    (isExternal || validTargets.some((o) => o.id === targetId));
+    (isExternal || (validTargets.some((o) => o.id === targetId) && !needsRelationship));
+
+  const createRelationship = async () => {
+    if (!onCreateRelationship || creatingRel || !needsRelationship) return;
+    setCreatingRel(true);
+    try {
+      const id = await onCreateRelationship({ source_offer_id: sourceId, target_offer_id: targetId, relationship_type: relType });
+      if (id) toast.success("Offer relationship created");
+    } finally { setCreatingRel(false); }
+  };
 
   const reset = () => {
     setSystemId("");
@@ -83,6 +107,7 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate, o
     setTargetId("");
     setPrimaryChannelId("");
     setNotes("");
+    setRelType("ascends_to");
   };
 
   const handleSave = async () => {
@@ -95,6 +120,7 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate, o
       status: "planned",
       notes: notes.trim() ? notes.trim() : null,
     });
+    // Route failed: nothing is half-created (a relationship made above stays valid on its own).
     if (!id) { setSaving(false); return; }
 
     const { error } = await supabase
@@ -153,26 +179,45 @@ const AddRouteDialog = ({ open, onOpenChange, offers, relationships, onCreate, o
               </SelectContent>
             </Select>
             {!isExternal && validTargets.length === 0 && (
-              <p className="text-[11px] text-amber-600 mt-1">
-                No offer relationships exist from this offer yet. Add a "Next offer" on the source offer first.
-              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">There are no other offers in this workspace to route to yet.</p>
             )}
           </div>
 
           <div>
             <Label className="text-xs font-medium mb-1.5 block">Target offer</Label>
-            <Select
-              value={targetId}
-              onValueChange={setTargetId}
-              disabled={!isExternal && validTargets.length === 0}
-            >
-              <SelectTrigger><SelectValue placeholder="Pick the target offer…" /></SelectTrigger>
+            <Select value={targetId} onValueChange={setTargetId} disabled={!isExternal && validTargets.length === 0}>
+              <SelectTrigger aria-label="Target offer"><SelectValue placeholder="Pick the target offer…" /></SelectTrigger>
               <SelectContent>
                 {validTargets.map((o) => (
                   <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {!isExternal && targetId && existingRels.length > 0 && (
+              <p data-route-relationship="existing" className="text-[11px] text-muted-foreground mt-1">
+                Uses the existing relationship: {existingRels.map((r) => OFFER_RELATIONSHIP_TYPES[r.relationship_type]?.outgoing ?? r.relationship_type).join(", ")}.
+              </p>
+            )}
+            {needsRelationship && (
+              <div data-route-relationship="missing" className="mt-2 space-y-2 rounded-md border border-border bg-muted/40 p-3">
+                <p className="text-[11px] text-muted-foreground">
+                  These offers aren't linked yet. Choose how customers move from the source offer to this one, then create the relationship to continue.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select value={relType} onValueChange={(v) => setRelType(v as OfferRelationshipType)}>
+                    <SelectTrigger aria-label="Relationship type" className="h-8 w-56 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {REL_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>{OFFER_RELATIONSHIP_TYPES[t].outgoing} · {OFFER_RELATIONSHIP_TYPES[t].label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" size="sm" variant="outline" className="h-8 text-xs" disabled={!onCreateRelationship || creatingRel} onClick={() => void createRelationship()}>
+                    {creatingRel && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create relationship
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
