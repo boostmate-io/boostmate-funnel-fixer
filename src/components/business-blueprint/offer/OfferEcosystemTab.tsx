@@ -4,6 +4,7 @@
 // Delivery Type. Primary purpose removed.
 // =============================================================================
 
+import type { CoachBlueprintWrite } from "@/lib/coach/types";
 import { useCallback, useEffect, useState } from "react";
 import {
   Network, Sparkles, Plus,

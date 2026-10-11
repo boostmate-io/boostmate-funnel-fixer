@@ -2111,6 +2111,17 @@ async function fetchCoachCompletion(
   return gatewayJson?.choices?.[0]?.message ?? {};
 }
 
+/** Plain-language explanation for a rejected non-Core proposal batch. */
+function rejectionNote(errors: { reason: string }[]): string {
+  const r = new Set(errors.map((e) => e.reason));
+  if (r.has("context")) return "I couldn't prepare changes because the offer context changed. Reopen the offer and ask again.";
+  if (r.has("other_tab")) return "I couldn't apply those suggestions: some fields aren't on the tab you have open. Switch to that tab and ask again — nothing was changed.";
+  if ([...r].some((x) => ["not_in_tier", "denied", "read_only", "not_ai_writable", "unknown_list_field", "unknown_tier"].includes(x))) {
+    return "I couldn't apply those suggestions: some fields can't be changed by the Coach for this type of offer. Nothing was changed.";
+  }
+  return "I couldn't apply those suggestions: some values weren't valid for this offer (for example an option or price that isn't allowed). Nothing was changed.";
+}
+
 // -----------------------------------------------------------------------------
 // Handler
 // -----------------------------------------------------------------------------
@@ -2235,8 +2246,11 @@ Deno.serve(async (req) => {
     // category taken from the DB row, never from the client).
     const nonCoreOffer = !!verifiedOffer && verifiedOffer.tier !== "core";
     // Unknown categories never get write-backs.
-    const writesBlockedForTier = !!verifiedOffer && !isOfferTier(verifiedOffer.tier);
     const offerTabId = verifiedOffer ? validTierTab(verifiedOffer.tier, claimedOffer?.tabId) : null;
+    // Unknown categories never get write-backs; non-Core offers also need a
+    // valid active tab (a missing/invalid tab never broadens permissions).
+    const writesBlockedForTier = !!verifiedOffer && (!isOfferTier(verifiedOffer.tier) || (nonCoreOffer && !offerTabId));
+    const rejectedProposalNotes: string[] = [];
     // Read-only ecosystem context (non-Core categories only — Core prompts unchanged).
     if (nonCoreOffer && verifiedOffer && context?.businessContext) {
       const [{ data: rels }, { data: funnels }] = await Promise.all([
@@ -2417,11 +2431,12 @@ The latest user-role message was generated automatically when the user opened th
         // ignore
       }
       if (writesBlockedForTier && (name === "propose_field_value" || name === "propose_blueprint_writes")) {
-        // dropped: unknown offer category
+        rejectedProposalNotes.push(rejectionNote([{ reason: "context" }]));
       } else if (nonCoreOffer && name === "propose_field_value" && context?.scope === "blueprint.field") {
         const path = canonicalBlueprintPath(String(context?.target?.id ?? ""));
         const gate = gateOfferCoachWrites({ tier: verifiedOffer!.tier, tabId: offerTabId, design: verifiedOffer!.design, writes: [{ path, value: args.value }] });
         if (gate.ok) parts.push({ type: "proposal", value: gate.writes[0].value, reasoning: args.reasoning ?? "" });
+        else rejectedProposalNotes.push(rejectionNote(gate.errors));
       } else if (
         nonCoreOffer && name === "propose_blueprint_writes" &&
         (context?.scope === "blueprint.section" || context?.scope === "global")
@@ -2439,6 +2454,7 @@ The latest user-role message was generated automatically when the user opened th
           });
         } else if (!gate.ok) {
           console.warn("[coach-chat] non-Core write batch rejected", gate.errors);
+          rejectedProposalNotes.push(rejectionNote(gate.errors));
         }
       } else if (name === "propose_field_value" && context?.scope === "blueprint.field") {
         const value = normalizeCurrentFieldProposal(context, args.value ?? "");
