@@ -52,14 +52,11 @@ const renderTab = () =>
     </CoachProvider>,
   );
 
-async function openLowTicket() {
-  renderTab();
-  fireEvent.click(await screen.findByText("Quick Audit"));
-  return screen.findByRole("dialog", { name: "Quick Audit" });
-}
 
 beforeEach(() => {
   store = seed();
+  updateSpy.mockClear();
+});
 
 const open = async (name: string) => { renderTab(); fireEvent.click(await screen.findByText(name)); return screen.findByRole("dialog", { name }); };
 const done = async (d: HTMLElement) => { await act(async () => { fireEvent.click(within(d).getByRole("button", { name: "Done" })); }); };
