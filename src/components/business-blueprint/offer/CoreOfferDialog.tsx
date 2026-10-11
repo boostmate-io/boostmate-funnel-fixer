@@ -8,6 +8,7 @@ import { OfferCoachScopeProvider, type ScopedOfferCoach, type ScopedPersistResul
 import { fieldsForTier, OFFER_TIER_ECOSYSTEM_TAB } from "@shared/blueprintRegistry";
 import OfferEditorShell, { type OfferSaveStatus, type OfferEditorTab } from "./OfferEditorShell";
 import type { CoachBlueprintWrite } from "@/lib/coach/types";
+import { applyScopedOfferWrites } from "@/lib/coach/scopedOfferWrites";
 import OfferAngleTab from "./OfferAngleTab";
 import OfferStackTab from "./OfferStackTab";
 import PricingTab from "./PricingTab";
@@ -39,7 +40,7 @@ interface Props {
     id: string;
     name: string;
     /** Persist Coach writes to this offer by ID (independent of this dialog). */
-    persistWrites: (writes: CoachBlueprintWrite[]) => Promise<ScopedPersistResult>;
+    persistWrites: (writes: CoachBlueprintWrite[], ctx?: { baseDesign: OfferDesignData }) => Promise<ScopedPersistResult>;
   } | null;
   /** Bump to re-seed local state from `initial` (e.g. after a Coach write). */
   externalRevision?: number;
@@ -101,19 +102,39 @@ export default function CoreOfferDialog({
   const updateRef = useRef(update);
   updateRef.current = update;
 
+  // Additional Core Offers: merge approved Coach writes into the live editor
+  // state (never re-seed from the persisted row); save via the per-offer queue.
+  const persistScoped = scopedOffer?.persistWrites;
+  const guardedPersist = useMemo(() => persistScoped ? async (writes: CoachBlueprintWrite[]): Promise<ScopedPersistResult> => {
+    const base = dataRef.current;
+    if (!base?.angle?.main_offer_name?.trim()) {
+      return { appliedPaths: [], rejected: writes.map((write) => ({ write, reason: "name_required" as const })), saved: false };
+    }
+    const res = await persistScoped(writes, { baseDesign: base });
+    if (res.appliedPaths.length && res.design) {
+      if (dataRef.current === base) { dataRef.current = res.design; setData(res.design); }
+      else {
+        // Edits typed while saving: keep them, re-apply only the approved fields on top.
+        const merged = applyScopedOfferWrites(dataRef.current, writes).next;
+        updateRef.current(merged);
+      }
+    }
+    return res;
+  } : null, [persistScoped]);
+
   const coachScope = useMemo<ScopedOfferCoach | null>(
     () =>
-      scopedOffer
+      scopedOffer && guardedPersist
         ? {
             mode: "scoped",
             offerId: scopedOffer.id,
             offerName: scopedOffer.name || "this offer",
             getDesign: () => dataRef.current,
             // Captured per offer ID: keeps working after this dialog closes.
-            persistWrites: scopedOffer.persistWrites,
+            persistWrites: guardedPersist,
           }
         : null,
-    [scopedOffer?.id, scopedOffer?.name, scopedOffer?.persistWrites],
+    [scopedOffer?.id, scopedOffer?.name, guardedPersist],
   );
 
   const updateAngle = (patch: Partial<OfferAngleData>) =>

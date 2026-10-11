@@ -524,12 +524,8 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
             ? {
                 id: editing.id,
                 name: offers.find((o) => o.id === editing.id)?.name ?? "",
-                persistWrites: async (writes) => {
-                  const offerId = editing.id;
-                  const res = await applyCoachWrites(offerId, writes);
-                  if (res.appliedPaths.length) setCoachRevision((r) => r + 1);
-                  return res;
-                },
+                // The dialog passes its live state and merges the result itself (no re-seed).
+                persistWrites: (writes, ctx) => applyCoachWrites(editing.id, writes, null, ctx?.baseDesign),
               }
             : null
         }
