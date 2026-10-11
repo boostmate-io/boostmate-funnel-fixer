@@ -14,6 +14,8 @@ interface Props {
   cur: string;
   onEdit: () => void;
   onDelete: () => void;
+  /** Read-only relationship lines (registry labels); omitted when none. */
+  relationships?: { key: string; text: string }[];
 }
 
 const MAX_CHIPS = 3;
@@ -27,7 +29,9 @@ function priceLabel(offer: EcosystemOfferRow, cur: string): string | null {
   return null;
 }
 
-const OfferSummaryCard = ({ offer, cur, onEdit, onDelete }: Props) => {
+const MAX_REL_LINES = 2;
+
+const OfferSummaryCard = ({ offer, cur, onEdit, onDelete, relationships = [] }: Props) => {
   const isPrimary = offer.source === "blueprint_core";
   const canDelete = !isPrimary;
   const name = (offer.name || "").trim();
@@ -92,6 +96,17 @@ const OfferSummaryCard = ({ offer, cur, onEdit, onDelete }: Props) => {
             </span>
           )}
         </div>
+      )}
+
+      {relationships.length > 0 && (
+        <ul data-card-relationships="" className="mt-2 space-y-0.5">
+          {relationships.slice(0, MAX_REL_LINES).map((r) => (
+            <li key={r.key} className="truncate text-[11px] text-muted-foreground">{r.text}</li>
+          ))}
+          {relationships.length > MAX_REL_LINES && (
+            <li className="text-[11px] text-muted-foreground">+{relationships.length - MAX_REL_LINES} more</li>
+          )}
+        </ul>
       )}
 
       <div className="mt-auto pt-3 flex items-center justify-end gap-1">
