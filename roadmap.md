@@ -18,4 +18,4 @@
 - [x] Free, Mid-Ticket, Premium, Continuity editors
 - [x] Relationships Phase 1: workspace integrity, admin RLS, registry slots, hook guards
 - [x] Relationships Phase 2: editor Ecosystem section
-- [ ] Relationships Phase 3: read-only ecosystem display + Growth Architecture hint fix
+- [x] Relationships Phase 3: card summaries, Customer Journey overview, inline relationship in route form
