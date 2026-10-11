@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     raw = JSON.parse(data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ?? "null");
   } catch { return fail(502, "ai_malformed"); }
   const built = buildPublicResult(raw, { hasCurrentOffer: !!parsed.input.currentOffer });
-  if (!built.ok) { console.warn("offer-generator invalid", built.reason, JSON.stringify(built.detail ?? "").slice(0, 500)); return fail(502, "ai_invalid"); }
+  if (!built.ok) { console.warn("offer-generator invalid", built.reason, JSON.stringify(built.detail ?? "").slice(0, 500), "raw:", JSON.stringify(raw ?? null).slice(0, 800)); return fail(502, "ai_invalid"); }
   await admin.from("public_offer_generations").update({ status: "complete", result: built.result }).eq("id", row.id);
   return json({ token: row.claim_token, preview: toPublicPreview(built.result) });
 });
