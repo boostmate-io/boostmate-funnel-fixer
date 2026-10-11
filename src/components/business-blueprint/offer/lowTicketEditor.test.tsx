@@ -65,7 +65,7 @@ describe("Low-Ticket opens in the Universal Offer Editor", () => {
     expect(tabs).toEqual(["Offer"]);
     const sections = [...dialog.querySelectorAll("[data-offer-section]")].map((s) => s.getAttribute("data-offer-section"));
     expect(sections).toEqual(offerTabsForTier("low_ticket")[0].sections.map((s) => s.id));
-    expect(sections).toEqual(["basics", "value", "included", "price", "next_step"]);
+    expect(sections).toEqual(["basics", "value", "included", "price", "ecosystem"]);
   });
 
   it("renders fields with registry metadata, seeded from the summary", async () => {

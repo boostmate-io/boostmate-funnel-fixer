@@ -7,7 +7,7 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: v
 
 import OfferRelationshipsSection, { type RelationshipsController, type RelationshipOffer } from "./OfferRelationshipsSection";
 import TierOfferDialog from "./TierOfferDialog";
-import { OFFER_RELATIONSHIP_TYPES, OFFER_TIER_ECOSYSTEM_TAB, OFFER_TIERS, suggestedTiersFor } from "@shared/blueprintRegistry";
+import { OFFER_RELATIONSHIP_TYPES, OFFER_TIER_ECOSYSTEM_TAB, OFFER_TIER_LAYOUTS, OFFER_TIERS, suggestedTiersFor } from "@shared/blueprintRegistry";
 import { wouldCreateCycle, relationshipEndpoints } from "@/lib/offers/relationshipGraph";
 import { emptyOfferDesign } from "../offerDesignTypes";
 
@@ -47,6 +47,11 @@ describe("relationship graph helpers", () => {
   it("registry places Ecosystem per tier and suggests categories", () => {
     expect(OFFER_TIER_ECOSYSTEM_TAB).toEqual({ free: "offer", low_ticket: "offer", mid_ticket: "pricing", core: "pricing", premium: "pricing", continuity: "pricing" });
     expect(suggestedTiersFor("premium", "ascends_to", "incoming")).toEqual(["core"]);
+    for (const t of OFFER_TIERS.filter((x) => x !== "core")) {
+      const host = OFFER_TIER_LAYOUTS[t].tabs.find((tab) => tab.sections.some((s) => s.id === "ecosystem"));
+      expect(host?.id).toBe(OFFER_TIER_ECOSYSTEM_TAB[t]);
+      expect(host?.sections.at(-1)?.id).toBe("ecosystem");
+    }
   });
 });
 

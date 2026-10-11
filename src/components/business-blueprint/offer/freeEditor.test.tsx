@@ -66,7 +66,7 @@ describe("Free offers", () => {
     const d = await open("Lead Magnet");
     expect(within(d).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Offer"]);
     const sections = [...d.querySelectorAll("[data-offer-section]")].map((s) => s.getAttribute("data-offer-section"));
-    expect(sections).toEqual(["basics", "value", "included", "next_step"]);
+    expect(sections).toEqual(["basics", "value", "included", "next_step", "ecosystem"]);
     within(d).getAllByText("More options").forEach((m) => fireEvent.click(m));
     expect(within(d).queryByPlaceholderText("2500")).toBeNull();
     expect(within(d).queryByText(/Payment Plan/i)).toBeNull();

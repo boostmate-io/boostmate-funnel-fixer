@@ -1536,6 +1536,7 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
       { id: "pricing", label: STANDARD_TABS.pricing, sections: [
         sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price", helper: "What buyers pay for this offer." }), lst("pricing.payment_plans", "optional")]),
         sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
+        sec("ecosystem", "Ecosystem", [rel("retention", "Continues into")]),
       ] },
     ],
   },

@@ -18,7 +18,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   getOfferEditorFieldByPath,
   offerTabsForTier,
-  OFFER_TIER_ECOSYSTEM_TAB,
   type OfferLayoutItem,
   type OfferTier,
 } from "@shared/blueprintRegistry";
@@ -269,6 +268,8 @@ export default function TierOfferDialog({
       content: (
         <div className="space-y-6">
           {tab.sections.map((section) => {
+            // Shared relationships section replaces the registry "ecosystem" placeholder.
+            if (section.id === "ecosystem") return ecosystemSection ? <div key="ecosystem">{ecosystemSection}</div> : null;
             const shown = section.items.filter((i) => i.kind !== "relationship" || !!i.visibleWhen);
             if (!shown.length) return null;
             const main = shown.filter((i) => i.status !== "optional" || i.kind === "relationship");
@@ -295,7 +296,6 @@ export default function TierOfferDialog({
               </section>
             );
           })}
-          {OFFER_TIER_ECOSYSTEM_TAB[tier] === tab.id && ecosystemSection}
         </div>
       ),
     };
