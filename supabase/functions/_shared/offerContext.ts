@@ -10,7 +10,7 @@
 // No Deno / network imports: this file is imported by vitest as well.
 // =============================================================================
 
-import type { OfferTier } from "./blueprintRegistry.ts";
+import { OFFER_TIER_COACH_BRIEFS, type OfferTier } from "./blueprintRegistry.ts";
 export type { OfferTier };
 
 /** What the client claims (untrusted). */
@@ -136,6 +136,19 @@ export function isOfferUndefined(design: Record<string, any> | null | undefined)
 /** @deprecated kept as alias — use isOfferUndefined. */
 export const isDesignMostlyEmpty = isOfferUndefined;
 
+/** Category coaching brief (non-Core only; Core keeps the existing prompt). */
+export function renderTierCoachBrief(tier: string | null | undefined): string {
+  if (!tier || tier === "core") return "";
+  const b = (OFFER_TIER_COACH_BRIEFS as Record<string, { purpose: string; priorities: string[]; pitfalls: string[] }>)[tier];
+  if (!b) return "";
+  return [
+    `## Category brief — ${TIER_LABELS[tier] ?? tier}`,
+    b.purpose,
+    "Priorities:", ...b.priorities.map((p) => `- ${p}`),
+    "Common pitfalls:", ...b.pitfalls.map((p) => `- ${p}`),
+  ].join("\n");
+}
+
 export function renderActiveOfferSection(offer: VerifiedActiveOffer): string {
   const tier = TIER_LABELS[offer.tier] ?? offer.tier;
   const empty = isOfferUndefined(offer.design);
@@ -156,6 +169,7 @@ export function renderActiveOfferSection(offer: VerifiedActiveOffer): string {
           "- Do not propose field values until the user has answered; never invent details to fill gaps.",
         ].join("\n")
       : "",
+    renderTierCoachBrief(offer.tier),
     "## Active offer design JSON",
     JSON.stringify(offer.design ?? {}, null, 2),
   ]

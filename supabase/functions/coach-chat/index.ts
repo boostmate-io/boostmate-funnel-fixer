@@ -1,4 +1,5 @@
 // AI Coach chat edge function — ONE engine for every scope.
+import { checkWorkspaceAccess } from "../_shared/coachAuthorization.ts";
 // Scopes: blueprint.field | blueprint.section | copy.component | funnel.node | global
 // Handles multi-turn coaching, tool-calling (proposals, quick replies, memory),
 // and persists messages + facts to Lovable Cloud.
