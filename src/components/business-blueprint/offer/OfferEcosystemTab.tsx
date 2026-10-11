@@ -225,11 +225,10 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   const editingTierRow = editingTier ? offers.find((o) => o.id === editingTier.id) ?? null : null;
   const editingTierId = editingTier?.id ?? null;
   // Approved Coach writes for the open non-Core offer: captured by ID, saved via the per-offer queue.
-  const persistTierWrites = useCallback(async (writes: CoachBlueprintWrite[]) => {
+  // The editor passes its live state + open tab and merges the result itself (no re-seed).
+  const persistTierWrites = useCallback(async (writes: CoachBlueprintWrite[], ctx?: { tabId: string; baseDesign: OfferDesignData }) => {
     if (!editingTierId) return { appliedPaths: [], rejected: writes.map((write) => ({ write, reason: "offer_not_found" as const })), saved: false };
-    const res = await applyCoachWrites(editingTierId, writes);
-    if (res.appliedPaths.length) setTierRevision((r) => r + 1);
-    return res;
+    return applyCoachWrites(editingTierId, writes, ctx?.tabId ?? null, ctx?.baseDesign);
   }, [editingTierId, applyCoachWrites]);
 
   /** Open the existing editor that fits this offer (Core dialog vs. field dialog). */

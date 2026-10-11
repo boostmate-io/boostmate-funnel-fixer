@@ -137,11 +137,17 @@ export async function applyScopedWrites(scoped: ScopedOfferCoach, writes: CoachB
   const accepted = res.appliedPaths.length;
   const rejected = res.rejected.length;
   if (!accepted) {
-    const missing = res.rejected.some((r) => r.reason === "offer_not_found");
+    const has = (reason: string) => res.rejected.some((r) => r.reason === reason);
     toast.error(
-      missing
+      has("offer_not_found")
         ? `Could not find "${scoped.offerName}" — nothing was applied.`
-        : `Not applied — this suggestion doesn't belong to "${scoped.offerName}".`,
+        : has("name_required")
+          ? "Give this offer a name first, then approve the suggestion again. Your unsaved edits are kept."
+          : has("wrong_tab")
+            ? "This suggestion is for a field on another tab. Ask the Coach again on the tab you have open."
+            : has("tab_unknown")
+              ? "We couldn't tell which tab is open, so nothing was changed. Ask the Coach again."
+              : `Not applied — this suggestion doesn't belong to "${scoped.offerName}".`,
     );
     throw new Error("scoped_writes_rejected");
   }

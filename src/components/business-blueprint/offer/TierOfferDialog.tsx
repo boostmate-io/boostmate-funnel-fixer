@@ -18,6 +18,7 @@ import type { CoachActiveOffer, CoachBlueprintWrite } from "@/lib/coach/types";
 import { offerAiPermission } from "@shared/offerAiPolicy";
 import CoachIconButton from "./CoachIconButton";
 import { applyScopedWrites } from "./useOfferCoach";
+import { applyScopedOfferWrites, checkTierApproval } from "@/lib/coach/scopedOfferWrites";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +55,7 @@ interface Props {
   /** Shared Ecosystem (relationships) section, appended to the registry-chosen tab. */
   ecosystemSection?: ReactNode;
   /** Persist approved Coach writes to this offer by ID (enables the Coach). */
-  persistWrites?: (writes: CoachBlueprintWrite[]) => Promise<ScopedPersistResult>;
+  persistWrites?: (writes: CoachBlueprintWrite[], ctx?: { tabId: string; baseDesign: OfferDesignData }) => Promise<ScopedPersistResult>;
   /** Bump to re-seed from `initial` after a Coach write. */
   externalRevision?: number;
 }
@@ -100,13 +101,34 @@ export default function TierOfferDialog({
   const offerName = data.angle.main_offer_name?.trim() || "this offer";
   const offerNameRef = useRef(offerName);
   offerNameRef.current = offerName;
-  const coachScope = useMemo<ScopedOfferCoach | null>(() => persistWrites ? {
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  // Approval: validate against the live tab, merge into the live editor state
+  // (never re-seed from the persisted row), save through the per-offer queue.
+  const guardedPersist = useMemo(() => persistWrites ? async (writes: CoachBlueprintWrite[]): Promise<ScopedPersistResult> => {
+    const base = dataRef.current;
+    const tabId = tabRef.current;
+    const blocked = checkTierApproval({ tier, tabId, design: base, writes });
+    if (blocked) return { appliedPaths: [], rejected: writes.map((write) => ({ write, reason: blocked })), saved: false };
+    const res = await persistWrites(writes, { tabId: tabId!, baseDesign: base });
+    if (res.appliedPaths.length && res.design) {
+      if (dataRef.current === base) { dataRef.current = res.design; setData(res.design); }
+      else {
+        // Edits typed while saving: re-apply the approved fields on top of them.
+        const merged = applyScopedOfferWrites(dataRef.current, writes, tier, tabId).next;
+        dataRef.current = merged; setData(merged);
+        if (merged.angle.main_offer_name?.trim()) onChangeRef.current(merged);
+      }
+    }
+    return res;
+  } : null, [persistWrites, tier]);
+  const coachScope = useMemo<ScopedOfferCoach | null>(() => guardedPersist ? {
     mode: "scoped", offerId, tier,
     get offerName() { return offerNameRef.current; },
     getDesign: () => dataRef.current,
     getTabId: () => tabRef.current,
-    persistWrites,
-  } as ScopedOfferCoach : null, [offerId, tier, persistWrites]);
+    persistWrites: guardedPersist,
+  } as ScopedOfferCoach : null, [offerId, tier, guardedPersist]);
   const activeOffer = (): CoachActiveOffer => ({
     id: offerId, isPrimary: false, name: offerNameRef.current, tier,
     getDraftDesign: () => dataRef.current, getTabId: () => tabRef.current ?? undefined,
