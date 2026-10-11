@@ -33,7 +33,9 @@ import {
   type OfferRelationshipRow,
   type GrowthArchitectureRow,
   type GrowthArchStatus,
+  useOfferRelationships,
 } from "@/lib/growth-architecture/hooks";
+import SourceOfferLinks from "./SourceOfferLinks";
 import type { WorkspaceFunnelRow } from "@/lib/growth-architecture/funnelConnections";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
@@ -96,6 +98,8 @@ const AddRouteWizard = ({
   const { rows: systems } = useGrowthSystemsCatalog();
   const { rows: channels } = useAcquisitionChannels();
   const { activeSubAccountId } = useWorkspace();
+  // Optional offer linking only; routes never require or create relationships.
+  const offerRels = useOfferRelationships(activeSubAccountId ?? null);
   const { stage } = useCurrentGrowthStage(activeSubAccountId);
   const { isAdmin } = useIsAppAdmin();
 
@@ -257,6 +261,18 @@ const AddRouteWizard = ({
                   : [...state.selectedFunnelIds, id],
               })}
             />
+          )}
+          {step === 2 && (
+            <div className="mt-5">
+              <SourceOfferLinks
+                targetOfferId={state.targetOfferId}
+                workspaceId={activeSubAccountId ?? null}
+                offers={offers}
+                selectedFunnels={availableFunnels.filter((f) => state.selectedFunnelIds.includes(f.id))}
+                relationships={offerRels.rows}
+                onCreateRelationship={offerRels.add}
+              />
+            </div>
           )}
           {step === 3 && (
             <Step3System
