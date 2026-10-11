@@ -10,7 +10,7 @@
 // No Deno / network imports: this file is imported by vitest as well.
 // =============================================================================
 
-import { OFFER_TIER_COACH_BRIEFS, type OfferTier } from "./blueprintRegistry.ts";
+import { OFFER_TIER_COACH_BRIEFS, type OfferCoachBrief, type OfferTier } from "./blueprintRegistry.ts";
 export type { OfferTier };
 
 /** What the client claims (untrusted). */
@@ -141,12 +141,17 @@ export const isDesignMostlyEmpty = isOfferUndefined;
 /** Category coaching brief (non-Core only; Core keeps the existing prompt). */
 export function renderTierCoachBrief(tier: string | null | undefined): string {
   if (!tier || tier === "core") return "";
-  const b = (OFFER_TIER_COACH_BRIEFS as Record<string, { purpose: string; priorities: string[]; pitfalls: string[] }>)[tier];
+  const b = (OFFER_TIER_COACH_BRIEFS as Record<string, OfferCoachBrief>)[tier];
   if (!b) return "";
   return [
     `## Category brief — ${TIER_LABELS[tier] ?? tier}`,
     b.purpose,
+    "Act as an experienced offer strategist: build on what the user already has, ask only what is missing, and don't force one business model.",
+    ...(b.strong?.length ? ["What a strong offer looks like:", ...b.strong.map((p) => `- ${p}`)] : []),
     "Priorities:", ...b.priorities.map((p) => `- ${p}`),
+    ...(b.questions?.length ? ["Key decisions (ask only if not already answered):", ...b.questions.map((p) => `- ${p}`)] : []),
+    ...(b.pricing ? [`Pricing: ${b.pricing}`] : []),
+    ...(b.ecosystem ? [`Ecosystem: ${b.ecosystem}`] : []),
     "Common pitfalls:", ...b.pitfalls.map((p) => `- ${p}`),
   ].join("\n");
 }
@@ -204,8 +209,7 @@ export function summarizeRelatedOffers(
           .replace(/\s+/g, " ")
           .trim()
           .slice(0, 200);
-      const rawPrice = design?.pricing?.core_price ?? d.price;
-      const price = typeof rawPrice === "number" ? (rawPrice === 0 ? "free" : String(rawPrice)) : rawPrice ? String(rawPrice) : "";
+      const price = describeOfferPrice(r.tier ?? "core", design, d);
       return {
         id: r.id,
         name: (isPrimary ? design?.angle?.main_offer_name : null)?.trim?.() || (r.name ?? "").trim() || "Untitled offer",
@@ -218,11 +222,36 @@ export function summarizeRelatedOffers(
     .sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier));
 }
 
+const INTERVAL_LABEL: Record<string, string> = { monthly: "per month", quarterly: "per quarter", yearly: "per year" };
+const positivePrice = (v: unknown): string | null => {
+  if (v == null || v === "") return null;
+  const n = typeof v === "number" ? v : Number(String(v).replace(/[^\d.]/g, ""));
+  return Number.isFinite(n) && n > 0 ? String(v).trim() : null;
+};
+
+/**
+ * Persisted price as read-only text. Never estimated: missing (or a paid
+ * offer's 0) is "unknown"; Free is always free; Continuity is recurring per
+ * its stored billing interval.
+ */
+export function describeOfferPrice(tier: string, design: Record<string, any> | null | undefined, data: Record<string, any> = {}): string {
+  if (tier === "free") return "free";
+  if (tier === "continuity") {
+    const rec = design?.pricing?.recurring_offer ?? {};
+    const amount = positivePrice(rec.monthly_price ?? data.price);
+    const interval = INTERVAL_LABEL[String(rec.interval ?? "")] ?? null;
+    if (!amount) return "unknown (recurring)";
+    return `${amount} recurring ${interval ?? "(billing interval unknown)"}`;
+  }
+  const amount = positivePrice(design?.pricing?.core_price ?? data.price);
+  return amount ? `${amount} one-time` : "unknown";
+}
+
 export function renderRelatedOffersSection(related: RelatedOfferSummary[], activeTier?: string | null): string | null {
   if (related.length === 0) return null;
   const lines = related.map((o) => {
     const tier = TIER_LABELS[o.tier] ?? o.tier;
-    const bits = [`${tier}${o.isPrimary ? " · PRIMARY Core Offer" : ""}`, o.promise ? `outcome: ${o.promise}` : "", o.price ? `price: ${o.price}` : ""]
+    const bits = [`${tier}${o.isPrimary ? " · PRIMARY Core Offer" : ""}`, o.promise ? `outcome: ${o.promise}` : "", `price: ${o.price || "unknown"}`]
       .filter(Boolean)
       .join(" · ");
     return `- "${o.name}" (id ${o.id}) — ${bits}`;
@@ -233,6 +262,7 @@ export function renderRelatedOffersSection(related: RelatedOfferSummary[], activ
     "Other offers in this business. Use them for ecosystem strategy (lead magnets that feed a Core Offer, upsells, cross-sells, continuity, customer journey).",
     "NEVER copy another offer's framework, positioning, promise, name or deliverables into the active offer unless the user explicitly asks for that reuse. When you reference one, name it explicitly as a different offer.",
     activeTier ? `${ladder} The active offer is a ${TIER_LABELS[activeTier] ?? activeTier}.` : ladder,
+    "Prices are the user's saved prices (read-only). \"unknown\" means no price is saved — never estimate it. A higher price doesn't have to follow a lower one.",
     ...lines,
   ].join("\n");
 }

@@ -2,6 +2,7 @@
 import { checkWorkspaceAccess } from "../_shared/coachAuthorization.ts";
 import { gateOfferCoachWrites, isOfferTier, validTierTab } from "../_shared/offerAiPolicy.ts";
 import { buildOfferEcosystemContext, renderOfferEcosystemContext } from "../_shared/offerEcosystemContext.ts";
+import { renderOfferFieldReference } from "../_shared/offerFieldReference.ts";
 // Scopes: blueprint.field | blueprint.section | copy.component | funnel.node | global
 // Handles multi-turn coaching, tool-calling (proposals, quick replies, memory),
 // and persists messages + facts to Lovable Cloud.
@@ -855,6 +856,7 @@ The user opened the Coach from ONE specific field: "${context?.target?.label ?? 
   const verifiedActiveOffer = context?.businessContext?.verifiedActiveOffer ?? null;
   if (verifiedActiveOffer) {
     parts.push(renderActiveOfferSection(verifiedActiveOffer));
+    if (context?.businessContext?.offerFieldReference) parts.push(context.businessContext.offerFieldReference);
     if (context?.businessContext?.offerEcosystemSection) parts.push(context.businessContext.offerEcosystemSection);
     const bpRest = blueprintWithoutOfferDesign(context?.businessContext?.blueprintSnapshot);
     if (bpRest) {
@@ -862,6 +864,8 @@ The user opened the Coach from ONE specific field: "${context?.target?.label ?? 
     }
   } else if (context?.businessContext?.blueprintSnapshot) {
     parts.push(`# Current Business Blueprint JSON\n${JSON.stringify(context.businessContext.blueprintSnapshot, null, 2)}`);
+    // Primary Core Offer: separate read-only ecosystem layer (Core instructions unchanged).
+    if (context?.businessContext?.offerEcosystemSection) parts.push(`# Primary Core Offer ecosystem\n${context.businessContext.offerEcosystemSection}`);
   }
   if (context?.businessContext?.relatedOffersSection) {
     parts.push(context.businessContext.relatedOffersSection);
@@ -2251,20 +2255,34 @@ Deno.serve(async (req) => {
     // valid active tab (a missing/invalid tab never broadens permissions).
     const writesBlockedForTier = !!verifiedOffer && (!isOfferTier(verifiedOffer.tier) || (nonCoreOffer && !offerTabId));
     const rejectedProposalNotes: string[] = [];
-    // Read-only ecosystem context (non-Core categories only — Core prompts unchanged).
-    if (nonCoreOffer && verifiedOffer && context?.businessContext) {
-      const [{ data: rels }, { data: funnels }] = await Promise.all([
-        supabase.from("offer_relationships")
-          .select("source_offer_id,target_offer_id,relationship_type,sub_account_id")
-          .eq("sub_account_id", subAccountId)
-          .or(`source_offer_id.eq.${verifiedOffer.id},target_offer_id.eq.${verifiedOffer.id}`),
-        supabase.from("funnels").select("id,name,status,linked_offer_id,sub_account_id")
-          .eq("sub_account_id", subAccountId).eq("linked_offer_id", verifiedOffer.id).limit(20),
-      ]);
-      context.businessContext.offerEcosystemSection = renderOfferEcosystemContext(buildOfferEcosystemContext({
-        activeOfferId: verifiedOffer.id, subAccountId,
-        offers: relatedOfferRows, relationships: (rels as any[]) ?? [], funnels: (funnels as any[]) ?? [],
-      }));
+    // Read-only ecosystem context for every category, incl. the Primary Core
+    // Offer (its blueprint_core row). Workspace-filtered; never AI-writable.
+    const ecoOfferId = verifiedOffer?.id
+      ?? (resolvedOffer.kind === "primary" ? relatedOfferRows.find((r) => r.source === "blueprint_core")?.id ?? null : null);
+    if (context?.businessContext && (verifiedOffer || resolvedOffer.kind === "primary")) {
+      if (!ecoOfferId) {
+        context.businessContext.offerEcosystemSection = renderOfferEcosystemContext(null, "unavailable");
+      } else {
+        const [relRes, funnelRes] = await Promise.all([
+          supabase.from("offer_relationships")
+            .select("source_offer_id,target_offer_id,relationship_type,sub_account_id")
+            .eq("sub_account_id", subAccountId)
+            .or(`source_offer_id.eq.${ecoOfferId},target_offer_id.eq.${ecoOfferId}`),
+          supabase.from("funnels").select("id,name,status,linked_offer_id,sub_account_id")
+            .eq("sub_account_id", subAccountId).eq("linked_offer_id", ecoOfferId).limit(20),
+        ]);
+        const failed = !!relRes.error || !!funnelRes.error;
+        if (failed) console.warn("[coach-chat] ecosystem context unavailable");
+        context.businessContext.offerEcosystemSection = failed
+          ? renderOfferEcosystemContext(null, "unavailable")
+          : renderOfferEcosystemContext(buildOfferEcosystemContext({
+              activeOfferId: ecoOfferId, subAccountId,
+              offers: relatedOfferRows, relationships: (relRes.data as any[]) ?? [], funnels: (funnelRes.data as any[]) ?? [],
+            }));
+      }
+      if (verifiedOffer && nonCoreOffer) {
+        context.businessContext.offerFieldReference = renderOfferFieldReference(String(verifiedOffer.tier), offerTabId, verifiedOffer.design);
+      }
     }
     const activeOfferPart = offerContextPart(verifiedOffer, resolvedOffer.kind === "primary");
     const offerSwitchNote = renderOfferSwitchNote(messages, activeOfferPart);

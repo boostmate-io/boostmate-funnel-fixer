@@ -1,7 +1,6 @@
 // =============================================================================
-// Read-only ecosystem context for the active offer (prepared, not yet wired
-// into the Coach prompt — activation is a later phase so Core prompts stay
-// unchanged). Includes incoming/outgoing relationships, related offer names +
+// Read-only ecosystem context for the active offer (all six categories,
+// incl. the Primary Core Offer). Includes incoming/outgoing relationships, related offer names +
 // categories and funnels linked to the active offer. Every row is filtered to
 // the authorized workspace. Nothing here is AI-writable.
 // =============================================================================
@@ -49,13 +48,31 @@ export function buildOfferEcosystemContext(input: {
   return { readOnly: true, incoming, outgoing, funnels };
 }
 
-export function renderOfferEcosystemContext(ctx: OfferEcosystemContext): string | null {
-  if (!ctx.incoming.length && !ctx.outgoing.length && !ctx.funnels.length) return null;
+/** How to interpret the ecosystem layer (offer context only — not the global prompt). */
+export const OFFER_ECOSYSTEM_RULES = [
+  "How to use this:",
+  "- Consider the active offer's role in the business, but offer links describe possible customer journeys, not mandatory steps.",
+  "- An offer can be standalone; multiple entry points and journeys are valid. Missing links don't make an offer incomplete.",
+  "- Funnels are acquisition/conversion mechanisms, not offer design fields.",
+  "- You may suggest links or funnel improvements in conversation, but you cannot create or change them.",
+].join("\n");
+
+export type EcosystemLoadStatus = "loaded" | "unavailable";
+
+export function renderOfferEcosystemContext(ctx: OfferEcosystemContext | null, status: EcosystemLoadStatus = "loaded"): string {
   const label = (t: string, dir: "incoming" | "outgoing") =>
     OFFER_RELATIONSHIP_TYPES[t as OfferRelationshipType]?.[dir] ?? t;
   const lines = ["## Offer ecosystem (READ-ONLY — never propose changes to relationships or funnels)"];
+  if (status === "unavailable" || !ctx) {
+    lines.push("Offer links and funnels couldn't be loaded for this turn. Do NOT assume this offer has none; if it matters, ask the user.");
+    lines.push(OFFER_ECOSYSTEM_RULES);
+    return lines.join("\n");
+  }
+  if (!ctx.incoming.length && !ctx.outgoing.length) lines.push("Offer links: none recorded (loaded successfully).");
+  if (!ctx.funnels.length) lines.push("Funnels linked to this offer: none recorded (loaded successfully).");
   for (const r of ctx.incoming) lines.push(`- ${label(r.relationship, "incoming")}: "${r.name}" (${TIER_LABELS[r.tier] ?? r.tier})`);
   for (const r of ctx.outgoing) lines.push(`- ${label(r.relationship, "outgoing")}: "${r.name}" (${TIER_LABELS[r.tier] ?? r.tier})`);
   for (const f of ctx.funnels) lines.push(`- Funnel: "${f.name}"${f.status ? ` (${f.status})` : ""}`);
+  lines.push(OFFER_ECOSYSTEM_RULES);
   return lines.join("\n");
 }
