@@ -6,10 +6,15 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "u1" } }) }));
 vi.mock("@/contexts/WorkspaceContext", () => ({ useWorkspace: () => ({ activeSubAccountId: "ws" }), useOptionalWorkspace: () => ({ activeSubAccountId: "ws" }) }));
 vi.mock("@/hooks/useCurrency", () => ({ useCurrency: () => ({ symbol: "€", currency: "EUR" }) }));
+vi.mock("@/lib/coach/useCoachChat", () => ({
+  useCoachChat: () => ({ conversationId: null, messages: [], status: "idle", error: null, sendMessage: vi.fn(), decisions: {}, recordDecision: vi.fn() }),
+}));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() } }));
 
 import OfferRelationshipsSection, { type RelationshipsController, type RelationshipOffer } from "./OfferRelationshipsSection";
-import TierOfferDialog from "./TierOfferDialog";
+import TierOfferDialogBase from "./TierOfferDialog";
+import { CoachProvider } from "@/contexts/CoachContext";
+const TierOfferDialog = (p: any) => <CoachProvider><TierOfferDialogBase {...p} /></CoachProvider>;
 import { OFFER_RELATIONSHIP_TYPES, OFFER_TIER_ECOSYSTEM_TAB, OFFER_TIER_LAYOUTS, OFFER_TIERS, suggestedTiersFor } from "@shared/blueprintRegistry";
 import { wouldCreateCycle, relationshipEndpoints } from "@/lib/offers/relationshipGraph";
 import { emptyOfferDesign } from "../offerDesignTypes";
