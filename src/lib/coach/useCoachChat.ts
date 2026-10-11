@@ -239,7 +239,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
             locale: currentLocale,
             // Serializable claim; identity is re-verified server-side.
             activeOffer: ao
-              ? { id: ao.id, isPrimary: ao.isPrimary, name: ao.name, tier: ao.tier, draftDesign: ao.getDraftDesign?.() }
+              ? { id: ao.id, isPrimary: ao.isPrimary, name: ao.name, tier: ao.tier, draftDesign: ao.getDraftDesign?.(), tabId: ao.tabId }
               : undefined,
           },
         };
