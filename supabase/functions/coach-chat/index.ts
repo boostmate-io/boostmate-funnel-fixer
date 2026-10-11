@@ -3,6 +3,7 @@ import { checkWorkspaceAccess } from "../_shared/coachAuthorization.ts";
 import { gateOfferCoachWrites, isOfferTier, validTierTab } from "../_shared/offerAiPolicy.ts";
 import { buildOfferEcosystemContext, renderOfferEcosystemContext } from "../_shared/offerEcosystemContext.ts";
 import { COACH_FIELD_METHOD, COACH_METHODOLOGY, COACH_SECTION_PRECEDENCE } from "../_shared/coachMethodology.ts";
+import { renderOfferWalkthroughState } from "../_shared/offerWalkthrough.ts";
 import { renderOfferFieldReference } from "../_shared/offerFieldReference.ts";
 // Scopes: blueprint.field | blueprint.section | copy.component | funnel.node | global
 // Handles multi-turn coaching, tool-calling (proposals, quick replies, memory),
@@ -676,6 +677,14 @@ function isBareContinueTurn(messages: any[]): boolean {
 function renderBlueprintStateTruth(context: any, discussedUnfilledPaths: string[] = []): string | null {
   const scope = context?.scope;
   if (scope !== "blueprint.section" && scope !== "blueprint.field") return null;
+  // Non-Primary offers (any category, incl. additional Core): registry layout order.
+  const activeOffer = context?.businessContext?.verifiedActiveOffer;
+  if (activeOffer) {
+    const tabId = context?.businessContext?.offerTabId
+      ?? validTierTab(activeOffer.tier, context?.target?.subBlockId)
+      ?? null;
+    return renderOfferWalkthroughState(activeOffer, tabId, discussedUnfilledPaths.map((p) => canonicalBlueprintPath(p)));
+  }
   const snapshot = context?.businessContext?.blueprintSnapshot;
   if (!snapshot) return null;
 
@@ -2283,6 +2292,7 @@ Deno.serve(async (req) => {
               offers: relatedOfferRows, relationships: (relRes.data as any[]) ?? [], funnels: (funnelRes.data as any[]) ?? [],
             }));
       }
+      if (verifiedOffer) context.businessContext.offerTabId = offerTabId;
       if (verifiedOffer && nonCoreOffer) {
         context.businessContext.offerFieldReference = renderOfferFieldReference(String(verifiedOffer.tier), offerTabId, verifiedOffer.design);
       }
@@ -2358,7 +2368,8 @@ Deno.serve(async (req) => {
 
     // Build LLM messages
     const prompts = await loadCoachPrompts(supabase);
-    const forcedMainOfferStep = isFocusTurn
+    // Primary-Core-specific forced-write steps never apply to other categories.
+    const forcedMainOfferStep = isFocusTurn || nonCoreOffer
       ? null
       : detectMainOfferForcedWriteStep(context?.scope, messages, handledDecisions);
     const taskPromptBlock = taskInstructionBlock
