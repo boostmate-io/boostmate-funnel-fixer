@@ -390,10 +390,7 @@ export default function TierOfferDialog({
     };
   });
 
-  const Scope = ({ children }: { children: ReactNode }) =>
-    coachScope ? <OfferCoachScopeProvider value={coachScope}>{children}</OfferCoachScopeProvider> : <OfferCoachDisabled>{children}</OfferCoachDisabled>;
-  return (
-    <Scope>
+  const shell = (
       <OfferEditorShell
         open={open}
         onOpenChange={onOpenChange}
@@ -405,6 +402,8 @@ export default function TierOfferDialog({
         onOpenCoach={openOfferCoach}
         onTabChange={(t) => { tabRef.current = t; }}
       />
-    </Scope>
   );
+  return coachScope
+    ? <OfferCoachScopeProvider value={coachScope}>{shell}</OfferCoachScopeProvider>
+    : <OfferCoachDisabled>{shell}</OfferCoachDisabled>;
 }
