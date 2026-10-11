@@ -49,13 +49,13 @@ function pricingFrom(p: any): PricingEstimate | null {
 
 export function buildPublicResult(raw: unknown, opts: { hasCurrentOffer: boolean }): BuildResult {
   const checked = validateOperationOutput("public_generate", raw);
-  if (!checked.ok) return { ok: false, reason: "invalid_output", detail: checked.errors };
+  if (!checked.ok) return { ok: false, reason: "invalid_output", detail: (checked as any).errors };
   const out = checked.value;
   const writes = (out.writes as any[]).map((w) => ({ path: String(w.path), value: w.value }));
   const droppedWrites = writes.filter((w) => w.path.startsWith("offer_stack.pricing")).map((w) => w.path);
   const designWrites = writes.filter((w) => !w.path.startsWith("offer_stack.pricing"));
   const mapped = mapGeneratedToDesign("core", {}, designWrites);
-  if (!mapped.ok) return { ok: false, reason: "invalid_design", detail: mapped.errors };
+  if (!mapped.ok) return { ok: false, reason: "invalid_design", detail: (mapped as any).errors };
   const d = mapped.design;
   const offerName = clip(d.angle?.main_offer_name, 120);
   const promise = clip(d.angle?.core_outcome || d.angle?.short_description, 400);
