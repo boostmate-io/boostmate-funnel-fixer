@@ -2,6 +2,7 @@
 import { checkWorkspaceAccess } from "../_shared/coachAuthorization.ts";
 import { gateOfferCoachWrites, isOfferTier, validTierTab } from "../_shared/offerAiPolicy.ts";
 import { buildOfferEcosystemContext, renderOfferEcosystemContext } from "../_shared/offerEcosystemContext.ts";
+import { renderOfferFieldReference } from "../_shared/offerFieldReference.ts";
 // Scopes: blueprint.field | blueprint.section | copy.component | funnel.node | global
 // Handles multi-turn coaching, tool-calling (proposals, quick replies, memory),
 // and persists messages + facts to Lovable Cloud.
