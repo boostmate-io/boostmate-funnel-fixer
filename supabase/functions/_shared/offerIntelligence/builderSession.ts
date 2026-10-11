@@ -7,14 +7,15 @@ import type { OfferTier } from "../blueprintRegistry.ts";
 import { isOfferTier } from "../offerAiPolicy.ts";
 import { scoreValueProfile, type CriterionAssessment, type ValueProfile } from "./valueEquation.ts";
 import type { OperationContext } from "./operations.ts";
+import { strengthenComplete, type BuilderDecisions } from "./builderStages.ts";
 
 export type BuilderStage = "understand" | "diagnose" | "strengthen" | "package" | "final";
 export const BUILDER_STAGES: { id: BuilderStage; label: string; available: boolean }[] = [
   { id: "understand", label: "Understand", available: true },
   { id: "diagnose", label: "Diagnose", available: true },
-  { id: "strengthen", label: "Strengthen", available: false },
-  { id: "package", label: "Package", available: false },
-  { id: "final", label: "Final Offer Blueprint", available: false },
+  { id: "strengthen", label: "Strengthen", available: true },
+  { id: "package", label: "Package", available: true },
+  { id: "final", label: "Final Offer Blueprint", available: true },
 ];
 
 export interface UnderstandingItem { id: string; text: string; why?: string; question?: string }
@@ -44,6 +45,8 @@ export interface SessionLike {
   understanding: Understanding | null;
   context_confirmed_at: string | null;
   diagnosis: Diagnosis | null;
+  decisions?: BuilderDecisions | null;
+  draft_design?: Record<string, any> | null;
 }
 
 /** Can the user move to `target`? Unavailable future stages are never reachable. */
@@ -53,6 +56,9 @@ export function canEnterStage(s: SessionLike, target: BuilderStage): boolean {
   if (!def?.available) return false;
   if (target === "understand") return true;
   if (target === "diagnose") return !!s.understanding && !!s.context_confirmed_at;
+  if (target === "strengthen") return !!s.diagnosis;
+  if (target === "package") return !!s.diagnosis && strengthenComplete(s.decisions?.strengthen);
+  if (target === "final") return !!s.decisions?.package && !!s.draft_design;
   return false;
 }
 
@@ -62,6 +68,9 @@ export function stageState(s: SessionLike, id: BuilderStage): "completed" | "act
   if (s.stage === id) return "active";
   if (id === "understand" && s.context_confirmed_at) return "completed";
   if (id === "diagnose" && s.diagnosis) return "completed";
+  if (id === "strengthen" && strengthenComplete(s.decisions?.strengthen)) return "completed";
+  if (id === "package" && s.decisions?.package) return "completed";
+  if (id === "final" && (s.status === "completed" || s.decisions?.final)) return s.status === "completed" ? "completed" : "upcoming";
   return "upcoming";
 }
 
@@ -119,6 +128,7 @@ export function builderBlueprintContext(bp: Record<string, any> | null | undefin
 export function buildBuilderContext(input: {
   tier: unknown; mode: "new" | "existing"; blueprint: Record<string, any> | null; design: Record<string, any> | null;
   intake: Record<string, unknown>; understanding: Understanding | null; ecosystem: string | null;
+  extraFacts?: Record<string, string>;
 }): OperationContext {
   if (!isOfferTier(input.tier)) throw new Error("unknown_tier");
   const idea = clip((input.intake as any)?.idea, 1500);
@@ -128,7 +138,7 @@ export function buildBuilderContext(input: {
     mode: input.mode,
     blueprint: builderBlueprintContext(input.blueprint),
     design: input.mode === "existing" ? input.design : null,
-    facts: { ...(idea ? { offer_idea: idea } : {}), ...confirmedFacts(input.understanding) },
+    facts: { ...(idea ? { offer_idea: idea } : {}), ...confirmedFacts(input.understanding), ...(input.extraFacts ?? {}) },
     ecosystem: input.ecosystem,
   };
 }
