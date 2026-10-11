@@ -1481,7 +1481,8 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
       sec("basics", "Basics", [NAME, fld("angle.offer_format", "recommended"), SHORT_DESC("recommended")]),
       sec("value", "Value", [fld("angle.problem_solved", "recommended"), fld("angle.quick_win", "recommended"), fld("angle.core_outcome", "optional")]),
       sec("included", "What's included", [lst("stack.deliverables", "optional"), DELIVERY("recommended")]),
-      sec("next_step", "Next step", [fld("angle.next_step_cta", "optional"), rel("leads_into", "Leads into")]),
+      sec("next_step", "Next step", [fld("angle.next_step_cta", "optional")]),
+      sec("ecosystem", "Ecosystem", [rel("leads_into", "Leads into")]),
     ] }],
   },
   low_ticket: {
@@ -1494,7 +1495,7 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
       ]),
       sec("included", "What's included", [lst("stack.deliverables", "recommended"), lst("stack.bonuses", "optional"), DELIVERY("recommended")]),
       sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price", helper: "What buyers pay for this offer." }), fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
-      sec("next_step", "Next step", [rel("ascends_to", "Ascends to")]),
+      sec("ecosystem", "Ecosystem", [rel("ascends_to", "Ascends to")]),
     ] }],
   },
   mid_ticket: {
@@ -1513,7 +1514,7 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
       { id: "pricing", label: STANDARD_TABS.pricing, sections: [
         sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price", helper: "What buyers pay for this offer." }), lst("pricing.payment_plans", "optional")]),
         sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
-        sec("relationships", "Ecosystem", [rel("ascends_to", "Ascends to"), rel("downsell", "Downsell from")]),
+        sec("ecosystem", "Ecosystem", [rel("ascends_to", "Ascends to"), rel("downsell", "Downsell from")]),
       ] },
     ],
   },
@@ -1555,7 +1556,7 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
           fld("pricing.cancellation_terms", "recommended"),
         ]),
         sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
-        sec("relationships", "Ecosystem", [rel("retention", "Retention for")]),
+        sec("ecosystem", "Ecosystem", [rel("retention", "Retention for")]),
       ] },
     ],
   },
