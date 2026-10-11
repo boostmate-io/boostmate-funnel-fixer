@@ -20,6 +20,15 @@ type CoachTurnOrigin = "user" | "focus";
 
 const isVirtualListPath = (path: string) => /(?:^|\.)new_\d+(?:\.|$)/.test(path);
 
+/** Which persistent conversation a Coach context belongs to. */
+export function coachConversationKey(context: CoachContext | null): { scope: "global" | "offer"; targetId: string; label: string } {
+  const ao = context?.businessContext.activeOffer;
+  if (ao && !ao.isPrimary && ao.id && ao.id !== "primary") {
+    return { scope: "offer", targetId: String(ao.id), label: ao.name || "Offer Coach" };
+  }
+  return { scope: "global", targetId: "__workspace__", label: "Business Coach" };
+}
+
 export function useCoachChat(context: CoachContext | null, enabled: boolean) {
   const { user } = useAuth();
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -33,10 +42,16 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
 
   // ONE Business Coach conversation per (user, workspace). Scope/target only
   // shape the prompt for the current turn — they never fork the conversation.
-  const targetKey = "__workspace__";
-  const scope = context ? "global" : null;
+  // Exception: every non-Primary offer gets its OWN persistent conversation
+  // (scope "offer", target_id = offer ID). Primary Core + Blueprint keep the
+  // existing workspace thread; legacy additional-offer turns stay there too.
+  const offerKey = coachConversationKey(context);
+  const targetKey = offerKey.targetId;
+  const scope = context ? offerKey.scope : null;
   const subAccountId = context?.businessContext.subAccountId ?? null;
-  const targetLabel = "Business Coach";
+  const targetLabel = offerKey.label;
+  // Live conversation id: responses for an older conversation are dropped.
+  const liveConvRef = useRef<string | null>(null);
   const userId = user?.id ?? null;
 
   // Keep a live ref to context so we can snapshot it on insert without
@@ -59,6 +74,8 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
       setError(null);
       setMessages([]);
       setConversationId(null);
+      liveConvRef.current = null;
+      const stale = () => initKey.current !== key;
 
       // 1) Find existing
       const { data: existing } = await supabase
@@ -75,7 +92,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
       // Older builds keyed global conversations by other target_id shapes.
       // Adopt the most recent existing global conversation instead of creating
       // a fresh empty one, so history carries over into the single-thread model.
-      if (!convId) {
+      if (!convId && scope === "global") {
         const { data: latestGlobal } = await supabase
           .from("ai_coach_conversations")
           .select("id")
@@ -102,6 +119,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
           })
           .select("id")
           .single();
+        if (stale()) return;
         if (insErr || !created) {
           setError(insErr?.message ?? "Failed to start coach conversation");
           setStatus("error");
@@ -123,6 +141,8 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
           .eq("conversation_id", convId!),
       ]);
 
+      if (stale()) return;
+      liveConvRef.current = convId!;
       setConversationId(convId!);
       setMessages(
         (msgs ?? []).map((m) => ({
@@ -236,6 +256,8 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
           },
         });
 
+        // Stale: the user switched offer/conversation while this was in flight.
+        if (liveConvRef.current !== conversationId) return;
         if (fnErr) throw new Error(fnErr.message);
         if ((data as any)?.error) throw new Error((data as any).error);
 
@@ -256,6 +278,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
         }
         setStatus("idle");
       } catch (e: any) {
+        if (liveConvRef.current !== conversationId) return;
         setError(e?.message ?? "Something went wrong");
         setStatus("error");
       }
