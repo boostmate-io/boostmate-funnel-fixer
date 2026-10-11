@@ -4,7 +4,7 @@
 // Delivery Type. Primary purpose removed.
 // =============================================================================
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Network, Sparkles, Plus,
 } from "lucide-react";
@@ -222,6 +222,14 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   const editingSimple = offers.find((o) => o.id === editingSimpleId) ?? null;
   const [editingTier, setEditingTier] = useState<{ id: string; initial: OfferDesignData } | null>(null);
   const editingTierRow = editingTier ? offers.find((o) => o.id === editingTier.id) ?? null : null;
+  const editingTierId = editingTier?.id ?? null;
+  // Approved Coach writes for the open non-Core offer: captured by ID, saved via the per-offer queue.
+  const persistTierWrites = useCallback(async (writes: CoachBlueprintWrite[]) => {
+    if (!editingTierId) return { appliedPaths: [], rejected: writes.map((write) => ({ write, reason: "offer_not_found" as const })), saved: false };
+    const res = await applyCoachWrites(editingTierId, writes);
+    if (res.appliedPaths.length) setTierRevision((r) => r + 1);
+    return res;
+  }, [editingTierId, applyCoachWrites]);
 
   /** Open the existing editor that fits this offer (Core dialog vs. field dialog). */
   const openEditor = (offer: EcosystemOfferRow) => {
