@@ -5,7 +5,7 @@
 // =============================================================================
 
 import type { CoachBlueprintWrite } from "@/lib/coach/types";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Network, Sparkles, Plus,
 } from "lucide-react";
@@ -259,18 +259,6 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
     else if (UNIVERSAL_EDITOR_TIERS.includes(offer.tier)) setEditingTier({ id: offer.id, initial: designForRow(offer) });
     else setEditingSimpleId(offer.id);
   };
-
-  // Deep link from the Builder ("Open the finished offer"): open its editor once.
-  const openedFromLink = useRef(false);
-  useEffect(() => {
-    if (openedFromLink.current || typeof window === "undefined") return;
-    const id = new URLSearchParams(window.location.search).get("openOffer");
-    if (!id) return;
-    const o = offers.find((x) => x.id === id);
-    if (!o) return;
-    openedFromLink.current = true;
-    openEditor(o);
-  }, [offers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddSimple = async (tier: EcosystemTier) => {
     const id = await addOffer(tier);

@@ -66,6 +66,9 @@ const BusinessBlueprintModule = () => {
       setPendingOpenOfferId(offerId);
     };
     window.addEventListener("boostmate:open-offer-design", handler);
+    // Same deep link via URL (?openOffer=<id>), e.g. from the Offer Builder.
+    const linked = new URLSearchParams(window.location.search).get("openOffer");
+    if (linked) handler(new CustomEvent("x", { detail: { offerId: linked } }));
     return () => window.removeEventListener("boostmate:open-offer-design", handler);
   }, []);
 
