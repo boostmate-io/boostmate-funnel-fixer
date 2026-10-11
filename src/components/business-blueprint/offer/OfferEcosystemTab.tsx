@@ -19,8 +19,8 @@ import SectionHelpCoach from "../SectionHelpCoach";
 import CoreOfferDialog from "./CoreOfferDialog";
 import TierOfferDialog from "./TierOfferDialog";
 import OfferRelationshipsSection from "./OfferRelationshipsSection";
-import { useCurrentWorkspaceRelationships } from "@/lib/growth-architecture/hooks";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useOfferRelationships } from "@/lib/growth-architecture/hooks";
+import { useOptionalWorkspace } from "@/contexts/WorkspaceContext";
 import OfferSummaryCard from "./OfferSummaryCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -191,8 +191,8 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   const bt = getBusinessType(businessType);
   const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer, applyCoachWrites, saveStatuses } = useEcosystemOffers({ blueprintId });
   const [coachRevision, setCoachRevision] = useState(0);
-  const { activeSubAccountId } = useWorkspace();
-  const relationships = useCurrentWorkspaceRelationships();
+  const activeSubAccountId = useOptionalWorkspace()?.activeSubAccountId ?? null;
+  const relationships = useOfferRelationships(activeSubAccountId);
   // Relationships save immediately via their own hook — never via design autosave.
   const ecosystemFor = (offerId: string | undefined, tier: EcosystemTier) => offerId ? (
     <OfferRelationshipsSection offerId={offerId} tier={tier as any} workspaceId={activeSubAccountId ?? null}

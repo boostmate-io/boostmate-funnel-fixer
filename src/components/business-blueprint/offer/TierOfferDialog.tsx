@@ -95,7 +95,7 @@ export default function TierOfferDialog({
       if ((data as any)[sec]?.[k] !== item.visibleWhen.equals) return null;
       return (
         <p key={`rel:${item.relationship}`} data-relationship-hint={item.relationship} className="text-xs text-muted-foreground">
-          {item.label}: link the Core Offer this upgrades from in the Ecosystem section on the Pricing tab.
+          <span className="font-medium">{item.label}</span> — link the Core Offer this upgrades from in the Ecosystem section on the Pricing tab.
         </p>
       );
     }
