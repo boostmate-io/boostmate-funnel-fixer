@@ -66,7 +66,6 @@ export default function OfferBuilder() {
   const canDiagnose = !!u && !!s.context_confirmed_at;
 
   const saveCorrections = () => run("save", { corrections });
-  const confirm = async () => { if (dirty) await run("save", { corrections }); };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -161,9 +160,8 @@ export default function OfferBuilder() {
                     {s.context_confirmed_at && !dirty ? (
                       <Button onClick={() => setView("diagnose")}>Continue to diagnosis</Button>
                     ) : (
-                      <Button disabled={!!busy} onClick={async () => { await confirm(); }}
-                        {...(!dirty ? { onClick: () => run("save", { confirm: true }) } : {})}>
-                        {dirty ? "Save before confirming" : "Confirm working context"}
+                      <Button disabled={!!busy || dirty} onClick={() => run("save", { confirm: true })}>
+                        {dirty ? "Save your answers first" : "Confirm working context"}
                       </Button>
                     )}
                   </div>
