@@ -15,6 +15,13 @@
       "when": 1791630235614,
       "tag": "0001_coach_admin_access",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791700237441,
+      "tag": "0002_offer_relationships_integrity_admin",
+      "breakpoints": true
     }
   ]
 }
