@@ -1,4 +1,5 @@
 // AI Coach chat edge function — ONE engine for every scope.
+import { checkWorkspaceAccess } from "../_shared/coachAuthorization.ts";
 // Scopes: blueprint.field | blueprint.section | copy.component | funnel.node | global
 // Handles multi-turn coaching, tool-calling (proposals, quick replies, memory),
 // and persists messages + facts to Lovable Cloud.
@@ -2150,6 +2151,11 @@ Deno.serve(async (req) => {
 
     const subAccountId = conv.sub_account_id as string;
 
+    // Workspace authorization: member of the conversation's workspace or a
+    // trusted app admin. Checked before any context is built or model called.
+    const access = await checkWorkspaceAccess(supabase, userId, subAccountId);
+    if (!access.ok) return jsonResponse({ error: access.error }, access.status);
+
     // ---------------------------------------------------------------------
     // Authoritative Blueprint context.
     // The client may send a partial (field- or section-scoped) snapshot. The
@@ -2218,6 +2224,9 @@ Deno.serve(async (req) => {
         verifiedOffer?.tier ?? (resolvedOffer.kind === "primary" ? "core" : null),
       );
     }
+    // Non-Core offers: Coach write-back is not active yet (server-enforced,
+    // category taken from the DB row, never from the client).
+    const writesBlockedForTier = !!verifiedOffer && verifiedOffer.tier !== "core";
     const activeOfferPart = offerContextPart(verifiedOffer, resolvedOffer.kind === "primary");
     const offerSwitchNote = renderOfferSwitchNote(messages, activeOfferPart);
 
@@ -2382,7 +2391,9 @@ The latest user-role message was generated automatically when the user opened th
       } catch {
         // ignore
       }
-      if (name === "propose_field_value" && context?.scope === "blueprint.field") {
+      if (writesBlockedForTier && (name === "propose_field_value" || name === "propose_blueprint_writes")) {
+        // dropped: proposals for non-Core offers are not enabled in this phase
+      } else if (name === "propose_field_value" && context?.scope === "blueprint.field") {
         const value = normalizeCurrentFieldProposal(context, args.value ?? "");
         if (value) parts.push({ type: "proposal", value, reasoning: args.reasoning ?? "" });
       } else if (
