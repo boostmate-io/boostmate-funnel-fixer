@@ -36,7 +36,7 @@ import { getBusinessType } from "../businessTypes";
 import { designForRow, designToRowValues } from "@/lib/offers/offerRepository";
 
 /** Non-Core categories already served by the Universal Offer Editor. */
-const UNIVERSAL_EDITOR_TIERS: EcosystemTier[] = ["free", "low_ticket", "mid_ticket", "premium"];
+const UNIVERSAL_EDITOR_TIERS: EcosystemTier[] = ["free", "low_ticket", "mid_ticket", "premium", "continuity"];
 import type { OfferSaveStatus } from "./OfferEditorShell";
 
 
@@ -220,7 +220,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   const handleAddSimple = async (tier: EcosystemTier) => {
     const id = await addOffer(tier);
     if (!id) return;
-    if (UNIVERSAL_EDITOR_TIERS.includes(tier)) setEditingTier({ id, initial: designForRow({ name: "Untitled Offer", data: {} as any }) });
+    if (UNIVERSAL_EDITOR_TIERS.includes(tier)) setEditingTier({ id, initial: designForRow({ name: "Untitled Offer", data: {} as any, tier }) });
     else setEditingSimpleId(id);
   };
 

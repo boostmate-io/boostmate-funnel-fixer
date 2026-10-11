@@ -20,7 +20,9 @@ const MAX_CHIPS = 3;
 
 function priceLabel(offer: EcosystemOfferRow, cur: string): string | null {
   const p = offer.data?.price;
-  if (typeof p === "number" && p > 0) return `${cur}${p.toLocaleString()}`;
+  const per: Record<string, string> = { monthly: "/month", quarterly: "/quarter", yearly: "/year" };
+  const iv = offer.tier === "continuity" ? per[String((offer.data as any)?.billing_interval ?? "")] ?? "" : "";
+  if (typeof p === "number" && p > 0) return `${cur}${p.toLocaleString()}${iv}`;
   if (offer.tier === "free" || p === 0) return "Free";
   return null;
 }

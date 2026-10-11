@@ -185,6 +185,54 @@ export default function TierOfferDialog({
       );
     }
 
+    if (def?.control === "billing-interval") {
+      const v = String(data.pricing.recurring_offer?.interval ?? "");
+      return (
+        <div key={path}>
+          <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1 block">{copy.label}</Label>
+          {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
+          <select id={id} value={v}
+            onChange={(e) => updatePricing({ recurring_offer: { ...(dataRef.current.pricing.recurring_offer ?? {}), interval: (e.target.value || undefined) as any } })}
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+            <option value="">Select an interval…</option>
+            {(copy.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      );
+    }
+    if (def?.control === "currency-amount" && path === "offer_stack.pricing.recurring_offer.monthly_price") {
+      const raw = data.pricing.recurring_offer?.monthly_price;
+      return (
+        <div key={path}>
+          <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1 block">{copy.label}</Label>
+          {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
+          <Input id={id} type="number" inputMode="decimal" min={0} value={raw === "" || raw == null ? "" : String(raw)}
+            onChange={(e) => {
+              const n = e.target.value === "" ? "" : Number(e.target.value);
+              updatePricing({ recurring_offer: { ...(dataRef.current.pricing.recurring_offer ?? {}), monthly_price: n === "" || Number.isFinite(n) ? n : "" } });
+            }}
+            placeholder={copy.placeholder} className="h-9 text-sm" />
+        </div>
+      );
+    }
+    if (path.startsWith("offer_stack.pricing.recurring_offer.") || path === "offer_stack.pricing.cancellation_terms") {
+      const nested = path.startsWith("offer_stack.pricing.recurring_offer.");
+      const key = path.split(".").pop()!;
+      const value = String(nested ? (data.pricing.recurring_offer as any)?.[key] ?? "" : (data.pricing as any)[key] ?? "");
+      const set = (v: string) => nested
+        ? updatePricing({ recurring_offer: { ...(dataRef.current.pricing.recurring_offer ?? {}), [key]: v } })
+        : updatePricing({ [key]: v } as Partial<PricingData>);
+      return (
+        <div key={path}>
+          <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1 block">{copy.label}</Label>
+          {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
+          {def?.kind === "textarea"
+            ? <AutoTextarea id={id} value={value} onChange={(e) => set(e.target.value)} placeholder={copy.placeholder} rows={2} className="resize-none text-sm" />
+            : <Input id={id} value={value} onChange={(e) => set(e.target.value)} placeholder={copy.placeholder} className="h-9 text-sm" />}
+        </div>
+      );
+    }
+
     // Plain angle text fields (name, description, problem solved, quick win, outcome…)
     const [, section, key] = path.split(".");
     if (section !== "angle" || !key) return null;
