@@ -90,7 +90,7 @@ export default function OfferBuilder() {
       const r = await approveBuilderSession(s, { applyToLatest, userId: user.id });
       if (r.ok) { setConflicts(null); hydrate(r.session); setView("final"); }
       else if ("conflicts" in r) setConflicts(r.conflicts);
-      else {
+      else if ("error" in r) {
         setApproveError(r.error === "no_blueprint" ? "Open your Business Blueprint once before saving offers." : builderErrorMessage(r.error));
         const fresh = await loadBuilderSession(s.id); if (fresh) setS(fresh);
       }

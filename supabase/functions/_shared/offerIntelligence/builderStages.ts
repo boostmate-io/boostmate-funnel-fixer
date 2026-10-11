@@ -114,7 +114,7 @@ export function toPackage(tier: OfferTier, baseDesign: Record<string, any> | nul
   const writes = (out.writes ?? []).filter((w) => typeof w?.path === "string" && String(w.value ?? "").trim()).slice(0, 80)
     .map((w, i) => ({ id: `w${i}`, path: w.path, label: writeLabel(tier, w.path), value: clip(w.value, 2000), include: true, edited: false }));
   const draft = draftFromWrites(tier, baseDesign, writes);
-  if (!draft.ok) return draft;
+  if (draft.ok === false) return { ok: false, errors: draft.errors };
   const now = new Date().toISOString();
   return { ok: true, draft: draft.design, state: { writes, extras: sanitizeExtras(out.extras), baseDesign, generatedAt: now, basedOnStrengthenAt, updatedAt: now } };
 }
@@ -122,7 +122,8 @@ export function toPackage(tier: OfferTier, baseDesign: Record<string, any> | nul
 export function draftFromWrites(tier: OfferTier, baseDesign: Record<string, any> | null, writes: PackageWrite[]) {
   const included = writes.filter((w) => w.include).map((w) => ({ path: w.path, value: w.value }));
   const res = mapGeneratedToDesign(tier, baseDesign ?? {}, included);
-  return res.ok ? { ok: true as const, design: res.design } : { ok: false as const, errors: res.errors };
+  if (res.ok === false) return { ok: false as const, errors: res.errors as unknown[] };
+  return { ok: true as const, design: res.design };
 }
 
 /** User edits to the generated package: change values or include/exclude items. */
@@ -142,7 +143,7 @@ export function applyPackageEdits(tier: OfferTier, state: PackageState, raw: unk
   }
   if (!writes.some((w) => w.include)) return { ok: false, error: "nothing_included" };
   const draft = draftFromWrites(tier, state.baseDesign, writes);
-  if (!draft.ok) return { ok: false, error: "invalid_value", errors: draft.errors };
+  if (draft.ok === false) return { ok: false, error: "invalid_value", errors: draft.errors };
   return { ok: true, draft: draft.design, state: { ...state, writes, updatedAt: new Date().toISOString() } };
 }
 
