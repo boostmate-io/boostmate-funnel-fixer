@@ -285,11 +285,7 @@ export function useGrowthArchitecture(subAccountId: string | null) {
         .select("id,sub_account_id,system_catalog_id,source_offer_id,target_offer_id,status,notes,sort_order,funnel_id,pending_upstream_funnel_ids")
         .single();
       if (error) {
-        if (/offer_relationship/i.test(error.message)) {
-          toast.error("This route needs an offer relationship. Create one in the route form, then try again.");
-        } else {
-          toast.error("Could not add route");
-        }
+        toast.error("Could not add route");
         return null;
       }
       const row = { ...(data as any), pending_upstream_funnel_ids: ((data as any).pending_upstream_funnel_ids ?? []) as string[] } as GrowthArchitectureRow;

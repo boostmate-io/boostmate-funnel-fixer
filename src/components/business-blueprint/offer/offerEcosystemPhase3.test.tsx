@@ -24,8 +24,8 @@ vi.mock("@/contexts/WorkspaceContext", () => ({ useWorkspace: () => ({ activeSub
 import { summarizeOfferRelationships, edgesInCycles } from "@/lib/offers/relationshipSummary";
 import CustomerJourneyOverview from "./CustomerJourneyOverview";
 import OfferSummaryCard from "./OfferSummaryCard";
-import AddRouteDialog from "../growth-architecture/AddRouteDialog";
-import { useOfferRelationships } from "@/lib/growth-architecture/hooks";
+import SourceOfferLinks, { linkableSourceOffers } from "../growth-architecture/SourceOfferLinks";
+import { useOfferRelationships, useGrowthArchitecture } from "@/lib/growth-architecture/hooks";
 import { OFFER_RELATIONSHIP_TYPES } from "@shared/blueprintRegistry";
 
 vi.mock("@/lib/growth-architecture/hooks", async (orig) => {
@@ -84,70 +84,70 @@ describe("Customer Journey overview", () => {
   });
 });
 
-describe("AddRouteDialog inline relationship", () => {
-  const offers: any[] = [
-    { id: "a", name: "Free Guide", tier: "free", sub_account_id: "ws" },
-    { id: "b", name: "Core Coaching", tier: "core", sub_account_id: "ws" },
-    { id: "x", name: "Foreign", tier: "core", sub_account_id: "other" },
+describe("SourceOfferLinks (active wizard, Traffic Sources)", () => {
+  const offers = [
+    { id: "a", name: "Free Guide", sub_account_id: "ws" },
+    { id: "b", name: "Core Coaching", sub_account_id: "ws" },
+    { id: "c", name: "Mini Course", sub_account_id: "ws" },
+    { id: "x", name: "Foreign", sub_account_id: "other" },
   ];
-  const pick = async (name: string, opt: RegExp) => {
-    fireEvent.click(screen.getAllByRole("combobox").find((c) => c.getAttribute("aria-label") === name || c.textContent?.match(name))!);
-    fireEvent.click(await screen.findByRole("option", { name: opt }));
-  };
-  const setup = (rels: any[], over: any = {}) => {
-    const onCreate = vi.fn(async () => "route-1");
-    const onCreateRelationship = vi.fn(async () => "rel-1");
-    const utils = render(<AddRouteDialog open onOpenChange={() => {}} offers={offers} relationships={rels} workspaceId="ws"
-      onCreate={over.onCreate ?? onCreate} onCreateRelationship={over.onCreateRelationship ?? onCreateRelationship} />);
-    return { onCreate, onCreateRelationship, ...utils };
-  };
-  const fill = async () => {
-    const boxes = screen.getAllByRole("combobox");
-    fireEvent.click(boxes[0]); fireEvent.click(await screen.findByRole("option", { name: "Webinar" }));
-    fireEvent.click(screen.getAllByRole("combobox")[1]); fireEvent.click(await screen.findByRole("option", { name: "From: Free Guide" }));
-    await pick("Target offer", /Core Coaching/);
-    const ch = screen.getAllByRole("combobox").find((c) => /primary channel/i.test(c.textContent ?? ""))!;
-    fireEvent.click(ch); fireEvent.click(await screen.findByRole("option", { name: "Ads" }));
+  const F = (id: string, offer: string | null) => ({ id, name: `Funnel ${id}`, linked_offer_id: offer });
+  const view = (funnels: any[], rels: any[] = [], add: any = vi.fn(async () => "rel-1")) => {
+    const utils = render(<SourceOfferLinks targetOfferId="b" workspaceId="ws" offers={offers} selectedFunnels={funnels} relationships={rels} onCreateRelationship={add} />);
+    return { add, ...utils };
   };
 
-  it("reuses an existing relationship", async () => {
-    const { container, onCreateRelationship, onCreate } = setup([R("r", "a", "b", "leads_into")]);
-    await fill();
-    expect(container.ownerDocument.querySelector('[data-route-relationship="existing"]')).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Add Route" }));
-    await waitFor(() => expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ source_offer_id: "a", target_offer_id: "b" })));
-    expect(onCreateRelationship).not.toHaveBeenCalled();
+  it("skips funnels without an offer, same-offer and other-workspace offers; dedupes by offer", () => {
+    expect(linkableSourceOffers({ targetOfferId: "b", workspaceId: "ws", offers, selectedFunnels: [F("1", null), F("2", "b"), F("3", "x")] })).toEqual([]);
+    const items = linkableSourceOffers({ targetOfferId: "b", workspaceId: "ws", offers, selectedFunnels: [F("1", "a"), F("2", "a"), F("3", "c")] });
+    expect(items.map((i) => [i.offer.id, i.funnels.length])).toEqual([["a", 2], ["c", 1]]);
+    const { container } = view([F("1", null)]);
+    expect(container.querySelector("[data-source-offer-links]")).toBeNull();
   });
 
-  it("requires an explicit click to create a missing relationship, in source → target direction", async () => {
-    const { onCreateRelationship } = setup([]);
-    expect(screen.queryByText(/Next offer/)).toBeNull();
-    await fill();
-    expect((screen.getByRole("button", { name: "Add Route" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(onCreateRelationship).not.toHaveBeenCalled();
-    await pick("Relationship type", new RegExp(OFFER_RELATIONSHIP_TYPES.leads_into.label));
-    fireEvent.click(screen.getByRole("button", { name: /Create relationship/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Create relationship/ }));
-    await waitFor(() => expect(onCreateRelationship).toHaveBeenCalledTimes(1));
-    expect(onCreateRelationship).toHaveBeenCalledWith({ source_offer_id: "a", target_offer_id: "b", relationship_type: "leads_into" });
+  it("shows existing relationship as connected, per source offer", () => {
+    const { container } = view([F("1", "a"), F("3", "c")], [R("r", "a", "b", "leads_into")]);
+    expect(container.querySelector('[data-source-offer="a"] [data-link-status="connected"]')?.textContent).toContain(OFFER_RELATIONSHIP_TYPES.leads_into.outgoing);
+    expect(container.querySelector('[data-source-offer="c"]')?.textContent).toContain("Link these offers");
   });
 
-  it("excludes offers from other workspaces", async () => {
-    setup([]);
-    fireEvent.click(screen.getAllByRole("combobox")[1]);
-    expect(screen.queryByRole("option", { name: /Foreign/ })).toBeNull();
+  it("creates only after explicit action, source offer → target offer, once", async () => {
+    const { add } = view([F("1", "a"), F("2", "a")]);
+    expect(add).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("button", { name: "Link these offers" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Link these offers" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Relationship type" }));
+    fireEvent.click(await screen.findByRole("option", { name: new RegExp(OFFER_RELATIONSHIP_TYPES.retention.label.replace("/", "\\/")) }));
+    const btn = screen.getByRole("button", { name: /Create link/ });
+    fireEvent.click(btn); fireEvent.click(btn);
+    await waitFor(() => expect(add).toHaveBeenCalledTimes(1));
+    expect(add).toHaveBeenCalledWith({ source_offer_id: "a", target_offer_id: "b", relationship_type: "retention" });
   });
 
-  it("route failure keeps the dialog and creates no extra records", async () => {
-    const onCreate = vi.fn(async () => null);
-    const onOpenChange = vi.fn();
-    const { onCreateRelationship } = setup([R("r", "a", "b", "leads_into")], { onCreate });
-    await fill();
-    fireEvent.click(screen.getByRole("button", { name: "Add Route" }));
-    await waitFor(() => expect(onCreate).toHaveBeenCalled());
-    expect(onCreateRelationship).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Add Route" })).toBeTruthy();
-    expect(onOpenChange).not.toHaveBeenCalled();
+  it("failure doesn't throw or block (wizard continues)", async () => {
+    const add = vi.fn(async () => { throw new Error("boom"); });
+    view([F("1", "a")], [], add);
+    fireEvent.click(screen.getByRole("button", { name: "Link these offers" }));
+    fireEvent.click(screen.getByRole("button", { name: /Create link/ }));
+    await waitFor(() => expect(add).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: /Create link/ })).toBeTruthy();
+  });
+});
+
+describe("routes and relationships stay separate", () => {
+  it("deleting a route only touches growth_architecture_systems", async () => {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const spy = vi.spyOn(supabase as any, "from");
+    const h = renderHook(() => useGrowthArchitecture("ws"));
+    await waitFor(() => expect(h.result.current.loading).toBe(false));
+    spy.mockClear();
+    await act(async () => { await h.result.current.remove("route-1"); });
+    expect(spy.mock.calls.map((c) => c[0])).toEqual(["growth_architecture_systems"]);
+  });
+  it("legacy offer-to-offer route form is removed", () => {
+    const files = Object.keys(import.meta.glob("../growth-architecture/*.tsx"));
+    expect(files.some((f) => f.includes("AddRouteDialog"))).toBe(false);
+    expect(files.some((f) => f.includes("AddRouteWizard"))).toBe(true);
   });
 });
 
