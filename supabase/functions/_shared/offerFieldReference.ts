@@ -4,8 +4,8 @@
 // from the central registry. Context only: permissions stay in offerAiPolicy.
 // =============================================================================
 
-import { OFFER_TIER_LAYOUTS, getOfferEditorFieldByPath, isOfferTier } from "./blueprintRegistry.ts";
-import { offerAiPermission } from "./offerAiPolicy.ts";
+import { OFFER_TIER_LAYOUTS, getOfferEditorFieldByPath } from "./blueprintRegistry.ts";
+import { isOfferTier, offerAiPermission } from "./offerAiPolicy.ts";
 
 const get = (obj: any, path: string) => path.split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
 
