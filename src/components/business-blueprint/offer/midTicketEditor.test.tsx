@@ -50,7 +50,7 @@ const renderTab = () =>
 beforeEach(() => { store = seed(); updateSpy.mockClear(); });
 const open = async () => { renderTab(); fireEvent.click(await screen.findByText("Group Sprint")); return screen.findByRole("dialog", { name: "Group Sprint" }); };
 const done = async (d: HTMLElement) => { await act(async () => { fireEvent.click(within(d).getByRole("button", { name: "Done" })); }); };
-const sections = (d: HTMLElement) => [...d.querySelectorAll("[data-offer-section]")].map((s) => s.getAttribute("data-offer-section"));
+const sections = (d: HTMLElement) => [...(d.querySelector("[role=tabpanel][data-state=active]") ?? d).querySelectorAll("[data-offer-section]")].map((s) => s.getAttribute("data-offer-section"));
 const expand = (d: HTMLElement) => within(d).queryAllByText("More options").forEach((m) => fireEvent.click(m));
 const goTab = (d: HTMLElement, name: string) => { const t = within(d).getByRole("tab", { name }); fireEvent.mouseDown(t); fireEvent.click(t); };
 
