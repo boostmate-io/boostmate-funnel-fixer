@@ -1484,8 +1484,8 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
       ] },
       { id: "pricing", label: STANDARD_TABS.pricing, sections: [
         sec("billing", "Billing", [
-          fld("pricing.recurring_offer.monthly_price", "min", { label: "Recurring Price" }),
-          fld("pricing.recurring_offer.interval", "recommended", { label: "Billing Interval" }),
+          fld("pricing.recurring_offer.monthly_price", "min", { label: "Recurring Price", helper: "Price per billing period — e.g. €129 with Quarterly means €129 per quarter.", placeholder: "49" }),
+          fld("pricing.recurring_offer.interval", "recommended", { label: "Billing Interval", helper: "How often members are billed the recurring price." }),
           fld("pricing.cancellation_terms", "recommended"),
         ]),
         sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),

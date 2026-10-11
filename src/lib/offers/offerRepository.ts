@@ -103,9 +103,18 @@ export function designToRowValues(
   const s = summarizeOfferDesign(design);
   // Free offers always summarize as free (0); hidden design pricing is kept as-is.
   if (tier === "free") s.price = 0;
+  const extra: Record<string, unknown> = {};
+  if (tier === "continuity") {
+    // Summary price = price per billing interval (stored at recurring_offer.monthly_price
+    // for compatibility). `billing_interval` is an additive summary key.
+    const r = design.pricing?.recurring_offer;
+    const rp = r?.monthly_price;
+    s.price = typeof rp === "number" && Number.isFinite(rp) ? rp : "";
+    extra.billing_interval = r?.interval ?? "";
+  }
   return {
     name: s.name || existing.name || fallbackName,
-    data: { ...summaryToRowData(existing.data, s), design },
+    data: { ...summaryToRowData(existing.data, s), ...extra, design },
   };
 }
 
@@ -114,7 +123,7 @@ export function designToRowValues(
  * otherwise one seeded (in memory only) from the row's summary fields.
  * Nothing is written — the row only changes once the user edits.
  */
-export function designForRow(row: Pick<EcosystemOfferRow, "name" | "data">): OfferDesignData {
+export function designForRow(row: Pick<EcosystemOfferRow, "name" | "data"> & { tier?: string }): OfferDesignData {
   const stored = (row.data as any)?.design;
   if (stored) return normalizeOfferDesign(stored);
   const d = emptyOfferDesign();
@@ -126,6 +135,15 @@ export function designForRow(row: Pick<EcosystemOfferRow, "name" | "data">): Off
   // Missing price stays "" (incomplete draft) — never coerced to 0.
   d.pricing.core_price = typeof price === "number" && Number.isFinite(price) ? price : "";
   d.stack.delivery_types = Array.isArray(data.delivery_types) ? [...data.delivery_types] : [];
+  if (row.tier === "continuity") {
+    // Summary price is the recurring price; interval only when one was saved (never assumed).
+    const iv = (data as any).billing_interval;
+    d.pricing.recurring_offer = {
+      monthly_price: d.pricing.core_price,
+      ...(iv === "monthly" || iv === "quarterly" || iv === "yearly" ? { interval: iv } : {}),
+    };
+    d.pricing.core_price = "";
+  }
   return d;
 }
 

@@ -159,6 +159,8 @@ export interface PricingData {
   premium_upgrade?: PremiumUpgrade;
   guarantee_type: GuaranteeType;
   guarantee_details?: string; // 🆕 explains how the guarantee works
+  /** Descriptive cancellation conditions (Continuity editor; not enforced billing). */
+  cancellation_terms?: string;
   guarantee_custom?: string; // legacy: only used when guarantee_type === "custom" label
 }
 
