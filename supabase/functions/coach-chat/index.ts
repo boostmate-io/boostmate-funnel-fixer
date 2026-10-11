@@ -2530,6 +2530,24 @@ The latest user-role message was generated automatically when the user opened th
 
     await processToolCalls();
 
+    // Non-Core offers: every write card (incl. ones recovered from prose)
+    // must pass the tier-aware gate as a whole batch.
+    if (nonCoreOffer && verifiedOffer) {
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const p: any = parts[i];
+        if (p?.type !== "blueprint_writes") continue;
+        if (writesBlockedForTier) { parts.splice(i, 1); continue; }
+        const gate = gateOfferCoachWrites({
+          tier: verifiedOffer.tier, tabId: offerTabId, design: verifiedOffer.design,
+          writes: (p.writes ?? []).map((w: any) => ({ path: String(w?.path ?? ""), value: w?.value, label: w?.label })),
+        });
+        if (gate.ok) p.writes = gate.writes.map((w) => ({ path: w.path, label: String(w.label ?? w.path), value: w.value }));
+        else { parts.splice(i, 1); rejectedProposalNotes.push(rejectionNote(gate.errors)); }
+      }
+      const note = [...new Set(rejectedProposalNotes)][0];
+      if (note) parts.push({ type: "text", text: note });
+    }
+
     // Field-scope guard: a Coach opened from ONE field may only ever propose a
     // value for that field. Any blueprint_writes recovered from leaked prose is
     // collapsed to the target path (or dropped entirely).
