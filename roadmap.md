@@ -8,11 +8,14 @@
 - [x] Companion Coach above editor; keyboard/mobile interaction, safe close, regression tests and signed-in layout verification
 - [ ] Final real-AI Apply / refresh and physical mobile keyboard checks (manual verification checklist; mocked Apply regression passes)
 - [ ] Link tabs to registry (simple fields first)
-- [ ] Universal Offer Editor (Core tabs + simple editor), no empty records on Add
+- [x] Universal Offer Editor for all six categories; Offer Design opens on the Ecosystem
 - [ ] Coach writes targeted at specific offers; expose recurring/premium fields to Coach
 - [ ] Irresistible Offer Builder
 - [x] Final field matrix for six offer categories (approved)
 - [x] Offer architecture cleanup (options from registry, row type, OfferTier, audits)
 - [x] Tier-aware registry layouts for six categories
 - [x] Low-Ticket editor in the Universal Offer Editor
-- [ ] Next category (awaiting approval)
+- [x] Free, Mid-Ticket, Premium, Continuity editors
+- [x] Relationships Phase 1: workspace integrity, admin RLS, registry slots, hook guards
+- [ ] Relationships Phase 2: editor Ecosystem section (awaiting approval)
+- [ ] Relationships Phase 3: read-only ecosystem display + Growth Architecture hint fix
