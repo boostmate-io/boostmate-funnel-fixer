@@ -19,7 +19,8 @@ export interface ValueCriterion { id: string; dimension: ValueDimension; label: 
 const c = (dimension: ValueDimension, id: string, label: string, question: string): ValueCriterion => ({ id, dimension, label, question });
 
 /** Fixed rubric. Changing it changes every score — treat as versioned. */
-export const VALUE_RUBRIC_VERSION = 1;
+/** v2: stricter evidence rules (SCORING_RULES in operations.ts). */
+export const VALUE_RUBRIC_VERSION = 2;
 export const VALUE_CRITERIA: ValueCriterion[] = [
   c("dream_outcome", "do_specific", "Specific result", "Is the promised result concrete and specific (ideally measurable)?"),
   c("dream_outcome", "do_relevant", "Matters to the audience", "Is it a result this audience strongly wants or urgently needs?"),

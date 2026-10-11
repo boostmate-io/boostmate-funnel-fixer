@@ -2345,8 +2345,47 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_builder_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          session_id: string
+          stage: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          session_id: string
+          stage?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          session_id?: string
+          stage?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_builder_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "offer_builder_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offer_builder_sessions: {
         Row: {
+          completed_at: string | null
           context_confirmed_at: string | null
           created_at: string
           decisions: Json
@@ -2357,6 +2396,7 @@ export type Database = {
           mode: string
           offer_id: string | null
           recommendations: Json
+          result_offer_id: string | null
           stage: string
           status: string
           sub_account_id: string
@@ -2367,6 +2407,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          completed_at?: string | null
           context_confirmed_at?: string | null
           created_at?: string
           decisions?: Json
@@ -2377,6 +2418,7 @@ export type Database = {
           mode: string
           offer_id?: string | null
           recommendations?: Json
+          result_offer_id?: string | null
           stage?: string
           status?: string
           sub_account_id: string
@@ -2387,6 +2429,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          completed_at?: string | null
           context_confirmed_at?: string | null
           created_at?: string
           decisions?: Json
@@ -2397,6 +2440,7 @@ export type Database = {
           mode?: string
           offer_id?: string | null
           recommendations?: Json
+          result_offer_id?: string | null
           stage?: string
           status?: string
           sub_account_id?: string
@@ -2410,6 +2454,13 @@ export type Database = {
           {
             foreignKeyName: "offer_builder_sessions_offer_id_fkey"
             columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_builder_sessions_result_offer_id_fkey"
+            columns: ["result_offer_id"]
             isOneToOne: false
             referencedRelation: "offers"
             referencedColumns: ["id"]

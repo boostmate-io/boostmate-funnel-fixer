@@ -34,9 +34,9 @@ const HONESTY = `Honesty (hard rules): never invent testimonials, results, case 
 const TASK: Record<OfferOperation, string> = {
   understand: "Identify what is KNOWN (stated by the user/Blueprint/offer), ASSUMED (reasonable inference — say why) and MISSING (needed for a strong offer) about: audience, core problem, desired transformation, current offer, delivery approach, positioning. Do not ask about anything already known.",
   diagnose: "Assess EACH Value Equation criterion below as strong | partial | weak | unknown with one short reason. Use unknown when the information isn't available — never mark missing information as weak. Then list strengths, weaknesses and the top 3 highest-impact improvements.",
-  strengthen: "Propose 2–3 concrete options to improve the focus dimension, each with what changes, why it raises perceived value, and the trade-off. Prefer clarity, speed, ease and certainty over adding deliverables.",
-  package: "Construct the offer as field writes for this category ONLY, using the exact paths and allowed values listed. Lists use <listPath>.new_<n>.<key>. Free offers never get a price; paid prices must be positive; Continuity prices are per the chosen billing interval. Also return builder extras (obstacle→solution mapping, pricing rationale, assumptions, audience difference, positioning, bonus reasons).",
-  final_assessment: "Re-assess every Value Equation criterion for the improved offer (strong | partial | weak | unknown, one short reason each), then summarise key decisions, remaining assumptions and next steps.",
+  strengthen: "Using the diagnosis and confirmed facts, pick the 2–4 most important weaknesses (highest impact first: outcome specificity, differentiation, credibility/proof, speed to first result, delivery efficiency, customer effort, support/accountability, obstacles). For each: name the weakness, its Value Equation dimension, why it matters for THIS buyer, and 2–3 genuinely different strategic options — each with what changes, why it raises perceived value and the trade-off (cost, effort, delivery load, risk). Prefer clarity, speed, ease and certainty over adding deliverables; never propose bonuses, resources or services just to inflate perceived value. Never propose proof, results or guarantees the user cannot genuinely back.",
+  package: "Turn the user's confirmed strategic decisions (they are authoritative; rejected areas stay as they are) into one coherent offer. Fill only fields that genuinely belong to this category — do not force every element; add bonuses only where they remove a specific obstacle, and a guarantee only where it is credible for this business. Pricing: a recommendation with its reasoning, clearly separating assumptions from validated information. Construct the offer as field writes for this category ONLY, using the exact paths and allowed values listed. Lists use <listPath>.new_<n>.<key>. Free offers never get a price; paid prices must be positive; Continuity prices are per the chosen billing interval. Also return builder extras (obstacle→solution mapping, pricing rationale, assumptions, audience difference, positioning, bonus reasons).",
+  final_assessment: "Re-assess every Value Equation criterion for the proposed offer (strong | partial | weak | unknown, one short reason each) exactly as strictly as the diagnosis did. A proposed mechanism (e.g. a planned guarantee or milestone) is not proof that it works. The After score does not need to be higher than Before: in scoreChanges explain honestly which dimensions improved, which did not and why. Then summarise key decisions, remaining assumptions and next steps.",
   public_generate: "From the visitor's short answers only, construct ONE offer as field writes (Angle and Stack fields listed below — never pricing fields). Fill at least the offer name, short description, core outcome, framework name/description and 3–5 deliverables. Describe the target audience, the method in 2 sentences and the delivery approach. List key assumptions (anything not stated by the visitor). Pricing: set recommend=false unless the answers support it; if true, give a conservative low/high estimate with reasoning and assumptions — never a market benchmark. Assess each Value Equation criterion for the NEW offer; if the visitor described a current offer, also assess that offer in beforeAssessments (otherwise return an empty list). Give 1–2 strategic insights and exactly 3 improvements. No business data beyond the answers exists.",
 };
 
@@ -51,6 +51,15 @@ function fieldContract(tier: OfferTier, excludePricing = false): string {
       : `- ${f.path} (${f.label})${f.values ? ` allowed: ${f.values.join(", ")}` : ""}`,
   ).join("\n");
 }
+
+/** Scoring discipline (rubric v2): applies to every assessing operation. */
+export const SCORING_RULES = `# Scoring discipline (strict)
+- "strong" requires specific supporting evidence in the provided information (concrete numbers, named mechanisms, user-stated proof). Clear or confident wording alone is never enough.
+- Missing proof is never verified proof: without user-provided results, credentials or experience, pl_proof is weak (if the offer claims results) or unknown (if nothing is said) — never strong.
+- Distinguish proposed delivery mechanisms (what the offer plans to do) from demonstrated effectiveness (what is shown to work). A planned feature can be at most "partial" for criteria about likelihood or proof.
+- If the information to judge a criterion is absent, use "unknown" — do not guess either way.
+- "strong" on every criterion of a dimension requires genuinely strong support for each; most real offers have several partial criteria.
+- Assess what is written, not what the offer could become. Never adjust verdicts to make a before/after comparison look better.`;
 
 const NEEDS_RUBRIC: OfferOperation[] = ["diagnose", "final_assessment", "public_generate"];
 const NEEDS_FIELDS: OfferOperation[] = ["package", "public_generate"];
@@ -68,7 +77,7 @@ export function buildOperationInstructions(op: OfferOperation, ctx: OperationCon
     ctx.mode === "new" && (op === "diagnose" || op === "understand") ? "This is a NEW offer idea, not a proven existing offer. Assess the idea as described; never imply it has a track record." : "",
     HONESTY,
     ctx.tier !== "core" ? renderTierCoachBrief(ctx.tier) : "",
-    NEEDS_RUBRIC.includes(op) ? `# Criteria\n${rubricText()}` : "",
+    NEEDS_RUBRIC.includes(op) ? `# Criteria\n${rubricText()}\n\n${SCORING_RULES}` : "",
     NEEDS_FIELDS.includes(op) ? `# Writable fields for this category\n${fieldContract(ctx.tier, op === "public_generate")}` : "",
   ].filter(Boolean).join("\n\n");
 }
@@ -102,9 +111,9 @@ const extrasSchema = obj({
 export const OPERATION_OUTPUT_SCHEMAS: Record<OfferOperation, Record<string, unknown>> = {
   understand: obj({ known: strArr, assumed: { type: "array", items: obj({ item: str, why: str }) }, missing: { type: "array", items: obj({ item: str, question: str }) } }),
   diagnose: obj({ assessments: assessmentSchema, strengths: strArr, weaknesses: strArr, topImprovements: strArr }),
-  strengthen: obj({ options: { type: "array", items: obj({ title: str, change: str, why: str, tradeoff: str }) } }),
+  strengthen: obj({ items: { type: "array", items: obj({ weakness: str, dimension: { type: "string", enum: [...VALUE_DIMENSIONS] }, whyItMatters: str, options: { type: "array", items: obj({ title: str, change: str, why: str, tradeoff: str }) } }) } }),
   package: obj({ writes: writesSchema, extras: extrasSchema }),
-  final_assessment: obj({ assessments: assessmentSchema, keyDecisions: strArr, remainingAssumptions: strArr, nextSteps: strArr }),
+  final_assessment: obj({ assessments: assessmentSchema, scoreChanges: str, keyDecisions: strArr, remainingAssumptions: strArr, nextSteps: strArr }),
   public_generate: obj({
     writes: writesSchema, assessments: assessmentSchema, beforeAssessments: assessmentSchema,
     audience: str, methodSummary: str, deliveryApproach: str, assumptions: strArr,
@@ -141,9 +150,9 @@ export function validateOperationOutput(op: OfferOperation, raw: unknown): Outpu
   switch (op) {
     case "understand": need("known", isStrArr); need("assumed", Array.isArray); need("missing", Array.isArray); break;
     case "diagnose": checkAssessments(r.assessments, errors); need("strengths", isStrArr); need("weaknesses", isStrArr); need("topImprovements", isStrArr); break;
-    case "strengthen": need("options", (v) => Array.isArray(v) && v.length > 0 && v.every((o: any) => isStr(o?.title) && isStr(o?.change))); break;
+    case "strengthen": need("items", (v) => Array.isArray(v) && v.length > 0 && v.every((it: any) => isStr(it?.weakness) && Array.isArray(it?.options) && it.options.length > 0 && it.options.every((o: any) => isStr(o?.title) && isStr(o?.change)))); break;
     case "package": need("writes", (v) => Array.isArray(v) && v.every((w: any) => isStr(w?.path))); need("extras", (v) => !!v && typeof v === "object"); break;
-    case "final_assessment": checkAssessments(r.assessments, errors); need("keyDecisions", isStrArr); need("nextSteps", isStrArr); break;
+    case "final_assessment": checkAssessments(r.assessments, errors); need("keyDecisions", isStrArr); need("nextSteps", isStrArr); need("remainingAssumptions", isStrArr); break;
     case "public_generate":
       need("writes", (v) => Array.isArray(v) && v.length > 0 && v.every((w: any) => isStr(w?.path)));
       checkAssessments(r.assessments, errors);

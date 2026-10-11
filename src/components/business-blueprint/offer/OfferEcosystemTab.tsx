@@ -21,6 +21,7 @@ import CoreOfferDialog from "./CoreOfferDialog";
 import TierOfferDialog from "./TierOfferDialog";
 import OfferRelationshipsSection from "./OfferRelationshipsSection";
 import CustomerJourneyOverview from "./CustomerJourneyOverview";
+import BuilderSessionsPanel from "@/components/offer-intelligence/BuilderSessionsPanel";
 import { summarizeOfferRelationships } from "@/lib/offers/relationshipSummary";
 import { useOfferRelationships } from "@/lib/growth-architecture/hooks";
 import { useOptionalWorkspace } from "@/contexts/WorkspaceContext";
@@ -212,12 +213,12 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   const navigate = useOptionalNavigate();
   const [startingBuilder, setStartingBuilder] = useState(false);
   // Irresistible Offer Builder: sessions are created server-side (category from the saved offer).
-  const openBuilder = async (target: { offerId: string } | { tier: string }) => {
+  const openBuilder = async (target: { offerId: string } | { tier: string }, forceNew = false) => {
     if (!activeSubAccountId || startingBuilder) return;
     setStartingBuilder(true);
     try {
       if ("offerId" in target) await flushOffer(target.offerId).catch(() => {});
-      const { session } = await startBuilderSession(activeSubAccountId, target);
+      const { session } = await startBuilderSession(activeSubAccountId, target, { forceNew });
       if (navigate) navigate(`/offer-builder/${session.id}`); else window.location.assign(`/offer-builder/${session.id}`);
     } catch (e) {
       toast.error(builderErrorMessage((e as BuilderError).code));
@@ -238,6 +239,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   };
 
   const [editing, setEditing] = useState<{ id: string; isPrimary: boolean } | null>(null);
+  const goToSession = (id: string) => { if (navigate) navigate(`/offer-builder/${id}`); else window.location.assign(`/offer-builder/${id}`); };
   const [editingSimpleId, setEditingSimpleId] = useState<string | null>(null);
   const editingSimple = offers.find((o) => o.id === editingSimpleId) ?? null;
   const [editingTier, setEditingTier] = useState<{ id: string; initial: OfferDesignData } | null>(null);
@@ -341,6 +343,11 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
         </>}
     >
       <div className="space-y-5">
+        <BuilderSessionsPanel subAccountId={activeSubAccountId} busy={startingBuilder}
+          offers={offers.map((o) => ({ id: o.id, name: o.name }))}
+          onOpenSession={goToSession}
+          onStartNew={(bs) => openBuilder(bs.offer_id ? { offerId: bs.offer_id } : { tier: bs.tier }, true)}
+          onOpenOffer={(id) => { const o = offers.find((x) => x.id === id); if (o) openEditor(o); }} />
         <CustomerJourneyOverview
           offers={offers.map((o) => ({ id: o.id, name: o.name, tier: o.tier as any }))}
           rows={relationships.rows}
