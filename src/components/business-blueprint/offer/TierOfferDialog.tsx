@@ -32,7 +32,7 @@ import {
 } from "@shared/blueprintRegistry";
 import { offerEditorField } from "../registryUi";
 import OfferEditorShell, { type OfferEditorTab, type OfferSaveStatus } from "./OfferEditorShell";
-import { OfferCoachScopeProvider, type ScopedOfferCoach, type ScopedPersistResult } from "./OfferCoachScope";
+import { OfferCoachDisabled, OfferCoachScopeProvider, type ScopedOfferCoach, type ScopedPersistResult } from "./OfferCoachScope";
 import OfferStackTab, { type StackBlock } from "./OfferStackTab";
 import PricingTab from "./PricingTab";
 import FrameworkSection from "./FrameworkSection";
@@ -390,8 +390,10 @@ export default function TierOfferDialog({
     };
   });
 
+  const Scope = ({ children }: { children: ReactNode }) =>
+    coachScope ? <OfferCoachScopeProvider value={coachScope}>{children}</OfferCoachScopeProvider> : <OfferCoachDisabled>{children}</OfferCoachDisabled>;
   return (
-    <OfferCoachScopeProvider value={coachScope}>
+    <Scope>
       <OfferEditorShell
         open={open}
         onOpenChange={onOpenChange}
@@ -403,6 +405,6 @@ export default function TierOfferDialog({
         onOpenCoach={openOfferCoach}
         onTabChange={(t) => { tabRef.current = t; }}
       />
-    </OfferCoachScopeProvider>
+    </Scope>
   );
 }
