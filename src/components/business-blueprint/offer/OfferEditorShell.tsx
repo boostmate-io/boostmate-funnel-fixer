@@ -19,10 +19,14 @@ interface Props {
   flushChanges?: () => Promise<boolean>;
   /** Hide the header Coach button (categories without approved Coach support). */
   coachAvailable?: boolean;
+  /** Notified whenever the active tab changes (Coach tab scope). */
+  onTabChange?: (tabId: string) => void;
+  /** Header Coach button handler (defaults to opening the Coach unfocused). */
+  onOpenCoach?: () => void;
 }
 
 /** Presentation only: persistence and field configuration belong to the caller. */
-export default function OfferEditorShell({ open, onOpenChange, offer, tabs, initialTab, saveStatus = "saved", flushChanges, coachAvailable = true }: Props) {
+export default function OfferEditorShell({ open, onOpenChange, offer, tabs, initialTab, saveStatus = "saved", flushChanges, coachAvailable = true, onTabChange, onOpenCoach }: Props) {
   const coach = useOptionalCoach();
   const companion = !!coach?.open;
   const [active, setActive] = useState(initialTab ?? tabs[0]?.id ?? "");
@@ -38,6 +42,9 @@ export default function OfferEditorShell({ open, onOpenChange, offer, tabs, init
   // Tab contents change with typing; reset only on opening / identity changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, offer.id, initialTab]);
+  const onTabChangeRef = useRef(onTabChange);
+  onTabChangeRef.current = onTabChange;
+  useEffect(() => { if (active) onTabChangeRef.current?.(active); }, [active]);
   const close = async () => {
     if (closeLock.current) return;
     closeLock.current = true;
@@ -78,7 +85,7 @@ export default function OfferEditorShell({ open, onOpenChange, offer, tabs, init
                 {offer.primary && <Badge variant="secondary">Primary</Badge>}
               </div>
             </div>
-            {coach && coachAvailable && <Button ref={coachButton} variant="outline" size="icon" className="min-h-11 min-w-11" aria-label={companion ? "Close AI Coach" : "Open AI Coach"} onClick={() => companion ? coach.closeCoach() : coach.openCoach()}><MessageCircle className="h-4 w-4" /></Button>}
+            {coach && coachAvailable && <Button ref={coachButton} variant="outline" size="icon" className="min-h-11 min-w-11" aria-label={companion ? "Close AI Coach" : "Open AI Coach"} onClick={() => companion ? coach.closeCoach() : onOpenCoach ? onOpenCoach() : coach.openCoach()}><MessageCircle className="h-4 w-4" /></Button>}
             <Button variant="ghost" size="icon" className="min-h-11 min-w-11 rounded-full bg-muted/80" aria-label="Close offer editor" disabled={closing} onClick={() => void close()}><X className="h-4 w-4" /></Button>
           </header>
           <Tabs value={active} onValueChange={setActive} className="flex min-h-0 flex-1 flex-col">

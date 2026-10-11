@@ -20,6 +20,20 @@ type CoachTurnOrigin = "user" | "focus";
 
 const isVirtualListPath = (path: string) => /(?:^|\.)new_\d+(?:\.|$)/.test(path);
 
+/** Non-technical message for a failed Coach request (no internals exposed). */
+export async function friendlyCoachError(err: any): Promise<string> {
+  const res = err?.context;
+  const status: number | undefined = typeof res?.status === "number" ? res.status : undefined;
+  let code: string | undefined;
+  try { code = (await res?.clone?.().json?.())?.code; } catch { /* ignore */ }
+  if (code === "offer_conversation_mismatch" || code === "offer_wrong_workspace" || code === "offer_not_found") {
+    return "This offer changed or is no longer available here. Close and reopen the offer to continue.";
+  }
+  if (status === 401) return "Your session expired. Please sign in again.";
+  if (status === 403) return "You don't have access to this workspace's Coach.";
+  return "The Coach is temporarily unavailable. Please try again in a moment.";
+}
+
 /** Which persistent conversation a Coach context belongs to. */
 export function coachConversationKey(context: CoachContext | null): { scope: "global" | "offer"; targetId: string; label: string } {
   const ao = context?.businessContext.activeOffer;
@@ -239,7 +253,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
             locale: currentLocale,
             // Serializable claim; identity is re-verified server-side.
             activeOffer: ao
-              ? { id: ao.id, isPrimary: ao.isPrimary, name: ao.name, tier: ao.tier, draftDesign: ao.getDraftDesign?.(), tabId: ao.tabId }
+              ? { id: ao.id, isPrimary: ao.isPrimary, name: ao.name, tier: ao.tier, draftDesign: ao.getDraftDesign?.(), tabId: ao.getTabId?.() ?? ao.tabId }
               : undefined,
           },
         };
@@ -258,7 +272,7 @@ export function useCoachChat(context: CoachContext | null, enabled: boolean) {
 
         // Stale: the user switched offer/conversation while this was in flight.
         if (liveConvRef.current !== conversationId) return;
-        if (fnErr) throw new Error(fnErr.message);
+        if (fnErr) throw new Error(await friendlyCoachError(fnErr));
         if ((data as any)?.error) throw new Error((data as any).error);
 
         const assistant = (data as any)?.message as CoachMessage | undefined;

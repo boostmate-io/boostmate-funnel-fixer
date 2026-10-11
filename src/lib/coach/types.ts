@@ -121,6 +121,8 @@ export interface CoachActiveOffer {
   getDraftDesign?: () => unknown;
   /** Open editor tab id (server re-validates for the persisted tier). */
   tabId?: string;
+  /** Live active tab (preferred over `tabId`). */
+  getTabId?: () => string | undefined;
 }
 
 export interface CoachContext {
