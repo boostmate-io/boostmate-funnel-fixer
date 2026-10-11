@@ -76,7 +76,7 @@ describe("Mid-Ticket in the Universal Offer Editor", () => {
     expect(within(d).getByPlaceholderText("2500")).toBeTruthy();
     expect(within(d).getByText("What buyers pay for this offer.")).toBeTruthy();
     expect(within(d).queryByText(/main offer/i)).toBeNull();
-    expect(within(d).queryAllByLabelText("Open AI Coach for this field")).toHaveLength(0);
+    expect(within(d).queryAllByLabelText("Open AI Coach for this field").length).toBeGreaterThan(0); // Phase 3: Coach active
   });
   it("every layout item renders a control (no silent gaps)", async () => {
     const d = await open();

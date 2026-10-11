@@ -3,12 +3,21 @@
 // Tabs, sections, field order, status and wording come from the registry's
 // OFFER_TIER_LAYOUTS; fields reuse the existing editor controls (Stack
 // builders, Pricing blocks, FrameworkSection, DeliveryTypePicker).
-// Coach entry points are disabled inside (no approved Coach support yet).
+// The shared Coach is scoped to this offer (ID, real category, live tab);
+// approved writes go through `persistWrites` (per-offer save queue).
 // Persistence belongs to the caller (`onChange` receives the full design).
 // =============================================================================
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ChevronDown, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useOptionalCoach } from "@/contexts/CoachContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { buildBlueprintFieldContext } from "@/lib/coach/buildContext";
+import type { CoachActiveOffer, CoachBlueprintWrite } from "@/lib/coach/types";
+import { offerAiPermission } from "@shared/offerAiPolicy";
+import CoachIconButton from "./CoachIconButton";
+import { applyScopedWrites } from "./useOfferCoach";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +32,7 @@ import {
 } from "@shared/blueprintRegistry";
 import { offerEditorField } from "../registryUi";
 import OfferEditorShell, { type OfferEditorTab, type OfferSaveStatus } from "./OfferEditorShell";
-import { OfferCoachDisabled } from "./OfferCoachScope";
+import { OfferCoachDisabled, OfferCoachScopeProvider, type ScopedOfferCoach, type ScopedPersistResult } from "./OfferCoachScope";
 import OfferStackTab, { type StackBlock } from "./OfferStackTab";
 import PricingTab from "./PricingTab";
 import FrameworkSection from "./FrameworkSection";
@@ -44,6 +53,10 @@ interface Props {
   businessType?: string;
   /** Shared Ecosystem (relationships) section, appended to the registry-chosen tab. */
   ecosystemSection?: ReactNode;
+  /** Persist approved Coach writes to this offer by ID (enables the Coach). */
+  persistWrites?: (writes: CoachBlueprintWrite[]) => Promise<ScopedPersistResult>;
+  /** Bump to re-seed from `initial` after a Coach write. */
+  externalRevision?: number;
 }
 
 const STACK_LIST_BLOCK: Record<string, StackBlock> = {
@@ -63,6 +76,7 @@ const RENDERED_BY_GROUP = new Set(["offer_stack.pricing.guarantee_details"]);
 
 export default function TierOfferDialog({
   open, onOpenChange, tier, categoryLabel, offerId, initial, onChange, saveStatus, flushChanges, businessType, ecosystemSection,
+  persistWrites, externalRevision = 0,
 }: Props) {
   const [data, setData] = useState<OfferDesignData>(initial);
   const dataRef = useRef(data);
@@ -73,6 +87,80 @@ export default function TierOfferDialog({
     // Seed on open / offer switch only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, offerId]);
+
+  // Coach wrote to this offer (saved by ID) — show the merged design.
+  useEffect(() => {
+    if (open && externalRevision) { dataRef.current = initial; setData(initial); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalRevision]);
+
+  const tabRef = useRef<string | null>(null);
+  const coach = useOptionalCoach();
+  const { activeSubAccountId } = useWorkspace();
+  const offerName = data.angle.main_offer_name?.trim() || "this offer";
+  const offerNameRef = useRef(offerName);
+  offerNameRef.current = offerName;
+  const coachScope = useMemo<ScopedOfferCoach | null>(() => persistWrites ? {
+    mode: "scoped", offerId, tier,
+    get offerName() { return offerNameRef.current; },
+    getDesign: () => dataRef.current,
+    getTabId: () => tabRef.current,
+    persistWrites,
+  } as ScopedOfferCoach : null, [offerId, tier, persistWrites]);
+  const activeOffer = (): CoachActiveOffer => ({
+    id: offerId, isPrimary: false, name: offerNameRef.current, tier,
+    getDraftDesign: () => dataRef.current, getTabId: () => tabRef.current ?? undefined,
+  });
+  const coachOn = !!(coach && coachScope && activeSubAccountId);
+  const applyWrites = (writes: CoachBlueprintWrite[]) => applyScopedWrites(coachScope!, writes);
+  const snapshot = () => ({ offer_stack: dataRef.current }) as any;
+
+  /** Field-level Coach (registry-permitted paths only). */
+  const fieldCoach = (path: string, label: string, currentValue: string) => {
+    if (!coachOn || !offerAiPermission(tier, path).write) return null;
+    return (
+      <CoachIconButton compact onClick={() => {
+        const ctx = buildBlueprintFieldContext({ id: path, label, currentValue }, snapshot(), activeSubAccountId!);
+        coach!.openCoach({
+          key: `offer-field:${path}@offer:${offerId}`, label: `${label} — ${offerNameRef.current}`,
+          scope: ctx.scope, intent: ctx.intent, mode: "field", target: ctx.target, blueprintSnapshot: snapshot(),
+          activeOffer: activeOffer(),
+          onApply: (value) => { void applyWrites([{ path, label, value }]).catch(() => {}); },
+          onApplyBlueprintWrites: applyWrites,
+        });
+      }} />
+    );
+  };
+  /** Section-level Coach: this offer + this section's registry fields only. */
+  const sectionCoach = (tabId: string, section: { id: string; label: string; items: OfferLayoutItem[] }) => {
+    if (!coachOn) return null;
+    const paths = section.items.filter((i) => i.kind !== "relationship").map((i) => (i as { path: string }).path);
+    const fields = paths.map((p) => getOfferEditorFieldByPath(p)?.label ?? p);
+    return (
+      <Button type="button" size="sm" variant="ghost" className="h-7 gap-1.5 text-xs text-primary hover:bg-primary/5"
+        aria-label={`AI Coach — ${section.label}`}
+        onClick={() => coach!.openCoach({
+          key: `offer-section:${tabId}.${section.id}@offer:${offerId}`, label: `${section.label} — ${offerNameRef.current}`,
+          scope: "blueprint.section", intent: "freeform", mode: "section",
+          target: { id: `section:offer_${tier}.${tabId}.${section.id}`, label: section.label, kind: "structured", currentValue: null, subBlockId: tabId,
+            helper: `Fields in this section: ${fields.join(", ")}. Only propose changes to these fields (paths: ${paths.join(", ")}).` },
+          blueprintSnapshot: snapshot(), activeOffer: activeOffer(), onApplyBlueprintWrites: applyWrites,
+        })}>
+        <Sparkles className="w-3.5 h-3.5" /><span>AI Coach</span>
+      </Button>
+    );
+  };
+  const openOfferCoach = coachOn ? () => coach!.openCoach({
+    key: `offer:${offerId}`, label: offerNameRef.current, scope: "global", mode: "general",
+    blueprintSnapshot: snapshot(), activeOffer: activeOffer(), onApplyBlueprintWrites: applyWrites,
+  }) : undefined;
+  /** Label row with an optional field Coach button. */
+  const labelRow = (path: string, label: ReactNode, plainLabel: string, value: string, htmlFor?: string, labelId?: string) => (
+    <div className="flex items-center justify-between gap-2 mb-1">
+      <Label htmlFor={htmlFor} id={labelId} className="text-xs font-medium text-muted-foreground block">{label}</Label>
+      {fieldCoach(path, plainLabel, value)}
+    </div>
+  );
 
   // An empty name never overwrites the saved offer: edits are held locally
   // (with inline validation) and persist together once a valid name exists.
@@ -135,7 +223,7 @@ export default function TierOfferDialog({
     if (path === "offer_stack.stack.delivery_types") {
       return (
         <div key={path}>
-          <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1.5 block">{copy.label}</Label>
+          {labelRow(path, copy.label, copy.label, (data.stack.delivery_types ?? []).join(", "), id)}
           <DeliveryTypePicker value={data.stack.delivery_types ?? []} onChange={(v) => updateStack({ delivery_types: v })} placeholder={copy.placeholder} />
         </div>
       );
@@ -145,7 +233,7 @@ export default function TierOfferDialog({
       const v = String(data.angle.premium_mode ?? "");
       return (
         <div key={path}>
-          <Label className="text-xs font-medium text-muted-foreground mb-1 block" id={`${id}-label`}>{copy.label}</Label>
+          {labelRow(path, copy.label, copy.label, v, undefined, `${id}-label`)}
           {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
           <ToggleGroup type="single" variant="outline" aria-labelledby={`${id}-label`} value={v}
             onValueChange={(nv) => { if (nv) updateAngle({ premium_mode: nv }); }} className="justify-start flex-wrap">
@@ -158,7 +246,7 @@ export default function TierOfferDialog({
       const v = data.stack.touch_level ?? [];
       return (
         <div key={path}>
-          <Label className="text-xs font-medium text-muted-foreground mb-1 block" id={`${id}-label`}>{copy.label}</Label>
+          {labelRow(path, copy.label, copy.label, v.join(", "), undefined, `${id}-label`)}
           {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
           <ToggleGroup type="multiple" variant="outline" aria-labelledby={`${id}-label`} value={v}
             onValueChange={(nv) => updateStack({ touch_level: nv })} className="justify-start flex-wrap">
@@ -171,7 +259,7 @@ export default function TierOfferDialog({
       const v = String(data.angle.offer_format ?? "");
       return (
         <div key={path}>
-          <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1 block">{copy.label}</Label>
+          {labelRow(path, copy.label, copy.label, v, id)}
           {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
           <select
             id={id}
@@ -190,7 +278,7 @@ export default function TierOfferDialog({
       const v = String(data.pricing.recurring_offer?.interval ?? "");
       return (
         <div key={path}>
-          <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1 block">{copy.label}</Label>
+          {labelRow(path, copy.label, copy.label, v, id)}
           {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
           <select id={id} value={v}
             onChange={(e) => updatePricing({ recurring_offer: { ...(dataRef.current.pricing.recurring_offer ?? {}), interval: (e.target.value || undefined) as any } })}
@@ -205,7 +293,7 @@ export default function TierOfferDialog({
       const raw = data.pricing.recurring_offer?.monthly_price;
       return (
         <div key={path}>
-          <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1 block">{copy.label}</Label>
+          {labelRow(path, copy.label, copy.label, raw === "" || raw == null ? "" : String(raw), id)}
           {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
           <Input id={id} type="number" inputMode="decimal" min={0} value={raw === "" || raw == null ? "" : String(raw)}
             onChange={(e) => {
@@ -225,7 +313,7 @@ export default function TierOfferDialog({
         : updatePricing({ [key]: v } as Partial<PricingData>);
       return (
         <div key={path}>
-          <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1 block">{copy.label}</Label>
+          {labelRow(path, copy.label, copy.label, value, id)}
           {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
           {def?.kind === "textarea"
             ? <AutoTextarea id={id} value={value} onChange={(e) => set(e.target.value)} placeholder={copy.placeholder} rows={2} className="resize-none text-sm" />
@@ -242,9 +330,7 @@ export default function TierOfferDialog({
     const invalid = required && nameMissing;
     return (
       <div key={path}>
-        <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1 block">
-          {copy.label}{required && <span className="text-destructive ml-0.5" aria-hidden>*</span>}
-        </Label>
+        {labelRow(path, <>{copy.label}{required && <span className="text-destructive ml-0.5" aria-hidden>*</span>}</>, copy.label, value, id)}
         {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
         {def?.kind === "textarea" ? (
           <AutoTextarea id={id} value={value} onChange={(e) => set(e.target.value)} placeholder={copy.placeholder} rows={2} className="resize-none text-sm" />
@@ -279,7 +365,10 @@ export default function TierOfferDialog({
               : FRAMEWORK_PATHS.has(i.path) ? "framework" : RENDERED_BY_GROUP.has(i.path) ? "" : i.path).filter(Boolean)).size;
             return (
               <section key={section.id} data-offer-section={section.id} className="space-y-3">
-                <h3 className="text-base font-display font-bold text-foreground">{section.label}</h3>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-base font-display font-bold text-foreground">{section.label}</h3>
+                  {sectionCoach(tab.id, section)}
+                </div>
                 {main.map((i) => renderItem(i, rendered))}
                 {extra.length > 0 && (
                   <Collapsible>
@@ -301,8 +390,7 @@ export default function TierOfferDialog({
     };
   });
 
-  return (
-    <OfferCoachDisabled>
+  const shell = (
       <OfferEditorShell
         open={open}
         onOpenChange={onOpenChange}
@@ -310,8 +398,12 @@ export default function TierOfferDialog({
         tabs={tabs}
         saveStatus={saveStatus}
         flushChanges={flushChanges}
-        coachAvailable={false}
+        coachAvailable={coachOn}
+        onOpenCoach={openOfferCoach}
+        onTabChange={(t) => { tabRef.current = t; }}
       />
-    </OfferCoachDisabled>
   );
+  return coachScope
+    ? <OfferCoachScopeProvider value={coachScope}>{shell}</OfferCoachScopeProvider>
+    : <OfferCoachDisabled>{shell}</OfferCoachDisabled>;
 }

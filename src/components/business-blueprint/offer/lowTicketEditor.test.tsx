@@ -87,12 +87,10 @@ describe("Low-Ticket opens in the Universal Offer Editor", () => {
     expect(within(dialog).getByText("Risk Reversal / Guarantee")).toBeTruthy();
   });
 
-  it("has no Coach entry points", async () => {
+  it("exposes Coach entry points (Phase 3)", async () => {
     const dialog = await openLowTicket();
     within(dialog).getAllByText("More options").forEach((m) => fireEvent.click(m));
-    expect(within(dialog).queryAllByLabelText("Open AI Coach for this field")).toHaveLength(0);
-    expect(within(dialog).queryByLabelText("Open AI Coach")).toBeNull();
-    expect(within(dialog).queryByText("AI Coach")).toBeNull();
+    expect(within(dialog).queryAllByLabelText("Open AI Coach for this field").length).toBeGreaterThan(0); // Phase 3: Coach active
   });
 });
 

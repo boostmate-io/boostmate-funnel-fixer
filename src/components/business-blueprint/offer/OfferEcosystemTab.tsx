@@ -4,7 +4,8 @@
 // Delivery Type. Primary purpose removed.
 // =============================================================================
 
-import { useEffect, useState } from "react";
+import type { CoachBlueprintWrite } from "@/lib/coach/types";
+import { useCallback, useEffect, useState } from "react";
 import {
   Network, Sparkles, Plus,
 } from "lucide-react";
@@ -193,6 +194,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   const bt = getBusinessType(businessType);
   const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer, applyCoachWrites, saveStatuses } = useEcosystemOffers({ blueprintId });
   const [coachRevision, setCoachRevision] = useState(0);
+  const [tierRevision, setTierRevision] = useState(0);
   const activeSubAccountId = useOptionalWorkspace()?.activeSubAccountId ?? null;
   const relationships = useOfferRelationships(activeSubAccountId);
   // Relationships save immediately via their own hook — never via design autosave.
@@ -221,6 +223,14 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   const editingSimple = offers.find((o) => o.id === editingSimpleId) ?? null;
   const [editingTier, setEditingTier] = useState<{ id: string; initial: OfferDesignData } | null>(null);
   const editingTierRow = editingTier ? offers.find((o) => o.id === editingTier.id) ?? null : null;
+  const editingTierId = editingTier?.id ?? null;
+  // Approved Coach writes for the open non-Core offer: captured by ID, saved via the per-offer queue.
+  const persistTierWrites = useCallback(async (writes: CoachBlueprintWrite[]) => {
+    if (!editingTierId) return { appliedPaths: [], rejected: writes.map((write) => ({ write, reason: "offer_not_found" as const })), saved: false };
+    const res = await applyCoachWrites(editingTierId, writes);
+    if (res.appliedPaths.length) setTierRevision((r) => r + 1);
+    return res;
+  }, [editingTierId, applyCoachWrites]);
 
   /** Open the existing editor that fits this offer (Core dialog vs. field dialog). */
   const openEditor = (offer: EcosystemOfferRow) => {
@@ -481,7 +491,9 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
           tier={editingTierRow.tier}
           categoryLabel={ECOSYSTEM_TIERS.find((t) => t.id === editingTierRow.tier)?.label ?? "Offer"}
           offerId={editingTierRow.id}
-          initial={editingTier.initial}
+          initial={tierRevision ? designForRow(editingTierRow) : editingTier.initial}
+          persistWrites={persistTierWrites}
+          externalRevision={tierRevision}
           onChange={(next) => {
             const row = offers.find((o) => o.id === editingTier.id);
             // Design is the source of truth; summary fields are derived from it.

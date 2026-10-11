@@ -27,6 +27,8 @@ export interface ScopedOfferCoach {
   offerName: string;
   /** Actual offer category (server re-verifies; never used for authorization). */
   tier?: string;
+  /** Active editor tab id, read at send time (server re-validates it). */
+  getTabId?: () => string | null;
   /** Latest design of the scoped offer (read at call time) — Coach context. */
   getDesign: () => OfferDesignData;
   /**
