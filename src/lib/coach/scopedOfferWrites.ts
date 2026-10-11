@@ -106,8 +106,8 @@ function applyTierOfferWrites(
   const base = structuredClone(design ?? {}) as any;
   const resolved = resolveVirtualListPaths(base, writes ?? []);
   const res = validateOfferAiWrites({ tier, tabId, design: base, writes: resolved });
-  if (!res.ok) {
-    const bad = new Map(res.errors.map((e) => [e.path, e.reason]));
+  if ("errors" in res) {
+    const bad = new Map<string, string>(res.errors.map((e) => [e.path, e.reason]));
     return {
       next: design,
       applied: [],
@@ -119,6 +119,7 @@ function applyTierOfferWrites(
       })),
     };
   }
+  if (!("design" in res)) return { next: design, applied: [], rejected: [] };
   ensureListIds(res.design);
   return { next: res.design as OfferDesignData, applied: [...(writes ?? [])], rejected: [] };
 }

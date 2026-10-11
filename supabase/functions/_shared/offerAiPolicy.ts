@@ -286,7 +286,7 @@ export function gateOfferCoachWrites(input: {
 }): { ok: true; writes: { path: string; value: string; label?: string }[] } | { ok: false; errors: WriteError[] } {
   const resolved = resolveVirtualListPaths(input.design, input.writes);
   const res = validateOfferAiWrites({ tier: input.tier, tabId: input.tabId, design: input.design, writes: resolved });
-  if (!res.ok) return res;
+  if ("errors" in res) return { ok: false, errors: res.errors };
   return {
     ok: true,
     writes: input.writes.map((w, i) => ({ ...w, value: writeValueToString(res.applied[i].value) })),
