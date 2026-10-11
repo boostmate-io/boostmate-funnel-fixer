@@ -17,8 +17,8 @@ const und = toUnderstanding({
 const base = { stage: "understand" as const, status: "active", understanding: null, context_confirmed_at: null, diagnosis: null };
 
 describe("stages", () => {
-  it("only A and B are available; C–E unreachable", () => {
-    expect(BUILDER_STAGES.filter((s) => s.available).map((s) => s.id)).toEqual(["understand", "diagnose"]);
+  it("all five stages available; C–E gated by earlier work", () => {
+    expect(BUILDER_STAGES.filter((s) => s.available).map((s) => s.id)).toEqual(["understand", "diagnose", "strengthen", "package", "final"]);
     for (const t of ["strengthen", "package", "final"] as const) expect(canEnterStage({ ...base, understanding: und, context_confirmed_at: "x" }, t)).toBe(false);
   });
   it("diagnose requires analysed + confirmed context; closed sessions locked", () => {
@@ -31,7 +31,7 @@ describe("stages", () => {
     const s = { ...base, understanding: und, context_confirmed_at: "t", stage: "diagnose" as const };
     expect(stageState(s, "understand")).toBe("completed");
     expect(stageState(s, "diagnose")).toBe("active");
-    expect(stageState(s, "package")).toBe("unavailable");
+    expect(stageState(s, "package")).toBe("upcoming");
   });
 });
 
