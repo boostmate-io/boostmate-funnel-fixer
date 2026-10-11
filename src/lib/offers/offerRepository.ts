@@ -98,8 +98,11 @@ export function designToRowValues(
   design: OfferDesignData,
   existing: { name?: string; data?: Record<string, unknown> },
   fallbackName = "Untitled Core Offer",
+  tier?: string,
 ) {
   const s = summarizeOfferDesign(design);
+  // Free offers always summarize as free (0); hidden design pricing is kept as-is.
+  if (tier === "free") s.price = 0;
   return {
     name: s.name || existing.name || fallbackName,
     data: { ...summaryToRowData(existing.data, s), design },

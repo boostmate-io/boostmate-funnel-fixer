@@ -36,7 +36,7 @@ import { getBusinessType } from "../businessTypes";
 import { designForRow, designToRowValues } from "@/lib/offers/offerRepository";
 
 /** Non-Core categories already served by the Universal Offer Editor. */
-const UNIVERSAL_EDITOR_TIERS: EcosystemTier[] = ["low_ticket"];
+const UNIVERSAL_EDITOR_TIERS: EcosystemTier[] = ["free", "low_ticket"];
 import type { OfferSaveStatus } from "./OfferEditorShell";
 
 
@@ -465,7 +465,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
           onChange={(next) => {
             const row = offers.find((o) => o.id === editingTier.id);
             // Design is the source of truth; summary fields are derived from it.
-            if (row) void updateOffer(row.id, designToRowValues(next, row as any, "Untitled Offer") as any);
+            if (row) void updateOffer(row.id, designToRowValues(next, row as any, "Untitled Offer", row.tier) as any);
           }}
           saveStatus={saveStatuses[editingTierRow.id] ?? "saved"}
           flushChanges={() => flushOffer(editingTierRow.id)}
