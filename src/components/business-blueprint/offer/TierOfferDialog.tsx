@@ -100,6 +100,11 @@ export default function TierOfferDialog({
         <FrameworkSection key="framework" value={data.angle.framework} onChange={(framework) => updateAngle({ framework })} />
       );
     }
+    if (path === "offer_stack.stack.delivery_timeline") {
+      return (
+        <OfferStackTab key={path} bare only={["timeline"]} data={data.stack} onChange={updateStack} saving={false} businessType={businessType} embedded />
+      );
+    }
     if (item.kind === "list" && STACK_LIST_BLOCK[path]) {
       return (
         <OfferStackTab key={path} bare only={[STACK_LIST_BLOCK[path]]} data={data.stack} onChange={updateStack} saving={false} businessType={businessType} embedded />
