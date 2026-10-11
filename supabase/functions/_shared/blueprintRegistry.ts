@@ -1761,15 +1761,7 @@ export function renderBlueprintStructurePrompt(): string {
 // -----------------------------------------------------------------------------
 
 /** Approved delivery-type values (mirrors the editor library; drift-tested). */
-export const DELIVERY_TYPE_VALUES: string[] = [
-  "Templates", "Ebooks", "Scripts", "Checklists", "Guides", "Swipe Files",
-  "Vaults", "Calculators", "Calendars", "Workbooks", "Frameworks", "SOPs",
-  "Resource Lists", "Blueprints", "Roadmaps", "Playbooks",
-  "Transformations", "VSL", "Customer Results", "Webinars", "BTS",
-  "Project Walkthroughs", "Breakdowns", "Reports", "Deep Dives", "Documentary",
-  "Masterclasses", "Trainings", "Workshops", "Tutorials", "Events",
-  "Video Courses", "Summits", "Cohorts", "Bootcamps", "Guest Experts",
-];
+export const DELIVERY_TYPE_VALUES: string[] = ["Templates", "Ebooks", "Scripts", "Checklists", "Guides", "Swipe Files", "Vaults", "Calculators", "Calendars", "Workbooks", "Frameworks", "SOPs", "Resource Lists", "Blueprints", "Roadmaps", "Playbooks", "Transformations", "VSL", "Customer Results", "Webinars", "BTS", "Project Walkthroughs", "Breakdowns", "Reports", "Deep Dives", "Documentary", "Masterclasses", "Trainings", "Workshops", "Tutorials", "Events", "Video Courses", "Summits", "Cohorts", "Bootcamps", "Guest Experts", "Private Community", "Challenges", "Gamified Assignments", "Awards", "Certifications", "Accountability Groups", "VIP Groups", "Masterminds", "Progress Tracking", "Meetups", "Interviews", "Onboarding Calls", "Kickoff Calls", "1:1 Coaching Calls", "Consulting Calls", "Implementation Calls", "Q&A Calls", "Walkthrough Calls", "Mastermind Calls", "Group Calls", "Feedback Calls", "Intensives"];
 
 export interface OfferTierAiPolicy {
   /**
