@@ -69,6 +69,7 @@ describe("Mid-Ticket in the Universal Offer Editor", () => {
     goTab(d, "Offer Stack");
     expect(sections(d)).toEqual(layout[1].sections.map((s) => s.id));
     expand(d);
+    console.log("STACKTXT", d.querySelector("[role=tabpanel][data-state=active]")?.textContent?.slice(0,800));
     for (const t of ["Core Deliverables", "Templates & Resources", "Bonuses", "Milestones"]) expect(within(d).getAllByText(t).length).toBeGreaterThan(0);
     goTab(d, "Pricing");
     expect(sections(d)).toEqual(layout[2].sections.map((s) => s.id));
