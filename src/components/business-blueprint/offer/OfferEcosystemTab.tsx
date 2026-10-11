@@ -40,6 +40,11 @@ import {
 import { useEcosystemOffers, type EcosystemOfferRow } from "../useEcosystemOffers";
 import { getBusinessType } from "../businessTypes";
 import { designForRow, designToRowValues } from "@/lib/offers/offerRepository";
+import { startBuilderSession, builderErrorMessage, type BuilderError } from "@/lib/offers/offerBuilder";
+import { useInRouterContext, useNavigate } from "react-router-dom";
+
+// Router-optional navigate (some tests render the tab without a Router).
+const useOptionalNavigate = () => (useInRouterContext() ? useNavigate() : null); // eslint-disable-line react-hooks/rules-of-hooks
 
 /** Non-Core categories already served by the Universal Offer Editor. */
 const UNIVERSAL_EDITOR_TIERS: EcosystemTier[] = ["free", "low_ticket", "mid_ticket", "premium", "continuity"];
@@ -204,6 +209,20 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
       relationships={relationships} />
   ) : null;
   const progress = calcEcosystemProgress(tierCounts);
+  const navigate = useOptionalNavigate();
+  const [startingBuilder, setStartingBuilder] = useState(false);
+  // Irresistible Offer Builder: sessions are created server-side (category from the saved offer).
+  const openBuilder = async (target: { offerId: string } | { tier: string }) => {
+    if (!activeSubAccountId || startingBuilder) return;
+    setStartingBuilder(true);
+    try {
+      if ("offerId" in target) await flushOffer(target.offerId).catch(() => {});
+      const { session } = await startBuilderSession(activeSubAccountId, target);
+      if (navigate) navigate(`/offer-builder/${session.id}`); else window.location.assign(`/offer-builder/${session.id}`);
+    } catch (e) {
+      toast.error(builderErrorMessage((e as BuilderError).code));
+    } finally { setStartingBuilder(false); }
+  };
   const { openCoach, openListCoach, panel } = useOfferCoach(() => ({ offer_ecosystem: offers }));
 
   const appendEcosystemOffer = async (tier: EcosystemTier, item: Record<string, string>) => {
@@ -347,6 +366,11 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                   <p className="text-xs text-muted-foreground mt-0.5">{tier.description}</p>
                   <p className="text-[11px] text-muted-foreground/70 mt-0.5 italic">{tier.examples}</p>
                 </div>
+                <Button size="sm" variant="ghost" onClick={() => openBuilder({ tier: tier.id })}
+                  disabled={!blueprintId || startingBuilder} className="h-8 gap-1.5 text-xs text-primary hover:bg-primary/5 shrink-0">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Build with AI
+                </Button>
                 {isCoreSection ? (
                   <Button
                     size="sm"
@@ -439,6 +463,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                         cur={cur}
                         onEdit={() => openEditor(offer)}
                         onDelete={() => deleteOffer(offer.id)}
+                        onStrengthen={activeSubAccountId ? () => openBuilder({ offerId: offer.id }) : undefined}
                         relationships={relationships.loadFailed ? [] : summarizeOfferRelationships(offer.id, relationships.rows, (id) => offers.find((o) => o.id === id)?.name)}
                       />
                     ))}

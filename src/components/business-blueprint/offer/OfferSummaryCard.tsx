@@ -4,6 +4,7 @@
 // produced by summarizeOfferDesign during sync/save). No inputs.
 // =============================================================================
 
+import { Sparkles } from "lucide-react";
 import { Lock, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,8 @@ interface Props {
   cur: string;
   onEdit: () => void;
   onDelete: () => void;
+  /** Opens the Irresistible Offer Builder for this offer. */
+  onStrengthen?: () => void;
   /** Read-only relationship lines (registry labels); omitted when none. */
   relationships?: { key: string; text: string }[];
 }
@@ -31,7 +34,7 @@ function priceLabel(offer: EcosystemOfferRow, cur: string): string | null {
 
 const MAX_REL_LINES = 2;
 
-const OfferSummaryCard = ({ offer, cur, onEdit, onDelete, relationships = [] }: Props) => {
+const OfferSummaryCard = ({ offer, cur, onEdit, onDelete, onStrengthen, relationships = [] }: Props) => {
   const isPrimary = offer.source === "blueprint_core";
   const canDelete = !isPrimary;
   const name = (offer.name || "").trim();
@@ -110,6 +113,13 @@ const OfferSummaryCard = ({ offer, cur, onEdit, onDelete, relationships = [] }: 
       )}
 
       <div className="mt-auto pt-3 flex items-center justify-end gap-1">
+        {onStrengthen && (
+          <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs text-primary hover:bg-primary/5"
+            onClick={(e) => { e.stopPropagation(); onStrengthen(); }}>
+            <Sparkles className="w-3 h-3" />
+            Strengthen with AI
+          </Button>
+        )}
         <Button
           size="sm"
           variant="outline"

@@ -7,12 +7,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { validatePublicOfferInput, publicInputToContext } from "../_shared/offerIntelligence/publicInput.ts";
-import { buildOperationInstructions, buildOperationInput, OPERATION_OUTPUT_SCHEMAS } from "../_shared/offerIntelligence/operations.ts";
+import { runOfferOperation } from "../_shared/offerIntelligence/aiCall.ts";
 import {
   buildPublicResult, toPublicPreview, decideRateLimit, looksLikeBot, DEFAULT_RATE_LIMITS, EMAIL_RE, CONSENT_TEXT_VERSION,
 } from "../_shared/offerIntelligence/publicResult.ts";
 
-const MODEL = "google/gemini-2.5-flash"; // cost-conscious, same family as the public assessment
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -71,33 +70,10 @@ Deno.serve(async (req) => {
     return json({ error }, status);
   };
 
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) return fail(500, "ai_not_configured");
   const ctx = publicInputToContext(parsed.input);
-  let aiResp: Response;
-  try {
-    aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: MODEL, temperature: 0.4, max_tokens: 3000,
-        messages: [
-          { role: "system", content: buildOperationInstructions("public_generate", ctx) + (parsed.input.locale === "nl" ? "\n\nWrite all text in Dutch." : "") },
-          { role: "user", content: buildOperationInput(ctx) },
-        ],
-        tools: [{ type: "function", function: { name: "deliver_offer", description: "Return the generated offer", parameters: OPERATION_OUTPUT_SCHEMAS.public_generate } }],
-        tool_choice: { type: "function", function: { name: "deliver_offer" } },
-      }),
-    });
-  } catch { return fail(502, "ai_unavailable"); }
-  if (aiResp.status === 429) return fail(429, "ai_busy");
-  if (aiResp.status === 402) return fail(503, "ai_unavailable");
-  if (!aiResp.ok) { console.error("offer-generator ai", aiResp.status, await aiResp.text()); return fail(502, "ai_failed"); }
-  let raw: unknown;
-  try {
-    const data = await aiResp.json();
-    raw = JSON.parse(data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ?? "null");
-  } catch { return fail(502, "ai_malformed"); }
+  const ai = await runOfferOperation("public_generate", ctx, parsed.input.locale === "nl" ? { extraInstructions: "Write all text in Dutch." } : {});
+  if (!ai.ok) return fail(ai.status, ai.error);
+  const raw = ai.raw;
   const built = buildPublicResult(raw, { hasCurrentOffer: !!parsed.input.currentOffer });
   if (!built.ok) { console.warn("offer-generator invalid", built.reason, JSON.stringify(built.detail ?? "").slice(0, 500)); return fail(502, "ai_invalid"); }
   await admin.from("public_offer_generations").update({ status: "complete", result: built.result }).eq("id", row.id);

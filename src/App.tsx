@@ -19,6 +19,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import OAuthConsent from "./pages/OAuthConsent.tsx";
 import OfferGenerator from "./pages/OfferGenerator";
+import OfferBuilder from "./pages/OfferBuilder";
 import PublicAssessment from "./pages/PublicAssessment.tsx";
 import RedirectSlug from "./pages/RedirectSlug.tsx";
 
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/r/:slug" element={<RedirectSlug />} />
           
           <Route path="/.lovable/oauth/consent" element={<WithAuth><OAuthConsent /></WithAuth>} />
+          <Route path="/offer-builder/:sessionId" element={<WithAuth><ProtectedRoute><OfferBuilder /></ProtectedRoute></WithAuth>} />
           <Route path="/dashboard" element={
             <WithAuth>
               <ProtectedRoute>

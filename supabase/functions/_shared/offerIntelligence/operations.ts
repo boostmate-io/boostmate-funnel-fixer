@@ -23,6 +23,10 @@ export interface OperationContext {
   design?: Record<string, unknown> | null;
   /** strengthen: the dimension to work on. */
   focusDimension?: string;
+  /** Read-only summary of the workspace's other offers (authenticated only). */
+  ecosystem?: string | null;
+  /** "new" = assessing an idea, not a proven existing offer. */
+  mode?: "new" | "existing";
 }
 
 const HONESTY = `Honesty (hard rules): never invent testimonials, results, case studies, revenue, conversion rates, competitor details, market prices or validation. Separate user-provided facts from assumptions; label assumptions. Prices you suggest are estimates, never market benchmarks. More deliverables do not equal more value.`;
@@ -61,6 +65,7 @@ export function buildOperationInstructions(op: OfferOperation, ctx: OperationCon
     "You are an experienced offer strategist applying the Value Equation (Dream Outcome, Perceived Likelihood, Speed to Value, Ease of Achievement).",
     `# Task: ${op}\n${TASK[op]}`,
     op === "strengthen" && ctx.focusDimension ? `Focus dimension: ${ctx.focusDimension}` : "",
+    ctx.mode === "new" && (op === "diagnose" || op === "understand") ? "This is a NEW offer idea, not a proven existing offer. Assess the idea as described; never imply it has a track record." : "",
     HONESTY,
     ctx.tier !== "core" ? renderTierCoachBrief(ctx.tier) : "",
     NEEDS_RUBRIC.includes(op) ? `# Criteria\n${rubricText()}` : "",
@@ -74,6 +79,7 @@ export function buildOperationInput(ctx: OperationContext): string {
   if (ctx.facts) parts.push(`# Provided answers\n${JSON.stringify(ctx.facts, null, 2)}`);
   if (ctx.source === "workspace" && ctx.blueprint) parts.push(`# Business Blueprint\n${JSON.stringify(ctx.blueprint, null, 2)}`);
   if (ctx.design) parts.push(`# Current offer design\n${JSON.stringify(ctx.design, null, 2)}`);
+  if (ctx.source === "workspace" && ctx.ecosystem) parts.push(`# Other offers (read-only)\n${ctx.ecosystem}`);
   return parts.join("\n\n") || "(no information provided)";
 }
 

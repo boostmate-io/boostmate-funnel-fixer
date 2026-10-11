@@ -2345,6 +2345,84 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_builder_sessions: {
+        Row: {
+          context_confirmed_at: string | null
+          created_at: string
+          decisions: Json
+          diagnosis: Json | null
+          draft_design: Json | null
+          id: string
+          intake: Json
+          mode: string
+          offer_id: string | null
+          recommendations: Json
+          stage: string
+          status: string
+          sub_account_id: string
+          tier: string
+          understanding: Json | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          context_confirmed_at?: string | null
+          created_at?: string
+          decisions?: Json
+          diagnosis?: Json | null
+          draft_design?: Json | null
+          id?: string
+          intake?: Json
+          mode: string
+          offer_id?: string | null
+          recommendations?: Json
+          stage?: string
+          status?: string
+          sub_account_id: string
+          tier: string
+          understanding?: Json | null
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          context_confirmed_at?: string | null
+          created_at?: string
+          decisions?: Json
+          diagnosis?: Json | null
+          draft_design?: Json | null
+          id?: string
+          intake?: Json
+          mode?: string
+          offer_id?: string | null
+          recommendations?: Json
+          stage?: string
+          status?: string
+          sub_account_id?: string
+          tier?: string
+          understanding?: Json | null
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_builder_sessions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_builder_sessions_sub_account_id_fkey"
+            columns: ["sub_account_id"]
+            isOneToOne: false
+            referencedRelation: "sub_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offer_relationships: {
         Row: {
           created_at: string
