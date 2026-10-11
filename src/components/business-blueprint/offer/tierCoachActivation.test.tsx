@@ -73,7 +73,7 @@ describe("field + section assistance", () => {
     expect(focus.activeOffer.id).toBe(ID);
     focus.onApply("upgrade");
     await Promise.resolve();
-    expect(persist).toHaveBeenCalledWith([{ path: "offer_stack.angle.premium_mode", label: "Premium Type", value: "upgrade" }]);
+    expect(persist).toHaveBeenCalledWith([{ path: "offer_stack.angle.premium_mode", label: "Premium Type", value: "upgrade" }], expect.objectContaining({ tabId: "angle", baseDesign: expect.any(Object) }));
   });
 
   it("Continuity recurring price + billing interval + cancellation terms have field Coach", () => {

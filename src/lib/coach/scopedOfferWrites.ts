@@ -10,7 +10,7 @@
 import type { OfferDesignData } from "@/components/business-blueprint/offerDesignTypes";
 import type { CoachBlueprintWrite } from "./types";
 import { coerceForPath, isWritablePath, setDeep } from "./applyBlueprintWrites";
-import { resolveVirtualListPaths, validateOfferAiWrites } from "@shared/offerAiPolicy";
+import { offerAiPermission, resolveVirtualListPaths, validateOfferAiWrites, validTierTab } from "@shared/offerAiPolicy";
 
 const OFFER_ROOT = "offer_stack";
 const DESIGN_SECTIONS = new Set(["angle", "stack", "pricing"]);
@@ -19,7 +19,10 @@ export type ScopedRejectReason =
   | "not_offer_design_path"
   | "not_writable"
   | "invalid_value"
-  | "invalid_list_index";
+  | "invalid_list_index"
+  | "tab_unknown"
+  | "wrong_tab"
+  | "name_required";
 
 export interface ScopedWriteResult {
   next: OfferDesignData;
@@ -122,4 +125,21 @@ function applyTierOfferWrites(
   if (!("design" in res)) return { next: design, applied: [], rejected: [] };
   ensureListIds(res.design);
   return { next: res.design as OfferDesignData, applied: [...(writes ?? [])], rejected: [] };
+}
+
+/**
+ * Client-side approval guard for non-Core editors (mirrors the server):
+ * the open tab must be a real tab of this category, every write must belong
+ * to that tab, and an unnamed offer is never saved by a Coach approval.
+ * Missing/invalid tab never broadens permissions — it blocks.
+ */
+export function checkTierApproval(input: {
+  tier: string; tabId: string | null | undefined; design: OfferDesignData; writes: CoachBlueprintWrite[];
+}): "tab_unknown" | "wrong_tab" | "name_required" | null {
+  const tab = validTierTab(input.tier, input.tabId);
+  if (!tab) return "tab_unknown";
+  const resolved = resolveVirtualListPaths(structuredClone(input.design ?? {}) as any, input.writes ?? []);
+  if (resolved.some((w) => !offerAiPermission(input.tier, w.path, tab).write)) return "wrong_tab";
+  if (!input.design?.angle?.main_offer_name?.trim()) return "name_required";
+  return null;
 }

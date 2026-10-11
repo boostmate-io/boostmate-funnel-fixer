@@ -19,6 +19,8 @@ export interface ScopedPersistResult {
   rejected: { write: CoachBlueprintWrite; reason: ScopedRejectReason | "offer_not_found" }[];
   /** True only when the accepted writes were saved to the database. */
   saved: boolean;
+  /** Merged design that was saved (when applied). */
+  design?: OfferDesignData;
 }
 
 export interface ScopedOfferCoach {

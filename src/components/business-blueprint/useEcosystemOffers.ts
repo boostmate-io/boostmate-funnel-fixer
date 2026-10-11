@@ -271,7 +271,7 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
    * debounced queue (updateOffer) and flushes it — no second save path.
    */
   const applyCoachWrites = useCallback(
-    async (id: string, writes: CoachBlueprintWrite[], tabId: string | null = null): Promise<ScopedPersistResult> => {
+    async (id: string, writes: CoachBlueprintWrite[], tabId: string | null = null, baseDesign?: OfferDesignData): Promise<ScopedPersistResult> => {
       const row = offersRef.current.find((o) => o.id === id);
       // Any non-Primary offer, any category; permissions follow the row's own tier.
       if (!row || row.source === "blueprint_core") {
@@ -281,12 +281,13 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
           saved: false,
         };
       }
-      const design = ((row.data as any)?.design as OfferDesignData | undefined) ?? emptyOfferDesign();
+      // Editor state (incl. unsaved edits) wins over the persisted row when supplied.
+      const design = baseDesign ?? ((row.data as any)?.design as OfferDesignData | undefined) ?? emptyOfferDesign();
       const { next, applied, rejected } = applyScopedOfferWrites(design, writes, row.tier ?? "core", tabId);
       if (!applied.length) return { appliedPaths: [], rejected, saved: false };
       await updateOffer(id, designToRowValues(next, row as any) as any);
       const saved = await flushOffer(id);
-      return { appliedPaths: applied.map((w) => w.path), rejected, saved };
+      return { appliedPaths: applied.map((w) => w.path), rejected, saved, design: next };
     },
     [updateOffer, flushOffer],
   );
