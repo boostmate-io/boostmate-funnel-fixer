@@ -43,7 +43,7 @@ function rubricText(): string {
 function fieldContract(tier: OfferTier, excludePricing = false): string {
   return categoryWritableFields(tier).filter((f) => !excludePricing || !f.path.startsWith("offer_stack.pricing")).map((f) =>
     f.kind === "list"
-      ? `- ${f.path}.new_<n>.{${f.itemKeys!.join(", ")}} (${f.label})`
+      ? `- ${f.path}.new_<n>.{${f.itemKeys!.join(", ")}} (${f.label})${f.itemValues ? ` allowed: ${Object.entries(f.itemValues).map(([k, v]) => `${k} = ${v.join(" | ")}`).join("; ")}` : ""}`
       : `- ${f.path} (${f.label})${f.values ? ` allowed: ${f.values.join(", ")}` : ""}`,
   ).join("\n");
 }

@@ -20,7 +20,7 @@ export type MapResult =
 
 /** Writable paths for a whole category (all tabs) — the package op's contract. */
 export function categoryWritableFields(tier: OfferTier) {
-  const out: { path: string; label: string; tabId: string; kind: "field" | "list"; values?: string[]; itemKeys?: string[] }[] = [];
+  const out: { path: string; label: string; tabId: string; kind: "field" | "list"; values?: string[]; itemKeys?: string[]; itemValues?: Record<string, string[]> }[] = [];
   for (const tab of OFFER_TIER_LAYOUTS[tier].tabs) for (const s of tab.sections) for (const i of s.items) {
     if (i.kind === "relationship") continue;
     if (i.kind === "field") {
@@ -31,7 +31,9 @@ export function categoryWritableFields(tier: OfferTier) {
     } else {
       const list = BLUEPRINT_LISTS.find((l) => l.basePath === i.path);
       const keys = (list?.itemFields ?? []).map((k) => k.key).filter((k) => offerAiPermission(tier, `${i.path}.0.${k}`).write);
-      if (keys.length) out.push({ path: i.path, label: list?.label ?? i.path, tabId: tab.id, kind: "list", itemKeys: keys });
+      const itemValues: Record<string, string[]> = {};
+      for (const f of list?.itemFields ?? []) if (keys.includes(f.key) && f.valueType === "enum" && f.enumValues?.length) itemValues[f.key] = f.enumValues.map((v) => v.value);
+      if (keys.length) out.push({ path: i.path, label: (list as any)?.label ?? i.path, tabId: tab.id, kind: "list", itemKeys: keys, ...(Object.keys(itemValues).length ? { itemValues } : {}) });
     }
   }
   return out;
