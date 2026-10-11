@@ -94,7 +94,7 @@ describe("tier-specific wording", () => {
     expect(offerEditorField("offer_stack.pricing.core_price", undefined, "premium").label).toBe("Price");
     expect(offerEditorField("offer_stack.pricing.recurring_offer.monthly_price", undefined, "continuity").label).toBe("Recurring Price");
     // Core-only helpers keep their existing copy when no tier override applies
-    expect(offerEditorField("offer_stack.pricing.core_price", undefined, "premium").helper).toBe("The headline price for your main offer.");
+    expect(offerEditorField("offer_stack.pricing.core_price", undefined, "premium").helper).toBe("What buyers pay for this offer.");
   });
   it("free formats are registry-configured", () => {
     expect(offerEditorField("offer_stack.angle.offer_format").options).toBe(OFFER_FORMAT_VALUES);
