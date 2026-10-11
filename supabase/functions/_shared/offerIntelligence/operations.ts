@@ -33,15 +33,15 @@ const TASK: Record<OfferOperation, string> = {
   strengthen: "Propose 2–3 concrete options to improve the focus dimension, each with what changes, why it raises perceived value, and the trade-off. Prefer clarity, speed, ease and certainty over adding deliverables.",
   package: "Construct the offer as field writes for this category ONLY, using the exact paths and allowed values listed. Lists use <listPath>.new_<n>.<key>. Free offers never get a price; paid prices must be positive; Continuity prices are per the chosen billing interval. Also return builder extras (obstacle→solution mapping, pricing rationale, assumptions, audience difference, positioning, bonus reasons).",
   final_assessment: "Re-assess every Value Equation criterion for the improved offer (strong | partial | weak | unknown, one short reason each), then summarise key decisions, remaining assumptions and next steps.",
-  public_generate: "From the visitor's short answers only, construct ONE offer as field writes for this category (same rules as package), assess each Value Equation criterion, and give the top 3 improvements. Keep it short and concrete. No business data beyond the answers exists.",
+  public_generate: "From the visitor's short answers only, construct ONE offer as field writes (Angle and Stack fields listed below — never pricing fields). Fill at least the offer name, short description, core outcome, framework name/description and 3–5 deliverables. Describe the target audience, the method in 2 sentences and the delivery approach. List key assumptions (anything not stated by the visitor). Pricing: set recommend=false unless the answers support it; if true, give a conservative low/high estimate with reasoning and assumptions — never a market benchmark. Assess each Value Equation criterion for the NEW offer; if the visitor described a current offer, also assess that offer in beforeAssessments (otherwise return an empty list). Give 1–2 strategic insights and exactly 3 improvements. No business data beyond the answers exists.",
 };
 
 function rubricText(): string {
   return VALUE_DIMENSIONS.map((d) => `${d}:\n${VALUE_CRITERIA.filter((c) => c.dimension === d).map((c) => `  - ${c.id}: ${c.question}`).join("\n")}`).join("\n");
 }
 
-function fieldContract(tier: OfferTier): string {
-  return categoryWritableFields(tier).map((f) =>
+function fieldContract(tier: OfferTier, excludePricing = false): string {
+  return categoryWritableFields(tier).filter((f) => !excludePricing || !f.path.startsWith("offer_stack.pricing")).map((f) =>
     f.kind === "list"
       ? `- ${f.path}.new_<n>.{${f.itemKeys!.join(", ")}} (${f.label})`
       : `- ${f.path} (${f.label})${f.values ? ` allowed: ${f.values.join(", ")}` : ""}`,
@@ -64,7 +64,7 @@ export function buildOperationInstructions(op: OfferOperation, ctx: OperationCon
     HONESTY,
     ctx.tier !== "core" ? renderTierCoachBrief(ctx.tier) : "",
     NEEDS_RUBRIC.includes(op) ? `# Criteria\n${rubricText()}` : "",
-    NEEDS_FIELDS.includes(op) ? `# Writable fields for this category\n${fieldContract(ctx.tier)}` : "",
+    NEEDS_FIELDS.includes(op) ? `# Writable fields for this category\n${fieldContract(ctx.tier, op === "public_generate")}` : "",
   ].filter(Boolean).join("\n\n");
 }
 
@@ -99,7 +99,12 @@ export const OPERATION_OUTPUT_SCHEMAS: Record<OfferOperation, Record<string, unk
   strengthen: obj({ options: { type: "array", items: obj({ title: str, change: str, why: str, tradeoff: str }) } }),
   package: obj({ writes: writesSchema, extras: extrasSchema }),
   final_assessment: obj({ assessments: assessmentSchema, keyDecisions: strArr, remainingAssumptions: strArr, nextSteps: strArr }),
-  public_generate: obj({ writes: writesSchema, assessments: assessmentSchema, topImprovements: strArr }),
+  public_generate: obj({
+    writes: writesSchema, assessments: assessmentSchema, beforeAssessments: assessmentSchema,
+    audience: str, methodSummary: str, deliveryApproach: str, assumptions: strArr,
+    pricing: obj({ recommend: { type: "boolean" }, low: { type: "number" }, high: { type: "number" }, reasoning: str, assumptions: strArr }),
+    insights: strArr, topImprovements: strArr,
+  }),
 };
 
 export type OutputCheck = { ok: true; value: any } | { ok: false; errors: string[] };
@@ -133,9 +138,17 @@ export function validateOperationOutput(op: OfferOperation, raw: unknown): Outpu
     case "strengthen": need("options", (v) => Array.isArray(v) && v.length > 0 && v.every((o: any) => isStr(o?.title) && isStr(o?.change))); break;
     case "package": need("writes", (v) => Array.isArray(v) && v.every((w: any) => isStr(w?.path))); need("extras", (v) => !!v && typeof v === "object"); break;
     case "final_assessment": checkAssessments(r.assessments, errors); need("keyDecisions", isStrArr); need("nextSteps", isStrArr); break;
-    case "public_generate": need("writes", (v) => Array.isArray(v) && v.every((w: any) => isStr(w?.path))); checkAssessments(r.assessments, errors); need("topImprovements", isStrArr); break;
+    case "public_generate":
+      need("writes", (v) => Array.isArray(v) && v.length > 0 && v.every((w: any) => isStr(w?.path)));
+      checkAssessments(r.assessments, errors);
+      if (r.beforeAssessments != null) checkAssessments(r.beforeAssessments, errors);
+      need("audience", isStr); need("methodSummary", isStr); need("assumptions", isStrArr);
+      need("insights", isStrArr); need("topImprovements", isStrArr);
+      need("pricing", (v: any) => !!v && typeof v.recommend === "boolean");
+      break;
   }
   if (errors.length) return { ok: false, errors };
   if (r.assessments) r.assessments = checkAssessments(r.assessments, []);
+  if (r.beforeAssessments) r.beforeAssessments = checkAssessments(r.beforeAssessments, []);
   return { ok: true, value: r };
 }
