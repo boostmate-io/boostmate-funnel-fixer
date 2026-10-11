@@ -1434,7 +1434,7 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
       { id: "angle", label: STANDARD_TABS.angle, sections: [
         sec("basics", "Basics", [NAME, SHORT_DESC("recommended"), fld("angle.core_outcome", "recommended"), fld("angle.problem_solved", "recommended")]),
         sec("framework", "Signature Framework", FRAMEWORK("optional")),
-        sec("angles", "Offer Angles", ANGLES("optional")),
+        sec("angles", "Differentiation", ANGLES("optional")),
       ] },
       { id: "stack", label: STANDARD_TABS.stack, sections: [
         sec("deliverables", "Deliverables", [lst("stack.deliverables", "recommended")]),
@@ -1442,7 +1442,7 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
         sec("timeline", "Milestones & timeline", [lst("stack.milestones", "optional"), fld("stack.delivery_timeline", "optional")]),
       ] },
       { id: "pricing", label: STANDARD_TABS.pricing, sections: [
-        sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price" }), lst("pricing.payment_plans", "optional")]),
+        sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price", helper: "What buyers pay for this offer." }), lst("pricing.payment_plans", "optional")]),
         sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
         sec("relationships", "Ecosystem", [rel("ascends_to", "Ascends to"), rel("downsell", "Downsell from")]),
       ] },

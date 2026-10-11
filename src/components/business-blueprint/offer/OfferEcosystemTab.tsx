@@ -36,7 +36,7 @@ import { getBusinessType } from "../businessTypes";
 import { designForRow, designToRowValues } from "@/lib/offers/offerRepository";
 
 /** Non-Core categories already served by the Universal Offer Editor. */
-const UNIVERSAL_EDITOR_TIERS: EcosystemTier[] = ["free", "low_ticket"];
+const UNIVERSAL_EDITOR_TIERS: EcosystemTier[] = ["free", "low_ticket", "mid_ticket"];
 import type { OfferSaveStatus } from "./OfferEditorShell";
 
 
