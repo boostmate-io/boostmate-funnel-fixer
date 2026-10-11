@@ -110,6 +110,8 @@ export interface OfferStackData {
   milestones: MilestoneCard[];
   /** Offer-level delivery types chosen directly (category editors). */
   delivery_types?: string[];
+  /** High-touch levels (Premium editor; registry TOUCH_LEVEL_VALUES). */
+  touch_level?: string[];
 }
 
 // ---------- Tab 3: Pricing --------------------------------------------------

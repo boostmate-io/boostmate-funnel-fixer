@@ -1357,7 +1357,10 @@ export type OfferRelationshipType = "ascends_to" | "leads_into" | "retention" | 
 export type OfferLayoutItem =
   | { kind: "field"; path: string; status: OfferFieldStatus; editor?: OfferEditorCopy }
   | { kind: "list"; path: string; status: OfferFieldStatus; editor?: OfferListEditorCopy }
-  | { kind: "relationship"; relationship: OfferRelationshipType; status: OfferFieldStatus; label: string };
+  | { kind: "relationship"; relationship: OfferRelationshipType; status: OfferFieldStatus; label: string; visibleWhen?: OfferVisibleWhen };
+
+/** Show an item only when another design path equals a value (e.g. premium_mode = upgrade). */
+export interface OfferVisibleWhen { path: string; equals: string }
 
 export interface OfferLayoutSection { id: string; label: string; items: OfferLayoutItem[] }
 export interface OfferLayoutTab { id: string; label: string; sections: OfferLayoutSection[] }
@@ -1367,8 +1370,8 @@ const fld = (path: string, status: OfferFieldStatus, editor?: OfferEditorCopy): 
   ({ kind: "field", path: `offer_stack.${path}`, status, ...(editor ? { editor } : {}) });
 const lst = (path: string, status: OfferFieldStatus, editor?: OfferListEditorCopy): OfferLayoutItem =>
   ({ kind: "list", path: `offer_stack.${path}`, status, ...(editor ? { editor } : {}) });
-const rel = (relationship: OfferRelationshipType, label: string): OfferLayoutItem =>
-  ({ kind: "relationship", relationship, status: "optional", label });
+const rel = (relationship: OfferRelationshipType, label: string, visibleWhen?: OfferVisibleWhen): OfferLayoutItem =>
+  ({ kind: "relationship", relationship, status: "optional", label, ...(visibleWhen ? { visibleWhen } : {}) });
 const sec = (id: string, label: string, items: OfferLayoutItem[]): OfferLayoutSection => ({ id, label, items });
 /** Offer-level delivery types in the design; synced into the row summary. */
 const DELIVERY = (status: OfferFieldStatus): OfferLayoutItem => fld("stack.delivery_types", status);
@@ -1453,18 +1456,18 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
     tier: "premium",
     tabs: [
       { id: "angle", label: STANDARD_TABS.angle, sections: [
-        sec("type", "Premium type", [fld("angle.premium_mode", "recommended"), rel("ascends_to", "Upgrades from")]),
+        sec("type", "Premium type", [fld("angle.premium_mode", "recommended"), rel("ascends_to", "Upgrades from", { path: "offer_stack.angle.premium_mode", equals: "upgrade" })]),
         sec("basics", "Basics", [NAME, SHORT_DESC("recommended"), fld("angle.core_outcome", "recommended")]),
         sec("framework", "Signature Framework", FRAMEWORK("optional")),
-        sec("angles", "Offer Angles", ANGLES("optional")),
+        sec("angles", "Differentiation", ANGLES("optional")),
       ] },
       { id: "stack", label: STANDARD_TABS.stack, sections: [
-        sec("touch", "High-touch delivery", [fld("stack.touch_level", "recommended"), lst("stack.deliverables", "recommended"), lst("stack.support_channels", "recommended")]),
-        sec("extras", "Extras", [lst("stack.bonuses", "optional"), lst("stack.resources", "optional")]),
-        sec("timeline", "Milestones & timeline", [lst("stack.milestones", "optional"), fld("stack.delivery_timeline", "optional")]),
+        sec("touch", "High-touch delivery", [fld("stack.touch_level", "recommended")]),
+        sec("deliverables", "Deliverables & support", [lst("stack.deliverables", "recommended"), lst("stack.support_channels", "recommended")]),
+        sec("extras", "Additional value", [lst("stack.bonuses", "optional"), lst("stack.resources", "optional"), lst("stack.milestones", "optional"), fld("stack.delivery_timeline", "optional")]),
       ] },
       { id: "pricing", label: STANDARD_TABS.pricing, sections: [
-        sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price" }), lst("pricing.payment_plans", "optional")]),
+        sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price", helper: "What buyers pay for this offer." }), lst("pricing.payment_plans", "optional")]),
         sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
       ] },
     ],
