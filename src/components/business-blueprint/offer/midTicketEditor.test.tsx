@@ -51,7 +51,7 @@ beforeEach(() => { store = seed(); updateSpy.mockClear(); });
 const open = async () => { renderTab(); fireEvent.click(await screen.findByText("Group Sprint")); return screen.findByRole("dialog", { name: "Group Sprint" }); };
 const done = async (d: HTMLElement) => { await act(async () => { fireEvent.click(within(d).getByRole("button", { name: "Done" })); }); };
 const sections = (d: HTMLElement) => [...(d.querySelector("[role=tabpanel][data-state=active]") ?? d).querySelectorAll("[data-offer-section]")].map((s) => s.getAttribute("data-offer-section"));
-const expand = (d: HTMLElement) => within(d).queryAllByText("More options").forEach((m) => fireEvent.click(m));
+const expand = (d: HTMLElement) => within((d.querySelector("[role=tabpanel][data-state=active]") as HTMLElement) ?? d).queryAllByText("More options").forEach((m) => fireEvent.click(m));
 const goTab = (d: HTMLElement, name: string) => { const t = within(d).getByRole("tab", { name }); fireEvent.mouseDown(t); fireEvent.click(t); };
 
 describe("Mid-Ticket in the Universal Offer Editor", () => {
@@ -69,7 +69,6 @@ describe("Mid-Ticket in the Universal Offer Editor", () => {
     goTab(d, "Offer Stack");
     expect(sections(d)).toEqual(layout[1].sections.map((s) => s.id));
     expand(d);
-    console.log("STACKTXT", d.querySelector("[role=tabpanel][data-state=active]")?.textContent?.slice(0,800));
     for (const t of ["Core Deliverables", "Templates & Resources", "Bonuses", "Milestones"]) expect(within(d).getAllByText(t).length).toBeGreaterThan(0);
     goTab(d, "Pricing");
     expect(sections(d)).toEqual(layout[2].sections.map((s) => s.id));
