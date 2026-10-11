@@ -10,7 +10,8 @@ import { toast } from "sonner";
 
 // ---------- Types -----------------------------------------------------------
 
-export type OfferRelationshipType = "ascends_to" | "leads_into" | "retention" | "downsell";
+import type { OfferRelationshipType } from "@shared/blueprintRegistry";
+export type { OfferRelationshipType };
 
 export interface OfferRelationshipRow {
   id: string;
