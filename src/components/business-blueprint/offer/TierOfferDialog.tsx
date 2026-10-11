@@ -71,7 +71,13 @@ export default function TierOfferDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, offerId]);
 
-  const update = (next: OfferDesignData) => { dataRef.current = next; setData(next); onChange(next); };
+  // An empty name never overwrites the saved offer: edits are held locally
+  // (with inline validation) and persist together once a valid name exists.
+  const update = (next: OfferDesignData) => {
+    dataRef.current = next; setData(next);
+    if (next.angle.main_offer_name?.trim()) onChange(next);
+  };
+  const nameMissing = !data.angle.main_offer_name?.trim();
   const updateAngle = (patch: Partial<OfferAngleData>) => update({ ...dataRef.current, angle: { ...dataRef.current.angle, ...patch } });
   const updateStack = (patch: Partial<OfferStackData>) => update({ ...dataRef.current, stack: { ...dataRef.current.stack, ...patch } });
   const updatePricing = (patch: Partial<PricingData>) => update({ ...dataRef.current, pricing: { ...dataRef.current.pricing, ...patch } });
@@ -123,11 +129,31 @@ export default function TierOfferDialog({
       );
     }
 
+    if (def?.control === "offer-format") {
+      const v = String(data.angle.offer_format ?? "");
+      return (
+        <div key={path}>
+          <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1 block">{copy.label}</Label>
+          {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
+          <select
+            id={id}
+            value={v}
+            onChange={(e) => updateAngle({ offer_format: e.target.value })}
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="">Select a format…</option>
+            {(copy.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      );
+    }
+
     // Plain angle text fields (name, description, problem solved, quick win, outcome…)
     const [, section, key] = path.split(".");
     if (section !== "angle" || !key) return null;
     const value = String((data.angle as Record<string, unknown>)[key] ?? "");
     const set = (v: string) => updateAngle({ [key]: v } as Partial<OfferAngleData>);
+    const invalid = required && nameMissing;
     return (
       <div key={path}>
         <Label htmlFor={id} className="text-xs font-medium text-muted-foreground mb-1 block">
@@ -137,7 +163,12 @@ export default function TierOfferDialog({
         {def?.kind === "textarea" ? (
           <AutoTextarea id={id} value={value} onChange={(e) => set(e.target.value)} placeholder={copy.placeholder} rows={2} className="resize-none text-sm" />
         ) : (
-          <Input id={id} value={value} onChange={(e) => set(e.target.value)} placeholder={copy.placeholder} className="h-9 text-sm" aria-required={required || undefined} />
+          <Input id={id} value={value} onChange={(e) => set(e.target.value)} placeholder={copy.placeholder} className={`h-9 text-sm ${invalid ? "border-destructive" : ""}`} aria-required={required || undefined} aria-invalid={invalid || undefined} aria-describedby={invalid ? `${id}-error` : undefined} />
+        )}
+        {invalid && (
+          <p id={`${id}-error`} role="alert" className="text-xs text-destructive mt-1">
+            Offer Name is required. Changes are saved once a name is entered.
+          </p>
         )}
       </div>
     );
