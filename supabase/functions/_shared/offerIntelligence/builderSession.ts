@@ -70,7 +70,7 @@ const clip = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 /** Validated `understand` output → stored understanding (stable ids, bounded). */
 export function toUnderstanding(out: { known: string[]; assumed: { item: string; why: string }[]; missing: { item: string; question: string }[] }, previous?: Understanding | null): Understanding {
   return {
-    known: out.known.slice(0, 15).map((t, i) => ({ id: `k${i}`, text: clip(t, 300) })).filter((x) => x.text),
+    known: out.known.slice(0, 15).map((t, i) => ({ id: `k${i}`, text: clip(t, 800) })).filter((x) => x.text),
     assumed: out.assumed.slice(0, 10).map((a, i) => ({ id: `a${i}`, text: clip(a?.item, 300), why: clip(a?.why, 300) })).filter((x) => x.text),
     missing: out.missing.slice(0, 10).map((m, i) => ({ id: `m${i}`, text: clip(m?.item, 300), question: clip(m?.question, 300) })).filter((x) => x.text),
     // Re-analysis keeps the user's earlier answers (keyed by text, re-attached by id).

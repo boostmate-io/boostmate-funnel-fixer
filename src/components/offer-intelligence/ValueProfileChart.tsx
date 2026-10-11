@@ -52,7 +52,7 @@ export default function ValueProfileChart({ before, after, className, improvemen
 
   return (
     <div className={cn("w-full max-w-md space-y-3", className)}>
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="w-full h-auto" role="img"
+      <svg viewBox={`-70 0 ${SIZE + 140} ${SIZE}`} className="w-full h-auto" role="img"
         aria-label={`Value profile: ${AXES.map((d) => `${DIMENSION_LABELS[d]} ${label(d, main)}`).join(", ")}`}>
         {[2.5, 5, 7.5, 10].map((s) => (
           <polygon key={s} points={AXES.map((d) => point(d, s).join(",")).join(" ")} className="fill-none stroke-border" strokeWidth={1} />
