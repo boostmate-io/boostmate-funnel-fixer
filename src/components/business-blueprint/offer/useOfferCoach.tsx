@@ -63,7 +63,7 @@ export function useOfferCoach(buildSnapshot: () => Record<string, unknown>) {
   const keyFor = (base: string) => (scoped ? `${base}@offer:${scoped.offerId}` : base);
   // Scoped: the active offer for this Coach turn (re-verified by the server).
   const activeOffer = scoped
-    ? { id: scoped.offerId, isPrimary: false, name: scoped.offerName, tier: "core", getDraftDesign: () => scoped.getDesign() }
+    ? { id: scoped.offerId, isPrimary: false, name: scoped.offerName, tier: scoped.tier ?? "core", getDraftDesign: () => scoped.getDesign() }
     : null;
 
   const openCoachField = (spec: OfferCoachSpec) => {

@@ -119,6 +119,8 @@ export interface CoachActiveOffer {
   tier: string;
   /** Read at send time — latest editor state, including unsaved edits. */
   getDraftDesign?: () => unknown;
+  /** Open editor tab id (server re-validates for the persisted tier). */
+  tabId?: string;
 }
 
 export interface CoachContext {

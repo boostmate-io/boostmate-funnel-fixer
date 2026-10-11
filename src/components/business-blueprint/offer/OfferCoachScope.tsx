@@ -25,6 +25,8 @@ export interface ScopedOfferCoach {
   mode: "scoped";
   offerId: string;
   offerName: string;
+  /** Actual offer category (server re-verifies; never used for authorization). */
+  tier?: string;
   /** Latest design of the scoped offer (read at call time) — Coach context. */
   getDesign: () => OfferDesignData;
   /**

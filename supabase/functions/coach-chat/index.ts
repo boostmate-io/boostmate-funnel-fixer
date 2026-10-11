@@ -1,5 +1,7 @@
 // AI Coach chat edge function — ONE engine for every scope.
 import { checkWorkspaceAccess } from "../_shared/coachAuthorization.ts";
+import { gateOfferCoachWrites, isOfferTier, validTierTab } from "../_shared/offerAiPolicy.ts";
+import { buildOfferEcosystemContext, renderOfferEcosystemContext } from "../_shared/offerEcosystemContext.ts";
 // Scopes: blueprint.field | blueprint.section | copy.component | funnel.node | global
 // Handles multi-turn coaching, tool-calling (proposals, quick replies, memory),
 // and persists messages + facts to Lovable Cloud.
@@ -853,6 +855,7 @@ The user opened the Coach from ONE specific field: "${context?.target?.label ?? 
   const verifiedActiveOffer = context?.businessContext?.verifiedActiveOffer ?? null;
   if (verifiedActiveOffer) {
     parts.push(renderActiveOfferSection(verifiedActiveOffer));
+    if (context?.businessContext?.offerEcosystemSection) parts.push(context.businessContext.offerEcosystemSection);
     const bpRest = blueprintWithoutOfferDesign(context?.businessContext?.blueprintSnapshot);
     if (bpRest) {
       parts.push(`${BUSINESS_LAYER_HEADING}\n${JSON.stringify(bpRest, null, 2)}`);
@@ -2142,7 +2145,7 @@ Deno.serve(async (req) => {
     // Verify conversation ownership
     const { data: conv, error: convErr } = await supabase
       .from("ai_coach_conversations")
-      .select("id, user_id, sub_account_id")
+      .select("id, user_id, sub_account_id, scope, target_id")
       .eq("id", conversationId)
       .maybeSingle();
 
@@ -2193,6 +2196,10 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "This offer can't be used in this workspace.", code: resolvedOffer.reason }, 403);
     }
     const verifiedOffer = resolvedOffer.kind === "additional" ? resolvedOffer.offer : null;
+    // Per-offer conversations: the thread is bound to exactly one offer.
+    if (conv.scope === "offer" && (!verifiedOffer || verifiedOffer.id !== conv.target_id)) {
+      return jsonResponse({ error: "This conversation belongs to a different offer.", code: "offer_conversation_mismatch" }, 403);
+    }
     let relatedOfferRows: OfferRowLite[] = [];
     if (blueprintRow?.id) {
       const { data } = await supabase
@@ -2226,7 +2233,25 @@ Deno.serve(async (req) => {
     }
     // Non-Core offers: Coach write-back is not active yet (server-enforced,
     // category taken from the DB row, never from the client).
-    const writesBlockedForTier = !!verifiedOffer && verifiedOffer.tier !== "core";
+    const nonCoreOffer = !!verifiedOffer && verifiedOffer.tier !== "core";
+    // Unknown categories never get write-backs.
+    const writesBlockedForTier = !!verifiedOffer && !isOfferTier(verifiedOffer.tier);
+    const offerTabId = verifiedOffer ? validTierTab(verifiedOffer.tier, claimedOffer?.tabId) : null;
+    // Read-only ecosystem context (non-Core categories only — Core prompts unchanged).
+    if (nonCoreOffer && verifiedOffer && context?.businessContext) {
+      const [{ data: rels }, { data: funnels }] = await Promise.all([
+        supabase.from("offer_relationships")
+          .select("source_offer_id,target_offer_id,relationship_type,sub_account_id")
+          .eq("sub_account_id", subAccountId)
+          .or(`source_offer_id.eq.${verifiedOffer.id},target_offer_id.eq.${verifiedOffer.id}`),
+        supabase.from("funnels").select("id,name,status,linked_offer_id,sub_account_id")
+          .eq("sub_account_id", subAccountId).eq("linked_offer_id", verifiedOffer.id).limit(20),
+      ]);
+      context.businessContext.offerEcosystemSection = renderOfferEcosystemContext(buildOfferEcosystemContext({
+        activeOfferId: verifiedOffer.id, subAccountId,
+        offers: relatedOfferRows, relationships: (rels as any[]) ?? [], funnels: (funnels as any[]) ?? [],
+      }));
+    }
     const activeOfferPart = offerContextPart(verifiedOffer, resolvedOffer.kind === "primary");
     const offerSwitchNote = renderOfferSwitchNote(messages, activeOfferPart);
 
@@ -2392,7 +2417,29 @@ The latest user-role message was generated automatically when the user opened th
         // ignore
       }
       if (writesBlockedForTier && (name === "propose_field_value" || name === "propose_blueprint_writes")) {
-        // dropped: proposals for non-Core offers are not enabled in this phase
+        // dropped: unknown offer category
+      } else if (nonCoreOffer && name === "propose_field_value" && context?.scope === "blueprint.field") {
+        const path = canonicalBlueprintPath(String(context?.target?.id ?? ""));
+        const gate = gateOfferCoachWrites({ tier: verifiedOffer!.tier, tabId: offerTabId, design: verifiedOffer!.design, writes: [{ path, value: args.value }] });
+        if (gate.ok) parts.push({ type: "proposal", value: gate.writes[0].value, reasoning: args.reasoning ?? "" });
+      } else if (
+        nonCoreOffer && name === "propose_blueprint_writes" &&
+        (context?.scope === "blueprint.section" || context?.scope === "global")
+      ) {
+        // Non-Core: tier-aware registry policy, whole batch rejected on any error.
+        const raw = (Array.isArray(args.writes) ? args.writes : []).map((w: any) => ({
+          path: canonicalBlueprintPath(String(w?.path ?? "")), value: w?.value, label: w?.label,
+        }));
+        const gate = gateOfferCoachWrites({ tier: verifiedOffer!.tier, tabId: offerTabId, design: verifiedOffer!.design, writes: raw });
+        if (gate.ok && gate.writes.length) {
+          parts.push({
+            type: "blueprint_writes",
+            writes: gate.writes.map((w) => ({ path: w.path, label: String(w.label ?? w.path), value: w.value })),
+            reasoning: args.reasoning ?? "",
+          });
+        } else if (!gate.ok) {
+          console.warn("[coach-chat] non-Core write batch rejected", gate.errors);
+        }
       } else if (name === "propose_field_value" && context?.scope === "blueprint.field") {
         const value = normalizeCurrentFieldProposal(context, args.value ?? "");
         if (value) parts.push({ type: "proposal", value, reasoning: args.reasoning ?? "" });

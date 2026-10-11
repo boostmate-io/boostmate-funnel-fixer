@@ -21,6 +21,8 @@ export interface ClaimedActiveOffer {
   tier?: unknown;
   /** Local editor design, possibly including unsaved edits. */
   draftDesign?: unknown;
+  /** Open editor tab (validated against the persisted tier's layout). */
+  tabId?: unknown;
 }
 
 /** Minimal `public.offers` row shape the server loads. */

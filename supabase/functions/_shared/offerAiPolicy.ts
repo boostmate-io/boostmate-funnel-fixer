@@ -242,3 +242,59 @@ export function validateOfferAiWrites(input: {
   if (errors.length) return { ok: false, errors };
   return { ok: true, design: next, applied };
 }
+
+// -----------------------------------------------------------------------------
+// Coach write-back gate (Phase 2) — shared by the server proposal flow and the
+// client apply step, so both enforce identical rules.
+// -----------------------------------------------------------------------------
+
+const VIRTUAL_RE = /^(.*)\.new_(\d+)\.([a-z_]+)$/;
+
+/**
+ * Map Coach list proposals (`<base>.new_<k>.<key>`) onto append indices
+ * (`<base>.<len + k>.<key>`), keeping new items in proposal order.
+ */
+export function resolveVirtualListPaths(design: Record<string, any> | null | undefined, writes: ProposedWrite[]): ProposedWrite[] {
+  const order = new Map<string, Map<string, number>>();
+  return (writes ?? []).map((w) => {
+    const m = VIRTUAL_RE.exec(String(w?.path ?? ""));
+    if (!m) return w;
+    const [, base, k, key] = m;
+    let arr: any = design ?? {};
+    for (const seg of base.replace(/^offer_stack\./, "").split(".")) arr = arr?.[seg];
+    const len = Array.isArray(arr) ? arr.length : 0;
+    const seen = order.get(base) ?? new Map<string, number>();
+    if (!seen.has(k)) seen.set(k, seen.size);
+    order.set(base, seen);
+    return { ...w, path: `${base}.${len + seen.get(k)!}.${key}` };
+  });
+}
+
+/** Stringify a validated value for the existing string-valued write card. */
+export const writeValueToString = (v: unknown): string => (Array.isArray(v) ? v.join(", ") : String(v ?? ""));
+
+/**
+ * Validate a batch of Coach writes for a non-Primary offer. Rejects the whole
+ * batch on any invalid write. Returns the original paths (virtual list paths
+ * preserved for the approval card) with normalized string values.
+ */
+export function gateOfferCoachWrites(input: {
+  tier: unknown;
+  tabId?: string | null;
+  design: Record<string, any> | null | undefined;
+  writes: { path: string; value: unknown; label?: string }[];
+}): { ok: true; writes: { path: string; value: string; label?: string }[] } | { ok: false; errors: WriteError[] } {
+  const resolved = resolveVirtualListPaths(input.design, input.writes);
+  const res = validateOfferAiWrites({ tier: input.tier, tabId: input.tabId, design: input.design, writes: resolved });
+  if ("errors" in res) return { ok: false, errors: res.errors };
+  return {
+    ok: true,
+    writes: input.writes.map((w, i) => ({ ...w, value: writeValueToString(res.applied[i].value) })),
+  };
+}
+
+/** Valid editor tab for a tier, or null (untrusted client claim). */
+export function validTierTab(tier: unknown, tabId: unknown): string | null {
+  if (!isOfferTier(tier) || typeof tabId !== "string") return null;
+  return OFFER_TIER_LAYOUTS[tier].tabs.some((t) => t.id === tabId) ? tabId : null;
+}
