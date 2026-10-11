@@ -286,7 +286,7 @@ export function useGrowthArchitecture(subAccountId: string | null) {
         .single();
       if (error) {
         if (/offer_relationship/i.test(error.message)) {
-          toast.error("This route needs an offer relationship. Create one in the route form, then try again.");
+          toast.error("Could not add route");
         } else {
           toast.error("Could not add route");
         }
