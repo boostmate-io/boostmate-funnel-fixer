@@ -41,7 +41,10 @@ import { useEcosystemOffers, type EcosystemOfferRow } from "../useEcosystemOffer
 import { getBusinessType } from "../businessTypes";
 import { designForRow, designToRowValues } from "@/lib/offers/offerRepository";
 import { startBuilderSession, builderErrorMessage, type BuilderError } from "@/lib/offers/offerBuilder";
-import { useNavigate } from "react-router-dom";
+import { useInRouterContext, useNavigate } from "react-router-dom";
+
+// Router-optional navigate (some tests render the tab without a Router).
+const useOptionalNavigate = () => (useInRouterContext() ? useNavigate() : null); // eslint-disable-line react-hooks/rules-of-hooks
 
 /** Non-Core categories already served by the Universal Offer Editor. */
 const UNIVERSAL_EDITOR_TIERS: EcosystemTier[] = ["free", "low_ticket", "mid_ticket", "premium", "continuity"];
@@ -206,7 +209,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
       relationships={relationships} />
   ) : null;
   const progress = calcEcosystemProgress(tierCounts);
-  const navigate = useNavigate();
+  const navigate = useOptionalNavigate();
   const [startingBuilder, setStartingBuilder] = useState(false);
   // Irresistible Offer Builder: sessions are created server-side (category from the saved offer).
   const openBuilder = async (target: { offerId: string } | { tier: string }) => {
@@ -215,7 +218,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
     try {
       if ("offerId" in target) await flushOffer(target.offerId).catch(() => {});
       const { session } = await startBuilderSession(activeSubAccountId, target);
-      navigate(`/offer-builder/${session.id}`);
+      if (navigate) navigate(`/offer-builder/${session.id}`); else window.location.assign(`/offer-builder/${session.id}`);
     } catch (e) {
       toast.error(builderErrorMessage((e as BuilderError).code));
     } finally { setStartingBuilder(false); }
