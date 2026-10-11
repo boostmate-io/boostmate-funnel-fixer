@@ -271,9 +271,10 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
    * debounced queue (updateOffer) and flushes it — no second save path.
    */
   const applyCoachWrites = useCallback(
-    async (id: string, writes: CoachBlueprintWrite[]): Promise<ScopedPersistResult> => {
+    async (id: string, writes: CoachBlueprintWrite[], tabId: string | null = null): Promise<ScopedPersistResult> => {
       const row = offersRef.current.find((o) => o.id === id);
-      if (!row || row.source === "blueprint_core" || row.tier !== "core") {
+      // Any non-Primary offer, any category; permissions follow the row's own tier.
+      if (!row || row.source === "blueprint_core") {
         return {
           appliedPaths: [],
           rejected: writes.map((write) => ({ write, reason: "offer_not_found" as const })),
@@ -281,7 +282,7 @@ export function useEcosystemOffers({ blueprintId }: UseEcosystemOffersArgs) {
         };
       }
       const design = ((row.data as any)?.design as OfferDesignData | undefined) ?? emptyOfferDesign();
-      const { next, applied, rejected } = applyScopedOfferWrites(design, writes);
+      const { next, applied, rejected } = applyScopedOfferWrites(design, writes, row.tier ?? "core", tabId);
       if (!applied.length) return { appliedPaths: [], rejected, saved: false };
       await updateOffer(id, designToRowValues(next, row as any) as any);
       const saved = await flushOffer(id);

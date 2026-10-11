@@ -10,6 +10,7 @@
 import type { OfferDesignData } from "@/components/business-blueprint/offerDesignTypes";
 import type { CoachBlueprintWrite } from "./types";
 import { coerceForPath, isWritablePath, setDeep } from "./applyBlueprintWrites";
+import { resolveVirtualListPaths, validateOfferAiWrites } from "@shared/offerAiPolicy";
 
 const OFFER_ROOT = "offer_stack";
 const DESIGN_SECTIONS = new Set(["angle", "stack", "pricing"]);
@@ -70,7 +71,10 @@ function ensureListIds(root: any) {
 export function applyScopedOfferWrites(
   design: OfferDesignData,
   writes: CoachBlueprintWrite[],
+  tier: string = "core",
+  tabId: string | null = null,
 ): ScopedWriteResult {
+  if (tier !== "core") return applyTierOfferWrites(design, writes, tier, tabId);
   const working: { offer_stack: any } = { offer_stack: structuredClone(design ?? {}) };
   const applied: CoachBlueprintWrite[] = [];
   const rejected: ScopedWriteResult["rejected"] = [];
@@ -87,4 +91,34 @@ export function applyScopedOfferWrites(
 
   if (applied.length) ensureListIds(working.offer_stack);
   return { next: working.offer_stack as OfferDesignData, applied, rejected };
+}
+
+/**
+ * Non-Core categories: the shared tier-aware policy (same rules as the
+ * server). All-or-nothing — one invalid write rejects the whole batch.
+ */
+function applyTierOfferWrites(
+  design: OfferDesignData,
+  writes: CoachBlueprintWrite[],
+  tier: string,
+  tabId: string | null,
+): ScopedWriteResult {
+  const base = structuredClone(design ?? {}) as any;
+  const resolved = resolveVirtualListPaths(base, writes ?? []);
+  const res = validateOfferAiWrites({ tier, tabId, design: base, writes: resolved });
+  if (!res.ok) {
+    const bad = new Map(res.errors.map((e) => [e.path, e.reason]));
+    return {
+      next: design,
+      applied: [],
+      rejected: (writes ?? []).map((write, i) => ({
+        write,
+        reason: (bad.has(resolved[i].path) && /tier|tab|denied|writable|read_only|list_field/.test(bad.get(resolved[i].path)!)
+          ? "not_writable"
+          : "invalid_value") as ScopedRejectReason,
+      })),
+    };
+  }
+  ensureListIds(res.design);
+  return { next: res.design as OfferDesignData, applied: [...(writes ?? [])], rejected: [] };
 }
