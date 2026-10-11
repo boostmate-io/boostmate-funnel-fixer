@@ -1752,3 +1752,82 @@ export function renderBlueprintStructurePrompt(): string {
   }
   return lines.join("\n");
 }
+
+// -----------------------------------------------------------------------------
+// Tier-aware AI permissions + coaching briefs (Universal Offer Coach, Phase 1).
+// Additive metadata: NEVER read by the shared Coach prompt builders, so Core
+// prompts and Core write permissions are unchanged (snapshot-guarded).
+// Evaluated by `offerAiPolicy.ts`.
+// -----------------------------------------------------------------------------
+
+/** Approved delivery-type values (mirrors the editor library; drift-tested). */
+export const DELIVERY_TYPE_VALUES: string[] = [
+  "Templates", "Ebooks", "Scripts", "Checklists", "Guides", "Swipe Files",
+  "Vaults", "Calculators", "Calendars", "Workbooks", "Frameworks", "SOPs",
+  "Resource Lists", "Blueprints", "Roadmaps", "Playbooks",
+  "Transformations", "VSL", "Customer Results", "Webinars", "BTS",
+  "Project Walkthroughs", "Breakdowns", "Reports", "Deep Dives", "Documentary",
+  "Masterclasses", "Trainings", "Workshops", "Tutorials", "Events",
+  "Video Courses", "Summits", "Cohorts", "Bootcamps", "Guest Experts",
+];
+
+export interface OfferTierAiPolicy {
+  /**
+   * "registry": Core — writable exactly when the Coach-visible registry field
+   * or list is aiWritable (existing behaviour). "layout": every field/list in
+   * the tier's editor layout is AI-readable and writable unless denied.
+   */
+  mode: "registry" | "layout";
+  /** Offer-design paths (offer_stack.*) the Coach may read but never write. */
+  readOnly: string[];
+  /** Path prefixes the Coach may never write for this tier. */
+  denyPrefixes: string[];
+}
+
+export const OFFER_TIER_AI_POLICY: Record<OfferTier, OfferTierAiPolicy> = {
+  core: { mode: "registry", readOnly: [], denyPrefixes: [] },
+  // Free offers never carry a price: every pricing path is locked.
+  free: { mode: "layout", readOnly: [], denyPrefixes: ["offer_stack.pricing."] },
+  low_ticket: { mode: "layout", readOnly: [], denyPrefixes: [] },
+  mid_ticket: { mode: "layout", readOnly: [], denyPrefixes: [] },
+  premium: { mode: "layout", readOnly: [], denyPrefixes: [] },
+  continuity: { mode: "layout", readOnly: [], denyPrefixes: [] },
+};
+
+/** Price paths (number, non-negative, never written as a placeholder 0 on paid tiers). */
+export const OFFER_PRICE_PATHS: string[] = [
+  "offer_stack.pricing.core_price",
+  "offer_stack.pricing.recurring_offer.monthly_price",
+  "offer_stack.pricing.premium_upgrade.price",
+];
+
+export interface OfferCoachBrief { purpose: string; priorities: string[]; pitfalls: string[] }
+
+/** Short per-category coaching briefs (Core keeps the existing prompt). */
+export const OFFER_TIER_COACH_BRIEFS: Record<Exclude<OfferTier, "core">, OfferCoachBrief> = {
+  free: {
+    purpose: "A free offer / lead magnet earns attention and trust and moves the right people to the next step.",
+    priorities: ["One specific problem for one specific audience", "A quick win they can feel within minutes", "A format that fits the problem", "A clear next-step CTA into a paid offer"],
+    pitfalls: ["Trying to solve everything", "Giving away the full method", "No bridge to the next offer", "Suggesting a price — free offers are always free"],
+  },
+  low_ticket: {
+    purpose: "A low-ticket offer turns leads into buyers quickly and pays for acquisition.",
+    priorities: ["A concrete problem and a fast, tangible result", "A small, focused set of deliverables", "An easy-yes price", "A natural ascension into a bigger offer"],
+    pitfalls: ["Too much content for the price", "Vague outcomes", "Pricing it like a core program", "No reason to ascend"],
+  },
+  mid_ticket: {
+    purpose: "A mid-ticket offer delivers a meaningful result between the entry offer and the core program.",
+    priorities: ["A clear outcome and a simple framework", "Deliverables and support that match the price", "A price and payment plans that bridge low and core", "Positioning that differs from the core offer"],
+    pitfalls: ["Duplicating the core offer", "Unclear differentiation", "Price that cannibalizes the core offer"],
+  },
+  premium: {
+    purpose: "A premium offer gives the best-fit buyers more access, speed or done-for-you support at a high price.",
+    priorities: ["Standalone vs upgrade of a Core Offer", "The high-touch level (1:1, done-with-you, done-for-you, VIP day, priority access)", "Exclusive value beyond the core offer", "A price that reflects access and outcome"],
+    pitfalls: ["Just 'more content'", "Unclear extra value over the core offer", "Underpricing high-touch delivery"],
+  },
+  continuity: {
+    purpose: "A continuity offer keeps members getting ongoing value so they stay and keep paying.",
+    priorities: ["Ongoing value — why members stay", "Recurring deliverables and support", "A recurring price per billing interval (monthly, quarterly or yearly)", "Clear, fair cancellation terms"],
+    pitfalls: ["One-off value with a recurring price", "Confusing the price with a different interval", "Hidden or unclear cancellation terms"],
+  },
+};
