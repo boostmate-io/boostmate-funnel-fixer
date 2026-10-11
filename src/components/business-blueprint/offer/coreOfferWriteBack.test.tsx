@@ -7,7 +7,7 @@ import { useOfferCoachScope, type ScopedOfferCoach } from "./OfferCoachScope";
 // Probe instead of the real shell: exposes the Coach scope + a way to "type".
 let scope: ScopedOfferCoach | null = null;
 vi.mock("./OfferEditorShell", () => ({
-  default: () => { const s = useOfferCoachScope(); scope = s.mode === "scoped" ? s : null; return null; },
+  default: ({ tabs }: any) => { const s = useOfferCoachScope(); scope = s.mode === "scoped" ? s : null; return <>{tabs.map((t: any) => <div key={t.id}>{t.content}</div>)}</>; },
 }));
 vi.mock("./OfferAngleTab", () => ({ default: (p: any) => { (globalThis as any).__angle = p; return null; } }));
 vi.mock("./OfferStackTab", () => ({ default: () => null }));
