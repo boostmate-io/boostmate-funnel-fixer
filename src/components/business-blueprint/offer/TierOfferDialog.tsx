@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   getOfferEditorFieldByPath,
@@ -84,6 +85,11 @@ export default function TierOfferDialog({
 
   const renderItem = (item: OfferLayoutItem, rendered: Set<string>): ReactNode => {
     if (item.kind === "relationship") {
+      if (item.visibleWhen) {
+        const [, sec, k] = item.visibleWhen.path.split(".");
+        const cur = (data as any)[sec]?.[k];
+        if (cur !== item.visibleWhen.equals) return null;
+      }
       return (
         <div key={`rel:${item.relationship}`} className="rounded-lg border border-dashed border-border px-4 py-3">
           <Label className="text-xs font-medium text-muted-foreground">{item.label}</Label>
@@ -134,6 +140,32 @@ export default function TierOfferDialog({
       );
     }
 
+    if (def?.control === "premium-mode") {
+      const v = String(data.angle.premium_mode ?? "");
+      return (
+        <div key={path}>
+          <Label className="text-xs font-medium text-muted-foreground mb-1 block" id={`${id}-label`}>{copy.label}</Label>
+          {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
+          <ToggleGroup type="single" variant="outline" aria-labelledby={`${id}-label`} value={v}
+            onValueChange={(nv) => { if (nv) updateAngle({ premium_mode: nv }); }} className="justify-start flex-wrap">
+            {(copy.options ?? []).map((o) => <ToggleGroupItem key={o.value} value={o.value} className="h-8 text-xs">{o.label}</ToggleGroupItem>)}
+          </ToggleGroup>
+        </div>
+      );
+    }
+    if (def?.control === "touch-level") {
+      const v = data.stack.touch_level ?? [];
+      return (
+        <div key={path}>
+          <Label className="text-xs font-medium text-muted-foreground mb-1 block" id={`${id}-label`}>{copy.label}</Label>
+          {copy.helper && <p className="text-xs text-muted-foreground mb-1.5">{copy.helper}</p>}
+          <ToggleGroup type="multiple" variant="outline" aria-labelledby={`${id}-label`} value={v}
+            onValueChange={(nv) => updateStack({ touch_level: nv })} className="justify-start flex-wrap">
+            {(copy.options ?? []).map((o) => <ToggleGroupItem key={o.value} value={o.value} className="h-8 text-xs">{o.label}</ToggleGroupItem>)}
+          </ToggleGroup>
+        </div>
+      );
+    }
     if (def?.control === "offer-format") {
       const v = String(data.angle.offer_format ?? "");
       return (
