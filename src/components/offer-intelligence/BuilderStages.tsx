@@ -1,5 +1,5 @@
 // Builder Stages C–E working areas (presentation only; persistence via `run`).
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { AlertTriangle, Check, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -196,7 +196,7 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
         <>
           <Box title="Proposed offer">
             <dl className="grid md:grid-cols-[200px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
-              {included.map((w) => <><dt key={`${w.id}-l`} className="text-muted-foreground">{w.label}</dt><dd key={`${w.id}-v`} className="text-foreground whitespace-pre-wrap">{w.value}</dd></>)}
+              {included.map((w) => <Fragment key={w.id}><dt className="text-muted-foreground">{w.label}</dt><dd className="text-foreground whitespace-pre-wrap">{w.value}</dd></Fragment>)}
             </dl>
             {pk?.extras?.audience?.audience && <p className="text-sm text-foreground pt-2"><span className="text-muted-foreground">Audience:</span> {pk.extras.audience.audience}</p>}
             {pk?.extras?.pricingRationale?.reasoning && <p className="text-sm text-foreground"><span className="text-muted-foreground">Pricing reasoning (estimate):</span> {pk.extras.pricingRationale.reasoning}</p>}

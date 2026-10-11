@@ -77,7 +77,7 @@ const call = (body: Record<string, unknown>) => invoke<{ session: BuilderSession
 export const startBuilderSession = (subAccountId: string, target: { offerId: string } | { tier: string }, opts: { forceNew?: boolean } = {}) =>
   call({ action: "start", sub_account_id: subAccountId, force_new: !!opts.forceNew, ...("offerId" in target ? { offer_id: target.offerId } : { tier: target.tier }) });
 
-export type BuilderAction = "understand" | "diagnose" | "strengthen" | "package" | "final_assessment" | "save";
+export type BuilderAction = "understand" | "diagnose" | "strengthen" | "package" | "final_assessment" | "save" | "approval_begin" | "approval_complete";
 export const builderAction = (s: BuilderSession, action: BuilderAction, extra: Record<string, unknown> = {}) =>
   call({ action, session_id: s.id, version: s.version, ...extra });
 
@@ -166,7 +166,7 @@ export async function approveBuilderSession(s: BuilderSession, opts: { applyToLa
   // Claim the approval (version-locked → a second tab/double click gets a conflict).
   let session: BuilderSession;
   try {
-    ({ session } = await builderAction(s, "approval_begin" as any, { expected: fingerprint(merged) }));
+    ({ session } = await builderAction(s, "approval_begin", { expected: fingerprint(merged) }));
   } catch (e) { return { ok: false, error: (e as BuilderError).code }; }
 
   let offerId: string;
@@ -194,7 +194,7 @@ export async function approveBuilderSession(s: BuilderSession, opts: { applyToLa
     }
   }
   try {
-    const done = await builderAction(session, "approval_complete" as any, { offer_id: offerId });
+    const done = await builderAction(session, "approval_complete", { offer_id: offerId });
     if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("offers:changed"));
     return { ok: true, offerId, session: done.session };
   } catch (e) { return { ok: false, error: (e as BuilderError).code }; }
