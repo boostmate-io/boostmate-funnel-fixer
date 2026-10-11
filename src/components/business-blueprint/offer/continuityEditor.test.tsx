@@ -110,7 +110,7 @@ describe("Continuity in the Universal Offer Editor", () => {
     const v = designToRowValues(design, { name: "X", data: {} }, "Untitled Offer", "continuity");
     expect(v.data.design.stack.deliverables[0]).toMatchObject({ id: "d1", frequency: "weekly" });
     expect(v.data.price).toBe("");
-    expect(v.data.billing_interval).toBe("");
+    expect((v.data as any).billing_interval).toBe("");
   });
   it("summary without interval never assumes monthly", () => {
     const d = designForRow({ name: "X", data: { price: 20 } as any, tier: "continuity" });

@@ -215,8 +215,8 @@ export default function TierOfferDialog({
         </div>
       );
     }
-    if (path.startsWith("offer_stack.pricing.recurring_offer.") || path === "offer_stack.pricing.cancellation_terms") {
-      const nested = path.startsWith("offer_stack.pricing.recurring_offer.");
+    if (def?.path.split(".")[2] === "recurring_offer" || path === "offer_stack.pricing.cancellation_terms") {
+      const nested = def?.path.split(".")[2] === "recurring_offer";
       const key = path.split(".").pop()!;
       const value = String(nested ? (data.pricing.recurring_offer as any)?.[key] ?? "" : (data.pricing as any)[key] ?? "");
       const set = (v: string) => nested
