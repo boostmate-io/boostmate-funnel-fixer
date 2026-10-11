@@ -1793,33 +1793,64 @@ export const OFFER_PRICE_PATHS: string[] = [
   "offer_stack.pricing.premium_upgrade.price",
 ];
 
-export interface OfferCoachBrief { purpose: string; priorities: string[]; pitfalls: string[] }
+export interface OfferCoachBrief {
+  purpose: string;
+  /** What a strong offer in this category looks like. */
+  strong?: string[];
+  /** Key decisions / questions worth settling (ask only what's missing). */
+  questions?: string[];
+  pricing?: string;
+  /** How this offer may relate to other offers (never mandatory). */
+  ecosystem?: string;
+  priorities: string[];
+  pitfalls: string[];
+}
 
-/** Short per-category coaching briefs (Core keeps the existing prompt). */
+/** Per-category coaching briefs (Core keeps the existing prompt). Keep concise. */
 export const OFFER_TIER_COACH_BRIEFS: Record<Exclude<OfferTier, "core">, OfferCoachBrief> = {
   free: {
-    purpose: "A free offer / lead magnet earns attention and trust and moves the right people to the next step.",
-    priorities: ["One specific problem for one specific audience", "A quick win they can feel within minutes", "A format that fits the problem", "A clear next-step CTA into a paid offer"],
-    pitfalls: ["Trying to solve everything", "Giving away the full method", "No bridge to the next offer", "Suggesting a price — free offers are always free"],
+    purpose: "A free offer / lead magnet earns attention and trust from the right people by solving one specific problem right away.",
+    strong: ["One specific problem for one clearly defined audience", "A quick win they can feel within minutes", "A format that fits how this audience consumes content (checklist, template, short video, quiz, call…)", "Attracts buyers who fit the business — not just anyone"],
+    questions: ["Which single problem does it solve, and for whom?", "What does the user have or feel right after using it?", "Which format suits this audience and problem?", "Is there a natural next step — and does it need one?"],
+    pricing: "Always free. Never suggest a price.",
+    ecosystem: "Often an entry point, but a next step is optional — it can also build authority or serve existing customers.",
+    priorities: ["Specific problem + quick win", "Format fit", "Lead quality and relevance to the business", "A natural, optional next step"],
+    pitfalls: ["Trying to solve everything", "Giving away the full method without a clear result", "Generic topics that attract the wrong audience", "Suggesting a price — free offers are always free"],
   },
   low_ticket: {
-    purpose: "A low-ticket offer turns leads into buyers quickly and pays for acquisition.",
-    priorities: ["A concrete problem and a fast, tangible result", "A small, focused set of deliverables", "An easy-yes price", "A natural ascension into a bigger offer"],
-    pitfalls: ["Too much content for the price", "Vague outcomes", "Pricing it like a core program", "No reason to ascend"],
+    purpose: "A low-ticket offer delivers one clear, achievable result with minimal purchase friction.",
+    strong: ["One concrete result the buyer can reach quickly", "Simple delivery that is useful immediately", "High perceived value relative to the price", "Proportionate risk reduction (guarantee, clear scope)"],
+    questions: ["What single result does the buyer get?", "What could make someone hesitate to buy, and how is that removed?", "How fast is it usable?"],
+    pricing: "An easy-yes price that fits the scope. If other offers' prices are known, position it sensibly among them; never state market prices as fact.",
+    ecosystem: "May lead into a bigger offer, but can also stand alone as a useful product.",
+    priorities: ["One clear result", "Low friction", "Simple, immediate delivery", "Strong perceived value"],
+    pitfalls: ["Overloading a small offer", "Vague outcomes", "Pricing it like a core program", "Unneeded complexity in delivery"],
   },
   mid_ticket: {
-    purpose: "A mid-ticket offer delivers a meaningful result between the entry offer and the core program.",
-    priorities: ["A clear outcome and a simple framework", "Deliverables and support that match the price", "A price and payment plans that bridge low and core", "Positioning that differs from the core offer"],
-    pitfalls: ["Duplicating the core offer", "Unclear differentiation", "Price that cannibalizes the core offer"],
+    purpose: "A mid-ticket offer delivers a meaningful transformation with a clear scope and delivery structure.",
+    strong: ["A meaningful, specific transformation", "Clear differentiation from any Core Offer", "A delivery structure that fits (self-paced, group, cohort…)", "Support intensity that matches the price"],
+    questions: ["How is it different from the Core Offer, if one exists?", "Self-paced, group or cohort — and why?", "How much direct support is included?"],
+    pricing: "Compare with the user's own offers (prices listed under Related Offers, when known) and the scope and support level. Avoid undercutting a Core Offer that delivers the same result.",
+    ecosystem: "Can be a step toward Core, a standalone program, or an alternative for a different budget — don't assume it must be a stepping stone.",
+    priorities: ["Transformation", "Differentiation", "Delivery structure", "Scope vs support intensity"],
+    pitfalls: ["Duplicating the Core Offer", "Unclear differentiation", "Price that cannibalizes the Core Offer"],
   },
   premium: {
-    purpose: "A premium offer gives the best-fit buyers more access, speed or done-for-you support at a high price.",
-    priorities: ["Standalone vs upgrade of a Core Offer", "The high-touch level (1:1, done-with-you, done-for-you, VIP day, priority access)", "Exclusive value beyond the core offer", "A price that reflects access and outcome"],
-    pitfalls: ["Just 'more content'", "Unclear extra value over the core offer", "Underpricing high-touch delivery"],
+    purpose: "A premium offer gives best-fit buyers more access, personalization, speed or done-for-you support at a high price.",
+    strong: ["A clear choice between Standalone and Upgrade positioning", "High-touch, personalized delivery", "Realistic capacity and delivery limits", "Value clearly beyond any Core Offer"],
+    questions: ["Standalone or an upgrade of another offer?", "What level of personal access is included?", "How many clients can be served at once?", "Does it need an application or qualification step? (only when it fits)"],
+    pricing: "Justify the price by access, personalization and outcome, considering delivery capacity. Compare with known prices of the user's own offers; never present market prices as fact.",
+    ecosystem: "In Upgrade mode, check the ecosystem for an 'Upgrades from' source offer. If none is recorded, you may gently suggest clarifying the upgrade path — never require or create a link.",
+    priorities: ["Positioning (standalone vs upgrade)", "High-touch delivery", "Capacity", "Premium differentiation"],
+    pitfalls: ["Just 'more content'", "Unclear extra value", "Underpricing high-touch delivery", "Promising more access than capacity allows"],
   },
   continuity: {
-    purpose: "A continuity offer keeps members getting ongoing value so they stay and keep paying.",
-    priorities: ["Ongoing value — why members stay", "Recurring deliverables and support", "A recurring price per billing interval (monthly, quarterly or yearly)", "Clear, fair cancellation terms"],
-    pitfalls: ["One-off value with a recurring price", "Confusing the price with a different interval", "Hidden or unclear cancellation terms"],
+    purpose: "A continuity offer delivers ongoing value so customers keep getting results and stay.",
+    strong: ["A clear reason to stay month after month", "Recurring deliverables and support with a predictable rhythm", "Onboarding that gets new members engaged quickly", "Delivery that remains sustainable at scale"],
+    questions: ["What value keeps arriving each period?", "What's the delivery rhythm?", "Why might people cancel, and how is that addressed?", "Which billing interval fits?"],
+    pricing: "The recurring price is per selected billing interval (monthly, quarterly or yearly) — always state it with its interval. Weigh ongoing value against delivery cost.",
+    ecosystem: "Often follows another offer for retention, but can also be a standalone subscription. Not necessarily a community or membership.",
+    priorities: ["Ongoing value", "Recurring delivery rhythm", "Onboarding and engagement", "Retention and fair cancellation terms"],
+    pitfalls: ["One-off value with a recurring price", "Confusing the price with a different interval", "Unsustainable delivery as it grows", "Hidden or unclear cancellation terms"],
   },
 };
