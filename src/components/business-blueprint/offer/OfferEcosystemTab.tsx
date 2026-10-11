@@ -5,7 +5,7 @@
 // =============================================================================
 
 import type { CoachBlueprintWrite } from "@/lib/coach/types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Network, Sparkles, Plus,
 } from "lucide-react";
