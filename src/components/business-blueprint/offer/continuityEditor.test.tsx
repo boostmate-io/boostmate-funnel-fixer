@@ -66,7 +66,7 @@ describe("Continuity in the Universal Offer Editor", () => {
       expect(sections(d)).toEqual(tab.sections.map((s) => s.id));
       for (const sec of tab.sections) expect(panel(d).querySelector(`[data-offer-section="${sec.id}"]`)!.children.length).toBeGreaterThan(1);
     }
-    expect(within(d).queryAllByLabelText("Open AI Coach for this field")).toHaveLength(0);
+    expect(within(d).queryAllByLabelText("Open AI Coach for this field").length).toBeGreaterThan(0); // Phase 3: Coach active
   });
   it("seeds recurring price + interval from summary; open/close writes nothing", async () => {
     const d = await open(); goTab(d, "Pricing");

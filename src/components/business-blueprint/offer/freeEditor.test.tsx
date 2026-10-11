@@ -70,7 +70,7 @@ describe("Free offers", () => {
     within(d).getAllByText("More options").forEach((m) => fireEvent.click(m));
     expect(within(d).queryByPlaceholderText("2500")).toBeNull();
     expect(within(d).queryByText(/Payment Plan/i)).toBeNull();
-    expect(within(d).queryAllByLabelText("Open AI Coach for this field")).toHaveLength(0);
+    expect(within(d).queryAllByLabelText("Open AI Coach for this field").length).toBeGreaterThan(0); // Phase 3: Coach active
     expect(within(d).getByLabelText("Next-Step CTA")).toBeTruthy();
   });
   it("Offer Format options resolve from the registry", async () => {
