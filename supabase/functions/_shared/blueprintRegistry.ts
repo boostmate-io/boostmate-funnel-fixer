@@ -1353,6 +1353,50 @@ export function fieldsForTier(tier: OfferTier): {
 
 export type OfferFieldStatus = "min" | "recommended" | "optional";
 export type OfferRelationshipType = "ascends_to" | "leads_into" | "retention" | "downsell";
+export type OfferRelationshipDirection = "incoming" | "outgoing";
+
+/**
+ * Relationship types (stored in public.offer_relationships as source → target).
+ * `outgoing` label = shown on the source offer; `incoming` = shown on the target.
+ */
+export const OFFER_RELATIONSHIP_TYPES: Record<OfferRelationshipType, { label: string; outgoing: string; incoming: string }> = {
+  ascends_to: { label: "Ascension / next step", outgoing: "Ascends to", incoming: "Ascends from" },
+  leads_into: { label: "Entry point", outgoing: "Leads into", incoming: "Fed by" },
+  downsell: { label: "Downsell", outgoing: "Downsell to", incoming: "Downsell from" },
+  retention: { label: "Retention / continuity", outgoing: "Continues into", incoming: "Retention for" },
+};
+
+/** One relationship slot of an offer's Ecosystem section. */
+export interface OfferRelationshipSlot {
+  relationship: OfferRelationshipType;
+  direction: OfferRelationshipDirection;
+  /** Display label for this slot (defaults to the type's direction label). */
+  label: string;
+  /** Category suggestion for picking the other offer — never a restriction. */
+  suggestTiers?: OfferTier[];
+}
+
+const slot = (relationship: OfferRelationshipType, direction: OfferRelationshipDirection, suggestTiers?: OfferTier[], label?: string): OfferRelationshipSlot =>
+  ({ relationship, direction, label: label ?? OFFER_RELATIONSHIP_TYPES[relationship][direction], ...(suggestTiers ? { suggestTiers } : {}) });
+
+/**
+ * Consolidated Ecosystem section per tier (UI not yet rendered). Existing
+ * placeholders map here: Free "Leads into", Low/Mid "Ascends to", Mid
+ * "Downsell from" (incoming), Premium "Upgrades from" (incoming ascends_to),
+ * Continuity "Retention for" (incoming retention).
+ */
+export const OFFER_TIER_RELATIONSHIPS: Record<OfferTier, OfferRelationshipSlot[]> = {
+  free: [slot("leads_into", "outgoing", ["low_ticket", "mid_ticket", "core"])],
+  low_ticket: [slot("leads_into", "incoming", ["free"]), slot("ascends_to", "outgoing", ["mid_ticket", "core"]), slot("downsell", "incoming", ["mid_ticket", "core"])],
+  mid_ticket: [slot("leads_into", "incoming", ["free"]), slot("ascends_to", "incoming", ["low_ticket"]), slot("ascends_to", "outgoing", ["core", "premium"]), slot("downsell", "incoming", ["core", "premium"])],
+  core: [slot("leads_into", "incoming", ["free"]), slot("ascends_to", "incoming", ["low_ticket", "mid_ticket"]), slot("ascends_to", "outgoing", ["premium"], "Upgrades to"), slot("downsell", "outgoing", ["low_ticket", "mid_ticket"]), slot("retention", "outgoing", ["continuity"])],
+  premium: [slot("ascends_to", "incoming", ["core"], "Upgrades from"), slot("retention", "outgoing", ["continuity"]), slot("downsell", "outgoing", ["core", "mid_ticket"])],
+  continuity: [slot("retention", "incoming", ["core", "premium", "mid_ticket"])],
+};
+
+export function offerRelationshipSlots(tier: OfferTier): OfferRelationshipSlot[] {
+  return OFFER_TIER_RELATIONSHIPS[tier] ?? [];
+}
 
 export type OfferLayoutItem =
   | { kind: "field"; path: string; status: OfferFieldStatus; editor?: OfferEditorCopy }

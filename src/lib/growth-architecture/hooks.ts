@@ -65,6 +65,39 @@ export interface GrowthArchitectureRow {
 
 // ---------- useOfferRelationships ------------------------------------------
 
+/** Relationships where this offer is the source (this → other). */
+export function outgoingRelationships(rows: OfferRelationshipRow[], offerId: string) {
+  return rows.filter((r) => r.source_offer_id === offerId);
+}
+/** Relationships where this offer is the target (other → this). */
+export function incomingRelationships(rows: OfferRelationshipRow[], offerId: string) {
+  return rows.filter((r) => r.target_offer_id === offerId);
+}
+
+export type RelationshipError = "self" | "duplicate" | "cross_workspace" | "forbidden" | "unknown";
+
+/** Map a database error on offer_relationships to a stable, user-presentable reason. */
+export function relationshipErrorReason(err: { code?: string; message?: string } | null | undefined): RelationshipError {
+  if (!err) return "unknown";
+  const m = err.message ?? "";
+  if (err.code === "23505" || /duplicate/i.test(m)) return "duplicate";
+  if (/no_self/i.test(m)) return "self";
+  if (/belong to this workspace/i.test(m)) return "cross_workspace";
+  if (err.code === "42501" || /row-level security/i.test(m)) return "forbidden";
+  return "unknown";
+}
+
+export const RELATIONSHIP_ERROR_TEXT: Record<RelationshipError, string> = {
+  self: "An offer can't be linked to itself.",
+  duplicate: "These offers are already linked this way.",
+  cross_workspace: "Both offers must belong to this workspace.",
+  forbidden: "You don't have access to change this workspace's offers.",
+  unknown: "Could not save the relationship.",
+};
+
+const relKey = (p: { source_offer_id: string; target_offer_id: string; relationship_type: string }) =>
+  `${p.source_offer_id}>${p.target_offer_id}>${p.relationship_type}`;
+
 export function useOfferRelationships(subAccountId: string | null) {
   const [rows, setRows] = useState<OfferRelationshipRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,20 +119,42 @@ export function useOfferRelationships(subAccountId: string | null) {
 
   useEffect(() => { void load(); }, [load]);
 
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const inFlight = useRef(new Set<string>());
+
+  /**
+   * Create a relationship. Returns the new id, or null with `lastError` set.
+   * Duplicate submissions (already present or in flight) are ignored.
+   */
+  const [lastError, setLastError] = useState<RelationshipError | null>(null);
   const add = useCallback(
     async (payload: Omit<OfferRelationshipRow, "id" | "sub_account_id" | "notes"> & { notes?: string | null }) => {
       if (!subAccountId) return null;
-      const { data, error } = await supabase
-        .from("offer_relationships")
-        .insert({ ...payload, sub_account_id: subAccountId } as any)
-        .select("id,sub_account_id,source_offer_id,target_offer_id,relationship_type,notes")
-        .single();
-      if (error) {
-        if (!/duplicate/i.test(error.message)) toast.error("Could not add relationship");
-        return null;
+      const key = relKey(payload);
+      if (payload.source_offer_id === payload.target_offer_id) { setLastError("self"); return null; }
+      if (inFlight.current.has(key)) return null;
+      const existing = rowsRef.current.find((r) => relKey(r) === key);
+      if (existing) { setLastError("duplicate"); return existing.id; }
+      inFlight.current.add(key);
+      try {
+        const { data, error } = await supabase
+          .from("offer_relationships")
+          .insert({ ...payload, sub_account_id: subAccountId } as any)
+          .select("id,sub_account_id,source_offer_id,target_offer_id,relationship_type,notes")
+          .single();
+        if (error) {
+          const reason = relationshipErrorReason(error);
+          setLastError(reason);
+          if (reason !== "duplicate") toast.error(RELATIONSHIP_ERROR_TEXT[reason]);
+          return null;
+        }
+        setLastError(null);
+        setRows((prev) => [...prev, data as OfferRelationshipRow]);
+        return (data as any).id as string;
+      } finally {
+        inFlight.current.delete(key);
       }
-      setRows((prev) => [...prev, data as OfferRelationshipRow]);
-      return (data as any).id as string;
     },
     [subAccountId],
   );
@@ -110,7 +165,10 @@ export function useOfferRelationships(subAccountId: string | null) {
     if (error) { toast.error("Could not remove relationship"); await load(); }
   }, [load]);
 
-  return { rows, loading, add, remove, reload: load };
+  const incoming = useCallback((offerId: string) => incomingRelationships(rows, offerId), [rows]);
+  const outgoing = useCallback((offerId: string) => outgoingRelationships(rows, offerId), [rows]);
+
+  return { rows, loading, add, remove, reload: load, incoming, outgoing, lastError };
 }
 
 // ---------- useAcquisitionChannels -----------------------------------------
