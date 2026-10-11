@@ -245,7 +245,6 @@ export default function OfferBuilder() {
         {/* Guidance */}
         <aside aria-label="AI guidance" className="border-t lg:border-t-0 lg:border-l border-border p-4 space-y-4 bg-card/50">
           <p className="text-sm font-display font-semibold text-foreground flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-primary" /> Guidance</p>
-          <fieldset disabled={readOnly} className="space-y-6 min-w-0">
           {view === "understand" && (
             <div className="space-y-3 text-sm">
               <p className="text-muted-foreground">A strong offer starts from the right audience and one clear transformation. Correct anything assumed — the diagnosis treats your answers as facts.</p>
