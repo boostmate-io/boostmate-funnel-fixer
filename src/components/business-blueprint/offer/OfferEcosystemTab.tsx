@@ -193,6 +193,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   const bt = getBusinessType(businessType);
   const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer, applyCoachWrites, saveStatuses } = useEcosystemOffers({ blueprintId });
   const [coachRevision, setCoachRevision] = useState(0);
+  const [tierRevision, setTierRevision] = useState(0);
   const activeSubAccountId = useOptionalWorkspace()?.activeSubAccountId ?? null;
   const relationships = useOfferRelationships(activeSubAccountId);
   // Relationships save immediately via their own hook — never via design autosave.
@@ -481,7 +482,9 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
           tier={editingTierRow.tier}
           categoryLabel={ECOSYSTEM_TIERS.find((t) => t.id === editingTierRow.tier)?.label ?? "Offer"}
           offerId={editingTierRow.id}
-          initial={editingTier.initial}
+          initial={tierRevision ? designForRow(editingTierRow) : editingTier.initial}
+          persistWrites={persistTierWrites}
+          externalRevision={tierRevision}
           onChange={(next) => {
             const row = offers.find((o) => o.id === editingTier.id);
             // Design is the source of truth; summary fields are derived from it.
