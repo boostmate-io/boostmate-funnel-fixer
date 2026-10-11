@@ -26,6 +26,7 @@ import GrowthArchitectureModule from "@/components/growth-architecture/GrowthArc
 import GlobalCoachBubble from "@/components/coach/GlobalCoachBubble";
 import GrowthRoadmapModule from "@/components/growth/GrowthRoadmapModule";
 import { usePendingGrowthClaim } from "@/hooks/usePendingGrowthClaim";
+import { usePendingOfferClaim } from "@/hooks/usePendingOfferClaim";
 import { PageHeader, PAGE_CONTAINER } from "@/components/layout/PageLayout";
 
 
@@ -61,6 +62,7 @@ const Dashboard = () => {
   const fullHeightModules = ["funnels", "copy-documents", "funnel-audit", "analytics", "clients", "business-blueprint", "growth-architecture", "admin-accounts", "admin-ai", "admin-copy", "admin-growth", "admin-redirects", "outreach", "growth-roadmap", "overview", "settings"];
 
   usePendingGrowthClaim();
+  usePendingOfferClaim();
 
   if (loading) {
     return (

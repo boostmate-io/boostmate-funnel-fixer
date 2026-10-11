@@ -122,7 +122,8 @@ const MAX_TEXT = 5000;
 function matchEnum(values: EnumValue[], raw: unknown): string | null {
   const s = String(raw ?? "").trim().toLowerCase();
   if (!s) return null;
-  const hit = values.find((v) => v.value.toLowerCase() === s || v.label.toLowerCase() === s);
+  const snake = s.replace(/[\s-]+/g, "_");
+  const hit = values.find((v) => v.value.toLowerCase() === s || v.label.toLowerCase() === s || v.value.toLowerCase() === snake);
   return hit ? hit.value : null;
 }
 
@@ -150,6 +151,11 @@ function normalizeValue(tier: OfferTier, path: string, r: Resolved, raw: unknown
   if (isBlank) return { reason: "clear_not_allowed" };
   if (r.kind === "list") {
     if (typeof raw !== "string" && typeof raw !== "number") return { reason: "invalid_text" };
+    const item = r.list!.itemFields.find((f) => f.key === r.itemKey);
+    if (item?.valueType === "enum" && item.enumValues?.length) {
+      const v = matchEnum(item.enumValues, raw);
+      return v ? { value: v } : { reason: "invalid_option" };
+    }
     const s = String(raw).trim();
     return s.length > MAX_TEXT ? { reason: "too_long" } : { value: s };
   }
