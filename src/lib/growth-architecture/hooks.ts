@@ -106,10 +106,15 @@ export function useOfferRelationships(subAccountId: string | null) {
   const load = useCallback(async () => {
     if (!subAccountId) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("offer_relationships")
-      .select("id,sub_account_id,source_offer_id,target_offer_id,relationship_type,notes")
-      .eq("sub_account_id", subAccountId);
+    let data: unknown[] | null = null;
+    let error: unknown = null;
+    try {
+      const res = await supabase
+        .from("offer_relationships")
+        .select("id,sub_account_id,source_offer_id,target_offer_id,relationship_type,notes")
+        .eq("sub_account_id", subAccountId);
+      data = res.data; error = res.error;
+    } catch (e) { error = e; }
     setLoading(false);
     if (error) {
       toast.error("Could not load offer relationships");
@@ -160,10 +165,12 @@ export function useOfferRelationships(subAccountId: string | null) {
     [subAccountId],
   );
 
-  const remove = useCallback(async (id: string) => {
+  /** Optimistic removal; returns false (and restores rows) on failure. */
+  const remove = useCallback(async (id: string): Promise<boolean> => {
     setRows((prev) => prev.filter((r) => r.id !== id));
     const { error } = await supabase.from("offer_relationships").delete().eq("id", id);
-    if (error) { toast.error("Could not remove relationship"); await load(); }
+    if (error) { toast.error("Could not remove relationship"); await load(); return false; }
+    return true;
   }, [load]);
 
   const incoming = useCallback((offerId: string) => incomingRelationships(rows, offerId), [rows]);

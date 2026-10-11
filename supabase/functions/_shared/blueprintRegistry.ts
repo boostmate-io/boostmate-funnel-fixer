@@ -1394,6 +1394,28 @@ export const OFFER_TIER_RELATIONSHIPS: Record<OfferTier, OfferRelationshipSlot[]
   continuity: [slot("retention", "incoming", ["core", "premium", "mid_ticket"])],
 };
 
+/** Editor tab that hosts the shared Ecosystem (relationships) section, placed after its last section. */
+export const OFFER_TIER_ECOSYSTEM_TAB: Record<OfferTier, string> = {
+  free: "offer", low_ticket: "offer", mid_ticket: "pricing", core: "pricing", premium: "pricing", continuity: "pricing",
+};
+
+export const OFFER_ECOSYSTEM_SECTION_COPY = {
+  title: "Ecosystem",
+  helper: "Link this offer to the other offers in your ecosystem, so the customer journey is clear.",
+  incoming: "Offers leading here",
+  incomingHelper: "Offers that send customers to this offer.",
+  outgoing: "Where customers go next",
+  outgoingHelper: "Offers this offer sends customers to.",
+  cycleWarning: "This link makes the customer journey loop back to an offer that already leads here. That's allowed — just make sure it's intentional.",
+} as const;
+
+/** Category suggestions for a given type + direction on a tier (never a restriction). */
+export function suggestedTiersFor(tier: OfferTier, relationship: OfferRelationshipType, direction: OfferRelationshipDirection): OfferTier[] {
+  return (OFFER_TIER_RELATIONSHIPS[tier] ?? [])
+    .filter((s) => s.relationship === relationship && s.direction === direction)
+    .flatMap((s) => s.suggestTiers ?? []);
+}
+
 export function offerRelationshipSlots(tier: OfferTier): OfferRelationshipSlot[] {
   return OFFER_TIER_RELATIONSHIPS[tier] ?? [];
 }
