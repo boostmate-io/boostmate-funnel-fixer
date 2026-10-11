@@ -1394,6 +1394,28 @@ export const OFFER_TIER_RELATIONSHIPS: Record<OfferTier, OfferRelationshipSlot[]
   continuity: [slot("retention", "incoming", ["core", "premium", "mid_ticket"])],
 };
 
+/** Editor tab that hosts the shared Ecosystem (relationships) section, placed after its last section. */
+export const OFFER_TIER_ECOSYSTEM_TAB: Record<OfferTier, string> = {
+  free: "offer", low_ticket: "offer", mid_ticket: "pricing", core: "pricing", premium: "pricing", continuity: "pricing",
+};
+
+export const OFFER_ECOSYSTEM_SECTION_COPY = {
+  title: "Ecosystem",
+  helper: "Link this offer to the other offers in your ecosystem, so the customer journey is clear.",
+  incoming: "Offers leading here",
+  incomingHelper: "Offers that send customers to this offer.",
+  outgoing: "Where customers go next",
+  outgoingHelper: "Offers this offer sends customers to.",
+  cycleWarning: "This link makes the customer journey loop back to an offer that already leads here. That's allowed — just make sure it's intentional.",
+} as const;
+
+/** Category suggestions for a given type + direction on a tier (never a restriction). */
+export function suggestedTiersFor(tier: OfferTier, relationship: OfferRelationshipType, direction: OfferRelationshipDirection): OfferTier[] {
+  return (OFFER_TIER_RELATIONSHIPS[tier] ?? [])
+    .filter((s) => s.relationship === relationship && s.direction === direction)
+    .flatMap((s) => s.suggestTiers ?? []);
+}
+
 export function offerRelationshipSlots(tier: OfferTier): OfferRelationshipSlot[] {
   return OFFER_TIER_RELATIONSHIPS[tier] ?? [];
 }
@@ -1459,7 +1481,8 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
       sec("basics", "Basics", [NAME, fld("angle.offer_format", "recommended"), SHORT_DESC("recommended")]),
       sec("value", "Value", [fld("angle.problem_solved", "recommended"), fld("angle.quick_win", "recommended"), fld("angle.core_outcome", "optional")]),
       sec("included", "What's included", [lst("stack.deliverables", "optional"), DELIVERY("recommended")]),
-      sec("next_step", "Next step", [fld("angle.next_step_cta", "optional"), rel("leads_into", "Leads into")]),
+      sec("next_step", "Next step", [fld("angle.next_step_cta", "optional")]),
+      sec("ecosystem", "Ecosystem", [rel("leads_into", "Leads into")]),
     ] }],
   },
   low_ticket: {
@@ -1472,7 +1495,7 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
       ]),
       sec("included", "What's included", [lst("stack.deliverables", "recommended"), lst("stack.bonuses", "optional"), DELIVERY("recommended")]),
       sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price", helper: "What buyers pay for this offer." }), fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
-      sec("next_step", "Next step", [rel("ascends_to", "Ascends to")]),
+      sec("ecosystem", "Ecosystem", [rel("ascends_to", "Ascends to")]),
     ] }],
   },
   mid_ticket: {
@@ -1491,7 +1514,7 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
       { id: "pricing", label: STANDARD_TABS.pricing, sections: [
         sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price", helper: "What buyers pay for this offer." }), lst("pricing.payment_plans", "optional")]),
         sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
-        sec("relationships", "Ecosystem", [rel("ascends_to", "Ascends to"), rel("downsell", "Downsell from")]),
+        sec("ecosystem", "Ecosystem", [rel("ascends_to", "Ascends to"), rel("downsell", "Downsell from")]),
       ] },
     ],
   },
@@ -1513,6 +1536,7 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
       { id: "pricing", label: STANDARD_TABS.pricing, sections: [
         sec("price", "Price", [fld("pricing.core_price", "min", { label: "Price", helper: "What buyers pay for this offer." }), lst("pricing.payment_plans", "optional")]),
         sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
+        sec("ecosystem", "Ecosystem", [rel("retention", "Continues into")]),
       ] },
     ],
   },
@@ -1533,7 +1557,7 @@ export const OFFER_TIER_LAYOUTS: Record<OfferTier, OfferTierLayout> = {
           fld("pricing.cancellation_terms", "recommended"),
         ]),
         sec("guarantee", "Guarantee", [fld("pricing.guarantee_type", "optional"), fld("pricing.guarantee_details", "optional")]),
-        sec("relationships", "Ecosystem", [rel("retention", "Retention for")]),
+        sec("ecosystem", "Ecosystem", [rel("retention", "Retention for")]),
       ] },
     ],
   },

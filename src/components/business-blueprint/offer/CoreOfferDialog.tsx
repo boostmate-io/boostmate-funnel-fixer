@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { OfferCoachScopeProvider, type ScopedOfferCoach, type ScopedPersistResult } from "./OfferCoachScope";
-import { fieldsForTier } from "@shared/blueprintRegistry";
+import { fieldsForTier, OFFER_TIER_ECOSYSTEM_TAB } from "@shared/blueprintRegistry";
 import OfferEditorShell, { type OfferSaveStatus, type OfferEditorTab } from "./OfferEditorShell";
 import type { CoachBlueprintWrite } from "@/lib/coach/types";
 import OfferAngleTab from "./OfferAngleTab";
@@ -43,6 +43,8 @@ interface Props {
   } | null;
   /** Bump to re-seed local state from `initial` (e.g. after a Coach write). */
   externalRevision?: number;
+  /** Shared Ecosystem (relationships) section, appended to the Pricing tab. */
+  ecosystemSection?: React.ReactNode;
 }
 
 export default function CoreOfferDialog({
@@ -60,6 +62,7 @@ export default function CoreOfferDialog({
   businessType,
   scopedOffer,
   externalRevision = 0,
+  ecosystemSection,
 }: Props) {
   const [data, setData] = useState<OfferDesignData>(initial ?? emptyOfferDesign());
   const dataRef = useRef(data);
@@ -125,6 +128,8 @@ export default function CoreOfferDialog({
     stack: <OfferStackTab data={data.stack} onChange={updateStack} saving={!!saving} businessType={businessType} embedded />,
     pricing: <PricingTab data={data.pricing} onChange={updatePricing} saving={!!saving} businessType={businessType} embedded />,
   };
+  const ecoTab = OFFER_TIER_ECOSYSTEM_TAB.core;
+  if (ecosystemSection && content[ecoTab]) content[ecoTab] = <div className="space-y-6">{content[ecoTab]}{ecosystemSection}</div>;
   const tabs: OfferEditorTab[] = fieldsForTier("core").subBlocks.filter((section) => content[section.id]).map((section) => ({ id: section.id, label: section.label, content: content[section.id] }));
   return <OfferCoachScopeProvider value={coachScope}>
     <OfferEditorShell open={open} onOpenChange={onOpenChange} offer={{ id: offerId, name: data.angle.main_offer_name || title, category: "Core Offer", primary: isPrimary ?? !scopedOffer }} tabs={tabs} initialTab={initialTab} saveStatus={saveStatus ?? (saving ? "saving" : "saved")} flushChanges={flushChanges} />

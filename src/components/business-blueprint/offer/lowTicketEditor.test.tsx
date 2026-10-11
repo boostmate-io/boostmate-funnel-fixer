@@ -8,7 +8,7 @@ const updateSpy = vi.fn(async () => ({ error: null }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() } }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "u1" } }) }));
-vi.mock("@/contexts/WorkspaceContext", () => ({ useWorkspace: () => ({ activeSubAccountId: "ws-1" }) }));
+vi.mock("@/contexts/WorkspaceContext", () => ({ useWorkspace: () => ({ activeSubAccountId: "ws-1" }), useOptionalWorkspace: () => ({ activeSubAccountId: "ws-1" }) }));
 vi.mock("@/hooks/useCurrency", () => ({ useCurrency: () => ({ symbol: "€", currency: "EUR" }) }));
 vi.mock("@/lib/coach/useCoachChat", () => ({
   useCoachChat: () => ({ conversationId: null, messages: [], status: "idle", error: null, sendMessage: vi.fn(), decisions: {}, recordDecision: vi.fn() }),
@@ -65,7 +65,7 @@ describe("Low-Ticket opens in the Universal Offer Editor", () => {
     expect(tabs).toEqual(["Offer"]);
     const sections = [...dialog.querySelectorAll("[data-offer-section]")].map((s) => s.getAttribute("data-offer-section"));
     expect(sections).toEqual(offerTabsForTier("low_ticket")[0].sections.map((s) => s.id));
-    expect(sections).toEqual(["basics", "value", "included", "price", "next_step"]);
+    expect(sections).toEqual(["basics", "value", "included", "price", "ecosystem"]);
   });
 
   it("renders fields with registry metadata, seeded from the summary", async () => {

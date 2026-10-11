@@ -6,7 +6,7 @@ const openCoachSpy = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() } }));
 vi.mock("@/contexts/CoachContext", () => ({ useCoach: () => ({ openCoach: openCoachSpy }) }));
-vi.mock("@/contexts/WorkspaceContext", () => ({ useWorkspace: () => ({ activeSubAccountId: "ws-1" }) }));
+vi.mock("@/contexts/WorkspaceContext", () => ({ useWorkspace: () => ({ activeSubAccountId: "ws-1" }), useOptionalWorkspace: () => ({ activeSubAccountId: "ws-1" }) }));
 
 import { useOfferCoach } from "./useOfferCoach";
 import { OfferCoachScopeProvider, type ScopedOfferCoach } from "./OfferCoachScope";

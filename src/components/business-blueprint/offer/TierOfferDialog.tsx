@@ -42,6 +42,8 @@ interface Props {
   saveStatus?: OfferSaveStatus;
   flushChanges?: () => Promise<boolean>;
   businessType?: string;
+  /** Shared Ecosystem (relationships) section, appended to the registry-chosen tab. */
+  ecosystemSection?: ReactNode;
 }
 
 const STACK_LIST_BLOCK: Record<string, StackBlock> = {
@@ -60,7 +62,7 @@ const FRAMEWORK_PATHS = new Set([
 const RENDERED_BY_GROUP = new Set(["offer_stack.pricing.guarantee_details"]);
 
 export default function TierOfferDialog({
-  open, onOpenChange, tier, categoryLabel, offerId, initial, onChange, saveStatus, flushChanges, businessType,
+  open, onOpenChange, tier, categoryLabel, offerId, initial, onChange, saveStatus, flushChanges, businessType, ecosystemSection,
 }: Props) {
   const [data, setData] = useState<OfferDesignData>(initial);
   const dataRef = useRef(data);
@@ -85,16 +87,15 @@ export default function TierOfferDialog({
 
   const renderItem = (item: OfferLayoutItem, rendered: Set<string>): ReactNode => {
     if (item.kind === "relationship") {
-      if (item.visibleWhen) {
-        const [, sec, k] = item.visibleWhen.path.split(".");
-        const cur = (data as any)[sec]?.[k];
-        if (cur !== item.visibleWhen.equals) return null;
-      }
+      // Relationships are managed in the shared Ecosystem section; only a
+      // conditional pointer remains (e.g. Premium "Upgrades from" in Upgrade mode).
+      if (!item.visibleWhen) return null;
+      const [, sec, k] = item.visibleWhen.path.split(".");
+      if ((data as any)[sec]?.[k] !== item.visibleWhen.equals) return null;
       return (
-        <div key={`rel:${item.relationship}`} className="rounded-lg border border-dashed border-border px-4 py-3">
-          <Label className="text-xs font-medium text-muted-foreground">{item.label}</Label>
-          <p className="text-xs text-muted-foreground mt-1">Linking this offer to another offer will be available soon.</p>
-        </div>
+        <p key={`rel:${item.relationship}`} data-relationship-hint={item.relationship} className="text-xs text-muted-foreground">
+          <span className="font-medium">{item.label}</span> — link the Core Offer this upgrades from in the Ecosystem section on the Pricing tab.
+        </p>
       );
     }
     const path = item.path;
@@ -267,8 +268,12 @@ export default function TierOfferDialog({
       content: (
         <div className="space-y-6">
           {tab.sections.map((section) => {
-            const main = section.items.filter((i) => i.status !== "optional");
-            const extra = section.items.filter((i) => i.status === "optional");
+            // Shared relationships section replaces the registry "ecosystem" placeholder.
+            if (section.id === "ecosystem") return ecosystemSection ? <div key="ecosystem">{ecosystemSection}</div> : null;
+            const shown = section.items.filter((i) => i.kind !== "relationship" || !!i.visibleWhen);
+            if (!shown.length) return null;
+            const main = shown.filter((i) => i.status !== "optional" || i.kind === "relationship");
+            const extra = shown.filter((i) => i.status === "optional" && i.kind !== "relationship");
             // Count visual controls, not paths (framework + guarantee render as one block).
             const extraCount = new Set(extra.map((i) => i.kind === "relationship" ? `rel:${i.relationship}`
               : FRAMEWORK_PATHS.has(i.path) ? "framework" : RENDERED_BY_GROUP.has(i.path) ? "" : i.path).filter(Boolean)).size;

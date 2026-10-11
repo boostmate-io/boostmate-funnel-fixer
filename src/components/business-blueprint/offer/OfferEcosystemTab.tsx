@@ -18,6 +18,9 @@ import SectionShell from "./SectionShell";
 import SectionHelpCoach from "../SectionHelpCoach";
 import CoreOfferDialog from "./CoreOfferDialog";
 import TierOfferDialog from "./TierOfferDialog";
+import OfferRelationshipsSection from "./OfferRelationshipsSection";
+import { useOfferRelationships } from "@/lib/growth-architecture/hooks";
+import { useOptionalWorkspace } from "@/contexts/WorkspaceContext";
 import OfferSummaryCard from "./OfferSummaryCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -188,6 +191,14 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
   const bt = getBusinessType(businessType);
   const { offers, addOffer, updateOffer, deleteOffer, tierCounts, flushOffer, applyCoachWrites, saveStatuses } = useEcosystemOffers({ blueprintId });
   const [coachRevision, setCoachRevision] = useState(0);
+  const activeSubAccountId = useOptionalWorkspace()?.activeSubAccountId ?? null;
+  const relationships = useOfferRelationships(activeSubAccountId);
+  // Relationships save immediately via their own hook — never via design autosave.
+  const ecosystemFor = (offerId: string | undefined, tier: EcosystemTier) => offerId ? (
+    <OfferRelationshipsSection offerId={offerId} tier={tier as any} workspaceId={activeSubAccountId ?? null}
+      offers={offers.map((o) => ({ id: o.id, name: o.name, tier: o.tier as any, sub_account_id: o.sub_account_id }))}
+      relationships={relationships} />
+  ) : null;
   const progress = calcEcosystemProgress(tierCounts);
   const { openCoach, openListCoach, panel } = useOfferCoach(() => ({ offer_ecosystem: offers }));
 
@@ -470,6 +481,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
           saveStatus={saveStatuses[editingTierRow.id] ?? "saved"}
           flushChanges={() => flushOffer(editingTierRow.id)}
           businessType={businessType}
+          ecosystemSection={ecosystemFor(editingTierRow.id, editingTierRow.tier)}
         />
       )}
 
@@ -502,6 +514,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
             : null
         }
         externalRevision={coachRevision}
+        ecosystemSection={ecosystemFor(editing?.id, "core")}
         saving={saving}
         businessType={businessType}
       />
