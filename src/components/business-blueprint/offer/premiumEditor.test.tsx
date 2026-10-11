@@ -93,19 +93,19 @@ describe("Premium in the Universal Offer Editor", () => {
   });
   it("edits persist design; empty price stays incomplete (not free); IDs/metadata kept", async () => {
     const d = await open();
-    fireEvent.change(within(d).getByLabelText("Problem Solved"), { target: { value: "Stuck" } });
+    fireEvent.change(within(d).getByLabelText("Short Description"), { target: { value: "Stuck" } });
     await done(d);
     await waitFor(() => expect(updateSpy).toHaveBeenCalled());
     const [id, v] = updateSpy.mock.calls.at(-1) as any;
     expect(id).toBe("pr-1");
     expect(v.data.price).toBe("");
     expect(v.data.funnel_id).toBe("f-2");
-    expect(v.data.description).toBe("6-week sprint");
+    expect(v.data.description).toBe("Stuck");
     expect(v.data.delivery_types).toEqual(["Group call"]);
-    expect(v.data.design.angle.problem_solved).toBe("Stuck");
+    expect(v.data.design.angle.short_description).toBe("Stuck");
   });
   it("premium mode toggles the Upgrades-from placeholder and persists", async () => {
-    const d = await open();
+    const d = await open(); expand(d);
     expect(within(d).queryByText("Upgrades from")).toBeNull();
     const modes = OFFER_TIER_LAYOUTS && offerEditorField("offer_stack.angle.premium_mode", undefined, "premium").options!;
     expect(modes.map((m) => m.value)).toEqual(["standalone", "upgrade"]);
