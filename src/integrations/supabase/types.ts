@@ -2810,6 +2810,66 @@ export type Database = {
         }
         Relationships: []
       }
+      public_offer_generations: {
+        Row: {
+          claim_token: string
+          claimed_at: string | null
+          claimed_by: string | null
+          claimed_offer_id: string | null
+          claimed_sub_account_id: string | null
+          consent_at: string | null
+          consent_text_version: string | null
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          input: Json
+          ip_hash: string
+          marketing_consent: boolean
+          result: Json | null
+          status: string
+          unlocked_at: string | null
+        }
+        Insert: {
+          claim_token?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          claimed_offer_id?: string | null
+          claimed_sub_account_id?: string | null
+          consent_at?: string | null
+          consent_text_version?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          input?: Json
+          ip_hash: string
+          marketing_consent?: boolean
+          result?: Json | null
+          status?: string
+          unlocked_at?: string | null
+        }
+        Update: {
+          claim_token?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          claimed_offer_id?: string | null
+          claimed_sub_account_id?: string | null
+          consent_at?: string | null
+          consent_text_version?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          input?: Json
+          ip_hash?: string
+          marketing_consent?: boolean
+          result?: Json | null
+          status?: string
+          unlocked_at?: string | null
+        }
+        Relationships: []
+      }
       redirects: {
         Row: {
           created_at: string
