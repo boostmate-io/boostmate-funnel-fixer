@@ -10,3 +10,4 @@
 
 - Offer relationships live only in `public.offer_relationships` (source → target, DB-enforced same workspace); direction labels and per-tier slots live in `OFFER_TIER_RELATIONSHIPS` in the registry, and all reads/writes go through `useOfferRelationships`. Why: one relationship model, independent of offer design autosave.
 - Offer relationships are edited only through the shared `OfferRelationshipsSection`, placed via each tier's registry `ecosystem` section (Core: `OFFER_TIER_ECOSYSTEM_TAB`), and saved immediately through `useOfferRelationships`, never via design autosave. Why: one relationship UI for all categories, independent of offer saves.
+- Every `useOfferRelationships` instance refetches on the `offer-relationships:changed` window event fired after its own add/remove. Why: editor, cards, Customer Journey and route creation stay in sync without a shared query cache.

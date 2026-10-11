@@ -19,6 +19,8 @@ import SectionHelpCoach from "../SectionHelpCoach";
 import CoreOfferDialog from "./CoreOfferDialog";
 import TierOfferDialog from "./TierOfferDialog";
 import OfferRelationshipsSection from "./OfferRelationshipsSection";
+import CustomerJourneyOverview from "./CustomerJourneyOverview";
+import { summarizeOfferRelationships } from "@/lib/offers/relationshipSummary";
 import { useOfferRelationships } from "@/lib/growth-architecture/hooks";
 import { useOptionalWorkspace } from "@/contexts/WorkspaceContext";
 import OfferSummaryCard from "./OfferSummaryCard";
@@ -311,6 +313,12 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
         </>}
     >
       <div className="space-y-5">
+        <CustomerJourneyOverview
+          offers={offers.map((o) => ({ id: o.id, name: o.name, tier: o.tier as any }))}
+          rows={relationships.rows}
+          loading={relationships.loading}
+          loadFailed={relationships.loadFailed}
+        />
         {ECOSYSTEM_TIERS.map((tier) => {
           const tierOffers = offers.filter((o) => o.tier === tier.id);
           const isCoreSection = tier.id === "core";
@@ -422,6 +430,7 @@ const OfferEcosystemTab = ({ blueprintId, offerDesign, onChangeOfferDesign, savi
                         cur={cur}
                         onEdit={() => openEditor(offer)}
                         onDelete={() => deleteOffer(offer.id)}
+                        relationships={relationships.loadFailed ? [] : summarizeOfferRelationships(offer.id, relationships.rows, (id) => offers.find((o) => o.id === id)?.name)}
                       />
                     ))}
                   </div>

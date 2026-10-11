@@ -99,9 +99,16 @@ export const RELATIONSHIP_ERROR_TEXT: Record<RelationshipError, string> = {
 const relKey = (p: { source_offer_id: string; target_offer_id: string; relationship_type: string }) =>
   `${p.source_offer_id}>${p.target_offer_id}>${p.relationship_type}`;
 
+/** Window event announcing a relationship change, so every hook instance refetches. */
+export const OFFER_RELATIONSHIPS_CHANGED = "offer-relationships:changed";
+const announce = (subAccountId: string, instance: symbol) =>
+  typeof window !== "undefined" && window.dispatchEvent(new CustomEvent(OFFER_RELATIONSHIPS_CHANGED, { detail: { subAccountId, instance } }));
+
 export function useOfferRelationships(subAccountId: string | null) {
   const [rows, setRows] = useState<OfferRelationshipRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const instance = useRef(Symbol("offer-relationships")).current;
 
   const load = useCallback(async () => {
     if (!subAccountId) return;
@@ -116,6 +123,7 @@ export function useOfferRelationships(subAccountId: string | null) {
       data = res.data; error = res.error;
     } catch (e) { error = e; }
     setLoading(false);
+    setLoadFailed(!!error);
     if (error) {
       toast.error("Could not load offer relationships");
       return;
@@ -124,6 +132,14 @@ export function useOfferRelationships(subAccountId: string | null) {
   }, [subAccountId]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (d?.subAccountId === subAccountId && d?.instance !== instance) void load();
+    };
+    window.addEventListener(OFFER_RELATIONSHIPS_CHANGED, onChange);
+    return () => window.removeEventListener(OFFER_RELATIONSHIPS_CHANGED, onChange);
+  }, [load, subAccountId, instance]);
 
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
@@ -157,12 +173,13 @@ export function useOfferRelationships(subAccountId: string | null) {
         }
         setLastError(null);
         setRows((prev) => [...prev, data as OfferRelationshipRow]);
+        announce(subAccountId, instance);
         return (data as any).id as string;
       } finally {
         inFlight.current.delete(key);
       }
     },
-    [subAccountId],
+    [subAccountId, instance],
   );
 
   /** Optimistic removal; returns false (and restores rows) on failure. */
@@ -170,13 +187,14 @@ export function useOfferRelationships(subAccountId: string | null) {
     setRows((prev) => prev.filter((r) => r.id !== id));
     const { error } = await supabase.from("offer_relationships").delete().eq("id", id);
     if (error) { toast.error("Could not remove relationship"); await load(); return false; }
+    if (subAccountId) announce(subAccountId, instance);
     return true;
-  }, [load]);
+  }, [load, subAccountId, instance]);
 
   const incoming = useCallback((offerId: string) => incomingRelationships(rows, offerId), [rows]);
   const outgoing = useCallback((offerId: string) => outgoingRelationships(rows, offerId), [rows]);
 
-  return { rows, loading, add, remove, reload: load, incoming, outgoing, lastError };
+  return { rows, loading, loadFailed, add, remove, reload: load, incoming, outgoing, lastError };
 }
 
 // ---------- useAcquisitionChannels -----------------------------------------
@@ -268,7 +286,7 @@ export function useGrowthArchitecture(subAccountId: string | null) {
         .single();
       if (error) {
         if (/offer_relationship/i.test(error.message)) {
-          toast.error("Route requires an existing offer-to-offer relationship first.");
+          toast.error("This route needs an offer relationship. Create one in the route form, then try again.");
         } else {
           toast.error("Could not add route");
         }
