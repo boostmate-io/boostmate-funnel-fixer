@@ -2,6 +2,7 @@
 import { checkWorkspaceAccess } from "../_shared/coachAuthorization.ts";
 import { gateOfferCoachWrites, isOfferTier, validTierTab } from "../_shared/offerAiPolicy.ts";
 import { buildOfferEcosystemContext, renderOfferEcosystemContext } from "../_shared/offerEcosystemContext.ts";
+import { COACH_FIELD_METHOD, COACH_METHODOLOGY, COACH_SECTION_PRECEDENCE } from "../_shared/coachMethodology.ts";
 import { renderOfferFieldReference } from "../_shared/offerFieldReference.ts";
 // Scopes: blueprint.field | blueprint.section | copy.component | funnel.node | global
 // Handles multi-turn coaching, tool-calling (proposals, quick replies, memory),
@@ -729,7 +730,7 @@ function buildSystemPrompt(
   workspaceSettings: any | null = null,
   discussedUnfilledPaths: string[] = [],
 ): string {
-  const parts: string[] = [prompts.base];
+  const parts: string[] = [prompts.base, COACH_METHODOLOGY];
 
   // Single continuous Business Coach conversation. Entry points across the app
   // inject short focus turns ("Let's switch from X to Y…") instead of starting
@@ -797,6 +798,7 @@ function buildSystemPrompt(
 
   if (context?.scope === "blueprint.field") {
     parts.push(prompts.field);
+    parts.push(COACH_FIELD_METHOD);
     parts.push(BLUEPRINT_STRUCTURE);
     parts.push(BLUEPRINT_FIELD_PATHS);
     const targetId = context?.target?.id ? String(context.target.id) : "";
@@ -815,6 +817,7 @@ The user opened the Coach from ONE specific field: "${context?.target?.label ?? 
 
 
     parts.push(prompts.section);
+    parts.push(COACH_SECTION_PRECEDENCE);
     parts.push(BLUEPRINT_STRUCTURE);
     parts.push(BLUEPRINT_FIELD_PATHS);
   } else if (context?.scope === "global") {
