@@ -18,6 +18,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 
 import NotFound from "./pages/NotFound.tsx";
 import OAuthConsent from "./pages/OAuthConsent.tsx";
+import OfferGenerator from "./pages/OfferGenerator";
 import PublicAssessment from "./pages/PublicAssessment.tsx";
 import RedirectSlug from "./pages/RedirectSlug.tsx";
 
@@ -38,6 +39,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<WithAuth><Index /></WithAuth>} />
+          <Route path="/offer-generator" element={<WithAuth><OfferGenerator /></WithAuth>} />
           <Route path="/assessment" element={<WithAuth><PublicAssessment /></WithAuth>} />
           <Route path="/invite/:code" element={<InviteRegistration />} />
           <Route path="/shared/:token" element={<SharedFunnel />} />
