@@ -24,3 +24,13 @@ describe("packagePresentation", () => {
     expect(displayValue("Real sentence_here.")).toBe("Real sentence_here.");
   });
 });
+import { humanizeCriteria, splitScoreChanges } from "./packagePresentation";
+describe("value equation text", () => {
+  it("replaces known criterion codes and splits per dimension", () => {
+    expect(humanizeCriteria("pl_method improved; foo_bar stays")).toBe("“Named method” improved; foo_bar stays");
+    const p = splitScoreChanges("Dream Outcome: better do_specific. Speed to Value: sv_timeline clear.");
+    expect(p?.dream_outcome).toContain("Specific result");
+    expect(p?.speed_to_value).toContain("Clear timeline");
+    expect(splitScoreChanges("No structure here")).toBeNull();
+  });
+});
