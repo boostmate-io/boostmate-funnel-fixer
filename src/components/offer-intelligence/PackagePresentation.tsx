@@ -1,5 +1,7 @@
 // Stage D editor + Stage E presentation of the Builder package (presentation only).
-import { ChevronDown, Eye, EyeOff, ShieldAlert } from "lucide-react";
+// Both use the same five section tabs from `PACKAGE_SECTIONS`; only the selected tab renders.
+import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { PackageWrite } from "@shared/offerIntelligence/builderStages";
@@ -9,71 +11,155 @@ import {
 } from "@/lib/offers/packagePresentation";
 import { cn } from "@/lib/utils";
 
-const Tag = ({ tone = "muted", children }: { tone?: "muted" | "primary" | "warn"; children: React.ReactNode }) => (
+export const Tag = ({ tone = "muted", children }: { tone?: "muted" | "primary" | "warn"; children: React.ReactNode }) => (
   <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
     tone === "primary" && "bg-primary/10 text-primary", tone === "warn" && "bg-destructive/10 text-destructive", tone === "muted" && "bg-muted text-muted-foreground")}>{children}</span>
 );
 
 const provenance = (ws: PackageWrite[]) => ws.some((w) => w.edited) ? <Tag tone="primary">Edited by you</Tag> : <Tag>Proposed</Tag>;
 const rowsFor = (v: string) => Math.min(6, Math.max(1, Math.ceil(v.length / 70)));
+const isListPath = (p: string) => /\.(new_\d+|[0-9a-f][0-9a-f-]{7,})\./i.test(p);
+const TAB_LABELS: Record<PackageSectionId, string> = { overview: "Overview", method: "Method", delivery: "Delivery", value: "Value & Risk", pricing: "Pricing" };
+
+// ---- Shared section tabs ------------------------------------------------------------
+
+function useSectionTab(available: PackageSectionId[]) {
+  const [tab, setTab] = useState<PackageSectionId>(available[0] ?? "overview");
+  useEffect(() => { if (available.length && !available.includes(tab)) setTab(available[0]); }, [available.join(","), tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  return [tab, setTab] as const;
+}
+
+function SectionTabs({ tabs, active, onSelect, counts, warn }: {
+  tabs: PackageSectionId[]; active: PackageSectionId; onSelect: (t: PackageSectionId) => void; counts?: Partial<Record<PackageSectionId, string>>; warn?: PackageSectionId[];
+}) {
+  const onKey = (e: React.KeyboardEvent, i: number) => {
+    const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (!d) return;
+    e.preventDefault();
+    const next = tabs[(i + d + tabs.length) % tabs.length];
+    onSelect(next);
+    document.getElementById(`sectab-${next}`)?.focus();
+  };
+  return (
+    <div role="tablist" aria-label="Offer sections" className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-muted/40 p-1">
+      {tabs.map((t, i) => (
+        <button key={t} id={`sectab-${t}`} role="tab" type="button" aria-selected={active === t} aria-controls={`secpanel-${t}`} tabIndex={active === t ? 0 : -1}
+          onClick={() => onSelect(t)} onKeyDown={(e) => onKey(e, i)}
+          className={cn("shrink-0 flex-1 min-w-[96px] rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            active === t ? "bg-card text-foreground font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+          <span className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+            {TAB_LABELS[t]}
+            {warn?.includes(t) && <ShieldAlert className="w-3.5 h-3.5 text-destructive" aria-label="Contains items to review" />}
+          </span>
+          {counts?.[t] && <span className="block text-[10px] font-normal text-muted-foreground">{counts[t]}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SectionPager({ tabs, active, onSelect }: { tabs: PackageSectionId[]; active: PackageSectionId; onSelect: (t: PackageSectionId) => void }) {
+  const i = tabs.indexOf(active);
+  if (tabs.length < 2) return null;
+  const go = (t: PackageSectionId) => { onSelect(t); document.getElementById(`sectab-${t}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" }); };
+  return (
+    <div className="flex items-center justify-between gap-2 pt-1">
+      {i > 0 ? <Button size="sm" variant="ghost" onClick={() => go(tabs[i - 1])}><ChevronLeft className="w-4 h-4 mr-1" />{TAB_LABELS[tabs[i - 1]]}</Button> : <span />}
+      {i < tabs.length - 1 && <Button size="sm" variant="outline" onClick={() => go(tabs[i + 1])}>Next: {TAB_LABELS[tabs[i + 1]]}<ChevronRight className="w-4 h-4 ml-1" /></Button>}
+    </div>
+  );
+}
+
+const hasExtrasFor = (sec: PackageSectionId, ex: Record<string, any>) =>
+  (sec === "overview" && (ex?.problemObstacleSolutions?.length > 0 || !!ex?.positioning?.statement || !!ex?.audience?.audience)) ||
+  (sec === "value" && ex?.bonusRationales?.length > 0) ||
+  (sec === "pricing" && !!ex?.pricingRationale?.reasoning);
 
 // ---- Stage D ----------------------------------------------------------------------
 
 interface EditorProps {
-  writes: PackageWrite[]; values: Record<string, string>; busy: boolean;
+  writes: PackageWrite[]; values: Record<string, string>; busy: boolean; tierLabel: string; extras: Record<string, any>;
   onChange: (id: string, v: string) => void; onToggle: (ids: string[], include: boolean) => void;
 }
 
-export function PackageEditor({ writes, values, busy, onChange, onToggle }: EditorProps) {
+export function PackageEditor({ writes, values, busy, tierLabel, extras, onChange, onToggle }: EditorProps) {
   const groups = groupPackage(writes);
   const val = (w: PackageWrite) => values[w.id] ?? w.value;
-  const name = findWrite(writes, ["main_offer_name", "offer_name", "name"]);
-  const desc = findWrite(writes, ["short_description", "description"]);
-  const price = writes.find((w) => /price/.test(w.path) && !/\.new_\d+\./.test(w.path));
+  const scalars = writes.filter((w) => !isListPath(w.path));
+  const name = findWrite(scalars, ["main_offer_name", "offer_name", "name"]);
+  const promise = findWrite(scalars, ["core_promise.desired_outcome", "core_outcome", "promise"]);
+  const duration = findWrite(scalars, ["delivery_timeline", "duration", "timeframe"]);
+  const price = scalars.find((w) => /price/.test(w.path));
   const included = writes.filter((w) => w.include).length;
+  const tabs = PACKAGE_SECTIONS.map((s) => s.id).filter((id) => groups[id].length > 0 || hasExtrasFor(id, extras));
+  const [tab, setTab] = useSectionTab(tabs);
+  const sec = PACKAGE_SECTIONS.find((s) => s.id === tab)!;
+  const entries = groups[tab] ?? [];
+  const filled = entries.filter((e) => !isEmpty(e, values));
+  const empty = entries.filter((e) => isEmpty(e, values));
+  const counts = Object.fromEntries(tabs.map((t) => {
+    const ws = groups[t].flatMap(entryWrites);
+    return [t, ws.length ? `${ws.filter((w) => w.include).length}/${ws.length} included` : "notes"];
+  }));
+  const warnTabs = tabs.filter((t) => groups[t].some((e) => entryWrites(e).some((w) => w.include && /guarantee/.test(w.path) && val(w).trim())));
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-2">
-        <p className="text-xs text-muted-foreground">Offer at a glance</p>
+        <div className="flex flex-wrap gap-2"><Tag tone="primary">{tierLabel}</Tag><Tag>{included} of {writes.length} elements included</Tag></div>
         <h2 className="text-xl font-display font-bold text-foreground break-words">{(name && val(name)) || "Untitled offer"}</h2>
-        {desc && val(desc) && <p className="text-sm text-muted-foreground">{val(desc)}</p>}
+        {promise && val(promise) && <p className="text-sm text-muted-foreground line-clamp-2">{val(promise)}</p>}
         <div className="flex flex-wrap gap-2 pt-1">
+          {duration && val(duration) && <Tag>Duration: {displayValue(val(duration))}</Tag>}
           {price && val(price) && <Tag tone="primary">Proposed price: {val(price)}</Tag>}
-          <Tag>{included} of {writes.length} elements included</Tag>
         </div>
       </div>
-      {PACKAGE_SECTIONS.map((sec) => {
-        const entries = groups[sec.id];
-        if (!entries.length) return null;
-        const filled = entries.filter((e) => !isEmpty(e, values));
-        const empty = entries.filter((e) => isEmpty(e, values));
-        return (
-          <details key={sec.id} open className="group rounded-xl border border-border bg-card">
-            <summary className="cursor-pointer list-none px-4 py-3 flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl">
-              <span className="flex-1 min-w-0">
-                <span className="block font-display font-semibold text-foreground">{sec.title}</span>
-                <span className="block text-xs text-muted-foreground">{sec.hint}</span>
-              </span>
-              <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="border-t border-border p-4 space-y-3">
-              {sec.id === "pricing" && (
-                <p className="text-xs rounded-lg bg-muted/60 px-3 py-2 text-foreground flex gap-2"><ShieldAlert className="w-4 h-4 text-destructive shrink-0" />
-                  Prices and guarantees are proposals, not validated market figures. Review every guarantee carefully before offering it to buyers — leave it out if you can't honour it.</p>
-              )}
-              {filled.map((e) => <EntryEditor key={e.kind === "field" ? e.write.id : e.key} e={e} sec={sec.id} val={val} busy={busy} onChange={onChange} onToggle={onToggle} />)}
-              {empty.length > 0 && (
-                <details className="rounded-lg border border-dashed border-border">
-                  <summary className="cursor-pointer px-3 py-2 text-xs text-muted-foreground">{empty.length} empty field{empty.length > 1 ? "s" : ""} — add details if you want</summary>
-                  <div className="p-3 space-y-3">{empty.map((e) => <EntryEditor key={e.kind === "field" ? e.write.id : e.key} e={e} sec={sec.id} val={val} busy={busy} onChange={onChange} onToggle={onToggle} />)}</div>
-                </details>
-              )}
-            </div>
+
+      <SectionTabs tabs={tabs} active={tab} onSelect={setTab} counts={counts} warn={warnTabs} />
+
+      <div role="tabpanel" id={`secpanel-${tab}`} aria-labelledby={`sectab-${tab}`} className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-3">
+        <div>
+          <h3 className="font-display font-semibold text-foreground">{sec.title}</h3>
+          <p className="text-xs text-muted-foreground">{sec.hint}</p>
+        </div>
+        {tab === "pricing" && (
+          <p className="text-xs rounded-lg bg-muted/60 px-3 py-2 text-foreground flex gap-2"><ShieldAlert className="w-4 h-4 text-destructive shrink-0" />
+            Prices and guarantees are proposals, not validated market figures. Review every guarantee carefully before offering it to buyers — leave it out if you can't honour it.</p>
+        )}
+        {filled.map((e) => <EntryEditor key={e.kind === "field" ? e.write.id : e.key} e={e} sec={tab} val={val} busy={busy} onChange={onChange} onToggle={onToggle} />)}
+        {empty.length > 0 && (
+          <details className="rounded-lg border border-dashed border-border">
+            <summary className="cursor-pointer px-3 py-2 text-xs text-muted-foreground">{empty.length} empty field{empty.length > 1 ? "s" : ""} — add details if you want</summary>
+            <div className="p-3 space-y-3">{empty.map((e) => <EntryEditor key={e.kind === "field" ? e.write.id : e.key} e={e} sec={tab} val={val} busy={busy} onChange={onChange} onToggle={onToggle} />)}</div>
           </details>
-        );
-      })}
+        )}
+        <SectionExtras sec={tab} extras={extras} />
+        <SectionPager tabs={tabs} active={tab} onSelect={setTab} />
+      </div>
     </div>
   );
+}
+
+/** Strategist explanations attached to a section (read-only, not saved to Offer Design). */
+function SectionExtras({ sec, extras: ex }: { sec: PackageSectionId; extras: Record<string, any> }) {
+  if (sec === "overview") return (
+    <>
+      {ex?.positioning?.statement && <Note title="Positioning (not yet verified)"><p>{ex.positioning.statement}</p></Note>}
+      {ex?.problemObstacleSolutions?.length > 0 && <Transformation pos={ex.problemObstacleSolutions} />}
+    </>
+  );
+  if (sec === "value" && ex?.bonusRationales?.length > 0) return (
+    <Note title="Why these bonuses"><ul className="space-y-1">{ex.bonusRationales.map((b: any, i: number) => <li key={i}><span className="font-medium">{b.bonusName}:</span> {b.reason}</li>)}</ul></Note>
+  );
+  if (sec === "pricing" && ex?.pricingRationale?.reasoning) return (
+    <details className="rounded-lg border border-border">
+      <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-foreground">Why this price (estimate)</summary>
+      <div className="px-3 pb-3 space-y-1.5 text-sm text-foreground">
+        <p>{ex.pricingRationale.reasoning}</p>
+        {ex.pricingRationale.assumptions?.length > 0 && <p className="text-xs text-muted-foreground">Assumptions: {ex.pricingRationale.assumptions.join(" · ")}</p>}
+      </div>
+    </details>
+  );
+  return null;
 }
 
 function EntryEditor({ e, sec, val, busy, onChange, onToggle }: { e: PackageEntry; sec: PackageSectionId; val: (w: PackageWrite) => string } & Pick<EditorProps, "busy" | "onChange" | "onToggle">) {
@@ -124,15 +210,23 @@ function EntryEditor({ e, sec, val, busy, onChange, onToggle }: { e: PackageEntr
 export function FinalOfferPresentation({ writes, tierLabel, extras }: { writes: PackageWrite[]; tierLabel: string; extras: Record<string, any> }) {
   const inc = writes.filter((w) => w.include && w.value.trim());
   const used = new Set<string>();
-  const pick = (s: string[]) => { const w = findWrite(inc.filter((x) => !/\.(new_\d+|[0-9a-f-]{8,})\./i.test(x.path)), s); if (w) used.add(w.id); return w?.value; };
+  const scalars = inc.filter((x) => !isListPath(x.path));
+  const pick = (s: string[]) => { const w = findWrite(scalars, s); if (w) used.add(w.id); return w?.value; };
   const name = pick(["main_offer_name", "offer_name", "name"]);
   const desc = pick(["short_description"]);
   const promise = pick(["core_promise.desired_outcome", "core_outcome", "promise"]);
   const timeline = pick(["delivery_timeline", "duration", "timeframe"]);
-  const price = (() => { const w = inc.find((x) => /price/.test(x.path) && !/\.new_\d+\./.test(x.path)); if (w) used.add(w.id); return w?.value; })();
+  const price = (() => { const w = scalars.find((x) => /price/.test(x.path)); if (w) used.add(w.id); return w?.value; })();
   const audience = extras?.audience?.audience as string | undefined;
   const groups = groupPackage(inc.filter((w) => !used.has(w.id)));
-  const pos: any[] = extras?.problemObstacleSolutions ?? [];
+  const tabs = PACKAGE_SECTIONS.map((s) => s.id).filter((id) => groups[id].length > 0 || hasExtrasFor(id, extras));
+  const [tab, setTab] = useSectionTab(tabs);
+  const entries = groups[tab] ?? [];
+  const fields = entries.filter((e): e is Extract<PackageEntry, { kind: "field" }> => e.kind === "field");
+  const lists = new Map<string, ListItemEntry[]>();
+  entries.forEach((e) => { if (e.kind === "item") lists.set(e.listPath, [...(lists.get(e.listPath) ?? []), e]); });
+  const isPricing = tab === "pricing";
+  const guaranteeIncluded = inc.some((w) => /guarantee/.test(w.path));
 
   return (
     <div className="space-y-4">
@@ -140,77 +234,74 @@ export function FinalOfferPresentation({ writes, tierLabel, extras }: { writes: 
         <div className="flex flex-wrap gap-2"><Tag tone="primary">{tierLabel}</Tag><Tag>Proposed offer · internal blueprint</Tag></div>
         <h2 className="text-2xl font-display font-bold text-foreground break-words">{name || "Untitled offer"}</h2>
         {desc && <p className="text-sm text-muted-foreground max-w-prose">{desc}</p>}
-        {extras?.positioning?.statement && <p className="text-sm text-foreground max-w-prose"><span className="text-muted-foreground">Positioning (not yet verified): </span>{extras.positioning.statement}</p>}
         <dl className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
           {promise && <Fact k="Core promise" v={promise} wide />}
-          {audience && <Fact k="Audience" v={audience} wide />}
           {timeline && <Fact k="Duration" v={displayValue(timeline)} />}
           {price && <Fact k="Proposed investment" v={displayValue(price)} />}
         </dl>
+        {guaranteeIncluded && (
+          <p className="text-xs rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-foreground flex gap-2"><ShieldAlert className="w-4 h-4 text-destructive shrink-0" />
+            This offer includes a proposed guarantee. Review it in the Pricing tab before approving.</p>
+        )}
       </header>
 
-      {pos.length > 0 && (
-        <Panel title="The transformation">
-          <ol className="space-y-2">{pos.map((p, i) => (
-            <li key={i} className="grid sm:grid-cols-3 gap-2 text-sm">
-              <span className="rounded-lg bg-muted/50 p-2"><span className="block text-[11px] text-muted-foreground">Problem</span>{p.problem}</span>
-              <span className="rounded-lg bg-muted/50 p-2"><span className="block text-[11px] text-muted-foreground">Obstacle</span>{p.obstacle}</span>
-              <span className="rounded-lg bg-primary/5 p-2"><span className="block text-[11px] text-muted-foreground">Solution</span>{p.solution}</span>
-            </li>))}</ol>
-        </Panel>
-      )}
+      <SectionTabs tabs={tabs} active={tab} onSelect={setTab} warn={guaranteeIncluded ? ["pricing"] : []} />
 
-      {PACKAGE_SECTIONS.map((sec) => {
-        const entries = groups[sec.id];
-        if (!entries.length) return null;
-        const fields = entries.filter((e): e is Extract<PackageEntry, { kind: "field" }> => e.kind === "field");
-        const lists = new Map<string, ListItemEntry[]>();
-        entries.forEach((e) => { if (e.kind === "item") lists.set(e.listPath, [...(lists.get(e.listPath) ?? []), e]); });
-        const isPricing = sec.id === "pricing";
-        return (
-          <Panel key={sec.id} title={FINAL_TITLES[sec.id]}>
-            {fields.length > 0 && (
-              <dl className="grid sm:grid-cols-2 gap-3">
-                {fields.map((f) => <Fact key={f.write.id} k={f.write.label} v={displayValue(f.write.value)} wide={f.write.value.length > 80}
-                  warn={isPricing && /guarantee/.test(f.write.path)} />)}
-              </dl>
-            )}
-            {[...lists.values()].map((items) => <ListView key={items[0].listPath} items={items} />)}
-            {isPricing && extras?.pricingRationale?.reasoning && (
-              <details className="rounded-lg border border-border">
-                <summary className="cursor-pointer px-3 py-2 text-sm text-foreground">Why this price (estimate)</summary>
-                <div className="px-3 pb-3 space-y-1.5 text-sm text-foreground">
-                  <p>{extras.pricingRationale.reasoning}</p>
-                  {extras.pricingRationale.assumptions?.length > 0 && <p className="text-xs text-muted-foreground">Assumptions: {extras.pricingRationale.assumptions.join(" · ")}</p>}
-                </div>
-              </details>
-            )}
-            {sec.id === "value" && extras?.bonusRationales?.length > 0 && (
-              <ul className="space-y-1 text-sm text-foreground">{extras.bonusRationales.map((b: any, i: number) => <li key={i}><span className="font-medium">{b.bonusName}:</span> {b.reason}</li>)}</ul>
-            )}
-          </Panel>
-        );
-      })}
-      {extras?.assumptions?.length > 0 && (
-        <Panel title="Assumptions behind this package">
-          <ul className="space-y-1.5 text-sm text-foreground">{extras.assumptions.map((a: any, i: number) => <li key={i}>{a.statement}{a.howToValidate && <span className="text-xs text-muted-foreground"> — validate: {a.howToValidate}</span>}</li>)}</ul>
-        </Panel>
-      )}
+      <section role="tabpanel" id={`secpanel-${tab}`} aria-labelledby={`sectab-${tab}`} className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-4">
+        <h3 className="text-base font-display font-semibold text-foreground">{FINAL_TITLES[tab]}</h3>
+        {tab === "overview" && audience && <Fact k="Audience" v={audience} wide />}
+        {tab === "overview" && extras?.positioning?.statement && <Fact k="Positioning (not yet verified)" v={extras.positioning.statement} wide />}
+        {fields.length > 0 && (
+          <dl className="grid sm:grid-cols-2 gap-3">
+            {fields.map((f) => <Fact key={f.write.id} k={f.write.label} v={displayValue(f.write.value)} wide={f.write.value.length > 80}
+              warn={isPricing && /guarantee/.test(f.write.path)} />)}
+          </dl>
+        )}
+        {[...lists.values()].map((items) => <ListView key={items[0].listPath} items={items} />)}
+        {tab === "overview" && extras?.problemObstacleSolutions?.length > 0 && <Transformation pos={extras.problemObstacleSolutions} />}
+        {tab === "value" && extras?.bonusRationales?.length > 0 && (
+          <Note title="Why these bonuses"><ul className="space-y-1">{extras.bonusRationales.map((b: any, i: number) => <li key={i}><span className="font-medium">{b.bonusName}:</span> {b.reason}</li>)}</ul></Note>
+        )}
+        {isPricing && extras?.pricingRationale?.reasoning && (
+          <details className="rounded-lg border border-border">
+            <summary className="cursor-pointer px-3 py-2 text-sm text-foreground">Why this price (estimate)</summary>
+            <div className="px-3 pb-3 space-y-1.5 text-sm text-foreground">
+              <p>{extras.pricingRationale.reasoning}</p>
+              {extras.pricingRationale.assumptions?.length > 0 && <p className="text-xs text-muted-foreground">Assumptions: {extras.pricingRationale.assumptions.join(" · ")}</p>}
+            </div>
+          </details>
+        )}
+        <SectionPager tabs={tabs} active={tab} onSelect={setTab} />
+      </section>
     </div>
   );
 }
 
 const FINAL_TITLES: Record<PackageSectionId, string> = {
-  overview: "Offer positioning", method: "The unique method", delivery: "What's included & program roadmap",
+  overview: "Offer positioning & transformation", method: "The unique method", delivery: "What's included & program roadmap",
   value: "Value & risk reduction", pricing: "Investment & risk reversal",
 };
+
+function Transformation({ pos }: { pos: any[] }) {
+  return (
+    <div className="space-y-2">
+      <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">The transformation</h4>
+      <ol className="space-y-2">{pos.map((p, i) => (
+        <li key={i} className="grid sm:grid-cols-3 gap-2 text-sm">
+          <span className="rounded-lg bg-muted/50 p-2"><span className="block text-[11px] text-muted-foreground">Problem</span>{p.problem}</span>
+          <span className="rounded-lg bg-muted/50 p-2"><span className="block text-[11px] text-muted-foreground">Obstacle</span>{p.obstacle}</span>
+          <span className="rounded-lg bg-primary/5 p-2"><span className="block text-[11px] text-muted-foreground">Solution</span>{p.solution}</span>
+        </li>))}</ol>
+    </div>
+  );
+}
 
 function ListView({ items }: { items: ListItemEntry[] }) {
   const label = items[0].listLabel;
   const isSteps = /(pillar|milestone|phase|step|module)/i.test(items[0].listPath);
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</h3>
+      <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</h4>
       {isSteps ? (
         <ol className="relative space-y-3 border-l-2 border-primary/30 pl-5 ml-2">
           {items.map((it, i) => { const m = itemMap(it); return (
@@ -239,12 +330,12 @@ const Rest = ({ it, skip }: { it: ListItemEntry; skip: string[] }) => {
   const rest = it.fields.filter((f) => !skip.includes(f.sub) && f.write.value.trim());
   return rest.length ? <p className="flex flex-wrap gap-1.5 pt-1">{rest.map((f) => <Tag key={f.write.id}>{f.label}: {displayValue(f.write.value)}</Tag>)}</p> : null;
 };
-const Panel = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <section className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-3"><h2 className="text-base font-display font-semibold text-foreground">{title}</h2>{children}</section>
+const Note = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="rounded-lg bg-muted/40 p-3 space-y-1 text-sm text-foreground"><p className="text-[11px] text-muted-foreground">{title}</p>{children}</div>
 );
 const Fact = ({ k, v, wide, warn }: { k: string; v: string; wide?: boolean; warn?: boolean }) => (
   <div className={cn("rounded-lg p-3 min-w-0", warn ? "border border-destructive/40 bg-destructive/5" : "bg-muted/40", wide && "sm:col-span-2")}>
-    <dt className="text-[11px] text-muted-foreground flex items-center gap-1.5">{k}{warn && <Tag tone="warn">Proposed — review before offering</Tag>}</dt>
+    <dt className="text-[11px] text-muted-foreground flex flex-wrap items-center gap-1.5">{k}{warn && <Tag tone="warn">Proposed — review before offering</Tag>}</dt>
     <dd className="text-sm text-foreground whitespace-pre-wrap break-words">{v}</dd>
   </div>
 );
