@@ -79,3 +79,24 @@ export function findWrite(writes: PackageWrite[], suffixes: string[]): PackageWr
 
 /** Item fields as a map by sub-key for presentation (name/description/…). */
 export const itemMap = (item: ListItemEntry) => Object.fromEntries(item.fields.map((f) => [f.sub, f.write.value]));
+
+// ---- Human-readable Value Equation text ----------------------------------------
+import { VALUE_CRITERIA, DIMENSION_LABELS, VALUE_DIMENSIONS, type ValueDimension } from "@shared/offerIntelligence/valueEquation";
+
+export const CRITERION_LABELS: Record<string, string> = Object.fromEntries(VALUE_CRITERIA.map((c) => [c.id, c.label]));
+const CODE_RE = new RegExp(`\\b(${VALUE_CRITERIA.map((c) => c.id).join("|")})\\b`, "g");
+/** Replaces known internal criterion IDs in AI prose with their labels (display only). */
+export const humanizeCriteria = (text: string) => (text ?? "").replace(CODE_RE, (id) => `“${CRITERION_LABELS[id]}”`);
+
+/** Splits "Dream Outcome: … Perceived Likelihood: …" prose per dimension; null when not structured that way. */
+export function splitScoreChanges(text: string): Partial<Record<ValueDimension, string>> | null {
+  if (!text) return null;
+  const hits = VALUE_DIMENSIONS.map((d) => ({ d, i: text.search(new RegExp(`${DIMENSION_LABELS[d]}\\s*:`, "i")) })).filter((h) => h.i >= 0).sort((a, b) => a.i - b.i);
+  if (hits.length < 2) return null;
+  const out: Partial<Record<ValueDimension, string>> = {};
+  hits.forEach((h, k) => {
+    const seg = text.slice(h.i, hits[k + 1]?.i ?? text.length);
+    out[h.d] = humanizeCriteria(seg.replace(/^[^:]*:\s*/, "").trim());
+  });
+  return out;
+}
