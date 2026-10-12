@@ -248,10 +248,11 @@ Deno.serve(async (req) => {
   if (op === "final_assessment") ctx.design = s.draft_design;
   if (op === "package" && s.mode === "new") ctx.design = null;
 
-  const ai = await runOfferOperation(op, ctx, { maxTokens: op === "package" ? 6000 : 3500 });
+  const maxTokens = op === "package" ? 6000 : 3500;
+  const ai = await runOfferOperation(op, ctx, { maxTokens });
   if (!ai.ok) return json({ error: ai.error }, ai.status);
-  const checked = validateOperationOutput(op, ai.raw);
-  if (!checked.ok) { console.warn("offer-builder invalid", op, checked.errors.slice(0, 5)); return json({ error: "ai_invalid" }, 502); }
+  let checked = validateOperationOutput(op, ai.raw);
+  if (!checked.ok) { console.warn("offer-builder invalid", JSON.stringify({ op, session: s.id, errors: checked.errors.slice(0, 5) })); return json({ error: "ai_invalid" }, 502); }
 
   if (op === "understand") {
     return save({ tier, intake, understanding: toUnderstanding(checked.value, s.understanding), context_confirmed_at: null, stage: "understand" });
@@ -267,8 +268,19 @@ Deno.serve(async (req) => {
   }
   if (op === "package") {
     const base = s.mode === "existing" ? design : null;
-    const pk = toPackage(tier, base, checked.value, decisions.strengthen!.updatedAt);
-    if (!pk.ok) { console.warn("offer-builder package rejected", JSON.stringify(pk.errors).slice(0, 400)); return json({ error: "ai_invalid" }, 502); }
+    let pk = toPackage(tier, base, checked.value, decisions.strengthen!.updatedAt);
+    // Bounded recovery: ONE targeted regeneration naming the rejected fields (paths + reason codes only).
+    if (!pk.ok) {
+      const issues = (pk.errors as any[]).slice(0, 10).map((e) => `${e?.path}: ${e?.reason}`);
+      console.warn("offer-builder package rejected", JSON.stringify({ session: s.id, tier, attempt: 1, issues }));
+      const retry = await runOfferOperation(op, ctx, { maxTokens, extraInstructions: `# Correction required\nYour previous answer was rejected by validation for these fields:\n${issues.map((i) => `- ${i}`).join("\n")}\nReturn the full package again with valid values (prices: one plain positive number only, e.g. "997"; enums: only the listed values; only the listed paths).` });
+      if (!retry.ok) return json({ error: retry.error }, retry.status);
+      const c2 = validateOperationOutput(op, retry.raw);
+      if (!c2.ok) { console.warn("offer-builder invalid", JSON.stringify({ op, session: s.id, attempt: 2, errors: c2.errors.slice(0, 5) })); return json({ error: "ai_invalid" }, 502); }
+      checked = c2;
+      pk = toPackage(tier, base, c2.value, decisions.strengthen!.updatedAt);
+      if (!pk.ok) { console.warn("offer-builder package rejected", JSON.stringify({ session: s.id, tier, attempt: 2, issues: (pk.errors as any[]).slice(0, 10).map((e) => `${e?.path}: ${e?.reason}`) })); return json({ error: "ai_invalid" }, 502); }
+    }
     if (!pk.state.writes.length) return json({ error: "ai_invalid" }, 502);
     return save({ decisions: { ...decisions, package: pk.state, final: decisions.final ?? null }, draft_design: pk.draft, stage: "package" });
   }
