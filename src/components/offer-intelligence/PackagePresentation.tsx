@@ -121,10 +121,9 @@ function EntryEditor({ e, sec, val, busy, onChange, onToggle }: { e: PackageEntr
 
 // ---- Stage E ----------------------------------------------------------------------
 
-const used = new Set<string>();
 export function FinalOfferPresentation({ writes, tierLabel, extras }: { writes: PackageWrite[]; tierLabel: string; extras: Record<string, any> }) {
   const inc = writes.filter((w) => w.include && w.value.trim());
-  used.clear();
+  const used = new Set<string>();
   const pick = (s: string[]) => { const w = findWrite(inc.filter((x) => !/\.(new_\d+|[0-9a-f-]{8,})\./i.test(x.path)), s); if (w) used.add(w.id); return w?.value; };
   const name = pick(["main_offer_name", "offer_name", "name"]);
   const desc = pick(["short_description"]);
