@@ -35,12 +35,14 @@ export default function OfferBuilder() {
   // Strategist panel: open by default on wide screens only.
   const [panelOpen, setPanelOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 1440);
 
-  const hydrate = useCallback((next: BuilderSession) => {
+  // `followStage`: jump the view to the session's saved stage (initial load / navigation / generation).
+  // Plain saves (edits, toggles, decisions) keep the user on the stage they are viewing.
+  const hydrate = useCallback((next: BuilderSession, followStage = true) => {
     setS(next);
     setIdea(next.intake?.idea ?? "");
     setCorrections(next.understanding?.corrections ?? {});
     setDirty(false);
-    setView(next.stage);
+    if (followStage) setView(next.stage);
   }, []);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function OfferBuilder() {
     setBusy(action); setError(null);
     try {
       const { session } = await builderAction(s, action, extra);
-      hydrate(session);
+      hydrate(session, action !== "save" || "stage" in extra);
     } catch (e) {
       const err = e as BuilderError;
       setError(builderErrorMessage(err.code));
@@ -91,7 +93,20 @@ export default function OfferBuilder() {
     id === "understand" || (id === "diagnose" && (canDiagnose || !!d)) || (id === "strengthen" && !!d) ||
     (id === "package" && (!!s.decisions?.package || (!!d && strengthenComplete(s.decisions?.strengthen)))) ||
     (id === "final" && (!!fin || !!s.draft_design));
-  const goTo = (id: BuilderStage) => { setView(id); if (!readOnly && id !== s.stage && id !== "understand" && id !== "diagnose") run("save", { stage: id }); };
+  const order = BUILDER_STAGES.map((x) => x.id);
+  const idx = (id: BuilderStage) => order.indexOf(id);
+  // Going back only changes the view — later work and the saved stage stay untouched.
+  // Going forward past the saved stage is persisted (server re-checks the stage gates).
+  const goTo = (id: BuilderStage) => {
+    setView(id);
+    if (!readOnly && idx(id) > idx(s.stage) && id !== "understand" && id !== "diagnose") run("save", { stage: id });
+  };
+  const prevStage = order[idx(view) - 1] as BuilderStage | undefined;
+  const nextStage = order[idx(view) + 1] as BuilderStage | undefined;
+  const laterWork = (id: BuilderStage) =>
+    (id === "understand" && !!d) || (id === "diagnose" && !!s.decisions?.strengthen) ||
+    (id === "strengthen" && !!s.decisions?.package) || (id === "package" && !!fin);
+  const labelOf = (id: BuilderStage) => BUILDER_STAGES.find((x) => x.id === id)?.label ?? id;
   const openOffer = () => navigate(`/dashboard?module=business-blueprint&openOffer=${s.result_offer_id ?? s.offer_id ?? ""}`);
   const approve = async (applyToLatest: boolean) => {
     if (!user || approving) return;
@@ -176,6 +191,11 @@ export default function OfferBuilder() {
             </details>
           )}
           {readOnly && s.status === "completed" && <p role="status" className="text-sm rounded-lg border border-border bg-muted/40 p-3 text-foreground">This session is completed — you're reviewing the final analysis. Start a new Builder session from Offer Design to make further changes.</p>}
+          {!readOnly && laterWork(view) && (
+            <p role="status" className="text-xs rounded-lg border border-border bg-muted/40 px-3 py-2 text-foreground">
+              You're reviewing an earlier stage. Viewing changes nothing. If you change answers or decisions here, the later stages will be marked "Reassess" and must be regenerated before you can approve.
+            </p>
+          )}
           {error && <p role="alert" className="text-sm text-destructive flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{error}</p>}
 
           <fieldset disabled={readOnly} className="space-y-6 min-w-0">
@@ -284,6 +304,10 @@ export default function OfferBuilder() {
           </fieldset>
           {view === "strengthen" && <fieldset disabled={readOnly} className="min-w-0"><StrengthenStage s={s} busy={busy} run={run} stale={stale} /></fieldset>}
           {view === "package" && <fieldset disabled={readOnly} className="min-w-0"><PackageStage s={s} busy={busy} run={run} stale={stale} /></fieldset>}
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
+            {prevStage ? <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => goTo(prevStage)}><ArrowLeft className="w-4 h-4 mr-1" />Back to {labelOf(prevStage)}</Button> : <span />}
+            {nextStage && viewable(nextStage) && <Button variant="outline" size="sm" disabled={!!busy} onClick={() => goTo(nextStage)}>Go to {labelOf(nextStage)}</Button>}
+          </div>
           {view === "final" && <FinalStage s={s} busy={busy} run={run} stale={stale} onApprove={approve} approving={approving} conflicts={conflicts} approveError={approveError} onOpenOffer={openOffer} />}
         </main>
 
