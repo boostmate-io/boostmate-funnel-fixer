@@ -1,6 +1,7 @@
 // Presentation-only grouping of Builder package writes (Stage D/E). Never changes
 // paths, values or include flags — it only decides where a write is shown.
 import type { PackageWrite } from "@shared/offerIntelligence/builderStages";
+import { VALUE_CRITERIA, DIMENSION_LABELS, VALUE_DIMENSIONS, type ValueDimension } from "@shared/offerIntelligence/valueEquation";
 
 export type PackageSectionId = "overview" | "method" | "delivery" | "value" | "pricing";
 
@@ -81,7 +82,6 @@ export function findWrite(writes: PackageWrite[], suffixes: string[]): PackageWr
 export const itemMap = (item: ListItemEntry) => Object.fromEntries(item.fields.map((f) => [f.sub, f.write.value]));
 
 // ---- Human-readable Value Equation text ----------------------------------------
-import { VALUE_CRITERIA, DIMENSION_LABELS, VALUE_DIMENSIONS, type ValueDimension } from "@shared/offerIntelligence/valueEquation";
 
 export const CRITERION_LABELS: Record<string, string> = Object.fromEntries(VALUE_CRITERIA.map((c) => [c.id, c.label]));
 const CODE_RE = new RegExp(`\\b(${VALUE_CRITERIA.map((c) => c.id).join("|")})\\b`, "g");
