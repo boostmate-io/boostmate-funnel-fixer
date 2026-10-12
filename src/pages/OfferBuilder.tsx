@@ -53,13 +53,23 @@ export default function OfferBuilder() {
   const run = async (action: BuilderAction, extra: Record<string, unknown> = {}) => {
     if (!s) return;
     setBusy(action); setError(null);
+    const follow = action !== "save" || "stage" in extra;
+    // Pure stage moves carry no user content, so a version conflict (session saved in
+    // another tab) is safely retried once on the latest version. Everything else
+    // reloads and asks the user to retry, so newer work is never overwritten.
+    const navOnly = action === "save" && Object.keys(extra).length === 1 && "stage" in extra;
     try {
       const { session } = await builderAction(s, action, extra);
-      hydrate(session, action !== "save" || "stage" in extra);
+      hydrate(session, follow);
     } catch (e) {
       const err = e as BuilderError;
+      const fresh = err.code === "conflict" || err.code === "session_closed" ? (err.session ?? await loadBuilderSession(s.id)) : null;
+      if (navOnly && err.code === "conflict" && fresh && fresh.status === "active") {
+        try { const { session } = await builderAction(fresh, action, extra); hydrate(session, true); return; }
+        catch (e2) { const er2 = e2 as BuilderError; setError(builderErrorMessage(er2.code)); const f2 = await loadBuilderSession(s.id); if (f2) hydrate(f2, false); return; }
+      }
       setError(builderErrorMessage(err.code));
-      if (err.code === "conflict" || err.code === "session_closed") { const fresh = await loadBuilderSession(s.id); if (fresh) hydrate(fresh, false); }
+      if (fresh) hydrate(fresh, false);
     } finally { setBusy(null); }
   };
 
