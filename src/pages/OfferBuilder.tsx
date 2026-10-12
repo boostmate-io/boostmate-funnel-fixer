@@ -111,20 +111,20 @@ export default function OfferBuilder() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border bg-card px-4 py-3 flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard?module=business-blueprint")}><ArrowLeft className="w-4 h-4 mr-1" /> Offer Design</Button>
-        <div className="min-w-0">
+        <div className="min-w-0 hidden md:block">
           <p className="text-xs text-muted-foreground">Irresistible Offer Builder · {tierLabel} · {s.mode === "new" ? "New offer" : "Strengthening an existing offer"}</p>
         </div>
         <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1.5" aria-live="polite">
-          {busy ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />{busy === "save" ? "Saving…" : "Working…"}</> : <><Check className="w-3.5 h-3.5 text-primary" />Saved · {new Date(s.updated_at).toLocaleTimeString()}</>}
+          {busy ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />{busy === "save" ? "Saving…" : "Working…"}</> : <><Check className="w-3.5 h-3.5 text-primary" />Saved<span className="hidden sm:inline"> · {new Date(s.updated_at).toLocaleTimeString()}</span></>}
         </span>
         <Button size="sm" variant={panelOpen ? "secondary" : "outline"} onClick={() => setPanelOpen((v) => !v)} aria-expanded={panelOpen} aria-controls="builder-strategist">
           <MessagesSquare className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">Offer strategist</span>
         </Button>
       </header>
 
-      <div className={cn("flex-1 grid lg:grid-cols-[232px_minmax(0,1fr)] gap-0", panelOpen && "xl:grid-cols-[232px_minmax(0,1fr)_380px]")}>
+      <div className={cn("flex-1 grid grid-cols-1 lg:grid-cols-[232px_minmax(0,1fr)] gap-0 min-w-0", panelOpen && "xl:grid-cols-[232px_minmax(0,1fr)_380px]")}>
         {/* Stages */}
-        <nav aria-label="Builder stages" className="border-b lg:border-b-0 lg:border-r border-border p-3 lg:p-4 bg-card/50 lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-57px)]">
+        <nav aria-label="Builder stages" className="min-w-0 border-b lg:border-b-0 lg:border-r border-border p-3 lg:p-4 bg-card/50 lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-57px)]">
           <div className="hidden lg:block mb-4 px-1 space-y-1.5">
             <div className="flex justify-between text-xs"><span className="font-medium text-foreground">Progress</span><span className="text-muted-foreground">{doneCount} of {BUILDER_STAGES.length}</span></div>
             <div className="h-1.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={BUILDER_STAGES.length} aria-valuenow={doneCount}>

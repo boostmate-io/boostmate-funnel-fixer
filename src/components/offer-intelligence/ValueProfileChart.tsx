@@ -20,7 +20,7 @@ const DIR: Record<ValueDimension, [number, number]> = {
 const SIZE = 320;
 const C = SIZE / 2;
 const R = 112;
-const PAD_X = 120; // room for left/right labels so they never clip
+const PAD_X = 100; // room for left/right labels so they never clip
 const PAD_Y = 30;
 
 const point = (d: ValueDimension, score: number) => {
@@ -83,8 +83,8 @@ export default function ValueProfileChart({ before, after, className, improvemen
         const value = both ? `${label(d, before)} → ${label(d, after)}` : label(d, main);
         return (
           <g key={d} className="cursor-pointer" onClick={() => setSelected(selected === d ? null : d)}>
-            <text x={lx} y={ly} textAnchor={anchor} className={cn("text-[15px] font-semibold", selected === d ? "fill-primary" : "fill-foreground")}>{DIMENSION_LABELS[d]}</text>
-            <text x={lx} y={ly + 18} textAnchor={anchor} className="fill-muted-foreground text-[13px]">{value}</text>
+            <text x={lx} y={ly} textAnchor={anchor} className={cn("text-[17px] font-semibold", selected === d ? "fill-primary" : "fill-foreground")}>{DIMENSION_LABELS[d]}</text>
+            <text x={lx} y={ly + 19} textAnchor={anchor} className="fill-muted-foreground text-[14px]">{value}</text>
           </g>
         );
       })}
