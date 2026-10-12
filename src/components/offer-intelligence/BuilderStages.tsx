@@ -125,28 +125,28 @@ export function PackageStage({ s, busy, run, stale }: StageProps) {
       </div>
       {pk && (
         <>
-          <div className="rounded-xl border border-border bg-card divide-y divide-border">
-            {pk.writes.map((w) => (
-              <div key={w.id} className={cn("p-3 grid md:grid-cols-[200px_minmax(0,1fr)_auto] gap-2 items-start", !w.include && "opacity-60")}>
-                <label htmlFor={`pw-${w.id}`} className="text-xs font-medium text-muted-foreground pt-2">{w.label}{w.edited && <span className="ml-1 text-primary">· edited</span>}</label>
-                <Textarea id={`pw-${w.id}`} rows={Math.min(5, Math.max(1, Math.ceil((values[w.id] ?? w.value).length / 80)))} value={values[w.id] ?? w.value}
-                  disabled={!w.include} onChange={(e) => setValues((v) => ({ ...v, [w.id]: e.target.value }))} />
-                <Button size="sm" variant="ghost" disabled={!!busy} onClick={() => run("save", { package_edits: [{ id: w.id, include: !w.include }] })}>{w.include ? "Leave out" : "Include"}</Button>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Everything below is <span className="font-medium text-foreground">proposed</span> by the strategist from your Blueprint{s.mode === "existing" ? ", this offer" : ""} and your Strengthen decisions{st ? ` (${Object.keys(st).length ? st.items.filter((i) => i.decision && i.decision.kind !== "rejected").length : 0} selected improvements)` : ""}. Values you change are marked "Edited by you".
+          </p>
+          <PackageEditor writes={pk.writes} values={values} busy={!!busy}
+            onChange={(id, v) => setValues((cur) => ({ ...cur, [id]: v }))}
+            onToggle={(ids, include) => run("save", { package_edits: ids.map((id) => ({ id, include })) })} />
           {dirty.length > 0 && (
-            <div className="flex gap-2">
+            <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-card p-3 shadow-lg">
+              <span className="text-sm text-foreground flex-1">{dirty.length} unsaved edit{dirty.length > 1 ? "s" : ""}</span>
               <Button onClick={() => run("save", { package_edits: dirty.map((w) => ({ id: w.id, value: values[w.id] })) })} disabled={!!busy}>Save {dirty.length} edit{dirty.length > 1 ? "s" : ""}</Button>
               <Button variant="ghost" onClick={() => setValues(Object.fromEntries(pk.writes.map((w) => [w.id, w.value])))}>Discard edits</Button>
             </div>
           )}
           <div className="grid md:grid-cols-2 gap-4">
             {ex.pricingRationale && (
-              <Box title="Pricing reasoning (estimate)">
-                <p className="text-sm text-foreground">{ex.pricingRationale.reasoning}</p>
-                {ex.pricingRationale.assumptions?.length > 0 && <p className="text-xs text-muted-foreground">Assumptions: {ex.pricingRationale.assumptions.join(" · ")}</p>}
-              </Box>
+              <details className="rounded-xl border border-border bg-card p-4">
+                <summary className="cursor-pointer text-sm font-display font-semibold text-foreground">Pricing reasoning (estimate)</summary>
+                <div className="pt-2 space-y-1">
+                  <p className="text-sm text-foreground">{ex.pricingRationale.reasoning}</p>
+                  {ex.pricingRationale.assumptions?.length > 0 && <p className="text-xs text-muted-foreground">Assumptions: {ex.pricingRationale.assumptions.join(" · ")}</p>}
+                </div>
+              </details>
             )}
             {ex.problemObstacleSolutions?.length > 0 && (
               <Box title="Problem → obstacle → solution">
