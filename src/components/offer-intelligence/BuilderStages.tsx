@@ -33,17 +33,14 @@ export function StrengthenStage({ s, busy, run, stale }: StageProps) {
   const allDecided = !!st && st.items.every((i) => i.decision);
   return (
     <section className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">C · Strengthen</h1>
-        <p className="text-sm text-muted-foreground">The highest-impact weaknesses from your diagnosis, each with strategic options. Choose one, adapt it, write your own — or keep things as they are. Every decision is saved immediately.</p>
-      </div>
+      <StageHeader stage="strengthen" />
       {stale.strengthen && <StaleNotice text="The diagnosis changed after these options were generated. Your own alternatives are kept when you regenerate." action="Regenerate options" busy={!!busy} onClick={() => run("strengthen")} />}
       {!st && (
         <Button onClick={() => run("strengthen")} disabled={!!busy || !s.diagnosis}>
           {busy === "strengthen" ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Sparkles className="w-4 h-4 mr-1.5" />}Find improvement options
         </Button>
       )}
-      {st?.items.map((item, idx) => <StrengthenCard key={item.id} n={idx + 1} item={item} busy={!!busy} onDecide={(d) => decide(item, d)} />)}
+      {st && st.items.length > 0 && <StrengthenTabs items={st.items} busy={!!busy} decide={decide} />}
       {st && (
         <div className="flex flex-wrap gap-2 items-center">
           <Button variant="outline" onClick={() => run("strengthen")} disabled={!!busy}>
@@ -61,22 +58,36 @@ function StrengthenCard({ n, item, busy, onDecide }: { n: number; item: Strength
   const d = item.decision;
   const [editing, setEditing] = useState<null | { optionId?: string; text: string }>(null);
   return (
-    <article className="rounded-xl border border-border bg-card p-4 space-y-3">
-      <header className="space-y-1">
-        <p className="text-xs text-muted-foreground">{n}. {item.dimension ? DIMENSION_LABELS[item.dimension] : "Offer"}</p>
-        <h2 className="text-base font-display font-semibold text-foreground">{item.weakness}</h2>
-        {item.whyItMatters && <p className="text-sm text-muted-foreground">Why it matters: {item.whyItMatters}</p>}
+    <article className="space-y-4">
+      <header className="space-y-1.5">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Area {n} · {item.dimension ? DIMENSION_LABELS[item.dimension] : "Offer"}</p>
+        <h2 className="text-lg font-display font-semibold text-foreground">{item.weakness}</h2>
+        {item.whyItMatters && <p className="text-sm text-muted-foreground leading-relaxed"><span className="font-medium text-foreground">Why it matters: </span>{item.whyItMatters}</p>}
       </header>
-      <ul className="grid gap-2">
+      <h3 className="text-sm font-semibold text-foreground">Choose an improvement</h3>
+      <ul className="grid gap-3">
         {item.options.map((o) => {
           const chosen = d?.kind === "option" && d.optionId === o.id;
           return (
-            <li key={o.id} className={cn("rounded-lg border p-3 space-y-1.5", chosen ? "border-primary bg-primary/5" : "border-border")}>
-              <p className="text-sm font-medium text-foreground">{o.title}</p>
-              <p className="text-sm text-foreground">{chosen && d?.kind === "option" ? d.text : o.change}</p>
-              {o.why && <p className="text-xs text-muted-foreground">Why: {o.why}</p>}
-              {o.tradeoff && <p className="text-xs text-muted-foreground">Trade-off: {o.tradeoff}</p>}
-              <div className="flex gap-2 pt-1">
+            <li key={o.id} className={cn("rounded-xl border p-4 space-y-3 transition-colors", chosen ? "border-2 border-primary bg-primary/5" : "border-border bg-background")}>
+              <div className="flex items-start gap-2">
+                <p className="flex-1 text-base font-display font-semibold text-foreground">{o.title}</p>
+                {chosen && <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground"><Check className="w-3 h-3" />Your choice</span>}
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">The improvement</p>
+                <p className="text-sm text-foreground leading-relaxed">{chosen && d?.kind === "option" ? d.text : o.change}</p>
+              </div>
+              {(o.why || o.tradeoff) && (
+                <details className="group rounded-lg bg-muted/40 px-3 py-2">
+                  <summary className="cursor-pointer text-sm font-medium text-primary">Why this helps{o.tradeoff ? " · What to consider" : ""}</summary>
+                  <div className="pt-2 space-y-2 text-sm leading-relaxed text-foreground">
+                    {o.why && <div><p className="font-medium">Why this helps</p><p className="text-muted-foreground">{o.why}</p></div>}
+                    {o.tradeoff && <div><p className="font-medium">What to consider</p><p className="text-muted-foreground">{o.tradeoff}</p></div>}
+                  </div>
+                </details>
+              )}
+              <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant={chosen ? "default" : "outline"} disabled={busy} onClick={() => onDecide({ kind: "option", optionId: o.id, text: o.change })}>
                   {chosen ? <><Check className="w-3.5 h-3.5 mr-1" />Selected</> : "Select"}
                 </Button>
@@ -118,10 +129,7 @@ export function PackageStage({ s, busy, run, stale }: StageProps) {
   const selected = s.decisions?.strengthen?.items.filter((i) => i.decision && i.decision.kind !== "rejected").length ?? 0;
   return (
     <section className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">D · Package</h1>
-        <p className="text-sm text-muted-foreground">Your decisions turned into one coherent offer, using only this category's Offer Design fields. Edit any value or leave elements out. Nothing is saved to Offer Design until final approval.</p>
-      </div>
+      <StageHeader stage="package" />
       {stale.package && <StaleNotice text="Your Strengthen decisions changed after this package was generated." action="Regenerate package" busy={!!busy} onClick={() => run("package")} />}
       <div className="flex flex-wrap gap-2">
         <Button onClick={() => run("package")} disabled={!!busy} variant={pk ? "outline" : "default"}>
@@ -163,10 +171,7 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
   const rubricMismatch = !!before && !!fin && before.rubricVersion !== fin.profile.rubricVersion;
   return (
     <section className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">E · Final Offer Blueprint</h1>
-        <p className="text-sm text-muted-foreground">The complete proposed offer, re-assessed with the same strict criteria as the diagnosis. Scores don't have to go up — changes are explained either way.</p>
-      </div>
+      <StageHeader stage="final" />
       {completed && (
         <div role="status" className="rounded-lg border border-primary/40 bg-primary/5 p-3 flex flex-wrap items-center gap-3 text-sm">
           <Check className="w-4 h-4 text-primary" /><span className="flex-1 text-foreground">Approved and saved to Offer Design{s.completed_at ? ` on ${new Date(s.completed_at).toLocaleString()}` : ""}. This analysis stays here for review.</span>
@@ -182,7 +187,7 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
       {fin && (
         <>
           <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
-            <h2 className="text-base font-display font-semibold text-foreground mb-1">Value Profile — Before / After</h2>
+            <h2 className="text-lg font-display font-semibold text-foreground mb-1">How compelling is your offer? Before / After</h2>
             <p className="text-xs text-muted-foreground mb-4">Dashed = diagnosis, solid = proposed final offer. Select a dimension for the reasoning.</p>
             <ValueProfileChart before={before} after={fin.profile} />
             <div className="mt-4 space-y-2 border-t border-border pt-3">
@@ -223,10 +228,10 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
 }
 
 const Box = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="rounded-xl border border-border bg-card p-4 space-y-2"><h2 className="text-sm font-display font-semibold text-foreground">{title}</h2>{children}</div>
+  <div className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-3"><h2 className="text-base font-display font-semibold text-foreground">{title}</h2>{children}</div>
 );
 const List = ({ items, empty = "—" }: { items: string[]; empty?: string }) =>
-  items.length ? <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">{items.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">{empty}</p>;
+  items.length ? <ul className="list-disc pl-5 space-y-2 text-sm leading-relaxed text-foreground">{items.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">{empty}</p>;
 
 
 /** Per-dimension Before/After explanation built from the existing assessment (display only). */
@@ -262,6 +267,77 @@ function ScoreChanges({ before, after, text }: { before: ValueProfile | null; af
         })}
       </div>
       {!parts && text && <p className="text-sm text-foreground">{humanizeCriteria(text)}</p>}
+    </div>
+  );
+}
+
+
+const STAGE_HEADINGS: Record<string, { title: string; subtitle: string }> = {
+  understand: { title: "Let's understand your offer", subtitle: "We'll review what we know about your idea, check our assumptions, and fill in any important gaps." },
+  diagnose: { title: "Let's find out how strong your offer is", subtitle: "We'll evaluate what makes your offer attractive and identify where it could be stronger." },
+  strengthen: { title: "Let's make your offer more compelling", subtitle: "Explore practical improvements, compare your options, and decide what works best for your business." },
+  package: { title: "Let's bring your offer together", subtitle: "Review and refine the complete offer we've built from your decisions." },
+  final: { title: "Review your improved offer", subtitle: "See how your offer has evolved, review the final details, and approve it when you're ready." },
+};
+/** Shared stage heading (level 1) + subtitle for all five Builder stages. */
+export const StageHeader = ({ stage }: { stage: keyof typeof STAGE_HEADINGS }) => (
+  <div className="space-y-1.5">
+    <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-foreground">{STAGE_HEADINGS[stage].title}</h1>
+    <p className="text-base text-muted-foreground max-w-prose">{STAGE_HEADINGS[stage].subtitle}</p>
+  </div>
+);
+
+
+/** Friendly tab label from the improvement content; falls back to the Value Equation dimension. */
+export function improvementLabel(item: Pick<StrengthenItem, "weakness" | "dimension">): string {
+  const t = `${item.weakness ?? ""}`.toLowerCase();
+  if (/(proof|testimonial|trust|credib|track record|case stud)/.test(t)) return "Build trust";
+  if (/(guarantee|risk)/.test(t)) return "Reduce buyer risk";
+  if (/(structure|duration|framework|method|delivery mechanism|undefined program)/.test(t)) return "Clarify the program";
+  if (/(fast|quick|first win|timeline|milestone|speed)/.test(t)) return "Deliver results faster";
+  if (/(effort|easy|easier|tool|template|support|steps)/.test(t)) return "Make it easier";
+  if (/(outcome|result|promise|transformation)/.test(t)) return "Sharpen the promise";
+  const byDim: Record<string, string> = { perceived_likelihood: "Build trust", speed_to_value: "Deliver results faster", ease_of_achievement: "Make it easier", dream_outcome: "Sharpen the promise" };
+  return (item.dimension && byDim[item.dimension]) || "Improve the offer";
+}
+
+function StrengthenTabs({ items, busy, decide }: { items: StrengthenItem[]; busy: boolean; decide: (i: StrengthenItem, d: StrengthenDecision | null) => void }) {
+  const [active, setActive] = useState(() => (items.find((i) => !i.decision) ?? items[0]).id);
+  useEffect(() => { if (!items.some((i) => i.id === active)) setActive(items[0].id); }, [items, active]);
+  const seen = new Map<string, number>();
+  const labels = items.map((i) => { const l = improvementLabel(i); const n = (seen.get(l) ?? 0) + 1; seen.set(l, n); return n > 1 ? `${l} (${n})` : l; });
+  const idx = Math.max(0, items.findIndex((i) => i.id === active));
+  const onKey = (e: React.KeyboardEvent, i: number) => {
+    const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!d) return;
+    e.preventDefault(); const n = items[(i + d + items.length) % items.length]; setActive(n.id); document.getElementById(`imptab-${n.id}`)?.focus();
+  };
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div role="tablist" aria-label="Improvement areas" className="flex overflow-x-auto border-b border-border bg-muted/30">
+        {items.map((it, i) => (
+          <button key={it.id} id={`imptab-${it.id}`} role="tab" type="button" aria-selected={active === it.id} aria-controls={`imppanel-${it.id}`} tabIndex={active === it.id ? 0 : -1}
+            onClick={() => setActive(it.id)} onKeyDown={(e) => onKey(e, i)}
+            className={cn("shrink-0 flex-1 min-w-[140px] px-4 py-3 text-left border-b-2 -mb-px transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              active === it.id ? "border-primary bg-card text-foreground" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50")}>
+            <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
+              {it.decision ? <Check className="w-3.5 h-3.5 text-primary" aria-label="Decided" /> : <span className="h-2 w-2 rounded-full bg-destructive/70" aria-label="Needs a decision" />}
+              {labels[i]}
+            </span>
+            <span className="block text-[11px] font-normal text-muted-foreground">{it.dimension ? DIMENSION_LABELS[it.dimension] : "Offer"} · {it.decision ? "Decided" : "Needs a decision"}</span>
+          </button>
+        ))}
+      </div>
+      {/* All panels stay mounted (hidden) so in-progress edits survive tab switches. */}
+      {items.map((it, i) => (
+        <div key={it.id} role="tabpanel" id={`imppanel-${it.id}`} aria-labelledby={`imptab-${it.id}`} hidden={active !== it.id} className="p-4 sm:p-6 space-y-4">
+          <StrengthenCard n={i + 1} item={it} busy={busy} onDecide={(d) => decide(it, d)} />
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+            {i > 0 ? <Button size="sm" variant="ghost" onClick={() => setActive(items[i - 1].id)}>← {labels[i - 1]}</Button> : <span />}
+            {i < items.length - 1 && <Button size="sm" variant="outline" onClick={() => setActive(items[i + 1].id)}>Next: {labels[i + 1]} →</Button>}
+          </div>
+        </div>
+      ))}
+      <span className="sr-only">{idx + 1} of {items.length}</span>
     </div>
   );
 }

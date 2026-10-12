@@ -34,3 +34,11 @@ describe("value equation text", () => {
     expect(splitScoreChanges("No structure here")).toBeNull();
   });
 });
+import { improvementLabel } from "@/components/offer-intelligence/BuilderStages";
+describe("improvement tab labels", () => {
+  it("derives friendly labels from content with dimension fallback", () => {
+    expect(improvementLabel({ weakness: "No proof or testimonials", dimension: "perceived_likelihood" } as any)).toBe("Build trust");
+    expect(improvementLabel({ weakness: "Program structure is undefined", dimension: null } as any)).toBe("Clarify the program");
+    expect(improvementLabel({ weakness: "xyz", dimension: "ease_of_achievement" } as any)).toBe("Make it easier");
+  });
+});

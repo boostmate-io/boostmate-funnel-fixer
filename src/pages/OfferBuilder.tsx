@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import ValueProfileChart from "@/components/offer-intelligence/ValueProfileChart";
 import { BUILDER_STAGES, stageState, type BuilderStage } from "@shared/offerIntelligence/builderSession";
 import { staleStages, strengthenComplete } from "@shared/offerIntelligence/builderStages";
-import { StrengthenStage, PackageStage, FinalStage } from "@/components/offer-intelligence/BuilderStages";
+import { StrengthenStage, PackageStage, FinalStage, StageHeader } from "@/components/offer-intelligence/BuilderStages";
 import BuilderChatPanel from "@/components/offer-intelligence/BuilderChatPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { DIMENSION_LABELS } from "@shared/offerIntelligence/valueEquation";
@@ -197,7 +197,7 @@ export default function OfferBuilder() {
           {(view === "strengthen" || view === "package") && d && (
             <details className="group rounded-xl border border-border bg-card">
               <summary className="cursor-pointer list-none px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                <span className="font-display font-semibold text-foreground">Value Profile</span>
+                <span className="font-display font-semibold text-foreground">How compelling is your offer?</span>
                 <span className="text-xs text-muted-foreground">Diagnosis scores — not re-scored until the final assessment</span>
                 <span className="flex flex-wrap gap-3 text-xs text-foreground ml-auto">
                   {Object.values(d.profile.dimensions).map((x) => <span key={x.dimension}><span className="text-muted-foreground">{DIMENSION_LABELS[x.dimension]}</span> {x.score ?? "–"}</span>)}
@@ -218,10 +218,7 @@ export default function OfferBuilder() {
           <fieldset disabled={readOnly} className="space-y-6 min-w-0">
           {view === "understand" && (
             <section className="space-y-5">
-              <div>
-                <h1 className="text-2xl font-display font-bold text-foreground">A · Understand</h1>
-                <p className="text-sm text-muted-foreground">We gather what's already known from your Blueprint{s.mode === "existing" ? " and this offer" : ""}, then you correct assumptions and fill gaps.</p>
-              </div>
+              <StageHeader stage="understand" />
               {!d && (
                 <p className="text-xs text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
                   <span className="font-medium text-foreground">How we assess offers:</span> the Value Equation — a bigger Dream Outcome and higher Perceived Likelihood raise value; faster Speed to Value and easier Ease of Achievement do too. Your Value Profile appears after the diagnosis.
@@ -229,7 +226,7 @@ export default function OfferBuilder() {
               )}
               {s.mode === "new" && (
                 <div className="space-y-1.5">
-                  <label htmlFor="idea" className="text-sm font-medium text-foreground">Your offer idea</label>
+                  <label htmlFor="idea" className="text-lg font-display font-semibold text-foreground">Your starting idea</label>
                   <Textarea id="idea" rows={3} maxLength={1500} value={idea} onChange={(e) => setIdea(e.target.value)}
                     placeholder="e.g. A 6-week group program that helps new yoga teachers fill their first weekly class." />
                 </div>
@@ -241,10 +238,10 @@ export default function OfferBuilder() {
 
               {u && (
                 <div className="grid gap-4">
-                  <Group title="Known" tone="known" empty="Nothing confirmed yet.">
+                  <Group title="What we already know" hint="Here's what we understand about your audience and offer so far." tone="known" empty="Nothing confirmed yet.">
                     {u.known.map((k) => <li key={k.id} className="text-sm text-foreground">{k.text}</li>)}
                   </Group>
-                  <Group title="Assumed — correct anything that's wrong" tone="assumed" empty="No assumptions.">
+                  <Group title="What we're assuming" hint="We've made a few educated guesses. Correct anything that doesn't sound right." tone="assumed" empty="No assumptions.">
                     {u.assumed.map((a) => (
                       <li key={a.id} className="space-y-1">
                         <p className="text-sm text-foreground">{a.text}</p>
@@ -254,7 +251,7 @@ export default function OfferBuilder() {
                       </li>
                     ))}
                   </Group>
-                  <Group title="Missing — answer what you can" tone="missing" empty="Nothing important is missing.">
+                  <Group title="A few things we'd like to know" hint="Answer what you can. It's okay if you don't know everything yet." tone="missing" empty="Nothing important is missing.">
                     {u.missing.map((m) => (
                       <li key={m.id} className="space-y-1">
                         <p className="text-sm text-foreground">{m.question || m.text}</p>
@@ -280,10 +277,7 @@ export default function OfferBuilder() {
 
           {view === "diagnose" && (
             <section className="space-y-5">
-              <div>
-                <h1 className="text-2xl font-display font-bold text-foreground">B · Diagnose</h1>
-                <p className="text-sm text-muted-foreground">Each Value Equation criterion is assessed separately; unknown information is never counted as weak.</p>
-              </div>
+              <StageHeader stage="diagnose" />
               <Button onClick={() => run("diagnose")} disabled={!!busy || !canDiagnose}>
                 {busy === "diagnose" ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
                 {d ? "Run diagnosis again" : "Run diagnosis"}
@@ -291,17 +285,17 @@ export default function OfferBuilder() {
               {!canDiagnose && <p className="text-sm text-muted-foreground">Confirm the working context in Stage A first.</p>}
               {d && (
                 <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
-                  <h2 className="text-base font-display font-semibold text-foreground mb-1">Value Profile</h2>
+                  <h2 className="text-lg font-display font-semibold text-foreground mb-1">How compelling is your offer?</h2>
                   <p className="text-xs text-muted-foreground mb-4">{s.mode === "new" ? "Initial assessment of your offer idea." : "Assessment of the offer as it is today."}</p>
                   <ValueProfileChart before={d.profile} />
                 </div>
               )}
               {d && (
                 <div className="grid md:grid-cols-2 gap-4">
-                  <Card title="Strengths">{d.strengths.length ? <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">{d.strengths.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">None identified yet.</p>}</Card>
-                  <Card title="Weaknesses">{d.weaknesses.length ? <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">{d.weaknesses.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">None identified.</p>}</Card>
-                  <Card title="Top 3 improvement opportunities"><ol className="list-decimal pl-5 space-y-1 text-sm text-foreground">{d.topImprovements.map((x) => <li key={x}>{x}</li>)}</ol></Card>
-                  <Card title="Not assessed / unknown">
+                  <Card title="What's already working in your favor">{d.strengths.length ? <ul className="list-disc pl-5 space-y-2 text-sm leading-relaxed text-foreground">{d.strengths.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">None identified yet.</p>}</Card>
+                  <Card title="What's holding your offer back">{d.weaknesses.length ? <ul className="list-disc pl-5 space-y-2 text-sm leading-relaxed text-foreground">{d.weaknesses.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">None identified.</p>}</Card>
+                  <Card title="Where we can make the biggest improvements"><ol className="list-decimal pl-5 space-y-2 text-sm leading-relaxed text-foreground">{d.topImprovements.map((x) => <li key={x}>{x}</li>)}</ol></Card>
+                  <Card title="What we don't know yet">
                     {Object.values(d.profile.dimensions).some((x) => x.unknown.length) ? (
                       <ul className="space-y-1 text-sm text-muted-foreground">
                         {Object.values(d.profile.dimensions).filter((x) => x.unknown.length).map((x) => (
@@ -352,14 +346,14 @@ export default function OfferBuilder() {
   );
 }
 
-const Group = ({ title, tone, empty, children }: { title: string; tone: "known" | "assumed" | "missing"; empty: string; children: React.ReactNode[] }) => (
-  <div className={cn("rounded-xl border bg-card p-4 space-y-2", tone === "known" ? "border-border" : tone === "assumed" ? "border-primary/30" : "border-destructive/30")}>
-    <h2 className="text-sm font-display font-semibold text-foreground">{title}</h2>
+const Group = ({ title, hint, tone, empty, children }: { title: string; hint?: string; tone: "known" | "assumed" | "missing"; empty: string; children: React.ReactNode[] }) => (
+  <div className={cn("rounded-xl border-l-4 bg-card p-4 sm:p-5 space-y-3", tone === "known" ? "border-l-border" : tone === "assumed" ? "border-l-primary" : "border-l-destructive/60")}>
+    <div><h2 className="text-lg font-display font-semibold text-foreground">{title}</h2>{hint && <p className="text-sm text-muted-foreground">{hint}</p>}</div>
     {children.length ? <ul className="space-y-3">{children}</ul> : <p className="text-sm text-muted-foreground">{empty}</p>}
   </div>
 );
 const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="rounded-xl border border-border bg-card p-4 space-y-2"><h2 className="text-sm font-display font-semibold text-foreground">{title}</h2>{children}</div>
+  <div className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-3"><h2 className="text-base font-display font-semibold text-foreground">{title}</h2>{children}</div>
 );
 const StageGuidance = ({ text, onAsk, panelOpen }: { text: string; onAsk: () => void; panelOpen: boolean }) => (
   <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
