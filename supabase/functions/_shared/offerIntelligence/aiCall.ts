@@ -3,6 +3,8 @@
 
 import { buildOperationInstructions, buildOperationInput, OPERATION_OUTPUT_SCHEMAS, type OfferOperation, type OperationContext } from "./operations.ts";
 
+declare const Deno: { env: { get(k: string): string | undefined } };
+
 export const OFFER_INTELLIGENCE_MODEL = "google/gemini-2.5-flash";
 
 export type AiErrorCode = "ai_not_configured" | "ai_busy" | "ai_unavailable" | "ai_failed" | "ai_malformed" | "ai_truncated" | "ai_wrong_tool";
@@ -55,6 +57,6 @@ export async function runOfferOperation(op: OfferOperation, ctx: OperationContex
   let data: unknown;
   try { data = await resp.json(); } catch { return { ok: false, status: 502, error: "ai_malformed" }; }
   const parsed = parseDeliverResponse(data);
-  if (!parsed.ok) console.warn("offer-intelligence ai output", op, parsed.error);
+  if (!parsed.ok) console.warn("offer-intelligence ai output", op, (parsed as { error: string }).error);
   return parsed;
 }
