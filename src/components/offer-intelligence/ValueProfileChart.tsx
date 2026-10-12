@@ -81,10 +81,13 @@ export default function ValueProfileChart({ before, after, className, improvemen
         const lx = x + dx * 14;
         const ly = dy < 0 ? y - 26 : dy > 0 ? y + 22 : y - 4;
         const value = both ? `${label(d, before)} → ${label(d, after)}` : label(d, main);
+        // Side axes wrap onto two lines so long names never clip.
+        const lines = dx !== 0 ? DIMENSION_LABELS[d].split(" ") : [DIMENSION_LABELS[d]];
+        const top = dx !== 0 ? ly - 10 : ly;
         return (
           <g key={d} className="cursor-pointer" onClick={() => setSelected(selected === d ? null : d)}>
-            <text x={lx} y={ly} textAnchor={anchor} className={cn("text-[17px] font-semibold", selected === d ? "fill-primary" : "fill-foreground")}>{DIMENSION_LABELS[d]}</text>
-            <text x={lx} y={ly + 19} textAnchor={anchor} className="fill-muted-foreground text-[14px]">{value}</text>
+            {lines.map((t, i) => <text key={t} x={lx} y={top + i * 19} textAnchor={anchor} className={cn("text-[17px] font-semibold", selected === d ? "fill-primary" : "fill-foreground")}>{t}</text>)}
+            <text x={lx} y={top + lines.length * 19} textAnchor={anchor} className="fill-muted-foreground text-[14px]">{value}</text>
           </g>
         );
       })}
@@ -108,12 +111,12 @@ export default function ValueProfileChart({ before, after, className, improvemen
           <button key={d} type="button" onClick={() => setSelected(selected === d ? null : d)} aria-pressed={selected === d}
             className={cn("rounded-lg border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               selected === d ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50")}>
-            <span className="block text-xs font-medium text-muted-foreground">{DIMENSION_LABELS[d]}</span>
+            <span className="block text-xs font-medium text-muted-foreground">{DIMENSION_LABELS[d]}{both && <span className="font-normal"> · was {b ?? "–"}</span>}</span>
             <span className="flex items-baseline gap-2">
               <span className="text-xl font-display font-bold text-foreground">{score(d, main) ?? "–"}</span>
               <span className="text-xs text-muted-foreground">{score(d, main) == null ? "not assessed" : "/10"}</span>
-              {both && <span className={cn("ml-auto text-xs font-medium", delta != null && delta > 0 ? "text-primary" : delta != null && delta < 0 ? "text-destructive" : "text-muted-foreground")}>
-                {delta == null ? `was ${b ?? "–"}` : delta === 0 ? "no change" : `${delta > 0 ? "+" : ""}${delta} (was ${b})`}
+              {both && <span title={`Before: ${b ?? "not assessed"}`} className={cn("ml-auto text-xs font-medium whitespace-nowrap", delta != null && delta > 0 ? "text-primary" : delta != null && delta < 0 ? "text-destructive" : "text-muted-foreground")}>
+                {delta == null ? `was ${b ?? "–"}` : delta === 0 ? "±0" : `${delta > 0 ? "+" : ""}${delta}`}
               </span>}
             </span>
           </button>
