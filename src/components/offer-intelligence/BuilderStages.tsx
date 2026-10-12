@@ -7,6 +7,7 @@ import { DIMENSION_LABELS, compareProfiles, VALUE_PROFILE_DISCLAIMER, VALUE_RUBR
 import type { StrengthenDecision, StrengthenItem } from "@shared/offerIntelligence/builderStages";
 import type { BuilderSession, BuilderAction } from "@/lib/offers/offerBuilder";
 import { cn } from "@/lib/utils";
+import ValueProfileChart from "./ValueProfileChart";
 
 type Run = (action: BuilderAction, extra?: Record<string, unknown>) => Promise<void>;
 interface StageProps { s: BuilderSession; busy: string | null; run: Run; stale: { strengthen: boolean; package: boolean; final: boolean } }
@@ -194,6 +195,11 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
       )}
       {fin && (
         <>
+          <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
+            <h2 className="text-base font-display font-semibold text-foreground mb-1">Value Profile — Before / After</h2>
+            <p className="text-xs text-muted-foreground mb-4">Dashed = diagnosis, solid = proposed final offer. Select a dimension for the reasoning.</p>
+            <ValueProfileChart before={before} after={fin.profile} />
+          </div>
           <Box title="Proposed offer">
             <dl className="grid md:grid-cols-[200px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
               {included.map((w) => <Fragment key={w.id}><dt className="text-muted-foreground">{w.label}</dt><dd className="text-foreground whitespace-pre-wrap">{w.value}</dd></Fragment>)}
