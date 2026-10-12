@@ -63,10 +63,10 @@ export default function OfferBuilder() {
       hydrate(session, follow);
     } catch (e) {
       const err = e as BuilderError;
-      const fresh = err.code === "conflict" || err.code === "session_closed" ? (err.session ?? await loadBuilderSession(s.id)) : null;
+      const fresh = err.code === "conflict" || err.code === "session_closed" ? (err.session ?? await loadBuilderSession(s.id).catch(() => null)) : null;
       if (navOnly && err.code === "conflict" && fresh && fresh.status === "active") {
         try { const { session } = await builderAction(fresh, action, extra); hydrate(session, true); return; }
-        catch (e2) { const er2 = e2 as BuilderError; setError(builderErrorMessage(er2.code)); const f2 = await loadBuilderSession(s.id); if (f2) hydrate(f2, false); return; }
+        catch (e2) { const er2 = e2 as BuilderError; setError(builderErrorMessage(er2.code)); const f2 = await loadBuilderSession(s.id).catch(() => null); if (f2) hydrate(f2, false); return; }
       }
       setError(builderErrorMessage(err.code));
       if (fresh) hydrate(fresh, false);
