@@ -41,12 +41,12 @@ function SectionTabs({ tabs, active, onSelect, counts, warn }: {
     document.getElementById(`sectab-${next}`)?.focus();
   };
   return (
-    <div role="tablist" aria-label="Offer sections" className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-muted/40 p-1">
+    <div role="tablist" aria-label="Offer sections" className="flex overflow-x-auto border-b border-border bg-muted/30">
       {tabs.map((t, i) => (
         <button key={t} id={`sectab-${t}`} role="tab" type="button" aria-selected={active === t} aria-controls={`secpanel-${t}`} tabIndex={active === t ? 0 : -1}
           onClick={() => onSelect(t)} onKeyDown={(e) => onKey(e, i)}
-          className={cn("shrink-0 flex-1 min-w-[96px] rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            active === t ? "bg-card text-foreground font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+          className={cn("shrink-0 flex-1 min-w-[104px] px-3 py-3 text-sm border-b-2 -mb-px transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+            active === t ? "border-primary bg-card text-primary font-semibold" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50")}>
           <span className="flex items-center justify-center gap-1.5 whitespace-nowrap">
             {TAB_LABELS[t]}
             {warn?.includes(t) && <ShieldAlert className="w-3.5 h-3.5 text-destructive" aria-label="Contains items to review" />}
@@ -114,11 +114,12 @@ export function PackageEditor({ writes, values, busy, tierLabel, extras, onChang
         </div>
       </div>
 
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
       <SectionTabs tabs={tabs} active={tab} onSelect={setTab} counts={counts} warn={warnTabs} />
 
-      <div role="tabpanel" id={`secpanel-${tab}`} aria-labelledby={`sectab-${tab}`} className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-3">
+      <div role="tabpanel" id={`secpanel-${tab}`} aria-labelledby={`sectab-${tab}`} className="p-4 sm:p-6 space-y-4">
         <div>
-          <h3 className="font-display font-semibold text-foreground">{sec.title}</h3>
+          <h3 className="text-lg font-display font-semibold text-foreground">{sec.title}</h3>
           <p className="text-xs text-muted-foreground">{sec.hint}</p>
         </div>
         {tab === "pricing" && (
@@ -134,6 +135,7 @@ export function PackageEditor({ writes, values, busy, tierLabel, extras, onChang
         )}
         <SectionExtras sec={tab} extras={extras} />
         <SectionPager tabs={tabs} active={tab} onSelect={setTab} />
+      </div>
       </div>
     </div>
   );
@@ -174,7 +176,7 @@ function EntryEditor({ e, sec, val, busy, onChange, onToggle }: { e: PackageEntr
   );
   const head = (title: string) => (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm font-medium text-foreground">{title}</span>
+      <span className="text-sm font-semibold text-foreground">{title}</span>
       {provenance(ws)}
       {isGuarantee && <Tag tone="warn">Needs your review</Tag>}
       {!on && <Tag tone="warn">Left out</Tag>}
@@ -245,10 +247,11 @@ export function FinalOfferPresentation({ writes, tierLabel, extras }: { writes: 
         )}
       </header>
 
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
       <SectionTabs tabs={tabs} active={tab} onSelect={setTab} warn={guaranteeIncluded ? ["pricing"] : []} />
 
-      <section role="tabpanel" id={`secpanel-${tab}`} aria-labelledby={`sectab-${tab}`} className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-4">
-        <h3 className="text-base font-display font-semibold text-foreground">{FINAL_TITLES[tab]}</h3>
+      <section role="tabpanel" id={`secpanel-${tab}`} aria-labelledby={`sectab-${tab}`} className="p-4 sm:p-6 space-y-5">
+        <h3 className="text-lg font-display font-semibold text-foreground">{FINAL_TITLES[tab]}</h3>
         {tab === "overview" && (audience || extras?.positioning?.statement) && (
           <dl className="grid sm:grid-cols-2 gap-3">
             {audience && <Fact k="Audience" v={audience} wide />}
@@ -277,6 +280,7 @@ export function FinalOfferPresentation({ writes, tierLabel, extras }: { writes: 
         )}
         <SectionPager tabs={tabs} active={tab} onSelect={setTab} />
       </section>
+      </div>
     </div>
   );
 }
@@ -289,7 +293,7 @@ const FINAL_TITLES: Record<PackageSectionId, string> = {
 function Transformation({ pos }: { pos: any[] }) {
   return (
     <div className="space-y-2">
-      <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">The transformation</h4>
+      <h4 className="text-sm font-semibold text-foreground">The transformation</h4>
       <ol className="space-y-2">{pos.map((p, i) => (
         <li key={i} className="grid sm:grid-cols-3 gap-2 text-sm">
           <span className="rounded-lg bg-muted/50 p-2"><span className="block text-[11px] text-muted-foreground">Problem</span>{p.problem}</span>
@@ -305,7 +309,7 @@ function ListView({ items }: { items: ListItemEntry[] }) {
   const isSteps = /(pillar|milestone|phase|step|module)/i.test(items[0].listPath);
   return (
     <div className="space-y-2">
-      <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</h4>
+      <h4 className="text-sm font-semibold text-foreground">{label}</h4>
       {isSteps ? (
         <ol className="relative space-y-3 border-l-2 border-primary/30 pl-5 ml-2">
           {items.map((it, i) => { const m = itemMap(it); return (
