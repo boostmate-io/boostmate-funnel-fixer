@@ -1,9 +1,9 @@
 // Builder Stages C–E working areas (presentation only; persistence via `run`).
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, Check, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { DIMENSION_LABELS, compareProfiles, VALUE_PROFILE_DISCLAIMER, VALUE_RUBRIC_VERSION } from "@shared/offerIntelligence/valueEquation";
+import { DIMENSION_LABELS, VALUE_PROFILE_DISCLAIMER, VALUE_RUBRIC_VERSION } from "@shared/offerIntelligence/valueEquation";
 import type { StrengthenDecision, StrengthenItem } from "@shared/offerIntelligence/builderStages";
 import type { BuilderSession, BuilderAction } from "@/lib/offers/offerBuilder";
 import { cn } from "@/lib/utils";
@@ -175,9 +175,7 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
   const pk = s.decisions?.package ?? null;
   const completed = s.status === "completed";
   const before = s.diagnosis?.profile ?? null;
-  const rows = fin ? compareProfiles(before, fin.profile) : [];
   const rubricMismatch = !!before && !!fin && before.rubricVersion !== fin.profile.rubricVersion;
-  const included = (pk?.writes ?? []).filter((w) => w.include);
   return (
     <section className="space-y-5">
       <div>
