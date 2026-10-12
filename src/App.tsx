@@ -22,6 +22,7 @@ import OfferGenerator from "./pages/OfferGenerator";
 import OfferBuilder from "./pages/OfferBuilder";
 import PublicAssessment from "./pages/PublicAssessment.tsx";
 import RedirectSlug from "./pages/RedirectSlug.tsx";
+import Unsubscribe from "./pages/Unsubscribe.tsx";
 
 import { CoachProvider } from "@/contexts/CoachContext";
 
@@ -50,6 +51,7 @@ const App = () => (
           <Route path="/blueprint/:token" element={<SharedBlueprint />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/r/:slug" element={<RedirectSlug />} />
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
           
           <Route path="/.lovable/oauth/consent" element={<WithAuth><OAuthConsent /></WithAuth>} />
           <Route path="/offer-builder/:sessionId" element={<WithAuth><ProtectedRoute><OfferBuilder /></ProtectedRoute></WithAuth>} />

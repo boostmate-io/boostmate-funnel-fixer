@@ -4,13 +4,15 @@
 // Offer Design mapping. Core only for the MVP.
 // =============================================================================
 
-import { scoreValueProfile, VALUE_DIMENSIONS, type ValueProfile } from "./valueEquation.ts";
+import { scoreValueProfile, VALUE_DIMENSIONS, humanizeCriterionCodes as hc, type ValueProfile, type ValueDimension, type CriterionAssessment } from "./valueEquation.ts";
 import { mapGeneratedToDesign } from "./designMapping.ts";
 import { validateOperationOutput } from "./operations.ts";
 
 export const PUBLIC_RESULT_VERSION = 1;
 const clip = (s: unknown, n: number) => String(s ?? "").trim().slice(0, n);
 const clipList = (v: unknown, max: number, n = 300) => (Array.isArray(v) ? v.map((x) => clip(x, n)).filter(Boolean).slice(0, max) : []);
+
+export interface DimensionChange { dimension: ValueDimension; direction: "up" | "down" | "same"; whatChanged: string; stillUncertain: string; why: string; adjusted?: boolean }
 
 export interface PricingEstimate { low: number; high: number; reasoning: string; assumptions: string[]; label: "estimate" }
 
@@ -31,8 +33,13 @@ export interface PublicOfferResult {
   profile: ValueProfile;
   /** Only when the visitor described a current offer. */
   beforeProfile: ValueProfile | null;
-  scoreChanges: string;
   nextSteps: string[];
+  /** After assessments (kept so code-level consistency checks can re-score). */
+  assessments: CriterionAssessment[];
+  dimensionChanges: DimensionChange[];
+  appliedImprovements: { area: string; howItHelps: string }[];
+  futureActions: string[];
+  validationNeeds: string[];
   /** Pricing writes are never stored in the public design (estimates only). */
   droppedWrites: string[];
 }
@@ -71,9 +78,15 @@ export function buildPublicResult(raw: unknown, opts: { hasCurrentOffer: boolean
       version: PUBLIC_RESULT_VERSION, tier: "core", design: d, offerName, promise,
       audience: clip(out.audience, 400), methodSummary: clip(out.methodSummary, 600), deliveryApproach: clip(out.deliveryApproach, 400),
       deliverables: (d.stack?.deliverables ?? []).map((x: any) => clip(x?.name, 120)).filter(Boolean).slice(0, 8),
-      assumptions: clipList(out.assumptions, 6), pricing: pricingFrom(out.pricing),
-      insights: clipList(out.insights, 2), improvements: clipList(out.improvements ?? out.topImprovements, 3),
-      scoreChanges: clip(out.scoreChanges, 1200), nextSteps: clipList(out.nextSteps, 4),
+      assumptions: clipList(out.assumptions, 6).map(hc), pricing: pricingFrom(out.pricing),
+      insights: clipList(out.insights, 2).map(hc), improvements: clipList(out.improvements ?? out.topImprovements, 3).map(hc),
+      nextSteps: clipList(out.nextSteps, 3).map(hc), assessments: out.assessments,
+      dimensionChanges: VALUE_DIMENSIONS.map((dim) => {
+        const c = (Array.isArray(out.dimensionChanges) ? out.dimensionChanges : []).find((x: any) => x?.dimension === dim);
+        return { dimension: dim, direction: c?.direction ?? "same", whatChanged: hc(clip(c?.whatChanged, 500)), stillUncertain: hc(clip(c?.stillUncertain, 500)), why: hc(clip(c?.why, 500)) };
+      }),
+      appliedImprovements: (Array.isArray(out.appliedImprovements) ? out.appliedImprovements : []).map((a: any) => ({ area: clip(a?.area, 120), howItHelps: hc(clip(a?.howItHelps, 400)) })).filter((a: any) => a.area).slice(0, 4),
+      futureActions: clipList(out.futureActions, 5).map(hc), validationNeeds: clipList(out.validationNeeds, 6).map(hc),
       profile, beforeProfile, droppedWrites,
     },
   };

@@ -50,7 +50,7 @@ describe("Value Equation scoring", () => {
 
 describe("operations", () => {
   it.each(OFFER_OPERATIONS)("%s has instructions + a strict schema", (op) => {
-    const ctx = op === "public_generate" ? { source: "public" as const, tier: "core" as const, facts: { audience: "x" } } : { source: "workspace" as const, tier: "core" as const };
+    const ctx = op.startsWith("public_") ? { source: "public" as const, tier: "core" as const, facts: { audience: "x" } } : { source: "workspace" as const, tier: "core" as const };
     const text = buildOperationInstructions(op, ctx);
     expect(text).toMatch(new RegExp(`# Task: ${op}`));
     expect(text).toMatch(/never invent testimonials/);

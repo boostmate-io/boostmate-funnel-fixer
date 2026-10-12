@@ -19,14 +19,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ValueProfileChart from "@/components/offer-intelligence/ValueProfileChart";
 import { DIMENSION_LABELS, compareProfiles, type ValueDimension } from "@shared/offerIntelligence/valueEquation";
 import type { PublicOfferResult } from "@shared/offerIntelligence/publicResult";
-import type { PublicDiagnosis, PublicImprovement, PublicChoice, AuditChannel } from "@shared/offerIntelligence/publicFlow";
+import { describeDecisions, type PublicDiagnosis, type PublicImprovement, type PublicChoice, type AuditChannel } from "@shared/offerIntelligence/publicFlow";
 import {
   diagnoseOffer, strengthenOffer, finalizeOffer, requestVideoAudit, generatorErrorMessage,
   PENDING_OFFER_CLAIM_KEY, PUBLIC_BUILDER_STATE_KEY, type GeneratorIntake,
 } from "@/lib/offers/publicOfferGenerator";
 import { cn } from "@/lib/utils";
 
-type Stage = "discover" | "diagnose" | "strengthen" | "final";
+type Stage = "welcome" | "discover" | "diagnose" | "strengthen" | "final";
 const STAGES: { id: Stage; label: string }[] = [
   { id: "discover", label: "Discover" }, { id: "diagnose", label: "Diagnose" },
   { id: "strengthen", label: "Strengthen" }, { id: "final", label: "Your Improved Offer" },
@@ -37,21 +37,26 @@ interface Saved {
   items: PublicImprovement[] | null; choices: Record<string, PublicChoice>; result: PublicOfferResult | null; auditSent: boolean;
 }
 const EMPTY_FORM: GeneratorIntake = { audience: "", outcome: "", delivery: "", obstacle: "", currentOffer: "", currentPrice: "", stage: "existing", currency: "EUR" };
-const INITIAL: Saved = { stage: "discover", form: EMPTY_FORM, token: null, diagnosis: null, items: null, choices: {}, result: null, auditSent: false };
+const INITIAL: Saved = { stage: "welcome", form: EMPTY_FORM, token: null, diagnosis: null, items: null, choices: {}, result: null, auditSent: false };
 
 function loadSaved(): Saved {
   try {
     const raw = localStorage.getItem(PUBLIC_BUILDER_STATE_KEY);
-    if (raw) return { ...INITIAL, ...JSON.parse(raw) };
+    if (raw) {
+      const saved = { ...INITIAL, ...JSON.parse(raw) } as Saved;
+      // Results from the earlier format lack structured explanations: rebuild from the saved choices.
+      if (saved.result && !(saved.result as any).dimensionChanges) return { ...saved, result: null, stage: saved.items ? "strengthen" : saved.stage === "final" ? "diagnose" : saved.stage };
+      return saved;
+    }
   } catch { /* ignore */ }
   return INITIAL;
 }
 
 const DIMENSIONS: { id: ValueDimension; icon: typeof Target; q: string }[] = [
-  { id: "dream_outcome", icon: Target, q: "How desirable is the result?" },
-  { id: "perceived_likelihood", icon: ShieldCheck, q: "How confident is the buyer that it will work for them?" },
-  { id: "speed_to_value", icon: Zap, q: "How quickly do they experience meaningful progress?" },
-  { id: "ease_of_achievement", icon: Feather, q: "How manageable does the process feel?" },
+  { id: "dream_outcome", icon: Target, q: "How much does your ideal client want the result?" },
+  { id: "perceived_likelihood", icon: ShieldCheck, q: "How confident are they that your offer will work for them?" },
+  { id: "speed_to_value", icon: Zap, q: "How quickly can they experience meaningful progress?" },
+  { id: "ease_of_achievement", icon: Feather, q: "How easy and manageable does the journey feel?" },
 ];
 const CHALLENGES = ["It's hard to explain", "It sounds like everyone else", "People say it's too expensive", "Buyers aren't confident it will work", "Sales are inconsistent"];
 const CHANNELS: { v: AuditChannel; l: string }[] = [
@@ -125,7 +130,7 @@ export default function OfferGenerator() {
   const isIdea = f.stage === "idea";
   const discoverOk = !!(f.audience.trim() && f.outcome.trim() && f.currentOffer?.trim() && f.obstacle.trim());
 
-  const reached: Record<Stage, boolean> = { discover: true, diagnose: !!s.diagnosis, strengthen: !!s.items, final: !!s.result };
+  const reached: Record<Stage, boolean> = { welcome: true, discover: true, diagnose: !!s.diagnosis, strengthen: !!s.items, final: !!s.result };
 
   const run = async (kind: "diagnose" | "strengthen" | "final", fn: () => Promise<void>) => {
     if (inFlight.current) return; // no double generation
@@ -188,26 +193,33 @@ export default function OfferGenerator() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="container max-w-5xl mx-auto px-4 py-3 flex flex-col items-center gap-3">
           <img src={logo} alt="Boostmate" className="h-7" />
-          <nav aria-label="Builder progress" className="hidden md:flex items-center gap-1">
-            {STAGES.map((st, i) => (
-              <button key={st.id} disabled={!reached[st.id] || !!busy} onClick={() => patch({ stage: st.id })}
-                aria-current={s.stage === st.id ? "step" : undefined}
-                className={cn("flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-colors",
-                  s.stage === st.id ? "bg-primary text-primary-foreground font-medium" : reached[st.id] ? "text-foreground hover:bg-muted" : "text-muted-foreground/60")}>
-                <span className={cn("flex h-5 w-5 items-center justify-center rounded-full text-xs",
-                  s.stage === st.id ? "bg-primary-foreground/20" : reached[st.id] && i < idx ? "bg-primary/15 text-primary" : "bg-muted")}>
-                  {reached[st.id] && i < idx ? <Check className="h-3 w-3" /> : i + 1}
-                </span>
-                {st.label}
-              </button>
-            ))}
-          </nav>
-          {!user && <button onClick={() => setShowAuth(true)} className="text-sm font-medium text-muted-foreground hover:text-foreground">Log in</button>}
+          {s.stage !== "welcome" && (
+            <nav aria-label="Builder progress">
+              <ol className="flex items-center gap-1 rounded-full border border-border bg-background p-1">
+                {STAGES.map((st, i) => {
+                  const active = s.stage === st.id;
+                  const done = reached[st.id] && i < idx;
+                  return (
+                    <li key={st.id}>
+                      <button disabled={!reached[st.id] || !!busy} onClick={() => patch({ stage: st.id })} aria-current={active ? "step" : undefined}
+                        aria-label={`Step ${i + 1}: ${st.label}${done ? " (completed)" : ""}`}
+                        className={cn("flex items-center gap-1.5 rounded-full px-2.5 md:px-3 py-1.5 text-sm transition-colors",
+                          active ? "bg-primary text-primary-foreground font-medium" : done ? "text-foreground hover:bg-muted" : reached[st.id] ? "text-foreground hover:bg-muted" : "text-muted-foreground/60 cursor-default")}>
+                        <span className={cn("flex h-5 w-5 items-center justify-center rounded-full text-xs",
+                          active ? "bg-primary-foreground/20" : done ? "bg-primary/15 text-primary" : "bg-muted")}>
+                          {done ? <Check className="h-3 w-3" /> : i + 1}
+                        </span>
+                        <span className={cn(active ? "inline" : "hidden md:inline")}>{st.label}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </nav>
+          )}
         </div>
-        <div className="md:hidden px-4 pb-2 text-xs text-muted-foreground">Step {idx + 1} of 4 · {STAGES[idx].label}</div>
-        <div className="h-1 bg-muted"><div className="h-1 bg-primary transition-all" style={{ width: `${((idx + 1) / 4) * 100}%` }} /></div>
       </header>
 
       <main className="container max-w-5xl mx-auto px-4 py-10 md:py-14 space-y-10">
@@ -215,30 +227,47 @@ export default function OfferGenerator() {
 
         {busy ? <LoadingPanel kind={busy} /> : (
           <>
+            {/* ---------------- Welcome (not a step) ---------------- */}
+            {s.stage === "welcome" && (
+              <section className="space-y-10 text-center">
+                <div className="space-y-4 max-w-3xl mx-auto">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-primary">Free AI Irresistible Offer Builder</p>
+                  <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground leading-tight">Turn your offer into something clients actually want to buy.</h1>
+                  <p className="text-lg text-muted-foreground">A great offer doesn't just explain what you sell. It makes the right people want the result, believe they can achieve it, and feel confident taking the next step.</p>
+                  <p className="text-lg text-muted-foreground">Discover what's holding your offer back, strengthen it with AI, and see how your offer improves.</p>
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
+                  {DIMENSIONS.map(({ id, icon: Icon, q }) => (
+                    <div key={id} className="rounded-xl border border-border bg-card p-5 space-y-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Icon className="h-5 w-5 text-primary" /></span>
+                      <p className="font-display font-semibold text-foreground text-lg">{DIMENSION_LABELS[id]}</p>
+                      <p className="text-sm text-muted-foreground">{q}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-2 max-w-2xl mx-auto">
+                  <p className="text-sm text-muted-foreground">A stronger offer isn't necessarily about adding more bonuses or deliverables. It's about creating a more desirable result, increasing confidence, shortening the path to progress, and reducing unnecessary effort.</p>
+                  <p className="text-xs text-muted-foreground">Inspired by the Value Equation from Alex Hormozi's <em>$100M Offers</em>.</p>
+                </div>
+                <div className="space-y-3">
+                  <Button size="lg" className="px-8" onClick={() => patch({ stage: s.result ? "final" : s.items ? "strengthen" : s.diagnosis ? "diagnose" : "discover" })}>
+                    {s.diagnosis ? "Continue where I left off" : "Get started"} <ArrowRight className="w-4 h-4 ml-1.5" />
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Free · No account required · Takes just a few minutes</p>
+                </div>
+              </section>
+            )}
+
             {/* ---------------- Stage 1: Discover ---------------- */}
             {s.stage === "discover" && (
-              <section className="space-y-10">
-                <div className="space-y-8">
-                  <StageHeader eyebrow="Free Irresistible Offer Builder" title="Let's turn your offer into something clients actually want."
-                    subtitle="Great offers don't just explain what you sell. They make the right people want the result, believe they can achieve it, and feel confident taking the next step. Let's see how yours measures up." />
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {DIMENSIONS.map(({ id, icon: Icon, q }) => (
-                      <div key={id} className="rounded-xl border border-border bg-card p-4 space-y-2">
-                        <Icon className="h-5 w-5 text-primary" />
-                        <p className="font-display font-semibold text-foreground">{DIMENSION_LABELS[id]}</p>
-                        <p className="text-sm text-muted-foreground">{q}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-sm text-muted-foreground max-w-3xl">A stronger offer rarely means adding more bonuses or deliverables. It usually comes from a clearer result, more credibility, a shorter path to progress, or less effort and uncertainty for your buyer. Inspired by the Value Equation from Alex Hormozi's <em>$100M Offers</em>.</p>
-                </div>
-
+              <section className="space-y-8">
+                <StageHeader title="Tell us about your offer" subtitle="A few short answers are enough. The more specific you are, the more useful your diagnosis will be." />
                 <Card>
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-foreground">Where are you right now?</p>
                       <div className="grid sm:grid-cols-2 gap-2" role="radiogroup">
-                        {[{ v: "existing", t: "I'm already selling an offer", d: "Improve what you have." }, { v: "idea", t: "I have an offer idea", d: "Shape it before you sell it." }].map((o) => (
+                        {[{ v: "existing", t: "I'm already selling an offer", d: "We'll assess what you offer today." }, { v: "idea", t: "I have an offer idea", d: "We'll give a provisional assessment of your concept." }].map((o) => (
                           <button key={o.v} role="radio" aria-checked={f.stage === o.v} onClick={() => patch({ form: { ...f, stage: o.v as "existing" | "idea" } })}
                             className={cn("rounded-lg border p-3 text-left transition-colors", f.stage === o.v ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40")}>
                             <p className="font-medium text-foreground text-sm">{o.t}</p><p className="text-xs text-muted-foreground">{o.d}</p>
@@ -246,16 +275,16 @@ export default function OfferGenerator() {
                         ))}
                       </div>
                     </div>
-                    <Field id="audience" label="Who do you help?" hint="Be specific — e.g. “busy male professionals aged 30–45”, not “everyone”.">
+                    <Field id="audience" label="Who do you help?" hint="Be specific — e.g. “new online business coaches in their first year” or “busy professionals aged 30–45”, not “everyone”.">
                       <Textarea id="audience" value={f.audience} onChange={setField("audience")} maxLength={300} rows={2} />
                     </Field>
-                    <Field id="outcome" label="What result do you help them achieve?" hint="Describe the transformation, not your services — e.g. “sign their first 5 paying clients in 90 days”.">
+                    <Field id="outcome" label="What result do you help them achieve?" hint="The change in their life or business, not your services — e.g. “sign their first 5 paying clients in 90 days” or “run a half marathon without injury”.">
                       <Textarea id="outcome" value={f.outcome} onChange={setField("outcome")} maxLength={300} rows={2} />
                     </Field>
-                    <Field id="currentOffer" label={isIdea ? "What would you like to offer?" : "What are you currently offering?"} hint="Coaching, consulting, a course, a program, a service…">
+                    <Field id="currentOffer" label={isIdea ? "What would you like to offer?" : "What are you currently offering?"} hint={isIdea ? "e.g. “a 6-week group program” or “a self-paced course with monthly Q&A calls”." : "e.g. “12-week 1:1 coaching program” or “done-with-you marketing consulting”."}>
                       <Input id="currentOffer" value={f.currentOffer} onChange={setField("currentOffer")} maxLength={500} />
                     </Field>
-                    <Field id="delivery" label="How do clients achieve that result with you?" optional hint="Your method, how you deliver it and the support they get.">
+                    <Field id="delivery" label="How do clients achieve that result with you?" optional hint={isIdea ? "If you already know: the steps, format and support you have in mind." : "Your method or steps, the format (calls, videos, templates) and the support clients get."}>
                       <Textarea id="delivery" value={f.delivery} onChange={setField("delivery")} maxLength={300} rows={2} />
                     </Field>
                     <Field id="obstacle" label="What's the biggest challenge with your offer right now?">
@@ -268,7 +297,7 @@ export default function OfferGenerator() {
                       <Textarea id="obstacle" value={f.obstacle} onChange={setField("obstacle")} maxLength={300} rows={2} placeholder="Or describe it in your own words" />
                     </Field>
                     {!isIdea && (
-                      <Field id="currentPrice" label="What is the current price?" optional>
+                      <Field id="currentPrice" label="What is the current price?" optional hint="Leave empty if you'd rather not say.">
                         <div className="flex gap-2 max-w-xs">
                           <Select value={f.currency || "EUR"} onValueChange={(v) => patch({ form: { ...f, currency: v } })}>
                             <SelectTrigger className="w-24" aria-label="Currency"><SelectValue /></SelectTrigger>
@@ -295,8 +324,8 @@ export default function OfferGenerator() {
             {/* ---------------- Stage 2: Diagnose ---------------- */}
             {s.stage === "diagnose" && s.diagnosis && (
               <section className="space-y-8">
-                <StageHeader eyebrow="Before · Your current offer" title="Let's find out how strong your offer is"
-                  subtitle="Here's how your offer scores on the four parts of the Value Equation. Click a dimension to see why." />
+                <StageHeader eyebrow={isIdea ? "Before · Your offer idea (provisional)" : "Before · Your current offer"} title="Let's find out how strong your offer is"
+                  subtitle={isIdea ? "This is a provisional assessment of your idea, based only on what you've told us. Click a dimension to see why." : "Here's how the offer you sell today scores on the four parts of the Value Equation. Click a dimension to see why."} />
                 <Card><ValueProfileChart before={s.diagnosis.profile} variant="large" /></Card>
                 <div className="grid md:grid-cols-3 gap-4">
                   <Card title="What's already working"><ul className="space-y-2 text-sm text-foreground">{s.diagnosis.strengths.map((x) => <li key={x} className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />{x}</li>)}</ul></Card>
@@ -343,9 +372,12 @@ export default function OfferGenerator() {
                                 <h3 className="font-display font-semibold text-foreground">{o.title}</h3>
                                 {on && <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">Your choice</span>}
                               </div>
-                              <p className="text-sm text-foreground">{o.change}</p>
+                              <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-medium", o.kind === "future_action" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
+                                {o.kind === "future_action" ? "Needs work first — added as a next step" : "Can be applied to your offer now"}
+                              </span>
+                              <p className="text-sm text-foreground"><span className="font-medium">What to change: </span>{o.change}</p>
                               {o.why && <p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">Why it helps: </span>{o.why}</p>}
-                              {o.tradeoff && <p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">Keep in mind: </span>{o.tradeoff}</p>}
+                              {o.tradeoff && <p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">What to consider: </span>{o.tradeoff}</p>}
                               <div className="flex flex-wrap gap-2">
                                 <Button size="sm" variant={on ? "default" : "outline"} onClick={() => choose(it.id, o.id)}>{on ? <><Check className="w-4 h-4 mr-1" /> Selected</> : "Select this option"}</Button>
                                 {on && <Button size="sm" variant="ghost" onClick={() => setEditing(editing === it.id ? null : it.id)}><Pencil className="w-3.5 h-3.5 mr-1" /> Adjust</Button>}
@@ -393,85 +425,137 @@ export default function OfferGenerator() {
   );
 }
 
+const DIR_STYLE = { up: "text-primary", down: "text-destructive", same: "text-muted-foreground" } as const;
+
 function FinalStage({ s, onBack, onStartOver, onAuditSent, onSave }: { s: Saved; onBack: () => void; onStartOver: () => void; onAuditSent: () => void; onSave: () => void }) {
   const r = s.result!;
   const changes = compareProfiles(r.beforeProfile, r.profile);
   const deliverables: any[] = (r.design?.stack?.deliverables ?? []).filter((d: any) => d?.name);
   const framework = r.design?.angle?.framework;
-  const decisions = (s.items ?? []).map((it) => {
-    const c = s.choices[it.id];
-    const o = it.options.find((x) => x.id === c?.choice);
-    return { area: it.weakness, text: c?.choice === "keep" ? "Kept your current approach" : o ? `${o.title}${c?.custom ? ` — ${c.custom}` : ""}` : "" };
-  });
+  const transformation = r.design?.angle?.core_outcome;
+  const decisions = describeDecisions(s.items ?? [], Object.values(s.choices));
+  const applied = decisions.filter((d) => d.status === "applied");
+  const kept = decisions.filter((d) => d.status === "kept");
+  const price = s.form.stage !== "idea" && s.form.currentPrice ? `${s.form.currentPrice} ${s.form.currency ?? ""}`.trim() : null;
+  const [tab, setTab] = useState("overview");
+  const tabs = [
+    { id: "overview", label: "Offer overview" }, { id: "how", label: "How it works" }, { id: "stronger", label: "What makes it stronger" },
+    { id: "pricing", label: "Pricing" }, { id: "validate", label: "Validation & next steps" },
+  ];
   return (
     <section className="space-y-10">
-      <StageHeader eyebrow="Your improved offer" title="Here's how your offer has evolved" subtitle="We re-assessed your improved offer from scratch, using the same criteria as your diagnosis." />
+      {/* A — transformation */}
+      <StageHeader eyebrow="Your improved offer" title="Here's how your offer has improved" subtitle="Your original offer and the improved proposal were assessed with the same Value Equation and the same evidence standard. Planned changes are credited carefully until they're in place." />
 
-      <Card>
-        <ValueProfileChart before={r.beforeProfile} after={r.profile} variant="large" />
-      </Card>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {changes.map((c) => (
-          <div key={c.dimension} className="rounded-xl border border-border bg-card p-4 space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">{DIMENSION_LABELS[c.dimension]}</p>
-            <p className="text-2xl font-display font-bold text-foreground">{c.before ?? "–"} <span className="text-muted-foreground text-lg">→</span> {c.after ?? "–"}</p>
-            <p className={cn("text-sm font-medium", c.delta == null ? "text-muted-foreground" : c.delta > 0 ? "text-primary" : c.delta < 0 ? "text-destructive" : "text-muted-foreground")}>
-              {c.delta == null ? "Not enough information to compare" : c.delta > 0 ? `+${c.delta}` : c.delta < 0 ? `${c.delta}` : "No change"}
-            </p>
-          </div>
-        ))}
-      </div>
-      {r.scoreChanges && <Card title="What changed and why"><p className="text-sm text-foreground leading-relaxed">{r.scoreChanges}</p><p className="text-xs text-muted-foreground">Scores are a strategic assessment, not a prediction of sales. A planned improvement isn't proof it works, so some scores may stay the same.</p></Card>}
+      {/* B — Before/After profile */}
+      <Card><ValueProfileChart before={r.beforeProfile} after={r.profile} variant="large" /></Card>
 
+      {/* C — What changed and why, one card per dimension */}
       <div className="space-y-4">
-        <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-6 md:p-8 space-y-2">
+        <h2 className="text-2xl font-display font-bold text-foreground">What changed and why</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          {changes.map((c) => {
+            const dc = r.dimensionChanges.find((x) => x.dimension === c.dimension);
+            const dir = c.delta == null ? "same" : c.delta > 0 ? "up" : c.delta < 0 ? "down" : "same";
+            return (
+              <div key={c.dimension} className="rounded-xl border border-border bg-card p-5 space-y-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="font-display font-semibold text-foreground text-lg">{DIMENSION_LABELS[c.dimension]}</h3>
+                  <p className="text-sm whitespace-nowrap">
+                    <span className="text-muted-foreground">{c.before ?? "–"} → </span><span className="font-semibold text-foreground">{c.after ?? "–"}</span>
+                    <span className={cn("ml-2 font-medium", DIR_STYLE[dir])}>{c.delta == null ? "" : c.delta > 0 ? `+${c.delta}` : c.delta < 0 ? `${c.delta}` : "No change"}</span>
+                  </p>
+                </div>
+                {dc?.whatChanged && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What changed</p><p className="text-sm text-foreground">{dc.whatChanged}</p></div>}
+                {dc?.why && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Why the score {dir === "up" ? "went up" : dir === "down" ? "went down" : "stayed the same"}</p><p className="text-sm text-foreground">{dc.why}</p></div>}
+                {dc?.stillUncertain && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Still uncertain</p><p className="text-sm text-muted-foreground">{dc.stillUncertain}</p></div>}
+                {dc?.adjusted && <p className="text-xs text-muted-foreground border-t border-border pt-2">We credited planned changes conservatively — they count fully once they're in place and proven.</p>}
+                {c.before == null || c.after == null ? <p className="text-xs text-muted-foreground">Not enough information to compare both scores.</p> : null}
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">Scores are a strategic assessment, not a prediction of sales or conversion rates.</p>
+      </div>
+
+      {/* D — the improved offer */}
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Your improved offer</p>
           <h2 className="text-3xl font-display font-bold text-foreground">{r.offerName}</h2>
           <p className="text-lg text-foreground">{r.promise}</p>
         </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          {r.audience && <Card title="Who it's for"><p className="text-sm text-foreground">{r.audience}</p></Card>}
-          <Card title={framework?.name || "Your unique method"}><p className="text-sm text-foreground">{framework?.description || r.methodSummary}</p></Card>
-        </div>
-        {deliverables.length > 0 && (
-          <Card title="What your client receives">
-            <div className="grid sm:grid-cols-2 gap-3">
-              {deliverables.map((d, i) => (
-                <div key={i} className="rounded-lg bg-muted/40 p-3 space-y-1">
-                  <p className="flex gap-2 font-medium text-foreground text-sm"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />{d.name}</p>
-                  {d.description && <p className="text-sm text-muted-foreground pl-6">{d.description}</p>}
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-        <div className="grid md:grid-cols-2 gap-4">
-          {r.deliveryApproach && <Card title="How it works & support"><p className="text-sm text-foreground">{r.deliveryApproach}</p></Card>}
-          <Card title="Suggested pricing">
-            {r.pricing ? (
+        <div className="rounded-xl border border-border bg-card">
+          <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-border px-2">
+            {tabs.map((t) => (
+              <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
+                className={cn("whitespace-nowrap px-3 py-3 text-sm border-b-2 -mb-px", tab === t.id ? "border-primary text-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground")}>{t.label}</button>
+            ))}
+          </div>
+          <div className="p-5 md:p-6 space-y-5 text-sm">
+            {tab === "overview" && (
               <>
-                <p className="text-foreground"><span className="text-xl font-display font-bold">{r.pricing.low.toLocaleString()} – {r.pricing.high.toLocaleString()}</span>{s.form.currency && s.form.currentPrice ? ` ${s.form.currency}` : ""} <span className="text-xs text-muted-foreground">estimate, not market-validated</span></p>
-                <p className="text-sm text-muted-foreground">{r.pricing.reasoning}</p>
+                <Section title="Who it's for">{r.audience || s.form.audience}</Section>
+                {transformation && <Section title="The transformation">{transformation}</Section>}
+                <Section title="What you told us">
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>Offer: {s.form.currentOffer}</li>
+                    <li>Result: {s.form.outcome}</li>
+                    <li>Biggest challenge: {s.form.obstacle}</li>
+                  </ul>
+                </Section>
               </>
-            ) : <p className="text-sm text-muted-foreground">There isn't enough information yet for a responsible price suggestion.</p>}
-          </Card>
+            )}
+            {tab === "how" && (
+              <>
+                <Section title={framework?.name || "The core method"}>{framework?.description || r.methodSummary}</Section>
+                {r.deliveryApproach && <Section title="Delivery & support">{r.deliveryApproach}</Section>}
+                {deliverables.length > 0 && (
+                  <Section title="Main program components">
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {deliverables.map((d, i) => (
+                        <div key={i} className="rounded-lg bg-muted/40 p-3 space-y-1">
+                          <p className="flex gap-2 font-medium text-foreground"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />{d.name}</p>
+                          {d.description && <p className="text-muted-foreground pl-6">{d.description}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </Section>
+                )}
+              </>
+            )}
+            {tab === "stronger" && (
+              <>
+                <Section title="Improvements built into your offer">
+                  {applied.length ? <ul className="space-y-3">{applied.map((d) => {
+                    const how = r.appliedImprovements.find((a) => a.area.toLowerCase() === d.area.toLowerCase())?.howItHelps;
+                    return <li key={d.area}><p className="font-medium text-foreground">{d.title}{d.adjusted ? " (your adjusted version)" : ""}</p><p className="text-muted-foreground">{how || d.detail}</p></li>;
+                  })}</ul> : <p className="text-muted-foreground">You didn't apply any immediate changes.</p>}
+                </Section>
+                {r.futureActions.length > 0 && <Section title="Planned — not in place yet"><ul className="list-disc pl-5 space-y-1 text-muted-foreground">{r.futureActions.map((a) => <li key={a}>{a}</li>)}</ul></Section>}
+                {kept.length > 0 && <Section title="Kept as it is"><ul className="list-disc pl-5 space-y-1 text-muted-foreground">{kept.map((d) => <li key={d.area}>{d.area}</li>)}</ul></Section>}
+              </>
+            )}
+            {tab === "pricing" && (
+              <>
+                {price && <Section title="Your current price">{price}</Section>}
+                {r.pricing ? (
+                  <Section title="Suggested price range (estimate)">
+                    <p className="text-foreground"><span className="text-xl font-display font-bold">{r.pricing.low.toLocaleString()} – {r.pricing.high.toLocaleString()}</span>{price ? ` ${s.form.currency}` : ""}</p>
+                    <p className="text-muted-foreground mt-1">{r.pricing.reasoning}</p>
+                    <p className="text-xs text-muted-foreground mt-2">A recommendation based on your answers — not a validated market price.</p>
+                  </Section>
+                ) : <p className="text-muted-foreground">There isn't enough information yet for a responsible price suggestion.</p>}
+              </>
+            )}
+            {tab === "validate" && (
+              <>
+                <Section title="What still needs validation"><ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">{(r.validationNeeds.length ? r.validationNeeds : r.assumptions).map((a) => <li key={a}>{a}</li>)}</ul></Section>
+                <Section title="Your next steps"><ol className="list-decimal pl-5 space-y-1.5 text-foreground">{(r.nextSteps.length ? r.nextSteps : r.improvements).slice(0, 3).map((a) => <li key={a}>{a}</li>)}</ol></Section>
+              </>
+            )}
+          </div>
         </div>
-        <div className="grid md:grid-cols-3 gap-4">
-          <Card title="Improvements you chose"><ul className="space-y-2 text-sm">{decisions.map((d) => <li key={d.area}><span className="font-medium text-foreground">{d.area}: </span><span className="text-muted-foreground">{d.text}</span></li>)}</ul></Card>
-          <Card title="Assumptions to check"><ul className="list-disc pl-5 space-y-1.5 text-sm text-muted-foreground">{r.assumptions.map((a) => <li key={a}>{a}</li>)}</ul></Card>
-          <Card title="Recommended next steps"><ol className="list-decimal pl-5 space-y-1.5 text-sm text-foreground">{(r.nextSteps?.length ? r.nextSteps : r.improvements).map((a) => <li key={a}>{a}</li>)}</ol></Card>
-        </div>
-        <details className="rounded-xl border border-border bg-card p-5 text-sm">
-          <summary className="cursor-pointer font-medium text-foreground">What you told us</summary>
-          <dl className="mt-3 grid sm:grid-cols-2 gap-3 text-muted-foreground">
-            <div><dt className="font-medium text-foreground">Audience</dt><dd>{s.form.audience}</dd></div>
-            <div><dt className="font-medium text-foreground">Result</dt><dd>{s.form.outcome}</dd></div>
-            <div><dt className="font-medium text-foreground">Offer</dt><dd>{s.form.currentOffer}</dd></div>
-            {s.form.delivery && <div><dt className="font-medium text-foreground">How it works</dt><dd>{s.form.delivery}</dd></div>}
-            <div><dt className="font-medium text-foreground">Biggest challenge</dt><dd>{s.form.obstacle}</dd></div>
-            {s.form.currentPrice && s.form.stage !== "idea" && <div><dt className="font-medium text-foreground">Current price</dt><dd>{s.form.currentPrice} {s.form.currency}</dd></div>}
-          </dl>
-        </details>
         <div className="flex flex-wrap gap-2">
           <Button variant="ghost" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" /> Change my choices</Button>
           <Button variant="ghost" onClick={onStartOver}>Start a new offer</Button>
@@ -490,6 +574,13 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent, onSave }: { s: Saved;
     </section>
   );
 }
+
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="space-y-1.5">
+    <h4 className="font-display font-semibold text-foreground">{title}</h4>
+    <div className="text-foreground">{children}</div>
+  </div>
+);
 
 function VideoAuditSection({ token, sent, onSent }: { token: string | null; sent: boolean; onSent: () => void }) {
   const [open, setOpen] = useState(false);
@@ -535,8 +626,8 @@ function VideoAuditSection({ token, sent, onSent }: { token: string | null; sent
         <>
           <div className="space-y-3 max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Free personal video audit</p>
-            <h2 className="text-2xl md:text-3xl font-display font-bold leading-tight">A stronger offer is just the beginning. Now let's get you more clients.</h2>
-            <p className="opacity-90">You've improved your offer. But even a great offer needs the right client acquisition system behind it. Get a free, personalized 5-minute video audit of your coaching business. I'll review your current setup and show you the biggest opportunities to attract more qualified clients.</p>
+            <h2 className="text-2xl md:text-3xl font-display font-bold leading-tight">A stronger offer is just the beginning. Let's help you attract more clients.</h2>
+            <p className="opacity-90">You've improved your offer. Now let's look at how you're actually attracting clients. Request a free, personalized 5-minute video audit of your coaching business. I'll review your current client acquisition setup and show you the biggest opportunities to attract more qualified clients.</p>
             <ul className="grid sm:grid-cols-2 gap-2 text-sm">
               {["Personalized 5-minute video review", "Concrete recommendations for your business", "A practical plan to improve client acquisition", "Delivered within 2 business days", "Free, with no obligation"].map((b) => (
                 <li key={b} className="flex gap-2"><Check className="w-4 h-4 shrink-0 mt-0.5" />{b}</li>
@@ -544,7 +635,7 @@ function VideoAuditSection({ token, sent, onSent }: { token: string | null; sent
             </ul>
           </div>
           {!open ? (
-            <Button size="lg" variant="secondary" onClick={() => setOpen(true)}><Video className="w-4 h-4 mr-1.5" /> Request my free video audit</Button>
+            <Button size="lg" variant="secondary" onClick={() => setOpen(true)}><Video className="w-4 h-4 mr-1.5" /> Request my free video audit <ArrowRight className="w-4 h-4 ml-1.5" /></Button>
           ) : (
             <form onSubmit={submit} noValidate className="rounded-xl bg-card text-card-foreground p-5 md:p-6 space-y-4 max-w-2xl">
               {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
@@ -558,7 +649,7 @@ function VideoAuditSection({ token, sent, onSent }: { token: string | null; sent
                   {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </Field>
               </div>
-              <Field id="channel" label="How are you currently attracting clients?">
+              <Field id="channel" label="How are you currently attracting clients?" hint="For example: Instagram content, referrals, paid ads, a website, email marketing, or something else.">
                 <Select value={form.channel} onValueChange={(v) => setForm({ ...form, channel: v as AuditChannel })}>
                   <SelectTrigger id="channel" aria-invalid={!!errors.channel}><SelectValue placeholder="Choose one" /></SelectTrigger>
                   <SelectContent>{CHANNELS.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}</SelectContent>

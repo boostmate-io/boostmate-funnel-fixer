@@ -1,17 +1,18 @@
 import { describe, it, expect } from "vitest";
 import {
+  reconcileFinal, describeDecisions, PUBLIC_DIAGNOSE_INSTRUCTION, PUBLIC_FINAL_INSTRUCTION,
   buildDiagnosis, buildStrengthen, validateChoices, finalizeFacts, validateAuditRequest, normalizeInstagram, normalizeWebsite, auditSnapshot,
 } from "@shared/offerIntelligence/publicFlow";
 import { validatePublicOfferInput, publicInputToContext } from "@shared/offerIntelligence/publicInput";
 import { buildOperationInstructions, OPERATION_OUTPUT_SCHEMAS } from "@shared/offerIntelligence/operations";
-import { VALUE_CRITERIA } from "@shared/offerIntelligence/valueEquation";
+import { VALUE_CRITERIA, humanizeCriterionCodes } from "@shared/offerIntelligence/valueEquation";
 
 const assess = (verdict = "partial") => VALUE_CRITERIA.map((c) => ({ criterionId: c.id, verdict, reasoning: "r" }));
 const diag = () => ({ assessments: assess(), strengths: ["s1"], weaknesses: ["w1", "w2"], topImprovements: ["t1", "t2", "t3"] });
-const opt = (t: string) => ({ title: t, change: `${t} change`, why: "w", tradeoff: "t" });
+const opt = (t: string, kind = "apply_now") => ({ title: t, change: `${t} change`, why: "w", tradeoff: "t", kind });
 const strengthenRaw = () => ({ items: [
   { weakness: "Make it believable", dimension: "perceived_likelihood", whyItMatters: "m", options: [opt("A"), opt("B"), opt("C")] },
-  { weakness: "Faster first win", dimension: "speed_to_value", whyItMatters: "m", options: [opt("D"), opt("E")] },
+  { weakness: "Faster first win", dimension: "speed_to_value", whyItMatters: "m", options: [opt("D", "future_action"), opt("E")] },
   { weakness: "Only one option", dimension: "ease_of_achievement", whyItMatters: "m", options: [opt("F")] },
 ] });
 
@@ -55,15 +56,16 @@ describe("diagnose / strengthen / finalize", () => {
     expect(c.ok).toBe(true);
     expect((c as any).value[1].custom).toBeUndefined();
     const facts = finalizeFacts((buildDiagnosis(diag()) as any).value, items, (c as any).value);
-    expect(facts.selectedImprovements).toContain("B — my twist");
+    expect(facts.selectedImprovements).toContain("[APPLY NOW, adjusted by the visitor] Make it believable: B — my twist");
     expect(facts.selectedImprovements).toContain("Faster first win: keep current approach");
   });
   it("final operation re-assesses independently and returns score changes + next steps", () => {
     const ctx = publicInputToContext((validatePublicOfferInput({ audience: "a", outcome: "b", obstacle: "d", currentOffer: "x", tier: "core" }) as any).input);
     const text = buildOperationInstructions("public_generate", ctx);
-    expect(text).toMatch(/independently/);
+    expect(text).toMatch(/same rubric and evidence standard/);
     expect(text).toMatch(/selectedImprovements/);
-    expect((OPERATION_OUTPUT_SCHEMAS.public_generate as any).required).toEqual(expect.arrayContaining(["scoreChanges", "nextSteps"]));
+    expect((OPERATION_OUTPUT_SCHEMAS.public_generate as any).required).toEqual(expect.arrayContaining(["dimensionChanges", "appliedImprovements", "futureActions", "validationNeeds", "nextSteps"]));
+    expect(() => buildOperationInstructions("public_strengthen", { source: "workspace", tier: "core" } as any)).toThrow("public_only_operation");
   });
 });
 
@@ -88,5 +90,49 @@ describe("video audit request", () => {
     expect(snap.decisions).toEqual([{ area: "Make it believable", choice: "A", custom: null }, { area: "Faster first win", choice: "Keep current approach", custom: null }]);
     expect(snap.beforeScores!.dream_outcome).toBe(5);
     expect(snap.offer!.name).toBe("N");
+  });
+});
+
+describe("Before/After consistency", () => {
+  const verdicts = (map: Record<string, string>, dflt = "partial") => VALUE_CRITERIA.map((c) => ({ criterionId: c.id, verdict: map[c.id] ?? dflt, reasoning: `r ${c.id}` }));
+  const items = () => (buildStrengthen(strengthenRaw()) as any).value;
+  const result = (assessments: any[], changes: any[] = []) => ({
+    offerName: "N", assessments, futureActions: [], profile: null, beforeProfile: null,
+    dimensionChanges: ["dream_outcome", "perceived_likelihood", "speed_to_value", "ease_of_achievement"].map((d) => ({ dimension: d, direction: "same", whatChanged: "", stillUncertain: "", why: "", ...(changes.find((c) => c.dimension === d) ?? {}) })),
+  }) as any;
+
+  it("never creates proof, caps planned likelihood changes and limits jumps to one step", () => {
+    const d = (buildDiagnosis({ ...diag(), assessments: verdicts({ pl_proof: "unknown", pl_risk: "weak", do_specific: "weak" }) }) as any).value;
+    const r = reconcileFinal(result(verdicts({}, "strong")), d, items(), [{ itemId: "i0", choice: "a" }, { itemId: "i1", choice: "a" }]);
+    const v = Object.fromEntries(r.assessments.map((a: any) => [a.criterionId, a.verdict]));
+    expect(v.pl_proof).toBe("unknown");
+    expect(v.pl_risk).toBe("partial");
+    expect(v.pl_method).toBe("partial");
+    expect(v.do_specific).toBe("partial");
+    expect(v.do_relevant).toBe("strong");
+    expect(r.profile.dimensions.perceived_likelihood.score).toBeLessThan(10);
+    expect(r.dimensionChanges.find((c: any) => c.dimension === "perceived_likelihood").adjusted).toBe(true);
+  });
+  it("restores unexplained drops but keeps explained ones, and syncs directions with real deltas", () => {
+    const d = (buildDiagnosis({ ...diag(), assessments: verdicts({}, "strong") }) as any).value;
+    const unexplained = reconcileFinal(result(verdicts({}, "weak")), d, items(), [{ itemId: "i0", choice: "keep" }, { itemId: "i1", choice: "keep" }]);
+    expect(unexplained.profile.dimensions.perceived_likelihood.score).toBe(10);
+    const explained = reconcileFinal(result(verdicts({ pl_method: "partial" }, "strong"), [{ dimension: "perceived_likelihood", direction: "down" }]), d, items(), [{ itemId: "i0", choice: "keep" }, { itemId: "i1", choice: "keep" }]);
+    expect(explained.dimensionChanges.find((c: any) => c.dimension === "perceived_likelihood").direction).toBe("down");
+    expect(explained.dimensionChanges.find((c: any) => c.dimension === "dream_outcome").direction).toBe("same");
+  });
+  it("lists selected future actions as planned, never as applied", () => {
+    const d = (buildDiagnosis(diag()) as any).value;
+    const choices = [{ itemId: "i0", choice: "a" as const }, { itemId: "i1", choice: "a" as const }];
+    const r = reconcileFinal(result(verdicts({})), d, items(), choices);
+    expect(r.futureActions.some((f: string) => f.startsWith("D"))).toBe(true);
+    expect(describeDecisions(items(), choices).map((x) => x.status)).toEqual(["applied", "future"]);
+  });
+  it("public text never shows criterion codes; both assessments share the evidence calibration", () => {
+    expect(humanizeCriterionCodes("Weak on pl_proof and sv_first_win.")).toBe("Weak on proof and first win.".replace("proof", VALUE_CRITERIA.find((c) => c.id === "pl_proof")!.label.toLowerCase()).replace("first win", VALUE_CRITERIA.find((c) => c.id === "sv_first_win")!.label.toLowerCase()));
+    const dd = (buildDiagnosis({ ...diag(), strengths: ["Good do_specific"] }) as any).value;
+    expect(dd.strengths[0]).not.toMatch(/do_specific/);
+    expect(PUBLIC_DIAGNOSE_INSTRUCTION).toMatch(/Evidence calibration/);
+    expect(PUBLIC_FINAL_INSTRUCTION).toMatch(/Evidence calibration/);
   });
 });

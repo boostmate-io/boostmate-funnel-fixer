@@ -111,3 +111,8 @@ export function compareProfiles(before: ValueProfile | null, after: ValueProfile
 }
 
 export const VALUE_PROFILE_DISCLAIMER = "Strategic assessment — not a prediction of sales, conversion or results.";
+
+/** Replace internal criterion codes (e.g. pl_proof) with readable labels for public text. */
+export function humanizeCriterionCodes(text: string): string {
+  return String(text ?? "").replace(/\b(do|pl|sv|ea)_[a-z_]+\b/g, (code) => VALUE_CRITERIA.find((c) => c.id === code)?.label.toLowerCase() ?? code.replace(/_/g, " "));
+}
