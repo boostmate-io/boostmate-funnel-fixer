@@ -82,7 +82,8 @@ export default function ValueProfileChart({ before, after, className, improvemen
         const ly = dy < 0 ? y - 26 : dy > 0 ? y + 22 : y - 4;
         const value = both ? `${label(d, before)} → ${label(d, after)}` : label(d, main);
         // Side axes wrap onto two lines so long names never clip.
-        const lines = dx !== 0 ? DIMENSION_LABELS[d].split(" ") : [DIMENSION_LABELS[d]];
+        const words = DIMENSION_LABELS[d].split(" ");
+        const lines = dx !== 0 && words.length > 1 ? [words[0], words.slice(1).join(" ")] : [DIMENSION_LABELS[d]];
         const top = dx !== 0 ? ly - 10 : ly;
         return (
           <g key={d} className="cursor-pointer" onClick={() => setSelected(selected === d ? null : d)}>
