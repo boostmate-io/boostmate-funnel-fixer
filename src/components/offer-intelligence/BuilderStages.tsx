@@ -33,10 +33,7 @@ export function StrengthenStage({ s, busy, run, stale }: StageProps) {
   const allDecided = !!st && st.items.every((i) => i.decision);
   return (
     <section className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">C · Strengthen</h1>
-        <p className="text-sm text-muted-foreground">The highest-impact weaknesses from your diagnosis, each with strategic options. Choose one, adapt it, write your own — or keep things as they are. Every decision is saved immediately.</p>
-      </div>
+      <StageHeader stage="strengthen" />
       {stale.strengthen && <StaleNotice text="The diagnosis changed after these options were generated. Your own alternatives are kept when you regenerate." action="Regenerate options" busy={!!busy} onClick={() => run("strengthen")} />}
       {!st && (
         <Button onClick={() => run("strengthen")} disabled={!!busy || !s.diagnosis}>
@@ -118,10 +115,7 @@ export function PackageStage({ s, busy, run, stale }: StageProps) {
   const selected = s.decisions?.strengthen?.items.filter((i) => i.decision && i.decision.kind !== "rejected").length ?? 0;
   return (
     <section className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">D · Package</h1>
-        <p className="text-sm text-muted-foreground">Your decisions turned into one coherent offer, using only this category's Offer Design fields. Edit any value or leave elements out. Nothing is saved to Offer Design until final approval.</p>
-      </div>
+      <StageHeader stage="package" />
       {stale.package && <StaleNotice text="Your Strengthen decisions changed after this package was generated." action="Regenerate package" busy={!!busy} onClick={() => run("package")} />}
       <div className="flex flex-wrap gap-2">
         <Button onClick={() => run("package")} disabled={!!busy} variant={pk ? "outline" : "default"}>
@@ -163,10 +157,7 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
   const rubricMismatch = !!before && !!fin && before.rubricVersion !== fin.profile.rubricVersion;
   return (
     <section className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">E · Final Offer Blueprint</h1>
-        <p className="text-sm text-muted-foreground">The complete proposed offer, re-assessed with the same strict criteria as the diagnosis. Scores don't have to go up — changes are explained either way.</p>
-      </div>
+      <StageHeader stage="final" />
       {completed && (
         <div role="status" className="rounded-lg border border-primary/40 bg-primary/5 p-3 flex flex-wrap items-center gap-3 text-sm">
           <Check className="w-4 h-4 text-primary" /><span className="flex-1 text-foreground">Approved and saved to Offer Design{s.completed_at ? ` on ${new Date(s.completed_at).toLocaleString()}` : ""}. This analysis stays here for review.</span>
@@ -182,7 +173,7 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
       {fin && (
         <>
           <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
-            <h2 className="text-base font-display font-semibold text-foreground mb-1">Value Profile — Before / After</h2>
+            <h2 className="text-lg font-display font-semibold text-foreground mb-1">How compelling is your offer? Before / After</h2>
             <p className="text-xs text-muted-foreground mb-4">Dashed = diagnosis, solid = proposed final offer. Select a dimension for the reasoning.</p>
             <ValueProfileChart before={before} after={fin.profile} />
             <div className="mt-4 space-y-2 border-t border-border pt-3">
@@ -223,10 +214,10 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
 }
 
 const Box = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="rounded-xl border border-border bg-card p-4 space-y-2"><h2 className="text-sm font-display font-semibold text-foreground">{title}</h2>{children}</div>
+  <div className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-3"><h2 className="text-base font-display font-semibold text-foreground">{title}</h2>{children}</div>
 );
 const List = ({ items, empty = "—" }: { items: string[]; empty?: string }) =>
-  items.length ? <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">{items.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">{empty}</p>;
+  items.length ? <ul className="list-disc pl-5 space-y-2 text-sm leading-relaxed text-foreground">{items.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">{empty}</p>;
 
 
 /** Per-dimension Before/After explanation built from the existing assessment (display only). */
@@ -265,3 +256,19 @@ function ScoreChanges({ before, after, text }: { before: ValueProfile | null; af
     </div>
   );
 }
+
+
+const STAGE_HEADINGS: Record<string, { title: string; subtitle: string }> = {
+  understand: { title: "Let's understand your offer", subtitle: "We'll review what we know about your idea, check our assumptions, and fill in any important gaps." },
+  diagnose: { title: "Let's find out how strong your offer is", subtitle: "We'll evaluate what makes your offer attractive and identify where it could be stronger." },
+  strengthen: { title: "Let's make your offer more compelling", subtitle: "Explore practical improvements, compare your options, and decide what works best for your business." },
+  package: { title: "Let's bring your offer together", subtitle: "Review and refine the complete offer we've built from your decisions." },
+  final: { title: "Review your improved offer", subtitle: "See how your offer has evolved, review the final details, and approve it when you're ready." },
+};
+/** Shared stage heading (level 1) + subtitle for all five Builder stages. */
+export const StageHeader = ({ stage }: { stage: keyof typeof STAGE_HEADINGS }) => (
+  <div className="space-y-1.5">
+    <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-foreground">{STAGE_HEADINGS[stage].title}</h1>
+    <p className="text-base text-muted-foreground max-w-prose">{STAGE_HEADINGS[stage].subtitle}</p>
+  </div>
+);
