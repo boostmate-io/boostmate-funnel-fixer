@@ -296,3 +296,20 @@ describe("approveBuilderSession", () => {
     expect(repo.insert).not.toHaveBeenCalled();
   });
 });
+
+describe("BM-17 package price regression", () => {
+  it("price values with ranges/text are rejected (not silently repaired); plain numbers accepted", () => {
+    const name = { path: sample("core").field.path, value: "Foundation 12" };
+    for (const bad of ["997-1497", "€997 (estimate)", "from 997"]) expect(toPackage("core", null, { writes: [name, { path: "offer_stack.pricing.core_price", value: bad }], extras: {} }, "t").ok).toBe(false);
+    const ok = toPackage("core", null, { writes: [name, { path: "offer_stack.pricing.core_price", value: "997" }], extras: {} }, "t");
+    expect(ok.ok && (ok.draft as any).pricing.core_price).toBe(997);
+  });
+  it("package contract tells the model price fields take one plain number", () => {
+    expect(buildOperationInstructions("package", { source: "workspace", tier: "core" })).toMatch(/core_price.*MUST be one plain positive number/);
+  });
+  it("server performs exactly one targeted regeneration on rejected package fields", () => {
+    const src = readFileSync("supabase/functions/offer-builder/index.ts", "utf8");
+    expect(src.match(/Correction required/g)?.length).toBe(1);
+    expect(src).toMatch(/attempt: 2/);
+  });
+});

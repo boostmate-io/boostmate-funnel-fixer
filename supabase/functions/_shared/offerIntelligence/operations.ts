@@ -6,7 +6,8 @@
 // =============================================================================
 
 import { renderTierCoachBrief } from "../offerContext.ts";
-import { isOfferTier, OFFER_PRICE_PATHS } from "../offerAiPolicy.ts";
+import { isOfferTier } from "../offerAiPolicy.ts";
+import { OFFER_PRICE_PATHS } from "../blueprintRegistry.ts";
 import type { OfferTier } from "../blueprintRegistry.ts";
 import { VALUE_CRITERIA, VALUE_DIMENSIONS, type CriterionAssessment, type CriterionVerdict } from "./valueEquation.ts";
 import { categoryWritableFields } from "./designMapping.ts";
