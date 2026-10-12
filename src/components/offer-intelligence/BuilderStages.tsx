@@ -8,6 +8,9 @@ import type { StrengthenDecision, StrengthenItem } from "@shared/offerIntelligen
 import type { BuilderSession, BuilderAction } from "@/lib/offers/offerBuilder";
 import { cn } from "@/lib/utils";
 import ValueProfileChart from "./ValueProfileChart";
+import { humanizeCriteria, splitScoreChanges, CRITERION_LABELS } from "@/lib/offers/packagePresentation";
+import type { ValueProfile } from "@shared/offerIntelligence/valueEquation";
+import { VALUE_DIMENSIONS } from "@shared/offerIntelligence/valueEquation";
 import { PackageEditor, FinalOfferPresentation } from "./PackagePresentation";
 import { ECOSYSTEM_TIERS } from "@/components/business-blueprint/offerDesignTypes";
 
@@ -131,7 +134,7 @@ export function PackageStage({ s, busy, run, stale }: StageProps) {
           <p className="text-xs text-muted-foreground">
             Everything below is <span className="font-medium text-foreground">proposed</span> by the strategist from your Blueprint{s.mode === "existing" ? ", this offer" : ""} and your Strengthen decisions{selected ? ` (${selected} selected improvement${selected > 1 ? "s" : ""})` : ""}. Values you change are marked "Edited by you".
           </p>
-          <PackageEditor writes={pk.writes} values={values} busy={!!busy}
+          <PackageEditor writes={pk.writes} values={values} busy={!!busy} extras={ex} tierLabel={ECOSYSTEM_TIERS.find((t) => t.id === s.tier)?.label ?? s.tier}
             onChange={(id, v) => setValues((cur) => ({ ...cur, [id]: v }))}
             onToggle={(ids, include) => run("save", { package_edits: ids.map((id) => ({ id, include })) })} />
           {dirty.length > 0 && (
@@ -141,25 +144,7 @@ export function PackageStage({ s, busy, run, stale }: StageProps) {
               <Button variant="ghost" onClick={() => setValues(Object.fromEntries(pk.writes.map((w) => [w.id, w.value])))}>Discard edits</Button>
             </div>
           )}
-          <div className="grid md:grid-cols-2 gap-4">
-            {ex.pricingRationale && (
-              <details className="rounded-xl border border-border bg-card p-4">
-                <summary className="cursor-pointer text-sm font-display font-semibold text-foreground">Pricing reasoning (estimate)</summary>
-                <div className="pt-2 space-y-1">
-                  <p className="text-sm text-foreground">{ex.pricingRationale.reasoning}</p>
-                  {ex.pricingRationale.assumptions?.length > 0 && <p className="text-xs text-muted-foreground">Assumptions: {ex.pricingRationale.assumptions.join(" · ")}</p>}
-                </div>
-              </details>
-            )}
-            {ex.problemObstacleSolutions?.length > 0 && (
-              <Box title="Problem → obstacle → solution">
-                <ul className="space-y-1.5 text-sm text-foreground">{ex.problemObstacleSolutions.map((p: any, i: number) => <li key={i}>{p.problem} → <span className="text-muted-foreground">{p.obstacle}</span> → {p.solution}</li>)}</ul>
-              </Box>
-            )}
-            {ex.positioning?.statement && <Box title="Positioning (not yet verified)"><p className="text-sm text-foreground">{ex.positioning.statement}</p></Box>}
-            {ex.bonusRationales?.length > 0 && <Box title="Why these bonuses"><ul className="space-y-1 text-sm text-foreground">{ex.bonusRationales.map((b: any, i: number) => <li key={i}><span className="font-medium">{b.bonusName}:</span> {b.reason}</li>)}</ul></Box>}
-            {ex.assumptions?.length > 0 && <Box title="Assumptions to validate"><ul className="space-y-1 text-sm text-foreground">{ex.assumptions.map((a: any, i: number) => <li key={i}>{a.statement} <span className="text-xs text-muted-foreground">— {a.howToValidate}</span></li>)}</ul></Box>}
-          </div>
+          {ex.assumptions?.length > 0 && <Box title="Assumptions to validate"><ul className="space-y-1 text-sm text-foreground">{ex.assumptions.map((a: any, i: number) => <li key={i}>{a.statement} <span className="text-xs text-muted-foreground">— {a.howToValidate}</span></li>)}</ul></Box>}
         </>
       )}
     </section>
@@ -201,16 +186,16 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
             <p className="text-xs text-muted-foreground mb-4">Dashed = diagnosis, solid = proposed final offer. Select a dimension for the reasoning.</p>
             <ValueProfileChart before={before} after={fin.profile} />
             <div className="mt-4 space-y-2 border-t border-border pt-3">
-              {fin.scoreChanges && <p className="text-sm text-foreground"><span className="font-medium">What changed and why: </span>{fin.scoreChanges}</p>}
+              <ScoreChanges before={before} after={fin.profile} text={fin.scoreChanges} />
               {rubricMismatch && <p className="text-xs text-destructive">The Before score used an earlier scoring version (v{before!.rubricVersion}; now v{VALUE_RUBRIC_VERSION}). Re-run the diagnosis for a like-for-like comparison.</p>}
               <p className="text-xs text-muted-foreground">{VALUE_PROFILE_DISCLAIMER}</p>
             </div>
           </div>
           <FinalOfferPresentation writes={pk?.writes ?? []} tierLabel={ECOSYSTEM_TIERS.find((t) => t.id === s.tier)?.label ?? s.tier} extras={pk?.extras ?? {}} />
           <div className="grid md:grid-cols-3 gap-4">
-            <Box title="Key strategic decisions"><List items={fin.keyDecisions} /></Box>
-            <Box title="Assumptions to validate"><List items={fin.remainingAssumptions} empty="None listed." /></Box>
-            <Box title="Recommended next steps"><List items={fin.nextSteps} /></Box>
+            <Box title="Key strategic decisions"><List items={fin.keyDecisions.map(humanizeCriteria)} /></Box>
+            <Box title="Assumptions to validate"><List items={fin.remainingAssumptions.map(humanizeCriteria)} empty="None listed." /></Box>
+            <Box title="Recommended next steps"><List items={fin.nextSteps.map(humanizeCriteria)} /></Box>
           </div>
           {!completed && (
             <div className="rounded-xl border-2 border-primary/50 bg-primary/5 p-4 sm:p-5 space-y-3">
@@ -242,3 +227,41 @@ const Box = ({ title, children }: { title: string; children: React.ReactNode }) 
 );
 const List = ({ items, empty = "—" }: { items: string[]; empty?: string }) =>
   items.length ? <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">{items.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">{empty}</p>;
+
+
+/** Per-dimension Before/After explanation built from the existing assessment (display only). */
+function ScoreChanges({ before, after, text }: { before: ValueProfile | null; after: ValueProfile; text: string }) {
+  const parts = splitScoreChanges(text);
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-display font-semibold text-foreground">What changed per dimension</h3>
+      <div className="grid sm:grid-cols-2 gap-2">
+        {VALUE_DIMENSIONS.map((d) => {
+          const b = before?.dimensions[d]?.score ?? null, a = after.dimensions[d]?.score ?? null;
+          const delta = a != null && b != null ? Math.round((a - b) * 10) / 10 : null;
+          const dim = after.dimensions[d];
+          const crit = [...(dim?.strengths ?? []), ...(dim?.weaknesses ?? []), ...(dim?.unknown ?? [])];
+          return (
+            <div key={d} className="rounded-lg border border-border bg-background p-3 space-y-1.5 min-w-0">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span className="text-sm font-medium text-foreground">{DIMENSION_LABELS[d]}</span>
+                <span className="text-xs text-muted-foreground">{b ?? "not assessed"} → {a ?? "not assessed"}</span>
+                {delta != null && <span className={cn("ml-auto text-xs font-semibold", delta > 0 ? "text-primary" : delta < 0 ? "text-destructive" : "text-muted-foreground")}>{delta > 0 ? `+${delta}` : delta}</span>}
+              </div>
+              {parts?.[d] && <p className="text-sm text-foreground">{parts[d]}</p>}
+              {crit.length > 0 && (
+                <details>
+                  <summary className="cursor-pointer text-xs text-primary">Detailed reasoning</summary>
+                  <ul className="mt-1.5 space-y-1 text-xs text-foreground">
+                    {crit.map((c) => <li key={c.criterionId}><span className="font-medium">{CRITERION_LABELS[c.criterionId] ?? "Criterion"}</span> <span className="text-muted-foreground">({c.verdict})</span>{c.reasoning ? ` — ${humanizeCriteria(c.reasoning)}` : ""}</li>)}
+                  </ul>
+                </details>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {!parts && text && <p className="text-sm text-foreground">{humanizeCriteria(text)}</p>}
+    </div>
+  );
+}

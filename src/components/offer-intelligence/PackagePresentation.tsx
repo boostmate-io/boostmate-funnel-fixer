@@ -249,8 +249,12 @@ export function FinalOfferPresentation({ writes, tierLabel, extras }: { writes: 
 
       <section role="tabpanel" id={`secpanel-${tab}`} aria-labelledby={`sectab-${tab}`} className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-4">
         <h3 className="text-base font-display font-semibold text-foreground">{FINAL_TITLES[tab]}</h3>
-        {tab === "overview" && audience && <Fact k="Audience" v={audience} wide />}
-        {tab === "overview" && extras?.positioning?.statement && <Fact k="Positioning (not yet verified)" v={extras.positioning.statement} wide />}
+        {tab === "overview" && (audience || extras?.positioning?.statement) && (
+          <dl className="grid sm:grid-cols-2 gap-3">
+            {audience && <Fact k="Audience" v={audience} wide />}
+            {extras?.positioning?.statement && <Fact k="Positioning (not yet verified)" v={extras.positioning.statement} wide />}
+          </dl>
+        )}
         {fields.length > 0 && (
           <dl className="grid sm:grid-cols-2 gap-3">
             {fields.map((f) => <Fact key={f.write.id} k={f.write.label} v={displayValue(f.write.value)} wide={f.write.value.length > 80}
