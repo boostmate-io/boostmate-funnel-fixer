@@ -53,6 +53,8 @@ const MESSAGES: Record<string, string> = {
   ai_invalid: "The AI returned an unusable answer. Nothing was saved — please try again.",
   ai_failed: "The AI request failed. Please try again.",
   ai_malformed: "The AI request failed. Please try again.",
+  ai_truncated: "The AI answer was cut off. Nothing was saved — please try again.",
+  ai_wrong_tool: "The AI request failed. Please try again.",
   ai_unavailable: "The AI is temporarily unavailable.",
   session_closed: "This session is closed.",
   save_failed: "Your message couldn't be saved. Please try again.",

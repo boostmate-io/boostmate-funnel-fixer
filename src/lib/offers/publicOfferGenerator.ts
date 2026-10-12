@@ -17,7 +17,7 @@ const MESSAGES: Record<string, string> = {
   invalid_input: "Please check your answers and try again.",
   rejected: "Please take a moment to fill in the form and try again.",
   ai_busy: "Our AI is busy right now. Please try again in a minute.",
-  ai_invalid: "We couldn't build a reliable offer from that. Please try again or add a bit more detail.",
+  ai_invalid: "We couldn't finish generating your offer. Please try again in a moment.",
   ai_malformed: "Something went wrong while generating. Please try again.",
   ai_failed: "Something went wrong while generating. Please try again.",
   ai_unavailable: "The generator is temporarily unavailable. Please try again later.",

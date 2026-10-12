@@ -7,7 +7,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { validatePublicOfferInput, publicInputToContext } from "../_shared/offerIntelligence/publicInput.ts";
-import { runOfferOperation } from "../_shared/offerIntelligence/aiCall.ts";
+import { runOfferOperation, RECOVERABLE_AI_ERRORS } from "../_shared/offerIntelligence/aiCall.ts";
+
+const PUBLIC_GENERATE_MAX_TOKENS = 8000;
+const PUBLIC_RETRY_INSTRUCTION = "# Correction required\nYour previous answer could not be read. Call the `deliver` function directly with JSON arguments (never code or any other tool), and keep every reasoning text to one short sentence so the complete answer fits.";
 import {
   buildPublicResult, toPublicPreview, decideRateLimit, looksLikeBot, DEFAULT_RATE_LIMITS, EMAIL_RE, CONSENT_TEXT_VERSION,
 } from "../_shared/offerIntelligence/publicResult.ts";
@@ -71,8 +74,16 @@ Deno.serve(async (req) => {
   };
 
   const ctx = publicInputToContext(parsed.input);
-  const ai = await runOfferOperation("public_generate", ctx, parsed.input.locale === "nl" ? { extraInstructions: "Write all text in Dutch." } : {});
-  if (!ai.ok) return fail(ai.status, ai.error);
+  const locale = parsed.input.locale === "nl" ? "Write all text in Dutch." : "";
+  // With a current offer the output holds two full assessment sets; 3000 tokens truncated it.
+  const opts = { maxTokens: PUBLIC_GENERATE_MAX_TOKENS, ...(locale ? { extraInstructions: locale } : {}) };
+  let ai = await runOfferOperation("public_generate", ctx, opts);
+  // One corrective attempt for recoverable technical output errors only.
+  if (!ai.ok && RECOVERABLE_AI_ERRORS.includes(ai.error)) {
+    console.warn("offer-generator retry", ai.error);
+    ai = await runOfferOperation("public_generate", ctx, { ...opts, extraInstructions: [locale, PUBLIC_RETRY_INSTRUCTION].filter(Boolean).join("\n\n") });
+  }
+  if (!ai.ok) return fail(ai.status, RECOVERABLE_AI_ERRORS.includes(ai.error) ? "ai_failed" : ai.error);
   const raw = ai.raw;
   const built = buildPublicResult(raw, { hasCurrentOffer: !!parsed.input.currentOffer });
   if (!built.ok) { console.warn("offer-generator invalid", built.reason, JSON.stringify(built.detail ?? "").slice(0, 500)); return fail(502, "ai_invalid"); }
