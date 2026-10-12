@@ -59,7 +59,7 @@ export default function OfferBuilder() {
     } catch (e) {
       const err = e as BuilderError;
       setError(builderErrorMessage(err.code));
-      if (err.code === "conflict" || err.code === "session_closed") { const fresh = await loadBuilderSession(s.id); if (fresh) hydrate(fresh); }
+      if (err.code === "conflict" || err.code === "session_closed") { const fresh = await loadBuilderSession(s.id); if (fresh) hydrate(fresh, false); }
     } finally { setBusy(null); }
   };
 
@@ -304,11 +304,11 @@ export default function OfferBuilder() {
           </fieldset>
           {view === "strengthen" && <fieldset disabled={readOnly} className="min-w-0"><StrengthenStage s={s} busy={busy} run={run} stale={stale} /></fieldset>}
           {view === "package" && <fieldset disabled={readOnly} className="min-w-0"><PackageStage s={s} busy={busy} run={run} stale={stale} /></fieldset>}
+          {view === "final" && <FinalStage s={s} busy={busy} run={run} stale={stale} onApprove={approve} approving={approving} conflicts={conflicts} approveError={approveError} onOpenOffer={openOffer} />}
           <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
             {prevStage ? <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => goTo(prevStage)}><ArrowLeft className="w-4 h-4 mr-1" />Back to {labelOf(prevStage)}</Button> : <span />}
             {nextStage && viewable(nextStage) && <Button variant="outline" size="sm" disabled={!!busy} onClick={() => goTo(nextStage)}>Go to {labelOf(nextStage)}</Button>}
           </div>
-          {view === "final" && <FinalStage s={s} busy={busy} run={run} stale={stale} onApprove={approve} approving={approving} conflicts={conflicts} approveError={approveError} onOpenOffer={openOffer} />}
         </main>
 
         {/* Guidance + Offer strategist: collapsible; a column on xl, a side drawer below xl. */}
