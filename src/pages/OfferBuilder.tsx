@@ -104,44 +104,67 @@ export default function OfferBuilder() {
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">Irresistible Offer Builder · {tierLabel} · {s.mode === "new" ? "New offer" : "Strengthening an existing offer"}</p>
         </div>
-        <span className="ml-auto text-xs text-muted-foreground" aria-live="polite">
-          {busy ? "Saving…" : `Saved · ${new Date(s.updated_at).toLocaleTimeString()}`}
+        <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1.5" aria-live="polite">
+          {busy ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />{busy === "save" ? "Saving…" : "Working…"}</> : <><Check className="w-3.5 h-3.5 text-primary" />Saved · {new Date(s.updated_at).toLocaleTimeString()}</>}
         </span>
+        <Button size="sm" variant={panelOpen ? "secondary" : "outline"} onClick={() => setPanelOpen((v) => !v)} aria-expanded={panelOpen} aria-controls="builder-strategist">
+          <MessagesSquare className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">Offer strategist</span>
+        </Button>
       </header>
 
-      <div className="flex-1 grid lg:grid-cols-[220px_minmax(0,1fr)_300px] gap-0">
+      <div className={cn("flex-1 grid lg:grid-cols-[232px_minmax(0,1fr)] gap-0", panelOpen && "xl:grid-cols-[232px_minmax(0,1fr)_380px]")}>
         {/* Stages */}
-        <nav aria-label="Builder stages" className="border-b lg:border-b-0 lg:border-r border-border p-4 space-y-1 bg-card/50">
+        <nav aria-label="Builder stages" className="border-b lg:border-b-0 lg:border-r border-border p-3 lg:p-4 bg-card/50 lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-57px)]">
+          <div className="hidden lg:block mb-4 px-1 space-y-1.5">
+            <div className="flex justify-between text-xs"><span className="font-medium text-foreground">Progress</span><span className="text-muted-foreground">{doneCount} of {BUILDER_STAGES.length}</span></div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={BUILDER_STAGES.length} aria-valuenow={doneCount}>
+              <div className="h-full bg-primary transition-all" style={{ width: `${(doneCount / BUILDER_STAGES.length) * 100}%` }} />
+            </div>
+          </div>
+          <ol className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible -mx-1 px-1">
           {BUILDER_STAGES.map((st, i) => {
             const state = stageState(s, st.id);
             const clickable = viewable(st.id);
             const isStale = (st.id === "strengthen" && stale.strengthen) || (st.id === "package" && stale.package) || (st.id === "final" && stale.final);
             return (
-              <button key={st.id} type="button" disabled={!clickable || !!busy} onClick={() => goTo(st.id)}
+              <li key={st.id} className="shrink-0 lg:shrink">
+              <button type="button" disabled={!clickable || !!busy} onClick={() => goTo(st.id)}
                 aria-current={view === st.id ? "step" : undefined}
-                className={cn("w-full flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm",
-                  view === st.id ? "bg-primary/10 text-foreground font-medium" : "text-muted-foreground",
-                  clickable ? "hover:bg-muted/60" : "cursor-not-allowed opacity-60")}>
-                <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs",
-                  state === "completed" ? "bg-primary text-primary-foreground border-primary" : state === "active" ? "border-primary text-primary" : "border-border")}>
-                  {state === "completed" ? <Check className="w-3.5 h-3.5" /> : state === "unavailable" ? <Lock className="w-3 h-3" /> : i + 1}
+                className={cn("w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm whitespace-nowrap lg:whitespace-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  view === st.id ? "bg-primary/10 text-foreground font-semibold ring-1 ring-primary/30" : state === "completed" ? "text-foreground" : "text-muted-foreground",
+                  clickable ? "hover:bg-muted/60" : "cursor-not-allowed opacity-50")}>
+                <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold",
+                  state === "completed" ? "bg-primary text-primary-foreground border-primary" : view === st.id || state === "active" ? "border-primary text-primary bg-background" : "border-border bg-background")}>
+                  {state === "completed" ? <Check className="w-3.5 h-3.5" /> : !clickable ? <Lock className="w-3 h-3" /> : i + 1}
                 </span>
-                <span className="flex-1">{st.label}</span>
-                {isStale && <span className="text-[10px] text-destructive" title="Needs reassessment">Reassess</span>}
+                <span className="flex-1 min-w-0">
+                  <span className="block leading-tight">{st.label}</span>
+                  <span className="hidden lg:block text-[11px] font-normal text-muted-foreground">{isStale ? "" : state === "completed" ? "Completed" : !clickable ? "Locked" : view === st.id ? "In progress" : "Available"}</span>
+                </span>
+                {isStale && <span className="text-[10px] font-medium text-destructive" title="Needs reassessment">Reassess</span>}
               </button>
+              </li>
             );
           })}
+          </ol>
         </nav>
 
         {/* Working area */}
-        <main className="p-5 lg:p-8 space-y-6 min-w-0">
-          <div className="flex flex-col md:flex-row md:items-start gap-6">
-            <ValueProfileChart before={d?.profile ?? null} after={fin?.profile ?? null} className="md:w-80 shrink-0" />
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p className="font-medium text-foreground">Value Profile</p>
-              <p>{fin ? "Before (diagnosis) and After (final offer)." : d ? (s.mode === "new" ? "Initial assessment of your offer idea." : "Assessment of the offer as it is today.") : "Appears after the diagnosis in Stage B."}</p>
-            </div>
-          </div>
+        <main className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7 space-y-5 min-w-0 w-full max-w-[1100px] mx-auto">
+          <StageGuidance text={guidanceText} />
+          {(view === "strengthen" || view === "package") && d && (
+            <details className="group rounded-xl border border-border bg-card" open={view === "strengthen" ? undefined : undefined}>
+              <summary className="cursor-pointer list-none px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <span className="font-display font-semibold text-foreground">Value Profile</span>
+                <span className="text-xs text-muted-foreground">Diagnosis scores — not re-scored until the final assessment</span>
+                <span className="flex flex-wrap gap-3 text-xs text-foreground ml-auto">
+                  {Object.values(d.profile.dimensions).map((x) => <span key={x.dimension}><span className="text-muted-foreground">{DIMENSION_LABELS[x.dimension]}</span> {x.score ?? "–"}</span>)}
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-border p-4"><ValueProfileChart variant="compact" before={d.profile} /></div>
+            </details>
+          )}
           {readOnly && s.status === "completed" && <p role="status" className="text-sm rounded-lg border border-border bg-muted/40 p-3 text-foreground">This session is completed — you're reviewing the final analysis. Start a new Builder session from Offer Design to make further changes.</p>}
           {error && <p role="alert" className="text-sm text-destructive flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{error}</p>}
 
@@ -152,6 +175,11 @@ export default function OfferBuilder() {
                 <h1 className="text-2xl font-display font-bold text-foreground">A · Understand</h1>
                 <p className="text-sm text-muted-foreground">We gather what's already known from your Blueprint{s.mode === "existing" ? " and this offer" : ""}, then you correct assumptions and fill gaps.</p>
               </div>
+              {!d && (
+                <p className="text-xs text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
+                  <span className="font-medium text-foreground">How we assess offers:</span> the Value Equation — a bigger Dream Outcome and higher Perceived Likelihood raise value; faster Speed to Value and easier Ease of Achievement do too. Your Value Profile appears after the diagnosis.
+                </p>
+              )}
               {s.mode === "new" && (
                 <div className="space-y-1.5">
                   <label htmlFor="idea" className="text-sm font-medium text-foreground">Your offer idea</label>
