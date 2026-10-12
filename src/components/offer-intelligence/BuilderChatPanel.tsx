@@ -38,7 +38,7 @@ export default function BuilderChatPanel({ session }: { session: BuilderSession 
   };
 
   return (
-    <div className="flex flex-col min-h-[360px] lg:h-[calc(100vh-260px)] rounded-xl border border-border bg-background">
+    <div className="flex flex-col min-h-[420px] h-[calc(100vh-220px)] rounded-xl border border-border bg-background">
       <div className="px-3 py-2 border-b border-border flex items-center gap-2">
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10"><Compass className="w-4 h-4 text-primary" /></span>
         <div><p className="text-sm font-display font-semibold text-foreground leading-tight">Offer strategist</p>

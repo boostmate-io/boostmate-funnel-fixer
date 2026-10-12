@@ -11,7 +11,7 @@ import { staleStages, strengthenComplete } from "@shared/offerIntelligence/build
 import { StrengthenStage, PackageStage, FinalStage } from "@/components/offer-intelligence/BuilderStages";
 import BuilderChatPanel from "@/components/offer-intelligence/BuilderChatPanel";
 import { useAuth } from "@/contexts/AuthContext";
-import { DIMENSION_LABELS, VALUE_PROFILE_DISCLAIMER } from "@shared/offerIntelligence/valueEquation";
+import { DIMENSION_LABELS } from "@shared/offerIntelligence/valueEquation";
 import { OFFER_TIER_COACH_BRIEFS } from "@shared/blueprintRegistry";
 import { ECOSYSTEM_TIERS } from "@/components/business-blueprint/offerDesignTypes";
 import { approveBuilderSession, builderAction, builderErrorMessage, BuilderError, loadBuilderSession, type BuilderAction, type BuilderSession } from "@/lib/offers/offerBuilder";
