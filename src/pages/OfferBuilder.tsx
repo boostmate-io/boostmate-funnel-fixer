@@ -129,6 +129,13 @@ export default function OfferBuilder() {
         setApproveError(r.error === "no_blueprint" ? "Open your Business Blueprint once before saving offers." : builderErrorMessage(r.error));
         const fresh = await loadBuilderSession(s.id); if (fresh) setS(fresh);
       }
+    } catch (e) {
+      // e.g. 409 conflict from approval_begin when the session was saved elsewhere:
+      // show a message and load the latest version — never leave the rejection unhandled.
+      const err = e as BuilderError;
+      setApproveError(builderErrorMessage(err?.code));
+      const fresh = err?.session ?? await loadBuilderSession(s.id).catch(() => null);
+      if (fresh) hydrate(fresh, false);
     } finally { setApproving(false); }
   };
 
