@@ -8,6 +8,8 @@ import type { StrengthenDecision, StrengthenItem } from "@shared/offerIntelligen
 import type { BuilderSession, BuilderAction } from "@/lib/offers/offerBuilder";
 import { cn } from "@/lib/utils";
 import ValueProfileChart from "./ValueProfileChart";
+import { PackageEditor, FinalOfferPresentation } from "./PackagePresentation";
+import { ECOSYSTEM_TIERS } from "@/components/business-blueprint/offerDesignTypes";
 
 type Run = (action: BuilderAction, extra?: Record<string, unknown>) => Promise<void>;
 interface StageProps { s: BuilderSession; busy: string | null; run: Run; stale: { strengthen: boolean; package: boolean; final: boolean } }
@@ -110,6 +112,7 @@ export function PackageStage({ s, busy, run, stale }: StageProps) {
   useEffect(() => { setValues(Object.fromEntries((pk?.writes ?? []).map((w) => [w.id, w.value]))); }, [pk?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
   const dirty = (pk?.writes ?? []).filter((w) => values[w.id] !== undefined && values[w.id] !== w.value);
   const ex = pk?.extras ?? {};
+  const selected = s.decisions?.strengthen?.items.filter((i) => i.decision && i.decision.kind !== "rejected").length ?? 0;
   return (
     <section className="space-y-5">
       <div>
@@ -126,7 +129,7 @@ export function PackageStage({ s, busy, run, stale }: StageProps) {
       {pk && (
         <>
           <p className="text-xs text-muted-foreground">
-            Everything below is <span className="font-medium text-foreground">proposed</span> by the strategist from your Blueprint{s.mode === "existing" ? ", this offer" : ""} and your Strengthen decisions{st ? ` (${Object.keys(st).length ? st.items.filter((i) => i.decision && i.decision.kind !== "rejected").length : 0} selected improvements)` : ""}. Values you change are marked "Edited by you".
+            Everything below is <span className="font-medium text-foreground">proposed</span> by the strategist from your Blueprint{s.mode === "existing" ? ", this offer" : ""} and your Strengthen decisions{selected ? ` (${selected} selected improvement${selected > 1 ? "s" : ""})` : ""}. Values you change are marked "Edited by you".
           </p>
           <PackageEditor writes={pk.writes} values={values} busy={!!busy}
             onChange={(id, v) => setValues((cur) => ({ ...cur, [id]: v }))}
@@ -199,39 +202,22 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
             <h2 className="text-base font-display font-semibold text-foreground mb-1">Value Profile — Before / After</h2>
             <p className="text-xs text-muted-foreground mb-4">Dashed = diagnosis, solid = proposed final offer. Select a dimension for the reasoning.</p>
             <ValueProfileChart before={before} after={fin.profile} />
+            <div className="mt-4 space-y-2 border-t border-border pt-3">
+              {fin.scoreChanges && <p className="text-sm text-foreground"><span className="font-medium">What changed and why: </span>{fin.scoreChanges}</p>}
+              {rubricMismatch && <p className="text-xs text-destructive">The Before score used an earlier scoring version (v{before!.rubricVersion}; now v{VALUE_RUBRIC_VERSION}). Re-run the diagnosis for a like-for-like comparison.</p>}
+              <p className="text-xs text-muted-foreground">{VALUE_PROFILE_DISCLAIMER}</p>
+            </div>
           </div>
-          <Box title="Proposed offer">
-            <dl className="grid md:grid-cols-[200px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
-              {included.map((w) => <Fragment key={w.id}><dt className="text-muted-foreground">{w.label}</dt><dd className="text-foreground whitespace-pre-wrap">{w.value}</dd></Fragment>)}
-            </dl>
-            {pk?.extras?.audience?.audience && <p className="text-sm text-foreground pt-2"><span className="text-muted-foreground">Audience:</span> {pk.extras.audience.audience}</p>}
-            {pk?.extras?.pricingRationale?.reasoning && <p className="text-sm text-foreground"><span className="text-muted-foreground">Pricing reasoning (estimate):</span> {pk.extras.pricingRationale.reasoning}</p>}
-          </Box>
-          <Box title="Value Equation — Before / After">
-            <table className="w-full text-sm">
-              <thead><tr className="text-xs text-muted-foreground text-left"><th className="font-normal py-1">Dimension</th><th className="font-normal">Before</th><th className="font-normal">After</th><th className="font-normal">Change</th></tr></thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.dimension} className="border-t border-border">
-                    <td className="py-1.5 text-foreground">{DIMENSION_LABELS[r.dimension]}</td>
-                    <td>{r.before ?? "not assessed"}</td><td>{r.after ?? "not assessed"}</td>
-                    <td className={cn(r.delta != null && r.delta > 0 && "text-primary", r.delta != null && r.delta < 0 && "text-destructive")}>{r.delta == null ? "—" : r.delta > 0 ? `+${r.delta}` : r.delta}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {rubricMismatch && <p className="text-xs text-destructive">The Before score used an earlier scoring version (v{before!.rubricVersion}; now v{VALUE_RUBRIC_VERSION}). Re-run the diagnosis for a like-for-like comparison.</p>}
-            {fin.scoreChanges && <p className="text-sm text-foreground">{fin.scoreChanges}</p>}
-            <p className="text-xs text-muted-foreground">{VALUE_PROFILE_DISCLAIMER}</p>
-          </Box>
+          <FinalOfferPresentation writes={pk?.writes ?? []} tierLabel={ECOSYSTEM_TIERS.find((t) => t.id === s.tier)?.label ?? s.tier} extras={pk?.extras ?? {}} />
           <div className="grid md:grid-cols-3 gap-4">
-            <Box title="Key decisions"><List items={fin.keyDecisions} /></Box>
-            <Box title="Remaining assumptions"><List items={fin.remainingAssumptions} empty="None listed." /></Box>
+            <Box title="Key strategic decisions"><List items={fin.keyDecisions} /></Box>
+            <Box title="Assumptions to validate"><List items={fin.remainingAssumptions} empty="None listed." /></Box>
             <Box title="Recommended next steps"><List items={fin.nextSteps} /></Box>
           </div>
           {!completed && (
-            <div className="rounded-xl border border-primary/40 bg-card p-4 space-y-3">
-              <h2 className="text-base font-display font-semibold text-foreground">Review and approve</h2>
+            <div className="rounded-xl border-2 border-primary/50 bg-primary/5 p-4 sm:p-5 space-y-3">
+              <h2 className="text-lg font-display font-semibold text-foreground">Review and approve</h2>
+              <p className="text-sm text-foreground">Approving saves the included elements to Offer Design — this is the first moment anything is written there. Left-out elements are not saved.</p>
               <p className="text-sm text-muted-foreground">
                 {s.mode === "new" ? "Approving creates this as a new offer in Offer Design." : "Approving applies the included elements to this offer. Fields not in the package, hidden fields, list items, offer links and other offers stay untouched."}
               </p>
