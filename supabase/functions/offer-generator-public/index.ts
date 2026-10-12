@@ -13,7 +13,7 @@ import { runOfferOperation, RECOVERABLE_AI_ERRORS, type AiCallResult } from "../
 import { buildPublicResult, decideRateLimit, looksLikeBot, DEFAULT_RATE_LIMITS } from "../_shared/offerIntelligence/publicResult.ts";
 import {
   buildDiagnosis, buildStrengthen, validateChoices, finalizeFacts, validateAuditRequest, auditSnapshot,
-  PUBLIC_DIAGNOSE_INSTRUCTION, PUBLIC_STRENGTHEN_INSTRUCTION, AUDIT_CONSENT_TEXT_VERSION,
+  PUBLIC_DIAGNOSE_INSTRUCTION, PUBLIC_STRENGTHEN_INSTRUCTION, PUBLIC_FINAL_INSTRUCTION, reconcileFinal, AUDIT_CONSENT_TEXT_VERSION, AUDIT_CHANNEL_LABELS, scoresLine,
 } from "../_shared/offerIntelligence/publicFlow.ts";
 import type { OfferOperation, OperationContext } from "../_shared/offerIntelligence/operations.ts";
 
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     if (row.strengthen_count >= MAX_STRENGTHEN) return json({ error: "rate_limited" }, 429);
     await admin.from("public_offer_generations").update({ strengthen_count: row.strengthen_count + 1 }).eq("id", row.id);
     const facts = { diagnosis: `Weaknesses: ${row.diagnosis.weaknesses.join(" | ")}. Top improvements: ${row.diagnosis.topImprovements.join(" | ")}` };
-    const ai = await aiWithRetry("strengthen", ctxFor(row, facts), [PUBLIC_STRENGTHEN_INSTRUCTION, localeNote(row)].filter(Boolean).join("\n\n"), 5000, buildStrengthen);
+    const ai = await aiWithRetry("public_strengthen", ctxFor(row, facts), [PUBLIC_STRENGTHEN_INSTRUCTION, localeNote(row)].filter(Boolean).join("\n\n"), 5000, buildStrengthen);
     if (!ai.ok) return json({ error: ai.error }, ai.status);
     // New options invalidate earlier decisions and any earlier final result.
     await admin.from("public_offer_generations").update({ strengthen: ai.value, choices: null }).eq("id", row.id);
@@ -123,12 +123,12 @@ Deno.serve(async (req) => {
     if (row.finalize_count >= MAX_FINALIZE) return json({ error: "rate_limited" }, 429);
     await admin.from("public_offer_generations").update({ finalize_count: row.finalize_count + 1 }).eq("id", row.id);
     const facts = finalizeFacts(row.diagnosis, row.strengthen, checked.value);
-    const ai = await aiWithRetry("public_generate", ctxFor(row, facts), localeNote(row), 8000, (raw) => {
+    const ai = await aiWithRetry("public_generate", ctxFor(row, facts), [PUBLIC_FINAL_INSTRUCTION, localeNote(row)].filter(Boolean).join("\n\n"), 9000, (raw) => {
       const b = buildPublicResult(raw, { hasCurrentOffer: false });
       return b.ok ? { ok: true as const, value: b.result } : b;
     });
     if (!ai.ok) return json({ error: ai.error }, ai.status);
-    const result = { ...ai.value, beforeProfile: row.diagnosis.profile };
+    const result = reconcileFinal(ai.value, row.diagnosis, row.strengthen, checked.value);
     await admin.from("public_offer_generations").update({ status: "complete", result, choices: checked.value }).eq("id", row.id);
     return json({ result });
   }
@@ -144,16 +144,32 @@ Deno.serve(async (req) => {
     }
     const { count } = await admin.from("video_audit_requests").select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", dayAgo);
     if ((count ?? 0) >= MAX_AUDITS_PER_IP_DAY) return json({ error: "rate_limited" }, 429);
-    const { error } = await admin.from("video_audit_requests").insert({
+    const { data: created, error } = await admin.from("video_audit_requests").insert({
       generation_id: row?.id ?? null, email: v.value.email, instagram: v.value.instagram, acquisition_channel: v.value.channel,
       website: v.value.website, marketing_consent: v.value.marketingConsent, consent_text_version: AUDIT_CONSENT_TEXT_VERSION,
       offer_snapshot: row ? auditSnapshot(row) : null, ip_hash: ipHash,
-    });
+    }).select("id,created_at").single();
     if (error) {
       if (error.code === "23505") return json({ ok: true, already: true });
       console.error("audit_request insert", error.code);
       return json({ error: "storage_failed" }, 500);
     }
+    // Admin notice (one fixed internal recipient). A failed notice never fails the request.
+    const snap = row ? auditSnapshot(row) : null;
+    try {
+      const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-transactional-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+        body: JSON.stringify({
+          templateName: "video-audit-request", idempotencyKey: `video-audit-request-${created!.id}`,
+          templateData: {
+            instagram: v.value.instagram, email: v.value.email, channel: AUDIT_CHANNEL_LABELS[v.value.channel], website: v.value.website ?? "",
+            offerName: snap?.offer?.name ?? "", scores: scoresLine(snap), submittedAt: new Date(created!.created_at).toUTCString(),
+          },
+        }),
+      });
+      if (!r.ok) console.error("audit notice failed", r.status, (await r.text()).slice(0, 200));
+    } catch (e) { console.error("audit notice error", String(e).slice(0, 200)); }
     return json({ ok: true });
   }
 
