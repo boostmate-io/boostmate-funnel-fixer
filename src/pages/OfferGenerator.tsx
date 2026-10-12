@@ -130,7 +130,7 @@ export default function OfferGenerator() {
   const isIdea = f.stage === "idea";
   const discoverOk = !!(f.audience.trim() && f.outcome.trim() && f.currentOffer?.trim() && f.obstacle.trim());
 
-  const reached: Record<Stage, boolean> = { discover: true, diagnose: !!s.diagnosis, strengthen: !!s.items, final: !!s.result };
+  const reached: Record<Stage, boolean> = { welcome: true, discover: true, diagnose: !!s.diagnosis, strengthen: !!s.items, final: !!s.result };
 
   const run = async (kind: "diagnose" | "strengthen" | "final", fn: () => Promise<void>) => {
     if (inFlight.current) return; // no double generation
