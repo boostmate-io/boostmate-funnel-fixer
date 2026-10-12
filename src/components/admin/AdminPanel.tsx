@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Users, Layers, ShieldCheck, Zap, BookOpen, Puzzle, LayoutList, Milestone, Radio, Workflow, Link2 } from "lucide-react";
 import AdminRedirects from "./AdminRedirects";
+import AdminVideoAudits from "./AdminVideoAudits";
 import AdminMainAccounts from "./AdminMainAccounts";
 import AdminSubAccounts from "./AdminSubAccounts";
 import AdminUsers from "./AdminUsers";
@@ -29,6 +30,7 @@ const categoryConfig = {
       { value: "main-accounts", label: "Main Accounts", icon: Building2, content: <AdminMainAccounts /> },
       { value: "sub-accounts", label: "Sub Accounts", icon: Layers, content: <AdminSubAccounts /> },
       { value: "users", label: "Users", icon: Users, content: <AdminUsers /> },
+      { value: "video-audits", label: "Video Audit Requests", icon: Users, content: <AdminVideoAudits /> },
     ],
   },
   ai: {

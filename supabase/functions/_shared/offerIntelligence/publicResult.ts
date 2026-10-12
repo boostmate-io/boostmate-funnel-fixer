@@ -31,6 +31,8 @@ export interface PublicOfferResult {
   profile: ValueProfile;
   /** Only when the visitor described a current offer. */
   beforeProfile: ValueProfile | null;
+  scoreChanges: string;
+  nextSteps: string[];
   /** Pricing writes are never stored in the public design (estimates only). */
   droppedWrites: string[];
 }
@@ -71,6 +73,7 @@ export function buildPublicResult(raw: unknown, opts: { hasCurrentOffer: boolean
       deliverables: (d.stack?.deliverables ?? []).map((x: any) => clip(x?.name, 120)).filter(Boolean).slice(0, 8),
       assumptions: clipList(out.assumptions, 6), pricing: pricingFrom(out.pricing),
       insights: clipList(out.insights, 2), improvements: clipList(out.improvements ?? out.topImprovements, 3),
+      scoreChanges: clip(out.scoreChanges, 1200), nextSteps: clipList(out.nextSteps, 4),
       profile, beforeProfile, droppedWrites,
     },
   };

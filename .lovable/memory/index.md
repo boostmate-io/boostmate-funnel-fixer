@@ -9,6 +9,7 @@
 
 ## Memories
 - [Visual Identity](mem://style/visuele-identiteit) — Brand colors, typography, and logo constraints
+- [Public Offer Builder](mem://features/public-offer-builder) — Free no-gate builder; Video Audit is the primary lead capture
 - [Lead Generator](mem://features/lead-generator) — Public sales page analysis flow and report generation
 - [Tech Stack](mem://tech/stack) — Core libraries, data fetching optimization, and context rules
 - [Assets Library](mem://features/assets-library) — Marketing content storage and AI generation rules

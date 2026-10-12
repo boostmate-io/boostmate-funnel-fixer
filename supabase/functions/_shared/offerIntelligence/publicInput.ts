@@ -12,13 +12,17 @@ export interface PublicOfferInput {
   obstacle: string;
   currentOffer?: string;
   currentPrice?: string;
+  /** "existing" = already selling; "idea" = not yet sold. */
+  stage?: "existing" | "idea";
+  currency?: string;
   tier: OfferTier;
   locale?: "en" | "nl";
 }
 
 const LIMITS = { audience: 300, outcome: 300, delivery: 300, obstacle: 300, currentOffer: 500, currentPrice: 40 } as const;
-const REQUIRED = ["audience", "outcome", "delivery", "obstacle"] as const;
-const ALLOWED_KEYS = new Set([...Object.keys(LIMITS), "tier", "locale"]);
+const REQUIRED = ["audience", "outcome", "obstacle"] as const;
+const ALLOWED_KEYS = new Set([...Object.keys(LIMITS), "tier", "locale", "stage", "currency"]);
+export const PUBLIC_CURRENCIES = ["EUR", "USD", "GBP", "CAD", "AUD", "CHF"] as const;
 
 export type PublicInputResult = { ok: true; input: PublicOfferInput } | { ok: false; errors: Record<string, string> };
 
@@ -38,6 +42,11 @@ export function validatePublicOfferInput(raw: unknown): PublicInputResult {
     else if (s.length > max) errors[k] = "too_long";
     else if (s) out[k] = s;
   }
+  if (!out.delivery && !out.currentOffer && !errors.delivery && !errors.currentOffer) errors.currentOffer = "required";
+  if (r.stage != null && r.stage !== "existing" && r.stage !== "idea") errors.stage = "invalid_stage";
+  else if (r.stage) out.stage = r.stage;
+  if (r.currency != null && r.currency !== "" && !(PUBLIC_CURRENCIES as readonly unknown[]).includes(r.currency)) errors.currency = "invalid_currency";
+  else if (r.currency) out.currency = r.currency;
   if (!isOfferTier(r.tier)) errors.tier = "invalid_tier";
   else out.tier = r.tier;
   if (r.locale != null && r.locale !== "en" && r.locale !== "nl") errors.locale = "invalid_locale";
@@ -51,11 +60,14 @@ export function publicInputToContext(input: PublicOfferInput) {
     source: "public" as const,
     tier: input.tier,
     facts: {
-      audience: input.audience, outcome: input.outcome, delivery: input.delivery, obstacle: input.obstacle,
+      audience: input.audience, outcome: input.outcome, obstacle: input.obstacle,
+      ...(input.delivery ? { delivery: input.delivery } : {}),
+      ...(input.stage ? { offerStage: input.stage === "idea" ? "offer idea, not sold yet" : "existing offer, already selling" } : {}),
       ...(input.currentOffer ? { currentOffer: input.currentOffer } : {}),
-      ...(input.currentPrice ? { currentPrice: input.currentPrice } : {}),
+      ...(input.currentPrice ? { currentPrice: input.currentPrice + (input.currency ? ` ${input.currency}` : "") } : {}),
     },
     blueprint: null,
     design: null,
+    mode: input.stage === "idea" ? ("new" as const) : ("existing" as const),
   };
 }

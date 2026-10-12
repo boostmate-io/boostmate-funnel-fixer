@@ -2941,6 +2941,7 @@ export type Database = {
       }
       public_offer_generations: {
         Row: {
+          choices: Json | null
           claim_token: string
           claimed_at: string | null
           claimed_by: string | null
@@ -2949,17 +2950,22 @@ export type Database = {
           consent_at: string | null
           consent_text_version: string | null
           created_at: string
+          diagnosis: Json | null
           email: string | null
           expires_at: string
+          finalize_count: number
           id: string
           input: Json
           ip_hash: string
           marketing_consent: boolean
           result: Json | null
           status: string
+          strengthen: Json | null
+          strengthen_count: number
           unlocked_at: string | null
         }
         Insert: {
+          choices?: Json | null
           claim_token?: string
           claimed_at?: string | null
           claimed_by?: string | null
@@ -2968,17 +2974,22 @@ export type Database = {
           consent_at?: string | null
           consent_text_version?: string | null
           created_at?: string
+          diagnosis?: Json | null
           email?: string | null
           expires_at?: string
+          finalize_count?: number
           id?: string
           input?: Json
           ip_hash: string
           marketing_consent?: boolean
           result?: Json | null
           status?: string
+          strengthen?: Json | null
+          strengthen_count?: number
           unlocked_at?: string | null
         }
         Update: {
+          choices?: Json | null
           claim_token?: string
           claimed_at?: string | null
           claimed_by?: string | null
@@ -2987,14 +2998,18 @@ export type Database = {
           consent_at?: string | null
           consent_text_version?: string | null
           created_at?: string
+          diagnosis?: Json | null
           email?: string | null
           expires_at?: string
+          finalize_count?: number
           id?: string
           input?: Json
           ip_hash?: string
           marketing_consent?: boolean
           result?: Json | null
           status?: string
+          strengthen?: Json | null
+          strengthen_count?: number
           unlocked_at?: string | null
         }
         Relationships: []
@@ -3150,6 +3165,65 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      video_audit_requests: {
+        Row: {
+          acquisition_channel: string
+          admin_notes: string | null
+          consent_text_version: string | null
+          created_at: string
+          email: string
+          generation_id: string | null
+          id: string
+          instagram: string
+          ip_hash: string | null
+          marketing_consent: boolean
+          offer_snapshot: Json | null
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          acquisition_channel: string
+          admin_notes?: string | null
+          consent_text_version?: string | null
+          created_at?: string
+          email: string
+          generation_id?: string | null
+          id?: string
+          instagram: string
+          ip_hash?: string | null
+          marketing_consent?: boolean
+          offer_snapshot?: Json | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          acquisition_channel?: string
+          admin_notes?: string | null
+          consent_text_version?: string | null
+          created_at?: string
+          email?: string
+          generation_id?: string | null
+          id?: string
+          instagram?: string
+          ip_hash?: string | null
+          marketing_consent?: boolean
+          offer_snapshot?: Json | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_audit_requests_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: false
+            referencedRelation: "public_offer_generations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workspace_settings: {
         Row: {

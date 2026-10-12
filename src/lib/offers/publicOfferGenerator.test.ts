@@ -103,7 +103,8 @@ describe("public isolation", () => {
   it("server functions: public one never touches workspace tables; claim checks membership, expiry, single claim", () => {
     const pub = readFileSync("supabase/functions/offer-generator-public/index.ts", "utf8");
     expect(pub).not.toMatch(/business_blueprints|ai_coach|from\("offers"\)/);
-    expect(pub).toMatch(/marketingConsent === true/);
+    expect(pub).toMatch(/validateAuditRequest/);
+    expect(readFileSync("supabase/functions/_shared/offerIntelligence/publicFlow.ts", "utf8")).toMatch(/marketingConsent === true/);
     const claim = readFileSync("supabase/functions/claim-offer-generation/index.ts", "utf8");
     expect(claim).toMatch(/is_sub_account_member/);
     expect(claim).toMatch(/expires_at/);
