@@ -1,13 +1,15 @@
 // Builder Stages C–E working areas (presentation only; persistence via `run`).
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, Check, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { DIMENSION_LABELS, compareProfiles, VALUE_PROFILE_DISCLAIMER, VALUE_RUBRIC_VERSION } from "@shared/offerIntelligence/valueEquation";
+import { DIMENSION_LABELS, VALUE_PROFILE_DISCLAIMER, VALUE_RUBRIC_VERSION } from "@shared/offerIntelligence/valueEquation";
 import type { StrengthenDecision, StrengthenItem } from "@shared/offerIntelligence/builderStages";
 import type { BuilderSession, BuilderAction } from "@/lib/offers/offerBuilder";
 import { cn } from "@/lib/utils";
 import ValueProfileChart from "./ValueProfileChart";
+import { PackageEditor, FinalOfferPresentation } from "./PackagePresentation";
+import { ECOSYSTEM_TIERS } from "@/components/business-blueprint/offerDesignTypes";
 
 type Run = (action: BuilderAction, extra?: Record<string, unknown>) => Promise<void>;
 interface StageProps { s: BuilderSession; busy: string | null; run: Run; stale: { strengthen: boolean; package: boolean; final: boolean } }
@@ -110,6 +112,7 @@ export function PackageStage({ s, busy, run, stale }: StageProps) {
   useEffect(() => { setValues(Object.fromEntries((pk?.writes ?? []).map((w) => [w.id, w.value]))); }, [pk?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
   const dirty = (pk?.writes ?? []).filter((w) => values[w.id] !== undefined && values[w.id] !== w.value);
   const ex = pk?.extras ?? {};
+  const selected = s.decisions?.strengthen?.items.filter((i) => i.decision && i.decision.kind !== "rejected").length ?? 0;
   return (
     <section className="space-y-5">
       <div>
@@ -125,28 +128,28 @@ export function PackageStage({ s, busy, run, stale }: StageProps) {
       </div>
       {pk && (
         <>
-          <div className="rounded-xl border border-border bg-card divide-y divide-border">
-            {pk.writes.map((w) => (
-              <div key={w.id} className={cn("p-3 grid md:grid-cols-[200px_minmax(0,1fr)_auto] gap-2 items-start", !w.include && "opacity-60")}>
-                <label htmlFor={`pw-${w.id}`} className="text-xs font-medium text-muted-foreground pt-2">{w.label}{w.edited && <span className="ml-1 text-primary">· edited</span>}</label>
-                <Textarea id={`pw-${w.id}`} rows={Math.min(5, Math.max(1, Math.ceil((values[w.id] ?? w.value).length / 80)))} value={values[w.id] ?? w.value}
-                  disabled={!w.include} onChange={(e) => setValues((v) => ({ ...v, [w.id]: e.target.value }))} />
-                <Button size="sm" variant="ghost" disabled={!!busy} onClick={() => run("save", { package_edits: [{ id: w.id, include: !w.include }] })}>{w.include ? "Leave out" : "Include"}</Button>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Everything below is <span className="font-medium text-foreground">proposed</span> by the strategist from your Blueprint{s.mode === "existing" ? ", this offer" : ""} and your Strengthen decisions{selected ? ` (${selected} selected improvement${selected > 1 ? "s" : ""})` : ""}. Values you change are marked "Edited by you".
+          </p>
+          <PackageEditor writes={pk.writes} values={values} busy={!!busy}
+            onChange={(id, v) => setValues((cur) => ({ ...cur, [id]: v }))}
+            onToggle={(ids, include) => run("save", { package_edits: ids.map((id) => ({ id, include })) })} />
           {dirty.length > 0 && (
-            <div className="flex gap-2">
+            <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-card p-3 shadow-lg">
+              <span className="text-sm text-foreground flex-1">{dirty.length} unsaved edit{dirty.length > 1 ? "s" : ""}</span>
               <Button onClick={() => run("save", { package_edits: dirty.map((w) => ({ id: w.id, value: values[w.id] })) })} disabled={!!busy}>Save {dirty.length} edit{dirty.length > 1 ? "s" : ""}</Button>
               <Button variant="ghost" onClick={() => setValues(Object.fromEntries(pk.writes.map((w) => [w.id, w.value])))}>Discard edits</Button>
             </div>
           )}
           <div className="grid md:grid-cols-2 gap-4">
             {ex.pricingRationale && (
-              <Box title="Pricing reasoning (estimate)">
-                <p className="text-sm text-foreground">{ex.pricingRationale.reasoning}</p>
-                {ex.pricingRationale.assumptions?.length > 0 && <p className="text-xs text-muted-foreground">Assumptions: {ex.pricingRationale.assumptions.join(" · ")}</p>}
-              </Box>
+              <details className="rounded-xl border border-border bg-card p-4">
+                <summary className="cursor-pointer text-sm font-display font-semibold text-foreground">Pricing reasoning (estimate)</summary>
+                <div className="pt-2 space-y-1">
+                  <p className="text-sm text-foreground">{ex.pricingRationale.reasoning}</p>
+                  {ex.pricingRationale.assumptions?.length > 0 && <p className="text-xs text-muted-foreground">Assumptions: {ex.pricingRationale.assumptions.join(" · ")}</p>}
+                </div>
+              </details>
             )}
             {ex.problemObstacleSolutions?.length > 0 && (
               <Box title="Problem → obstacle → solution">
@@ -172,9 +175,7 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
   const pk = s.decisions?.package ?? null;
   const completed = s.status === "completed";
   const before = s.diagnosis?.profile ?? null;
-  const rows = fin ? compareProfiles(before, fin.profile) : [];
   const rubricMismatch = !!before && !!fin && before.rubricVersion !== fin.profile.rubricVersion;
-  const included = (pk?.writes ?? []).filter((w) => w.include);
   return (
     <section className="space-y-5">
       <div>
@@ -199,39 +200,22 @@ export function FinalStage({ s, busy, run, stale, onApprove, approving, conflict
             <h2 className="text-base font-display font-semibold text-foreground mb-1">Value Profile — Before / After</h2>
             <p className="text-xs text-muted-foreground mb-4">Dashed = diagnosis, solid = proposed final offer. Select a dimension for the reasoning.</p>
             <ValueProfileChart before={before} after={fin.profile} />
+            <div className="mt-4 space-y-2 border-t border-border pt-3">
+              {fin.scoreChanges && <p className="text-sm text-foreground"><span className="font-medium">What changed and why: </span>{fin.scoreChanges}</p>}
+              {rubricMismatch && <p className="text-xs text-destructive">The Before score used an earlier scoring version (v{before!.rubricVersion}; now v{VALUE_RUBRIC_VERSION}). Re-run the diagnosis for a like-for-like comparison.</p>}
+              <p className="text-xs text-muted-foreground">{VALUE_PROFILE_DISCLAIMER}</p>
+            </div>
           </div>
-          <Box title="Proposed offer">
-            <dl className="grid md:grid-cols-[200px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
-              {included.map((w) => <Fragment key={w.id}><dt className="text-muted-foreground">{w.label}</dt><dd className="text-foreground whitespace-pre-wrap">{w.value}</dd></Fragment>)}
-            </dl>
-            {pk?.extras?.audience?.audience && <p className="text-sm text-foreground pt-2"><span className="text-muted-foreground">Audience:</span> {pk.extras.audience.audience}</p>}
-            {pk?.extras?.pricingRationale?.reasoning && <p className="text-sm text-foreground"><span className="text-muted-foreground">Pricing reasoning (estimate):</span> {pk.extras.pricingRationale.reasoning}</p>}
-          </Box>
-          <Box title="Value Equation — Before / After">
-            <table className="w-full text-sm">
-              <thead><tr className="text-xs text-muted-foreground text-left"><th className="font-normal py-1">Dimension</th><th className="font-normal">Before</th><th className="font-normal">After</th><th className="font-normal">Change</th></tr></thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.dimension} className="border-t border-border">
-                    <td className="py-1.5 text-foreground">{DIMENSION_LABELS[r.dimension]}</td>
-                    <td>{r.before ?? "not assessed"}</td><td>{r.after ?? "not assessed"}</td>
-                    <td className={cn(r.delta != null && r.delta > 0 && "text-primary", r.delta != null && r.delta < 0 && "text-destructive")}>{r.delta == null ? "—" : r.delta > 0 ? `+${r.delta}` : r.delta}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {rubricMismatch && <p className="text-xs text-destructive">The Before score used an earlier scoring version (v{before!.rubricVersion}; now v{VALUE_RUBRIC_VERSION}). Re-run the diagnosis for a like-for-like comparison.</p>}
-            {fin.scoreChanges && <p className="text-sm text-foreground">{fin.scoreChanges}</p>}
-            <p className="text-xs text-muted-foreground">{VALUE_PROFILE_DISCLAIMER}</p>
-          </Box>
+          <FinalOfferPresentation writes={pk?.writes ?? []} tierLabel={ECOSYSTEM_TIERS.find((t) => t.id === s.tier)?.label ?? s.tier} extras={pk?.extras ?? {}} />
           <div className="grid md:grid-cols-3 gap-4">
-            <Box title="Key decisions"><List items={fin.keyDecisions} /></Box>
-            <Box title="Remaining assumptions"><List items={fin.remainingAssumptions} empty="None listed." /></Box>
+            <Box title="Key strategic decisions"><List items={fin.keyDecisions} /></Box>
+            <Box title="Assumptions to validate"><List items={fin.remainingAssumptions} empty="None listed." /></Box>
             <Box title="Recommended next steps"><List items={fin.nextSteps} /></Box>
           </div>
           {!completed && (
-            <div className="rounded-xl border border-primary/40 bg-card p-4 space-y-3">
-              <h2 className="text-base font-display font-semibold text-foreground">Review and approve</h2>
+            <div className="rounded-xl border-2 border-primary/50 bg-primary/5 p-4 sm:p-5 space-y-3">
+              <h2 className="text-lg font-display font-semibold text-foreground">Review and approve</h2>
+              <p className="text-sm text-foreground">Approving saves the included elements to Offer Design — this is the first moment anything is written there. Left-out elements are not saved.</p>
               <p className="text-sm text-muted-foreground">
                 {s.mode === "new" ? "Approving creates this as a new offer in Offer Design." : "Approving applies the included elements to this offer. Fields not in the package, hidden fields, list items, offer links and other offers stay untouched."}
               </p>
