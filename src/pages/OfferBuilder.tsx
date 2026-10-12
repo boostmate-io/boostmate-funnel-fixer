@@ -1,7 +1,7 @@
 // Irresistible Offer Builder — full-screen workspace (Stages A–E + Builder chat).
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, Loader2, Lock, Sparkles, AlertTriangle, HelpCircle } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Lightbulb, Loader2, Lock, MessagesSquare, Sparkles, AlertTriangle, HelpCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { staleStages, strengthenComplete } from "@shared/offerIntelligence/build
 import { StrengthenStage, PackageStage, FinalStage } from "@/components/offer-intelligence/BuilderStages";
 import BuilderChatPanel from "@/components/offer-intelligence/BuilderChatPanel";
 import { useAuth } from "@/contexts/AuthContext";
-import { DIMENSION_LABELS, VALUE_PROFILE_DISCLAIMER } from "@shared/offerIntelligence/valueEquation";
+import { DIMENSION_LABELS } from "@shared/offerIntelligence/valueEquation";
 import { OFFER_TIER_COACH_BRIEFS } from "@shared/blueprintRegistry";
 import { ECOSYSTEM_TIERS } from "@/components/business-blueprint/offerDesignTypes";
 import { approveBuilderSession, builderAction, builderErrorMessage, BuilderError, loadBuilderSession, type BuilderAction, type BuilderSession } from "@/lib/offers/offerBuilder";
@@ -32,6 +32,8 @@ export default function OfferBuilder() {
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
   const [view, setView] = useState<BuilderStage>("understand");
+  // Strategist panel: open by default on wide screens only.
+  const [panelOpen, setPanelOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 1440);
 
   const hydrate = useCallback((next: BuilderSession) => {
     setS(next);
@@ -75,6 +77,14 @@ export default function OfferBuilder() {
 
   const saveCorrections = () => run("save", { corrections });
   const readOnly = s.status !== "active";
+  const doneCount = BUILDER_STAGES.filter((st) => stageState(s, st.id) === "completed").length;
+  const guidanceText: Record<BuilderStage, string> = {
+    understand: "A strong offer starts from the right audience and one clear transformation. Correct anything assumed — the diagnosis treats your answers as facts.",
+    diagnose: s.mode === "new" ? "Each criterion is assessed separately; unknown is never counted as weak. This assesses your idea, not a proven offer." : "Each criterion is assessed separately; unknown information is never counted as weak.",
+    strengthen: "Pick the option that fits your buyer and your capacity — or write your own. More deliverables rarely mean more value; clarity, speed and certainty usually do.",
+    package: "Only this category's Offer Design fields are filled. Prices are estimates — validate them with real buyers.",
+    final: "Nothing changes in Offer Design until you approve. Scores can go down as well as up.",
+  };
   const stale = staleStages(d, s.decisions);
   const fin = s.decisions?.final ?? null;
   const viewable = (id: BuilderStage) =>
@@ -101,47 +111,70 @@ export default function OfferBuilder() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border bg-card px-4 py-3 flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard?module=business-blueprint")}><ArrowLeft className="w-4 h-4 mr-1" /> Offer Design</Button>
-        <div className="min-w-0">
+        <div className="min-w-0 hidden md:block">
           <p className="text-xs text-muted-foreground">Irresistible Offer Builder · {tierLabel} · {s.mode === "new" ? "New offer" : "Strengthening an existing offer"}</p>
         </div>
-        <span className="ml-auto text-xs text-muted-foreground" aria-live="polite">
-          {busy ? "Saving…" : `Saved · ${new Date(s.updated_at).toLocaleTimeString()}`}
+        <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1.5" aria-live="polite">
+          {busy ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />{busy === "save" ? "Saving…" : "Working…"}</> : <><Check className="w-3.5 h-3.5 text-primary" />Saved<span className="hidden sm:inline"> · {new Date(s.updated_at).toLocaleTimeString()}</span></>}
         </span>
+        <Button size="sm" variant={panelOpen ? "secondary" : "outline"} onClick={() => setPanelOpen((v) => !v)} aria-expanded={panelOpen} aria-controls="builder-strategist">
+          <MessagesSquare className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">Offer strategist</span>
+        </Button>
       </header>
 
-      <div className="flex-1 grid lg:grid-cols-[220px_minmax(0,1fr)_300px] gap-0">
+      <div className={cn("flex-1 grid grid-cols-1 lg:grid-cols-[232px_minmax(0,1fr)] gap-0 min-w-0", panelOpen && "xl:grid-cols-[232px_minmax(0,1fr)_380px]")}>
         {/* Stages */}
-        <nav aria-label="Builder stages" className="border-b lg:border-b-0 lg:border-r border-border p-4 space-y-1 bg-card/50">
+        <nav aria-label="Builder stages" className="min-w-0 border-b lg:border-b-0 lg:border-r border-border p-3 lg:p-4 bg-card/50 lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-57px)]">
+          <div className="hidden lg:block mb-4 px-1 space-y-1.5">
+            <div className="flex justify-between text-xs"><span className="font-medium text-foreground">Progress</span><span className="text-muted-foreground">{doneCount} of {BUILDER_STAGES.length}</span></div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={BUILDER_STAGES.length} aria-valuenow={doneCount}>
+              <div className="h-full bg-primary transition-all" style={{ width: `${(doneCount / BUILDER_STAGES.length) * 100}%` }} />
+            </div>
+          </div>
+          <ol className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible -mx-1 px-1">
           {BUILDER_STAGES.map((st, i) => {
             const state = stageState(s, st.id);
             const clickable = viewable(st.id);
             const isStale = (st.id === "strengthen" && stale.strengthen) || (st.id === "package" && stale.package) || (st.id === "final" && stale.final);
             return (
-              <button key={st.id} type="button" disabled={!clickable || !!busy} onClick={() => goTo(st.id)}
+              <li key={st.id} className="shrink-0 lg:shrink">
+              <button type="button" disabled={!clickable || !!busy} onClick={() => goTo(st.id)}
                 aria-current={view === st.id ? "step" : undefined}
-                className={cn("w-full flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm",
-                  view === st.id ? "bg-primary/10 text-foreground font-medium" : "text-muted-foreground",
-                  clickable ? "hover:bg-muted/60" : "cursor-not-allowed opacity-60")}>
-                <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs",
-                  state === "completed" ? "bg-primary text-primary-foreground border-primary" : state === "active" ? "border-primary text-primary" : "border-border")}>
-                  {state === "completed" ? <Check className="w-3.5 h-3.5" /> : state === "unavailable" ? <Lock className="w-3 h-3" /> : i + 1}
+                className={cn("w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm whitespace-nowrap lg:whitespace-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  view === st.id ? "bg-primary/10 text-foreground font-semibold ring-1 ring-primary/30" : state === "completed" ? "text-foreground" : "text-muted-foreground",
+                  clickable ? "hover:bg-muted/60" : "cursor-not-allowed opacity-50")}>
+                <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold",
+                  state === "completed" ? "bg-primary text-primary-foreground border-primary" : view === st.id || state === "active" ? "border-primary text-primary bg-background" : "border-border bg-background")}>
+                  {state === "completed" ? <Check className="w-3.5 h-3.5" /> : !clickable ? <Lock className="w-3 h-3" /> : i + 1}
                 </span>
-                <span className="flex-1">{st.label}</span>
-                {isStale && <span className="text-[10px] text-destructive" title="Needs reassessment">Reassess</span>}
+                <span className="flex-1 min-w-0">
+                  <span className="block leading-tight">{st.label}</span>
+                  <span className="hidden lg:block text-[11px] font-normal text-muted-foreground">{isStale ? "" : state === "completed" ? "Completed" : !clickable ? "Locked" : view === st.id ? "In progress" : "Available"}</span>
+                </span>
+                {isStale && <span className="text-[10px] font-medium text-destructive" title="Needs reassessment">Reassess</span>}
               </button>
+              </li>
             );
           })}
+          </ol>
         </nav>
 
         {/* Working area */}
-        <main className="p-5 lg:p-8 space-y-6 min-w-0">
-          <div className="flex flex-col md:flex-row md:items-start gap-6">
-            <ValueProfileChart before={d?.profile ?? null} after={fin?.profile ?? null} className="md:w-80 shrink-0" />
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p className="font-medium text-foreground">Value Profile</p>
-              <p>{fin ? "Before (diagnosis) and After (final offer)." : d ? (s.mode === "new" ? "Initial assessment of your offer idea." : "Assessment of the offer as it is today.") : "Appears after the diagnosis in Stage B."}</p>
-            </div>
-          </div>
+        <main className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7 space-y-5 min-w-0 w-full max-w-[1100px] mx-auto">
+          <StageGuidance text={guidanceText[view]} onAsk={() => setPanelOpen(true)} panelOpen={panelOpen} />
+          {(view === "strengthen" || view === "package") && d && (
+            <details className="group rounded-xl border border-border bg-card">
+              <summary className="cursor-pointer list-none px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <span className="font-display font-semibold text-foreground">Value Profile</span>
+                <span className="text-xs text-muted-foreground">Diagnosis scores — not re-scored until the final assessment</span>
+                <span className="flex flex-wrap gap-3 text-xs text-foreground ml-auto">
+                  {Object.values(d.profile.dimensions).map((x) => <span key={x.dimension}><span className="text-muted-foreground">{DIMENSION_LABELS[x.dimension]}</span> {x.score ?? "–"}</span>)}
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-border p-4"><ValueProfileChart variant="compact" before={d.profile} /></div>
+            </details>
+          )}
           {readOnly && s.status === "completed" && <p role="status" className="text-sm rounded-lg border border-border bg-muted/40 p-3 text-foreground">This session is completed — you're reviewing the final analysis. Start a new Builder session from Offer Design to make further changes.</p>}
           {error && <p role="alert" className="text-sm text-destructive flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{error}</p>}
 
@@ -152,6 +185,11 @@ export default function OfferBuilder() {
                 <h1 className="text-2xl font-display font-bold text-foreground">A · Understand</h1>
                 <p className="text-sm text-muted-foreground">We gather what's already known from your Blueprint{s.mode === "existing" ? " and this offer" : ""}, then you correct assumptions and fill gaps.</p>
               </div>
+              {!d && (
+                <p className="text-xs text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
+                  <span className="font-medium text-foreground">How we assess offers:</span> the Value Equation — a bigger Dream Outcome and higher Perceived Likelihood raise value; faster Speed to Value and easier Ease of Achievement do too. Your Value Profile appears after the diagnosis.
+                </p>
+              )}
               {s.mode === "new" && (
                 <div className="space-y-1.5">
                   <label htmlFor="idea" className="text-sm font-medium text-foreground">Your offer idea</label>
@@ -215,6 +253,13 @@ export default function OfferBuilder() {
               </Button>
               {!canDiagnose && <p className="text-sm text-muted-foreground">Confirm the working context in Stage A first.</p>}
               {d && (
+                <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
+                  <h2 className="text-base font-display font-semibold text-foreground mb-1">Value Profile</h2>
+                  <p className="text-xs text-muted-foreground mb-4">{s.mode === "new" ? "Initial assessment of your offer idea." : "Assessment of the offer as it is today."}</p>
+                  <ValueProfileChart before={d.profile} />
+                </div>
+              )}
+              {d && (
                 <div className="grid md:grid-cols-2 gap-4">
                   <Card title="Strengths">{d.strengths.length ? <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">{d.strengths.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">None identified yet.</p>}</Card>
                   <Card title="Weaknesses">{d.weaknesses.length ? <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">{d.weaknesses.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-sm text-muted-foreground">None identified.</p>}</Card>
@@ -228,7 +273,7 @@ export default function OfferBuilder() {
                       </ul>
                     ) : <p className="text-sm text-muted-foreground">Every criterion could be assessed.</p>}
                   </Card>
-                  <p className="md:col-span-2 text-xs text-muted-foreground">Click a dimension in the Value Profile for the reasoning per criterion. {VALUE_PROFILE_DISCLAIMER}</p>
+
                 </div>
               )}
             </section>
@@ -242,29 +287,25 @@ export default function OfferBuilder() {
           {view === "final" && <FinalStage s={s} busy={busy} run={run} stale={stale} onApprove={approve} approving={approving} conflicts={conflicts} approveError={approveError} onOpenOffer={openOffer} />}
         </main>
 
-        {/* Guidance */}
-        <aside aria-label="AI guidance" className="border-t lg:border-t-0 lg:border-l border-border p-4 space-y-4 bg-card/50">
-          <p className="text-sm font-display font-semibold text-foreground flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-primary" /> Guidance</p>
-          {view === "understand" && (
-            <div className="space-y-3 text-sm">
-              <p className="text-muted-foreground">A strong offer starts from the right audience and one clear transformation. Correct anything assumed — the diagnosis treats your answers as facts.</p>
-              {u?.missing.length ? <Tip icon={HelpCircle} title="Most useful to answer">{u.missing.slice(0, 3).map((m) => m.question || m.text).join(" · ")}</Tip> : null}
-              {u?.assumed.length ? <Tip icon={AlertTriangle} title="Challenge these assumptions">{u.assumed.slice(0, 2).map((a) => a.text).join(" · ")}</Tip> : null}
-              {brief?.questions?.length ? <Tip icon={HelpCircle} title={`Key decisions for a ${tierLabel}`}>{brief.questions.join(" · ")}</Tip> : null}
+        {/* Guidance + Offer strategist: collapsible; a column on xl, a side drawer below xl. */}
+        {panelOpen && (
+          <aside id="builder-strategist" aria-label="Guidance and offer strategist"
+            className="fixed inset-y-0 right-0 z-30 w-full sm:w-[400px] xl:static xl:z-auto xl:w-auto border-l border-border bg-card shadow-xl xl:shadow-none flex flex-col xl:sticky xl:top-0 xl:self-start xl:h-[calc(100vh-57px)]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <p className="text-sm font-display font-semibold text-foreground flex items-center gap-1.5"><MessagesSquare className="w-4 h-4 text-primary" /> Guidance &amp; strategist</p>
+              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full bg-muted/80" onClick={() => setPanelOpen(false)} aria-label="Close panel"><X className="w-4 h-4" /></Button>
             </div>
-          )}
-          {view === "diagnose" && (
-            <div className="space-y-3 text-sm">
-              <p className="text-muted-foreground">The Value Equation: value rises with a bigger Dream Outcome and higher Perceived Likelihood, and with faster, easier achievement.</p>
-              {d?.profile.weakest && <Tip icon={AlertTriangle} title="Biggest lever">{DIMENSION_LABELS[d.profile.weakest]} — improving this is likely the highest-impact change. Work on it in Strengthen.</Tip>}
-              {s.mode === "new" && <p className="text-xs text-muted-foreground">This assesses your idea, not a proven offer.</p>}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+              {view === "understand" && <>
+                {u?.missing.length ? <Tip icon={HelpCircle} title="Most useful to answer">{u.missing.slice(0, 3).map((m) => m.question || m.text).join(" · ")}</Tip> : null}
+                {u?.assumed.length ? <Tip icon={AlertTriangle} title="Challenge these assumptions">{u.assumed.slice(0, 2).map((a) => a.text).join(" · ")}</Tip> : null}
+                {brief?.questions?.length ? <Tip icon={HelpCircle} title={`Key decisions for a ${tierLabel}`}>{brief.questions.join(" · ")}</Tip> : null}
+              </>}
+              {view === "diagnose" && d?.profile.weakest && <Tip icon={AlertTriangle} title="Biggest lever">{DIMENSION_LABELS[d.profile.weakest]} — improving this is likely the highest-impact change. Work on it in Strengthen.</Tip>}
+              <BuilderChatPanel session={s} />
             </div>
-          )}
-          {view === "strengthen" && <p className="text-sm text-muted-foreground">Pick the option that fits your buyer and your capacity — or write your own. More deliverables rarely mean more value; clarity, speed and certainty usually do.</p>}
-          {view === "package" && <p className="text-sm text-muted-foreground">Only this category's Offer Design fields are filled. Prices are estimates — validate them with real buyers.</p>}
-          {view === "final" && <p className="text-sm text-muted-foreground">Nothing changes in Offer Design until you approve. Scores can go down as well as up.</p>}
-          <BuilderChatPanel session={s} />
-        </aside>
+          </aside>
+        )}
       </div>
     </div>
   );
@@ -278,6 +319,13 @@ const Group = ({ title, tone, empty, children }: { title: string; tone: "known" 
 );
 const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="rounded-xl border border-border bg-card p-4 space-y-2"><h2 className="text-sm font-display font-semibold text-foreground">{title}</h2>{children}</div>
+);
+const StageGuidance = ({ text, onAsk, panelOpen }: { text: string; onAsk: () => void; panelOpen: boolean }) => (
+  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+    <Lightbulb className="w-4 h-4 text-primary shrink-0" />
+    <p className="flex-1 min-w-[200px] text-xs text-foreground">{text}</p>
+    {!panelOpen && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onAsk}><MessagesSquare className="w-3.5 h-3.5 mr-1" />Ask the strategist</Button>}
+  </div>
 );
 const Tip = ({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) => (
   <div className="rounded-lg border border-border bg-background p-3 space-y-1">
