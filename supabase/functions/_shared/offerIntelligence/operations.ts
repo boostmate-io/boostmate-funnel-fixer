@@ -7,6 +7,7 @@
 
 import { renderTierCoachBrief } from "../offerContext.ts";
 import { isOfferTier } from "../offerAiPolicy.ts";
+import { OFFER_PRICE_PATHS } from "../blueprintRegistry.ts";
 import type { OfferTier } from "../blueprintRegistry.ts";
 import { VALUE_CRITERIA, VALUE_DIMENSIONS, type CriterionAssessment, type CriterionVerdict } from "./valueEquation.ts";
 import { categoryWritableFields } from "./designMapping.ts";
@@ -48,7 +49,7 @@ function fieldContract(tier: OfferTier, excludePricing = false): string {
   return categoryWritableFields(tier).filter((f) => !excludePricing || !f.path.startsWith("offer_stack.pricing")).map((f) =>
     f.kind === "list"
       ? `- ${f.path}.new_<n>.{${f.itemKeys!.join(", ")}} (${f.label})${f.itemValues ? ` allowed: ${Object.entries(f.itemValues).map(([k, v]) => `${k} = ${v.join(" | ")}`).join("; ")}` : ""}`
-      : `- ${f.path} (${f.label})${f.values ? ` allowed: ${f.values.join(", ")}` : ""}`,
+      : `- ${f.path} (${f.label})${f.values ? ` allowed: ${f.values.join(", ")}` : ""}${OFFER_PRICE_PATHS.includes(f.path) ? " — value MUST be one plain positive number (e.g. \"997\"): no currency symbol, range, \"from\", \"estimate\" or other text. Put ranges and reasoning in extras.pricingRationale." : ""}`,
   ).join("\n");
 }
 
