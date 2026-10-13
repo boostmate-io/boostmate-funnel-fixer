@@ -146,7 +146,7 @@ describe("validateBlueprintRequest", () => {
   it("requires Instagram and acquisition text when the audit is requested", () => {
     const r = validateBlueprintRequest({ email: "a@example.com", auditRequested: true });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(Object.keys(r.errors).sort()).toEqual(["acquisition", "instagram"]);
+    if (r.ok === false) expect(Object.keys(r.errors).sort()).toEqual(["acquisition", "instagram"]);
   });
   it("normalizes audit fields and keeps marketing consent separate", () => {
     const r = validateBlueprintRequest({ email: "a@example.com", auditRequested: true, instagram: "instagram.com/Coach.Mark", acquisition: "Referrals and DMs", website: "coach.com", marketingConsent: true });
