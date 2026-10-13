@@ -12,9 +12,10 @@ import { validatePublicOfferInput, publicInputToContext } from "../_shared/offer
 import { runOfferOperation, RECOVERABLE_AI_ERRORS, type AiCallResult } from "../_shared/offerIntelligence/aiCall.ts";
 import { buildPublicResult, decideRateLimit, looksLikeBot, DEFAULT_RATE_LIMITS } from "../_shared/offerIntelligence/publicResult.ts";
 import {
-  buildDiagnosis, buildStrengthen, validateChoices, finalizeFacts, validateAuditRequest, auditSnapshot,
-  PUBLIC_DIAGNOSE_INSTRUCTION, PUBLIC_STRENGTHEN_INSTRUCTION, PUBLIC_FINAL_INSTRUCTION, reconcileFinal, AUDIT_CONSENT_TEXT_VERSION, AUDIT_CHANNEL_LABELS, scoresLine,
+  buildDiagnosis, buildStrengthen, validateChoices, finalizeFacts, validateBlueprintRequest, auditSnapshot,
+  PUBLIC_DIAGNOSE_INSTRUCTION, PUBLIC_STRENGTHEN_INSTRUCTION, PUBLIC_FINAL_INSTRUCTION, reconcileFinal, scoresLine,
 } from "../_shared/offerIntelligence/publicFlow.ts";
+import { renderBlueprintPdf } from "../_shared/offerIntelligence/blueprintPdf.ts";
 import type { OfferOperation, OperationContext } from "../_shared/offerIntelligence/operations.ts";
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
