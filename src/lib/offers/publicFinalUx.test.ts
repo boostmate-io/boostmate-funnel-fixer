@@ -43,3 +43,17 @@ describe("plain language", () => {
     expect(isRedundant("Lose 5kg.", "lose 5kg")).toBe(true);
   });
 });
+
+import { alignScoreWhy, splitPreProgram } from "@shared/offerIntelligence/plainLanguage";
+describe("pre-launch corrections", () => {
+  it("never claims an increase when the score is unchanged", () => {
+    expect(alignScoreWhy("same", "The new method improved this score.", "perceived likelihood", "3.3/10")).toMatch(/stays at 3.3\/10/);
+    expect(alignScoreWhy("up", "A clearer outcome increased this.", "dream outcome", "7/10")).toBe("A clearer outcome increased this.");
+    expect(alignScoreWhy("same", "No evidence yet, so it stays put.", "x", "3/10")).toBe("No evidence yet, so it stays put.");
+  });
+  it("moves pre-enrollment steps out of program deliverables only when flagged", () => {
+    const d = [{ name: "Initial Clarity Assessment" }, { name: "Weekly 1:1 Calls" }];
+    expect(splitPreProgram(d, [{ name: "Initial clarity assessment" }]).map((x) => x.name)).toEqual(["Weekly 1:1 Calls"]);
+    expect(splitPreProgram(d, [])).toHaveLength(2);
+  });
+});

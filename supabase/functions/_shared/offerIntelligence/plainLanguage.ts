@@ -64,3 +64,26 @@ export function promotionWarning(texts: string[]): string {
   const what = items.length ? items.join(", ").replace(/, ([^,]*)$/, " and $1") : "everything listed in your implementation checklist";
   return `Before promoting this offer, develop ${what}. Validate any claims about client outcomes before using them in marketing.`;
 }
+
+/** Score-change wording that contradicts the final reconciled score (e.g. "improved" when unchanged). */
+const UP_RE = /\b(improv\w*|increas\w*|rais\w*|boost\w*|higher|lift\w*|went up|moved up|stronger score|score (?:rose|grew))\b/i;
+const DOWN_RE = /\b(decreas\w*|lower\w*|drop\w*|fell|declin\w*|reduc\w* the score)\b/i;
+/**
+ * Explanation for why a score moved, aligned to the FINAL reconciled state.
+ * The AI's own wording is kept only when it does not contradict the numbers.
+ */
+export function alignScoreWhy(state: "up" | "down" | "same", text: string, label: string, after: string): string {
+  const t = (text ?? "").trim();
+  const contradicts = state === "same" ? UP_RE.test(t) || DOWN_RE.test(t) : state === "up" ? DOWN_RE.test(t) && !UP_RE.test(t) : UP_RE.test(t) && !DOWN_RE.test(t);
+  if (t && !contradicts) return t;
+  if (state === "same") return `The proposed changes may make this part of your offer clearer, but they are not yet in place or supported by evidence, so ${label} stays at ${after}. The score can rise once these changes are implemented and show results.`;
+  if (state === "up") return `The improved offer describes this part more concretely, which raises ${label} to ${after}. The proposed changes still need to be put in place and tested.`;
+  return `The improved offer leaves this part less clearly supported than before, so ${label} is now ${after}.`;
+}
+
+const normName = (s: unknown) => toText(s).toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+/** Deliverables minus anything the AI positioned as a separate pre-enrollment step. */
+export function splitPreProgram<T extends { name?: unknown }>(deliverables: T[], pre: { name: string }[] | undefined): T[] {
+  const names = new Set((pre ?? []).map((p) => normName(p.name)).filter(Boolean));
+  return names.size ? deliverables.filter((d) => !names.has(normName(d.name))) : deliverables;
+}

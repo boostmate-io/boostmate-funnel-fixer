@@ -87,7 +87,7 @@ describe("new offer idea corrections", () => {
   it("pilots validate first; open business choices stay open; pre-enrollment steps stay separate", () => {
     expect(str).toMatch(/a pilot is primarily for validation/);
     expect(gen).toMatch(/never decide it in the offer/);
-    expect(gen).toMatch(/separate step before the main program/);
+    expect(gen).toMatch(/BEFORE enrollment or before the main program go ONLY in preProgramSteps/);
     expect(gen).toMatch(/never 'now provides'/);
   });
   it("planned changes never make likelihood or speed criteria strong", () => {

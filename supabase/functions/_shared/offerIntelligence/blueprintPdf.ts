@@ -3,7 +3,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "npm:pdf-lib@1.17.1";
 import { VALUE_DIMENSIONS, DIMENSION_LABELS } from "./valueEquation.ts";
 import { auditSnapshot } from "./publicFlow.ts";
-import { toText, humanize, isRedundant, pricingHeadings, promotionWarning } from "./plainLanguage.ts";
+import { toText, humanize, isRedundant, pricingHeadings, promotionWarning, alignScoreWhy, splitPreProgram } from "./plainLanguage.ts";
 export { toText, humanize, isRedundant };
 import { BOOSTMATE_LOGO_LIGHT_PNG_BASE64 } from "./boostmateLogo.ts";
 
@@ -187,7 +187,7 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
     w.field("What changed", humanize(dc?.whatChanged));
     if (b == null && a != null) {
       w.field("Why it can now be assessed", `Your original answers didn't include enough detail to judge ${DIMENSION_LABELS[d].toLowerCase()}. The improved offer spells this out, so it can now be scored for the first time at ${fmt(a)}. This is a starting point, not an increase from zero.`);
-    } else w.field("Why it matters", humanize(dc?.why));
+    } else w.field(delta! > 0 ? "Why the score increased" : delta! < 0 ? "Why the score decreased" : "Why the score stayed the same", alignScoreWhy(delta! > 0 ? "up" : delta! < 0 ? "down" : "same", humanize(dc?.why), DIMENSION_LABELS[d].toLowerCase(), fmt(a)));
     w.field("What remains uncertain", humanize(dc?.stillUncertain));
   }
 
@@ -196,9 +196,11 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   w.h2("Offer overview");
   w.field("Delivery", r.deliveryApproach || inp.delivery);
   w.h2("How it works");
-  const deliverables: any[] = (r.design?.stack?.deliverables ?? []).filter((x: any) => x?.name);
+  const pre: any[] = (r.preProgramSteps ?? []).filter((m: any) => m?.name);
+  if (pre.length) { w.label("Before the program"); w.bullets(pre.map((m: any) => (m.description ? `${m.name}: ${m.description}` : m.name))); }
+  const deliverables: any[] = splitPreProgram((r.design?.stack?.deliverables ?? []).filter((x: any) => x?.name), pre);
   const incl = deliverables.length ? deliverables.map((x) => (x.description ? `${toText(x.name)}: ${toText(x.description)}` : toText(x.name))) : (r.deliverables ?? []);
-  if (incl.length) { w.label("What's included"); w.bullets(incl); }
+  if (incl.length) { w.label(pre.length ? "What's included in the program" : "What's included"); w.bullets(incl); }
   const steps: any[] = (r.methodSteps ?? []).filter((m: any) => m?.name);
   if (steps.length) { w.label("The steps your clients follow"); w.bullets(steps.map((m: any) => (m.description ? `${m.name}: ${m.description}` : m.name)), { numbered: true }); }
   w.h2("Included in your proposed offer", 120);

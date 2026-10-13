@@ -45,6 +45,8 @@ export interface PublicOfferResult {
   validationNeeds: string[];
   /** Concrete steps of the named method (optional for older results). */
   methodSteps?: { name: string; description: string }[];
+  /** Separate steps before enrollment (e.g. an introductory assessment) — not program deliverables. */
+  preProgramSteps?: { name: string; description: string }[];
   /** Useful opportunities the visitor did NOT select — optional, never part of the offer. */
   additionalRecommendations?: string[];
   /** Full positioning statement (who, problem, transformation, difference, credibility). */
@@ -99,6 +101,7 @@ export function buildPublicResult(raw: unknown, opts: { hasCurrentOffer: boolean
       appliedImprovements: (Array.isArray(out.appliedImprovements) ? out.appliedImprovements : []).map((a: any) => ({ area: clip(a?.area, 120), howItHelps: H(clip(a?.howItHelps, 400)) })).filter((a: any) => a.area).slice(0, 4),
       futureActions: clipList(out.futureActions, 5).map(H), validationNeeds: clipList(out.validationNeeds, 6).map(H),
       methodSteps: (Array.isArray(out.methodSteps) ? out.methodSteps : []).map((m: any) => ({ name: H(clip(m?.name, 80)), description: H(clip(m?.description, 300)) })).filter((m: any) => m.name).slice(0, 6),
+      preProgramSteps: (Array.isArray(out.preProgramSteps) ? out.preProgramSteps : []).map((m: any) => ({ name: H(clip(m?.name, 80)), description: H(clip(m?.description, 300)) })).filter((m: any) => m.name).slice(0, 2),
       additionalRecommendations: clipList(out.additionalRecommendations, 3).map(H),
       positioning: H(clip(out.positioning, 700)),
       pricingGuidance: out.pricingGuidance && typeof out.pricingGuidance === "object"
