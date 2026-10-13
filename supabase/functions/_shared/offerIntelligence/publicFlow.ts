@@ -163,6 +163,8 @@ export function reconcileFinal(result: PublicOfferResult, d: PublicDiagnosis, it
       // Design criteria (method, fit, milestones, early win, timeline, outcome, ease) may rise one step for a concrete proposed component.
       if (RANK[v] > cap) v = cap < 0 ? "unknown" : BY_RANK[cap];
     } else if (RANK[v] < RANK[b] && !claimedDown.has(crit.dimension)) v = b;
+    // A newly assessed weak criterion must not silently pull an already-scored dimension down.
+    if (b === "unknown" && v === "weak" && d.profile.dimensions[crit.dimension].score != null && !claimedDown.has(crit.dimension)) v = "unknown";
     if (v !== orig.verdict) touched.add(crit.dimension);
     out.push({ criterionId: crit.id, verdict: v, reasoning: hc(v === orig.verdict ? orig.reasoning : (before.get(crit.id)?.reasoning ?? orig.reasoning)) });
   }

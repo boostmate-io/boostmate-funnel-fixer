@@ -70,3 +70,14 @@ describe("checklist dedupe", () => {
     expect(out[0]).toMatch(/permission/);
   });
 });
+
+import { reconcileFinal } from "@shared/offerIntelligence/publicFlow";
+import { VALUE_CRITERIA, scoreValueProfile } from "@shared/offerIntelligence/valueEquation";
+describe("no unexplained drops from newly assessed criteria", () => {
+  it("keeps an unknown criterion unknown when it would only lower a scored dimension", () => {
+    const before = VALUE_CRITERIA.map((c) => ({ criterionId: c.id, verdict: (c.id === "do_status" ? "unknown" : "partial") as any, reasoning: "" }));
+    const after = before.map((a) => ({ ...a, verdict: (a.criterionId === "do_status" ? "weak" : "partial") as any }));
+    const out = reconcileFinal({ assessments: after, dimensionChanges: [], futureActions: [] } as any, { assessments: before, profile: scoreValueProfile(before) } as any, [], []);
+    expect(out.profile.dimensions.dream_outcome.score).toBe(scoreValueProfile(before).dimensions.dream_outcome.score);
+  });
+});
