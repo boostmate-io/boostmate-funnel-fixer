@@ -87,7 +87,7 @@ describe("video audit request", () => {
     const d = (buildDiagnosis(diag()) as any).value;
     const items = (buildStrengthen(strengthenRaw()) as any).value;
     const snap = auditSnapshot({ input: { audience: "a" }, diagnosis: d, strengthen: items, choices: [{ itemId: "i0", choice: "a" }, { itemId: "i1", choice: "keep" }], result: { offerName: "N", profile: d.profile } });
-    expect(snap.decisions).toEqual([{ area: "Make it believable", choice: "A", custom: null }, { area: "Faster first win", choice: "Keep current approach", custom: null }]);
+    expect(snap.decisions).toMatchObject([{ area: "Make it believable", choice: "A", custom: null, own: false }, { area: "Faster first win", choice: "Keep current approach", custom: null, own: false }]);
     expect(snap.beforeScores!.dream_outcome).toBe(5);
     expect(snap.offer!.name).toBe("N");
   });

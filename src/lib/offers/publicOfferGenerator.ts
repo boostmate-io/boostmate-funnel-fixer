@@ -13,6 +13,7 @@ export interface GeneratorIntake {
   delivery: string;
   obstacle: string;
   currentOffer?: string;
+  credibility?: string;
   currentPrice?: string;
   stage?: "existing" | "idea";
   currency?: string;
