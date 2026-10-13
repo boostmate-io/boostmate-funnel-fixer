@@ -157,10 +157,10 @@ export default function OfferGenerator() {
   };
 
   const choose = (item: string, choice: PublicChoice["choice"]) =>
-    setS((x) => ({ ...x, result: null, choices: { ...x.choices, [item]: { itemId: item, choice, ...(choice !== "keep" && x.choices[item]?.choice === choice && x.choices[item]?.custom ? { custom: x.choices[item].custom } : {}) } } }));
+    setS((x) => ({ ...x, result: null, choices: { ...x.choices, [item]: { itemId: item, choice, ...(choice !== "keep" && (x.choices[item]?.choice === choice || (choice === "own" && x.choices[item]?.custom)) && x.choices[item]?.custom ? { custom: x.choices[item].custom } : {}) } } }));
   const setCustom = (item: string, custom: string) =>
     setS((x) => ({ ...x, result: null, choices: { ...x.choices, [item]: { ...x.choices[item], custom } } }));
-  const allDecided = !!s.items && s.items.every((it) => s.choices[it.id]);
+  const allDecided = !!s.items && s.items.every((it) => s.choices[it.id] && (s.choices[it.id].choice !== "own" || (s.choices[it.id].custom?.trim().length ?? 0) >= 3));
 
   const build = () => {
     if (s.result) { patch({ stage: "final" }); return; }
@@ -222,9 +222,9 @@ export default function OfferGenerator() {
                 <div className="space-y-4 max-w-3xl mx-auto">
                   <p className="text-xs font-semibold uppercase tracking-wider text-primary">Free AI Irresistible Offer Builder</p>
                   <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground leading-tight">Turn your offer into something clients actually want to buy.</h1>
-                  <p className="text-lg text-muted-foreground">A great offer doesn't just explain what you sell. It makes the right people want the result, believe they can achieve it, and feel confident taking the next step.</p>
-                  <p className="text-lg text-muted-foreground">Discover what's holding your offer back, strengthen it with AI, and see how your offer improves.</p>
+                  <p className="text-base md:text-lg text-muted-foreground">Discover what's holding your offer back, get personalized AI recommendations, and build a stronger offer — with a visual before-and-after comparison.</p>
                 </div>
+                <h2 className="text-xl md:text-2xl font-display font-bold text-foreground -mb-4">The 4 ingredients of an irresistible offer</h2>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
                   {DIMENSIONS.map(({ id, icon: Icon, q }) => (
                     <div key={id} className="rounded-xl border border-border bg-card p-5 space-y-3">
@@ -235,7 +235,7 @@ export default function OfferGenerator() {
                   ))}
                 </div>
                 <div className="space-y-2 max-w-2xl mx-auto">
-                  <p className="text-sm text-muted-foreground">A stronger offer isn't necessarily about adding more bonuses or deliverables. It's about creating a more desirable result, increasing confidence, shortening the path to progress, and reducing unnecessary effort.</p>
+                  <p className="text-sm text-muted-foreground">A stronger offer isn't about adding more bonuses — it's about a more desirable result, more confidence, faster progress and less effort.</p>
                   <p className="text-xs text-muted-foreground">Inspired by the Value Equation from Alex Hormozi's <em>$100M Offers</em>.</p>
                 </div>
                 <div className="space-y-3">
@@ -270,11 +270,14 @@ export default function OfferGenerator() {
                     <Field id="outcome" label="What result do you help them achieve?" hint="The change in their life or business, not your services — e.g. “sign their first 5 paying clients in 90 days” or “run a half marathon without injury”.">
                       <Textarea id="outcome" value={f.outcome} onChange={setField("outcome")} maxLength={300} rows={2} />
                     </Field>
-                    <Field id="currentOffer" label={isIdea ? "What would you like to offer?" : "What are you currently offering?"} hint={isIdea ? "e.g. “a 6-week group program” or “a self-paced course with monthly Q&A calls”." : "e.g. “12-week 1:1 coaching program” or “done-with-you marketing consulting”."}>
-                      <Input id="currentOffer" value={f.currentOffer} onChange={setField("currentOffer")} maxLength={500} />
+                    <Field id="currentOffer" label={isIdea ? "What would your offer include?" : "What does your current offer include?"} hint={isIdea ? "Describe what you plan to provide, how it might work, and any support or resources you have in mind." : "Briefly describe what clients get, how long the program lasts, and any support or extras included."}>
+                      <Textarea id="currentOffer" value={f.currentOffer} onChange={setField("currentOffer")} maxLength={1000} rows={4} />
                     </Field>
-                    <Field id="delivery" label="How do clients achieve that result with you?" optional hint={isIdea ? "If you already know: the steps, format and support you have in mind." : "Your method or steps, the format (calls, videos, templates) and the support clients get."}>
-                      <Textarea id="delivery" value={f.delivery} onChange={setField("delivery")} maxLength={300} rows={2} />
+                    <Field id="delivery" label={isIdea ? "How would you help clients get that result?" : "How do you help clients get that result?"} optional hint={isIdea ? "Describe the approach you have in mind, the main steps clients would follow, and how you'd support them." : "Describe your approach, the main steps clients follow, and how you support them."}>
+                      <Textarea id="delivery" value={f.delivery} onChange={setField("delivery")} maxLength={800} rows={3} />
+                    </Field>
+                    <Field id="credibility" label={isIdea ? "What would make clients confident your offer will work?" : "What makes clients confident your offer will work?"} optional hint={isIdea ? "For example: relevant experience, a method you've tested, or results you've achieved yourself. Leave blank if you're just starting." : "For example: client results, testimonials, relevant experience, a proven method, or a guarantee. Leave blank if you're just starting."}>
+                      <Textarea id="credibility" value={f.credibility ?? ""} onChange={setField("credibility")} maxLength={800} rows={3} />
                     </Field>
                     <Field id="obstacle" label="What's the biggest challenge with your offer right now?">
                       <div className="flex flex-wrap gap-2">
@@ -298,8 +301,8 @@ export default function OfferGenerator() {
                     )}
                     <input type="text" name="website" value={website} onChange={(e) => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                      <p className="text-xs text-muted-foreground">Free · No account or email needed</p>
-                      <div className="flex gap-2">
+                      <Button variant="ghost" onClick={() => patch({ stage: "welcome" })}><ArrowLeft className="w-4 h-4 mr-1" /> Back to introduction</Button>
+                      <div className="flex flex-wrap gap-2">
                         {s.diagnosis && <Button variant="ghost" onClick={() => patch({ stage: "diagnose" })}>View current analysis</Button>}
                         <Button size="lg" onClick={analyze} disabled={!discoverOk}><Sparkles className="w-4 h-4 mr-1.5" /> Analyze my offer</Button>
                       </div>
@@ -316,12 +319,13 @@ export default function OfferGenerator() {
                 <StageHeader eyebrow={isIdea ? "Before · Your offer idea (provisional)" : "Before · Your current offer"} title="Let's find out how strong your offer is"
                   subtitle={isIdea ? "This is a provisional assessment of your idea, based only on what you've told us. Click a dimension to see why." : "Here's how the offer you sell today scores on the four parts of the Value Equation. Click a dimension to see why."} />
                 <Card><ValueProfileChart before={s.diagnosis.profile} variant="large" /></Card>
+                <p className="text-sm text-muted-foreground -mt-4">These are provisional assessments based on the information you've shared. If a dimension is marked “Not assessed”, it means we need more information — not that your offer is weak in that area.</p>
                 <div className="grid md:grid-cols-3 gap-4">
                   <Card title="What's already working"><ul className="space-y-2 text-sm text-foreground">{s.diagnosis.strengths.map((x) => <li key={x} className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />{x}</li>)}</ul></Card>
                   <Card title="What's holding your offer back"><ul className="space-y-2 text-sm text-foreground list-disc pl-5">{s.diagnosis.weaknesses.map((x) => <li key={x}>{x}</li>)}</ul></Card>
                   <Card title="Where we can make the biggest difference" className="border-primary/30 bg-primary/5"><ol className="space-y-2 text-sm text-foreground list-decimal pl-5">{s.diagnosis.topImprovements.map((x) => <li key={x}>{x}</li>)}</ol></Card>
                 </div>
-                <p className="text-xs text-muted-foreground">“Not assessed” means we didn't have enough information — it doesn't count against you. These scores are a strategic assessment, not a prediction of sales.</p>
+                <p className="text-xs text-muted-foreground">Scores are a strategic assessment, not a prediction of sales.</p>
                 <div className="flex justify-between gap-3">
                   <Button variant="ghost" onClick={() => patch({ stage: "discover" })}><ArrowLeft className="w-4 h-4 mr-1" /> Edit my answers</Button>
                   <Button size="lg" onClick={() => toStrengthen()}>Let's strengthen my offer <ArrowRight className="w-4 h-4 ml-1.5" /></Button>
@@ -362,7 +366,7 @@ export default function OfferGenerator() {
                                 {on && <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">Your choice</span>}
                               </div>
                               <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-medium", o.kind === "future_action" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
-                                {o.kind === "future_action" ? "Needs work first — added as a next step" : "Can be applied to your offer now"}
+                                {o.kind === "future_action" ? "Requires implementation before it can be claimed" : "Can be reflected in your offer now"}
                               </span>
                               <p className="text-sm text-foreground"><span className="font-medium">What to change: </span>{o.change}</p>
                               {o.why && <p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">Why it helps: </span>{o.why}</p>}
@@ -377,6 +381,15 @@ export default function OfferGenerator() {
                             </div>
                           );
                         })}
+                      </div>
+                      <div className={cn("rounded-xl border p-4 space-y-3", c?.choice === "own" ? "border-primary ring-1 ring-primary bg-primary/5" : "border-dashed border-border")}>
+                        <button onClick={() => choose(it.id, "own")} className="w-full text-left text-sm font-medium text-foreground flex items-center gap-2">
+                          {c?.choice === "own" ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Pencil className="w-4 h-4 text-muted-foreground" />} Write my own improvement
+                        </button>
+                        {c?.choice === "own" && (<>
+                          <Textarea rows={3} maxLength={600} autoFocus placeholder="Describe the change you'd like to make to your offer" value={c?.custom ?? ""} onChange={(e) => setCustom(it.id, e.target.value)} aria-label="Your own improvement" />
+                          <p className="text-xs text-muted-foreground">We'll assess your idea with the same standard as the suggestions. Anything you still need to create or collect goes into your action plan.</p>
+                        </>)}
                       </div>
                       <button onClick={() => choose(it.id, "keep")}
                         className={cn("w-full rounded-lg border px-4 py-3 text-sm text-left", c?.choice === "keep" ? "border-primary bg-primary/5 text-foreground font-medium" : "border-dashed border-border text-muted-foreground hover:text-foreground")}>
