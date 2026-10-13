@@ -93,10 +93,11 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   w.field("Desired transformation", r.design?.angle?.core_outcome || inp.outcome);
   w.field("Core promise", r.promise);
   w.field("Positioning", r.design?.angle?.positioning || r.design?.angle?.unique_angle || r.insights?.[0]);
-  w.field("Unique method", [r.design?.angle?.framework, r.methodSummary].filter(Boolean).join(" - "));
+  const fw = r.design?.angle?.framework; const fwName = typeof fw === "string" ? fw : fw?.name ?? fw?.title ?? "";
+  w.field("Unique method", [fwName, r.methodSummary].filter(Boolean).join(" - "));
 
   // ---- 2. Value Equation chart
-  w.newPage(); w.h1("2. Value Equation: Before vs. After");
+  w.y -= 12; w.ensure(330); w.h1("2. Value Equation: Before vs. After");
   w.text(before === r.beforeProfile && r.beforeProfile ? "Your original offer and the improved proposal, assessed with the same criteria and evidence standard." : "The initial assessment of your offer idea compared with the improved proposal.", { color: MUTED, gap: 12 });
   const barW = W - 2 * M - 150;
   for (const d of VALUE_DIMENSIONS) {
