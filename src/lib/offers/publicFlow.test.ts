@@ -56,7 +56,7 @@ describe("diagnose / strengthen / finalize", () => {
     expect(c.ok).toBe(true);
     expect((c as any).value[1].custom).toBeUndefined();
     const facts = finalizeFacts((buildDiagnosis(diag()) as any).value, items, (c as any).value);
-    expect(facts.selectedImprovements).toContain("[APPLY NOW, adjusted by the visitor] Make it believable: B — my twist");
+    expect(facts.selectedImprovements).toContain("[SELECTED — include in the offer now (internal tag, never repeat), adjusted by the visitor] Make it believable: B — my twist");
     expect(facts.selectedImprovements).toContain("Faster first win: keep current approach");
   });
   it("final operation re-assesses independently and returns score changes + next steps", () => {

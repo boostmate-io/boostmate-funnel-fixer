@@ -24,9 +24,9 @@ Separate confirmed facts the visitor stated, planned or proposed mechanisms, ass
 - A stated desired transformation is not automatically strong on dream outcome: strong needs a specific, believable, measurable result for a specific audience.
 - Use unknown when the information is genuinely absent; never treat unknown as strength or as weakness.`;
 
-export const PUBLIC_DIAGNOSE_INSTRUCTION = `Audience: a coach or consultant without marketing training. Assess ONLY what the visitor actually described — for an existing offer, what is sold today; for an idea, the proposed concept as described (provisional). Never imagine an optimized version or credit improvements before they are chosen. Write every reason, strength, weakness and improvement in plain, encouraging English — one short sentence each, specific to THIS offer (never generic advice that fits any coach), no jargon and never criterion codes. Give 2–3 strengths, 2–3 weaknesses and exactly 3 top improvements, highest impact first. Phrase each top improvement as the strategic objective first (e.g. \"Show why your coaching works\"), optionally followed by \" — for example\" and one or two ways that fit this visitor's actual stage and evidence (e.g. explaining a credible method, sharing relevant experience, running a pilot, a transparent process). Never assume the visitor already has clients, results or testimonials unless they said so.\n\nEvidence handling: the "credibility" fact is the visitor's own statement. Specific stated results, testimonials or a confirmed guarantee are stated evidence (still not independently verified); relevant experience alone does not prove the promised outcome (at most partial); plans are not evidence. If "credibility" or "delivery" is missing, mark the criteria that depend on it unknown — never weak and never strong.\n\n${PUBLIC_SCORING_NOTE}`;
+export const PUBLIC_DIAGNOSE_INSTRUCTION = `Audience: a coach or consultant without marketing training. Assess ONLY what the visitor actually described — for an existing offer, what is sold today; for an idea, the proposed concept as described (provisional). Never imagine an optimized version or credit improvements before they are chosen. Write every reason, strength, weakness and improvement in plain, encouraging English — one short sentence each, specific to THIS offer (never generic advice that fits any coach), no jargon and never criterion codes. Give 2–3 strengths, 2–3 weaknesses and exactly 3 top improvements, highest impact first. Phrase each top improvement as the strategic objective first (e.g. \"Show why your coaching works\"), optionally followed by \" — for example\" and one or two ways that fit this visitor's actual stage and evidence (e.g. explaining a credible method, sharing relevant experience, running a pilot, a transparent process). Never assume the visitor already has clients, results or testimonials unless they said so. Phrase weaknesses and improvements as strategic objectives ("Make your existing client results more credible and visible", "Reduce uncertainty for prospective clients"), not as a single tactic ("Add a guarantee", "Gather formal proof"). A missing guarantee is never automatically a weakness: judge perceived risk in the whole offer (clear expectations, methodology, experience, results, an introductory assessment, a clear delivery process) and mention a guarantee only when it is appropriate and realistically deliverable. Missing testimonials or case studies mean the evidence is not yet shown — never that the offer fails; never encourage promises the visitor cannot substantiate.\n\nEvidence handling: the "credibility" fact is the visitor's own statement. Specific stated results, testimonials or a confirmed guarantee are stated evidence (still not independently verified); relevant experience alone does not prove the promised outcome (at most partial); plans are not evidence. If "credibility" or "delivery" is missing, mark the criteria that depend on it unknown — never weak and never strong.\n\n${PUBLIC_SCORING_NOTE}`;
 export const PUBLIC_FINAL_INSTRUCTION = `Use exactly the same evidence standard as the diagnosis provided in the answers.\n\n${PUBLIC_SCORING_NOTE}`;
-export const PUBLIC_STRENGTHEN_INSTRUCTION = "Plain English for a non-marketer: weakness as a short friendly title (max 7 words, e.g. \"Make your offer more believable\"), whyItMatters in 1–2 sentences from the buyer's view, option title max 7 words, change in 1–2 sentences, why in one sentence, tradeoff in one sentence. Never use criterion codes.";
+export const PUBLIC_STRENGTHEN_INSTRUCTION = "Plain English for a non-marketer: weakness as a short objective-first title (max 7 words, e.g. \"Make your client results more visible\"), whyItMatters in 1–2 sentences from the buyer's view, option title max 7 words, change in 1–2 sentences, why in one sentence, tradeoff in one sentence. Never use criterion codes.";
 
 export interface PublicDiagnosis {
   assessments: CriterionAssessment[];
@@ -94,7 +94,7 @@ export function finalizeFacts(d: PublicDiagnosis, items: PublicImprovement[], ch
     if (c.choice === "keep") return `- ${it.weakness}: keep current approach`;
     if (c.choice === "own") return `- [VISITOR'S OWN IMPROVEMENT — a proposal, not yet in place; apply the same evidence and feasibility rules; if it requires creating, collecting or implementing anything, list that in futureActions and never present it as existing] ${it.weakness}: ${c.custom}`;
     const o = it.options.find((x) => x.id === c.choice)!;
-    const tag = o.kind === "future_action" ? "FUTURE ACTION (not in place yet)" : "APPLY NOW";
+    const tag = o.kind === "future_action" ? "SELECTED — needs creating first, not in place yet (internal tag, never repeat)" : "SELECTED — include in the offer now (internal tag, never repeat)";
     return `- [${tag}${c.custom ? ", adjusted by the visitor" : ""}] ${it.weakness}: ${o.title} — ${c.custom || o.change}`;
   }).join("\n");
   return {
@@ -116,6 +116,13 @@ const dimOf = (id: string) => VALUE_CRITERIA.find((c) => c.id === id)?.dimension
  * - a criterion only drops when the model explains a decrease for that dimension.
  * Re-scores the profile, syncs directions with the real deltas and lists future actions.
  */
+const words = (t: string) => new Set(t.toLowerCase().match(/[a-z]{4,}/g) ?? []);
+/** True when an existing action already covers most of the title's key words. */
+export function coversAction(existing: string, candidate: string): boolean {
+  const e = words(existing), c = [...words(candidate.split(/[:—-]/)[0])];
+  return c.length > 0 && c.filter((w) => e.has(w)).length / c.length >= 0.6;
+}
+
 export function reconcileFinal(result: PublicOfferResult, d: PublicDiagnosis, items: PublicImprovement[], choices: PublicChoice[]): PublicOfferResult {
   const before = new Map(d.assessments.map((a) => [a.criterionId, a]));
   const claimedDown = new Set(result.dimensionChanges.filter((c) => c.direction === "down").map((c) => c.dimension));
@@ -145,7 +152,7 @@ export function reconcileFinal(result: PublicOfferResult, d: PublicDiagnosis, it
   for (const it of items) {
     const ch = choices.find((x) => x.itemId === it.id);
     const o = it.options.find((x) => x.id === ch?.choice);
-    if (o?.kind === "future_action" && ![...future].some((f) => f.toLowerCase().includes(o.title.toLowerCase().slice(0, 20)))) future.add(ch?.custom ? `${o.title}: ${ch.custom}` : `${o.title}: ${o.change}`);
+    if (o?.kind === "future_action" && ![...future].some((f) => coversAction(f, `${o.title} ${o.change}`))) future.add(ch?.custom ? `${o.title}: ${ch.custom}` : `${o.title}: ${o.change}`);
   }
   return { ...result, assessments: out, profile, beforeProfile: d.profile, dimensionChanges, futureActions: [...future].slice(0, 6) };
 }

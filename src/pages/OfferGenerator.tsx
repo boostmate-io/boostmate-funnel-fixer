@@ -326,7 +326,6 @@ export default function OfferGenerator() {
                   <Card title="What's holding your offer back"><ul className="space-y-2 text-sm text-foreground list-disc pl-5">{s.diagnosis.weaknesses.map((x) => <li key={x}>{x}</li>)}</ul></Card>
                   <Card title="Where we can make the biggest difference" className="border-primary/30 bg-primary/5"><ol className="space-y-2 text-sm text-foreground list-decimal pl-5">{s.diagnosis.topImprovements.map((x) => <li key={x}>{x}</li>)}</ol></Card>
                 </div>
-                <p className="text-xs text-muted-foreground">Scores are a strategic assessment, not a prediction of sales.</p>
                 <div className="flex justify-between gap-3">
                   <Button variant="ghost" onClick={() => patch({ stage: "discover" })}><ArrowLeft className="w-4 h-4 mr-1" /> Edit my answers</Button>
                   <Button size="lg" onClick={() => toStrengthen()}>Let's strengthen my offer <ArrowRight className="w-4 h-4 ml-1.5" /></Button>
@@ -529,6 +528,18 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
             {tab === "how" && (
               <>
                 <Section title={toText(framework?.name) || "The core method"}>{toText(framework?.description) || r.methodSummary}</Section>
+                {(r.methodSteps?.length ?? 0) > 0 && (
+                  <Section title="The steps your clients follow">
+                    <ol className="space-y-3">
+                      {r.methodSteps!.map((m, i) => (
+                        <li key={i} className="flex gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{i + 1}</span>
+                          <p className="text-foreground"><span className="font-medium">{m.name}</span>{m.description ? <span className="text-muted-foreground"> — {m.description}</span> : null}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  </Section>
+                )}
                 {deliverables.length > 0 && (
                   <Section title="Main program components">
                     <div className="grid sm:grid-cols-2 gap-3">
@@ -545,7 +556,7 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
             )}
             {tab === "stronger" && (
               <>
-                <Section title="Applied to your improved offer">
+                <Section title="Included in your proposed offer">
                   {applied.length || own.length ? <div className="space-y-3">
                     {applied.map((d) => {
                       const how = r.appliedImprovements.find((a) => a.area.toLowerCase() === d.area.toLowerCase())?.howItHelps;
@@ -554,8 +565,9 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
                     {own.map((d) => <div key={d.area} className="rounded-lg border-l-4 border-primary bg-primary/5 p-4 space-y-1"><p className="font-medium text-foreground">Your own improvement · {d.area}</p><p className="text-muted-foreground">{d.detail}</p><p className="text-xs text-muted-foreground">Included in the proposal. Build or confirm anything it depends on before you claim it.</p></div>)}
                   </div> : <p className="text-muted-foreground">You didn't apply any immediate changes.</p>}
                 </Section>
-                {r.futureActions.length > 0 && <Section title="Your action plan — not in place yet"><ul className="space-y-2">{r.futureActions.map((a) => <li key={a} className="flex gap-2 text-foreground"><span className="mt-1 h-3.5 w-3.5 shrink-0 rounded border border-primary" />{humanize(a)}</li>)}</ul></Section>}
+                {r.futureActions.length > 0 && <Section title="Your implementation checklist"><p className="text-sm text-muted-foreground mb-2">What still needs to be created or set up before these parts of the offer are in place.</p><ul className="space-y-2">{r.futureActions.map((a) => <li key={a} className="flex gap-2 text-foreground"><span className="mt-1 h-3.5 w-3.5 shrink-0 rounded border border-primary" />{humanize(a)}</li>)}</ul></Section>}
                 {r.assumptions.length > 0 && <Section title="Assumptions to validate"><ul className="list-disc pl-5 space-y-1 text-muted-foreground">{r.assumptions.map((a) => <li key={a}>{humanize(a)}</li>)}</ul></Section>}
+                {(r.additionalRecommendations?.length ?? 0) > 0 && <Section title="Additional recommendations"><p className="text-sm text-muted-foreground mb-2">Optional ideas you didn't select — they are not part of your proposed offer.</p><ul className="list-disc pl-5 space-y-1 text-muted-foreground">{r.additionalRecommendations!.map((a) => <li key={a}>{humanize(a)}</li>)}</ul></Section>}
                 {kept.length > 0 && <Section title="Kept as it is"><ul className="list-disc pl-5 space-y-1 text-muted-foreground">{kept.map((d) => <li key={d.area}>{d.area}</li>)}</ul></Section>}
               </>
             )}
@@ -568,7 +580,10 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
                     <p className="text-muted-foreground mt-1">{humanize(r.pricing.reasoning)}</p>
                     <p className="text-xs text-muted-foreground mt-2">A recommendation based on your answers — not a validated market price.</p>
                   </Section>
-                ) : <p className="text-muted-foreground">There isn't enough information yet for a responsible price suggestion.</p>}
+                ) : <p className="text-muted-foreground">There isn't enough information yet to recommend a specific new price — here's what to consider instead.</p>}
+                {r.pricingGuidance && ([["What influences whether this price makes sense", r.pricingGuidance.factors], ["How to strengthen the perceived value", r.pricingGuidance.strengthenValue], ["What to validate before changing your price", r.pricingGuidance.validateFirst]] as const).map(([t, list]) => list.length > 0 && (
+                  <Section key={t} title={t}><ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">{list.map((a) => <li key={a}>{humanize(a)}</li>)}</ul></Section>
+                ))}
               </>
             )}
             {tab === "validate" && (
