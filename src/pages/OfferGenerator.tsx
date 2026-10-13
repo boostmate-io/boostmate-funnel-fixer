@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ValueProfileChart from "@/components/offer-intelligence/ValueProfileChart";
 import { DIMENSION_LABELS, compareProfiles, type ValueDimension } from "@shared/offerIntelligence/valueEquation";
 import type { PublicOfferResult } from "@shared/offerIntelligence/publicResult";
+import { toText, humanize, isRedundant } from "@shared/offerIntelligence/plainLanguage";
 import { describeDecisions, type PublicDiagnosis, type PublicImprovement, type PublicChoice } from "@shared/offerIntelligence/publicFlow";
 import {
   diagnoseOffer, strengthenOffer, finalizeOffer, requestOfferBlueprint, generatorErrorMessage,
@@ -427,7 +428,17 @@ export default function OfferGenerator() {
   );
 }
 
-const DIR_STYLE = { up: "text-primary", down: "text-destructive", same: "text-muted-foreground" } as const;
+type CompState = "up" | "down" | "same" | "new" | "none" | "lost";
+/** Score state for one dimension; unassessed scores never produce a numeric delta. */
+export function comparisonState(before: number | null, after: number | null): CompState {
+  if (before == null) return after == null ? "none" : "new";
+  if (after == null) return "lost";
+  return after > before ? "up" : after < before ? "down" : "same";
+}
+const WHY_HEADING: Record<CompState, string> = { up: "Why the score increased", down: "Why the score decreased", same: "Why the score stayed the same", new: "Why it can now be assessed", none: "What information is still missing", lost: "Why it can no longer be assessed" };
+const STATE_LABEL: Record<CompState, (d: number | null) => string> = {
+  up: (d) => `+${d}`, down: (d) => `${d}`, same: () => "No change", new: () => "Newly assessed", none: () => "Not assessed yet", lost: () => "Not assessed",
+};
 
 function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack: () => void; onStartOver: () => void; onAuditSent: (v: "pdf" | "audit") => void }) {
   const r = s.result!;
@@ -438,6 +449,7 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
   const decisions = describeDecisions(s.items ?? [], Object.values(s.choices));
   const applied = decisions.filter((d) => d.status === "applied");
   const kept = decisions.filter((d) => d.status === "kept");
+  const own = decisions.filter((d) => d.status === "own");
   const price = s.form.stage !== "idea" && s.form.currentPrice ? `${s.form.currentPrice} ${s.form.currency ?? ""}`.trim() : null;
   const [tab, setTab] = useState("overview");
   const tabs = [
@@ -453,26 +465,38 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
       <Card><ValueProfileChart before={r.beforeProfile} after={r.profile} variant="large" /></Card>
 
       {/* C — What changed and why, one card per dimension */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-display font-bold text-foreground">What changed and why</h2>
-        <div className="grid md:grid-cols-2 gap-4">
+      <div className="space-y-5">
+        <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground">What changed and why</h2>
+        <div className="grid md:grid-cols-2 gap-5">
           {changes.map((c) => {
             const dc = r.dimensionChanges.find((x) => x.dimension === c.dimension);
-            const dir = c.delta == null ? "same" : c.delta > 0 ? "up" : c.delta < 0 ? "down" : "same";
+            const st = comparisonState(c.before, c.after);
+            const why = st === "new" ? `Your original answers didn't include enough detail to judge this. The improved offer spells it out, so it can now be assessed for the first time${c.after != null ? ` at ${c.after}/10` : ""}. This is a starting point, not an increase from zero.`
+              : st === "none" ? (dc?.stillUncertain ? humanize(dc.stillUncertain) : "There still isn't enough information to assess this. Adding more detail about this part of your offer would make it assessable.")
+              : humanize(dc?.why);
+            const blocks = [
+              { h: "What changed", t: humanize(dc?.whatChanged) },
+              { h: WHY_HEADING[st], t: why },
+              { h: "What still needs work", t: st === "none" ? "" : humanize(dc?.stillUncertain) },
+            ].filter((x) => x.t);
             return (
-              <div key={c.dimension} className="rounded-xl border border-border bg-card p-5 space-y-3">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-display font-semibold text-foreground text-lg">{DIMENSION_LABELS[c.dimension]}</h3>
-                  <p className="text-sm whitespace-nowrap">
-                    <span className="text-muted-foreground">{c.before ?? "–"} → </span><span className="font-semibold text-foreground">{c.after ?? "–"}</span>
-                    <span className={cn("ml-2 font-medium", DIR_STYLE[dir])}>{c.delta == null ? "" : c.delta > 0 ? `+${c.delta}` : c.delta < 0 ? `${c.delta}` : "No change"}</span>
-                  </p>
+              <div key={c.dimension} className="rounded-xl border border-border bg-card p-6 space-y-4">
+                <div className="space-y-2">
+                  <h3 className="font-display font-bold text-foreground text-xl">{DIMENSION_LABELS[c.dimension]}</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-muted px-2.5 py-1 text-sm font-medium text-muted-foreground">{c.before == null ? "Not assessed" : `${c.before}/10`}</span>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                    <span className="rounded-md bg-primary/10 px-2.5 py-1 text-sm font-semibold text-primary">{c.after == null ? "Not assessed" : `${c.after}/10`}</span>
+                    <span className={cn("text-sm font-medium", st === "up" ? "text-primary" : st === "down" ? "text-destructive" : "text-muted-foreground")}>{STATE_LABEL[st](c.delta)}</span>
+                  </div>
                 </div>
-                {dc?.whatChanged && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What changed</p><p className="text-sm text-foreground">{dc.whatChanged}</p></div>}
-                {dc?.why && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Why the score {dir === "up" ? "went up" : dir === "down" ? "went down" : "stayed the same"}</p><p className="text-sm text-foreground">{dc.why}</p></div>}
-                {dc?.stillUncertain && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Still uncertain</p><p className="text-sm text-muted-foreground">{dc.stillUncertain}</p></div>}
-                {dc?.adjusted && <p className="text-xs text-muted-foreground border-t border-border pt-2">We credited planned changes conservatively — they count fully once they're in place and proven.</p>}
-                {c.before == null || c.after == null ? <p className="text-xs text-muted-foreground">Not enough information to compare both scores.</p> : null}
+                {blocks.map((x) => (
+                  <div key={x.h} className="space-y-1">
+                    <h4 className="text-sm font-display font-semibold text-foreground">{x.h}</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{x.t}</p>
+                  </div>
+                ))}
+                {dc?.adjusted && st !== "new" && <p className="text-xs text-muted-foreground border-t border-border pt-3">Planned changes are credited carefully — they count fully once they're in place and proven.</p>}
               </div>
             );
           })}
@@ -484,41 +508,34 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
       <div className="space-y-4">
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Your improved offer</p>
-          <h2 className="text-3xl font-display font-bold text-foreground">{r.offerName}</h2>
-          <p className="text-lg text-foreground">{r.promise}</p>
+          <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground">{r.offerName}</h2>
+          <p className="text-base md:text-lg text-foreground">{r.promise}</p>
         </div>
-        <div className="rounded-xl border border-border bg-card">
-          <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-border px-2">
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div role="tablist" aria-label="Offer details" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 bg-muted/50 p-1.5 border-b border-border">
             {tabs.map((t) => (
               <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
-                className={cn("whitespace-nowrap px-3 py-3 text-sm border-b-2 -mb-px", tab === t.id ? "border-primary text-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground")}>{t.label}</button>
+                className={cn("rounded-lg px-3 py-2.5 text-sm text-center leading-tight transition-colors", tab === t.id ? "bg-card text-primary font-semibold shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground hover:bg-card/60")}>{t.label}</button>
             ))}
           </div>
-          <div className="p-5 md:p-6 space-y-5 text-sm">
+          <div className="p-5 md:p-8 space-y-6 text-sm">
             {tab === "overview" && (
               <>
                 <Section title="Who it's for">{r.audience || s.form.audience}</Section>
-                {transformation && <Section title="The transformation">{transformation}</Section>}
-                <Section title="What you told us">
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>Offer: {s.form.currentOffer}</li>
-                    <li>Result: {s.form.outcome}</li>
-                    <li>Biggest challenge: {s.form.obstacle}</li>
-                  </ul>
-                </Section>
+                {transformation && !isRedundant(toText(transformation), r.promise) && <Section title="The transformation">{toText(transformation)}</Section>}
+                {r.deliveryApproach && <Section title="How it's delivered">{r.deliveryApproach}</Section>}
               </>
             )}
             {tab === "how" && (
               <>
-                <Section title={framework?.name || "The core method"}>{framework?.description || r.methodSummary}</Section>
-                {r.deliveryApproach && <Section title="Delivery & support">{r.deliveryApproach}</Section>}
+                <Section title={toText(framework?.name) || "The core method"}>{toText(framework?.description) || r.methodSummary}</Section>
                 {deliverables.length > 0 && (
                   <Section title="Main program components">
                     <div className="grid sm:grid-cols-2 gap-3">
                       {deliverables.map((d, i) => (
-                        <div key={i} className="rounded-lg bg-muted/40 p-3 space-y-1">
-                          <p className="flex gap-2 font-medium text-foreground"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />{d.name}</p>
-                          {d.description && <p className="text-muted-foreground pl-6">{d.description}</p>}
+                        <div key={i} className="rounded-lg border border-border bg-muted/30 p-4 space-y-1">
+                          <p className="flex gap-2 font-medium text-foreground"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />{toText(d.name)}</p>
+                          {d.description && <p className="text-muted-foreground pl-6">{toText(d.description)}</p>}
                         </div>
                       ))}
                     </div>
@@ -528,13 +545,17 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
             )}
             {tab === "stronger" && (
               <>
-                <Section title="Improvements built into your offer">
-                  {applied.length ? <ul className="space-y-3">{applied.map((d) => {
-                    const how = r.appliedImprovements.find((a) => a.area.toLowerCase() === d.area.toLowerCase())?.howItHelps;
-                    return <li key={d.area}><p className="font-medium text-foreground">{d.title}{d.adjusted ? " (your adjusted version)" : ""}</p><p className="text-muted-foreground">{how || d.detail}</p></li>;
-                  })}</ul> : <p className="text-muted-foreground">You didn't apply any immediate changes.</p>}
+                <Section title="Applied to your improved offer">
+                  {applied.length || own.length ? <div className="space-y-3">
+                    {applied.map((d) => {
+                      const how = r.appliedImprovements.find((a) => a.area.toLowerCase() === d.area.toLowerCase())?.howItHelps;
+                      return <div key={d.area} className="rounded-lg border-l-4 border-primary bg-primary/5 p-4 space-y-1"><p className="font-medium text-foreground">{d.title}{d.adjusted ? " (your adjusted version)" : ""}</p><p className="text-muted-foreground">{humanize(how || d.detail)}</p></div>;
+                    })}
+                    {own.map((d) => <div key={d.area} className="rounded-lg border-l-4 border-primary bg-primary/5 p-4 space-y-1"><p className="font-medium text-foreground">Your own improvement · {d.area}</p><p className="text-muted-foreground">{d.detail}</p><p className="text-xs text-muted-foreground">Included in the proposal. Build or confirm anything it depends on before you claim it.</p></div>)}
+                  </div> : <p className="text-muted-foreground">You didn't apply any immediate changes.</p>}
                 </Section>
-                {r.futureActions.length > 0 && <Section title="Planned — not in place yet"><ul className="list-disc pl-5 space-y-1 text-muted-foreground">{r.futureActions.map((a) => <li key={a}>{a}</li>)}</ul></Section>}
+                {r.futureActions.length > 0 && <Section title="Your action plan — not in place yet"><ul className="space-y-2">{r.futureActions.map((a) => <li key={a} className="flex gap-2 text-foreground"><span className="mt-1 h-3.5 w-3.5 shrink-0 rounded border border-primary" />{humanize(a)}</li>)}</ul></Section>}
+                {r.assumptions.length > 0 && <Section title="Assumptions to validate"><ul className="list-disc pl-5 space-y-1 text-muted-foreground">{r.assumptions.map((a) => <li key={a}>{humanize(a)}</li>)}</ul></Section>}
                 {kept.length > 0 && <Section title="Kept as it is"><ul className="list-disc pl-5 space-y-1 text-muted-foreground">{kept.map((d) => <li key={d.area}>{d.area}</li>)}</ul></Section>}
               </>
             )}
@@ -544,7 +565,7 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
                 {r.pricing ? (
                   <Section title="Suggested price range (estimate)">
                     <p className="text-foreground"><span className="text-xl font-display font-bold">{r.pricing.low.toLocaleString()} – {r.pricing.high.toLocaleString()}</span>{price ? ` ${s.form.currency}` : ""}</p>
-                    <p className="text-muted-foreground mt-1">{r.pricing.reasoning}</p>
+                    <p className="text-muted-foreground mt-1">{humanize(r.pricing.reasoning)}</p>
                     <p className="text-xs text-muted-foreground mt-2">A recommendation based on your answers — not a validated market price.</p>
                   </Section>
                 ) : <p className="text-muted-foreground">There isn't enough information yet for a responsible price suggestion.</p>}
@@ -552,12 +573,23 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
             )}
             {tab === "validate" && (
               <>
-                <Section title="What still needs validation"><ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">{(r.validationNeeds.length ? r.validationNeeds : r.assumptions).map((a) => <li key={a}>{a}</li>)}</ul></Section>
-                <Section title="Your next steps"><ol className="list-decimal pl-5 space-y-1.5 text-foreground">{(r.nextSteps.length ? r.nextSteps : r.improvements).slice(0, 3).map((a) => <li key={a}>{a}</li>)}</ol></Section>
+                <Section title="What still needs validation"><ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">{(r.validationNeeds.length ? r.validationNeeds : r.assumptions).map((a) => <li key={a}>{humanize(a)}</li>)}</ul></Section>
+                <Section title="Your next steps"><ol className="list-decimal pl-5 space-y-1.5 text-foreground">{(r.nextSteps.length ? r.nextSteps : r.improvements).slice(0, 3).map((a) => <li key={a}>{humanize(a)}</li>)}</ol></Section>
               </>
             )}
           </div>
         </div>
+        <details className="group rounded-xl border border-border bg-card">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 font-display font-semibold text-foreground">
+            What you told us <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-90" />
+          </summary>
+          <dl className="grid gap-3 px-5 pb-5 text-sm sm:grid-cols-2">
+            {([["Status", s.form.stage === "idea" ? "New offer idea" : "Existing offer"], ["Who you help", s.form.audience], ["Result", s.form.outcome], [s.form.stage === "idea" ? "What it would include" : "What it includes", s.form.currentOffer], ["How you help", s.form.delivery], ["Why clients can be confident", s.form.credibility], ["Biggest challenge", s.form.obstacle], ["Price", price]] as [string, string | null | undefined][])
+              .filter(([, v]) => v && String(v).trim()).map(([k, v]) => (
+                <div key={k}><dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{k}</dt><dd className="text-foreground whitespace-pre-line">{v}</dd></div>
+              ))}
+          </dl>
+        </details>
         <div className="flex flex-wrap gap-2">
           <Button variant="ghost" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" /> Change my choices</Button>
           <Button variant="ghost" onClick={onStartOver}>Start a new offer</Button>
