@@ -32,6 +32,8 @@ export function humanize(s: unknown): string {
     .replace(/\bselectedImprovements\b/g, "your chosen improvements")
     .replace(/,?\s*moving (?:the )?(?:overall )?(?:dimension )?score (?:upwards|up|higher)(?: from (?:weak|partial|unknown))?/gi, "")
     .replace(/\b(?:the\s+)?overall\s+dimension\s+score\b/gi, "the overall assessment")
+    .replace(/\s*(?:to move )?(?:beyond|above|from|to|at|maintains?|keeps?) (?:an? |the )?['"‘’]?(?:strong|partial|weak|unknown)['"‘’]? (?:assessment|rating|verdict|level)( for [a-z ]+)?/gi, "")
+    .replace(/['"‘’](strong|partial|weak|unknown)['"‘’]/gi, "$1")
     .replace(/\b(?:this|the)\s+dimension\b/gi, "this part of your offer")
     .replace(/\s{2,}/g, " ").replace(/\s+([.,;])/g, "$1").trim();
 }

@@ -109,3 +109,8 @@ describe("new offer idea corrections", () => {
     expect(humanize("The method helps, moving the overall dimension score upwards from weak.")).toBe("The method helps.");
   });
 });
+describe("verdict words in explanations", () => {
+  it("are removed", () => {
+    expect(humanize("The outcome has not been enhanced enough to move beyond a 'partial' assessment.")).toBe("The outcome has not been enhanced enough.");
+  });
+});
