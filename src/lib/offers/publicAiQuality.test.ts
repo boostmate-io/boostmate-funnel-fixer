@@ -68,3 +68,44 @@ describe("implementation checklist dedupe", () => {
     expect(coversAction("Create the fit assessment questionnaire.", "Collect formal client testimonials")).toBe(false);
   });
 });
+
+import { PUBLIC_SCORING_NOTE, reconcileFinal } from "@shared/offerIntelligence/publicFlow";
+import { pricingHeadings, promotionWarning } from "@shared/offerIntelligence/plainLanguage";
+import { VALUE_CRITERIA, scoreValueProfile } from "@shared/offerIntelligence/valueEquation";
+
+// Fictional new-offer idea: career transition coach, 10 years HR, nothing launched, no price.
+describe("new offer idea corrections", () => {
+  it("idea strengths are promising, never proven; methods never called proven", () => {
+    expect(PUBLIC_DIAGNOSE_INSTRUCTION).toMatch(/promising elements of an unlaunched concept/);
+    expect(PUBLIC_DIAGNOSE_INSTRUCTION).toMatch(/Never call a method proven, validated, tested or successful unless/);
+    expect(str).toMatch(/Develop a clear coaching method/);
+  });
+  it("guarantee and speed-to-value calibration", () => {
+    expect(PUBLIC_SCORING_NOTE).toMatch(/A missing guarantee alone is never weak/);
+    expect(PUBLIC_SCORING_NOTE).toMatch(/Never invent first wins or milestone timing/);
+  });
+  it("pilots validate first; open business choices stay open; pre-enrollment steps stay separate", () => {
+    expect(str).toMatch(/a pilot is primarily for validation/);
+    expect(gen).toMatch(/never decide it in the offer/);
+    expect(gen).toMatch(/separate step before the main program/);
+    expect(gen).toMatch(/never "now provides"/);
+  });
+  it("planned changes never jump a criterion to strong", () => {
+    const before = VALUE_CRITERIA.map((c) => ({ criterionId: c.id, verdict: "weak" as const, reasoning: "" }));
+    const after = VALUE_CRITERIA.map((c) => ({ criterionId: c.id, verdict: "strong" as const, reasoning: "" }));
+    const d: any = { assessments: before, profile: scoreValueProfile(before) };
+    const r: any = { assessments: after, dimensionChanges: [], futureActions: [] };
+    const out = reconcileFinal(r, d, [], []);
+    expect(out.assessments.every((a) => a.verdict !== "strong")).toBe(true);
+  });
+  it("pricing headings depend on whether a price exists; warning is proposal-specific", () => {
+    expect(pricingHeadings(false)[0]).toBe("What should influence your pricing");
+    expect(pricingHeadings(false)[2]).toBe("What to validate before setting your price");
+    expect(pricingHeadings(true)[0]).toMatch(/this price/);
+    const w = promotionWarning(["Create the clarity assessment questionnaire", "Develop the coaching method"]);
+    expect(w).toMatch(/assessment/); expect(w).not.toMatch(/guarantee|testimonial/);
+  });
+  it("internal scoring language is removed", () => {
+    expect(humanize("The method helps, moving the overall dimension score upwards from weak.")).toBe("The method helps.");
+  });
+});

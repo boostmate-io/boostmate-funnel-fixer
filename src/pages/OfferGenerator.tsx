@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ValueProfileChart from "@/components/offer-intelligence/ValueProfileChart";
 import { DIMENSION_LABELS, compareProfiles, type ValueDimension } from "@shared/offerIntelligence/valueEquation";
 import type { PublicOfferResult } from "@shared/offerIntelligence/publicResult";
-import { toText, humanize, isRedundant } from "@shared/offerIntelligence/plainLanguage";
+import { toText, humanize, isRedundant, pricingHeadings } from "@shared/offerIntelligence/plainLanguage";
 import { describeDecisions, type PublicDiagnosis, type PublicImprovement, type PublicChoice } from "@shared/offerIntelligence/publicFlow";
 import {
   diagnoseOffer, strengthenOffer, finalizeOffer, requestOfferBlueprint, generatorErrorMessage,
@@ -522,6 +522,7 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
               <>
                 <Section title="Who it's for">{r.audience || s.form.audience}</Section>
                 {transformation && !isRedundant(toText(transformation), r.promise) && <Section title="The transformation">{toText(transformation)}</Section>}
+                {r.positioning && !isRedundant(r.positioning, r.promise) && <Section title="Positioning">{humanize(r.positioning)}</Section>}
                 {r.deliveryApproach && <Section title="How it's delivered">{r.deliveryApproach}</Section>}
               </>
             )}
@@ -541,7 +542,7 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
                   </Section>
                 )}
                 {deliverables.length > 0 && (
-                  <Section title="Main program components">
+                  <Section title="What's included">
                     <div className="grid sm:grid-cols-2 gap-3">
                       {deliverables.map((d, i) => (
                         <div key={i} className="rounded-lg border border-border bg-muted/30 p-4 space-y-1">
