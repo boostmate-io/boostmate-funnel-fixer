@@ -442,7 +442,8 @@ const STATE_LABEL: Record<CompState, (d: number | null) => string> = {
 function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack: () => void; onStartOver: () => void; onAuditSent: (v: "pdf" | "audit") => void }) {
   const r = s.result!;
   const changes = compareProfiles(r.beforeProfile, r.profile);
-  const deliverables: any[] = (r.design?.stack?.deliverables ?? []).filter((d: any) => d?.name);
+  const pre = (r.preProgramSteps ?? []).filter((m) => m?.name);
+  const deliverables: any[] = splitPreProgram((r.design?.stack?.deliverables ?? []).filter((d: any) => d?.name), pre);
   const framework = r.design?.angle?.framework;
   const transformation = r.design?.angle?.core_outcome;
   const decisions = describeDecisions(s.items ?? [], Object.values(s.choices));
@@ -472,7 +473,7 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
             const st = comparisonState(c.before, c.after);
             const why = st === "new" ? `Your original answers didn't include enough detail to judge this. The improved offer spells it out, so it can now be assessed for the first time${c.after != null ? ` at ${c.after}/10` : ""}. This is a starting point, not an increase from zero.`
               : st === "none" ? (dc?.stillUncertain ? humanize(dc.stillUncertain) : "There still isn't enough information to assess this. Adding more detail about this part of your offer would make it assessable.")
-              : humanize(dc?.why);
+              : st === "lost" ? humanize(dc?.why) : alignScoreWhy(st, humanize(dc?.why), DIMENSION_LABELS[c.dimension].toLowerCase(), `${c.after}/10`);
             const blocks = [
               { h: "What changed", t: humanize(dc?.whatChanged) },
               { h: WHY_HEADING[st], t: why },
@@ -541,8 +542,20 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
                     </ol>
                   </Section>
                 )}
+                {pre.length > 0 && (
+                  <Section title="Before the program">
+                    <div className="space-y-3">
+                      {pre.map((m, i) => (
+                        <div key={i} className="rounded-lg border border-border bg-muted/30 p-4 space-y-1">
+                          <p className="font-medium text-foreground">{m.name}</p>
+                          {m.description && <p className="text-muted-foreground">{m.description}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </Section>
+                )}
                 {deliverables.length > 0 && (
-                  <Section title="What's included">
+                  <Section title={pre.length ? "What's included in the program" : "What's included"}>
                     <div className="grid sm:grid-cols-2 gap-3">
                       {deliverables.map((d, i) => (
                         <div key={i} className="rounded-lg border border-border bg-muted/30 p-4 space-y-1">
