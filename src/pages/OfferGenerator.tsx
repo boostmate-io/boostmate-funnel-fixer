@@ -226,11 +226,11 @@ export default function OfferGenerator() {
                   <p className="text-base md:text-lg text-muted-foreground">Discover what's holding your offer back, get personalized AI recommendations, and build a stronger offer — with a visual before-and-after comparison.</p>
                 </div>
                 <h2 className="text-xl md:text-2xl font-display font-bold text-foreground -mb-4">The 4 ingredients of an irresistible offer</h2>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 text-left">
                   {DIMENSIONS.map(({ id, icon: Icon, q }) => (
-                    <div key={id} className="rounded-xl border border-border bg-card p-5 space-y-3">
+                    <div key={id} className="rounded-xl border border-border bg-card p-4 md:p-5 space-y-2 md:space-y-3">
                       <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Icon className="h-5 w-5 text-primary" /></span>
-                      <p className="font-display font-semibold text-foreground text-lg">{DIMENSION_LABELS[id]}</p>
+                      <p className="font-display font-semibold text-foreground text-base md:text-lg leading-tight">{DIMENSION_LABELS[id]}</p>
                       <p className="text-sm text-muted-foreground">{q}</p>
                     </div>
                   ))}
