@@ -3,6 +3,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "npm:pdf-lib@1.17.1";
 import { VALUE_DIMENSIONS, DIMENSION_LABELS } from "./valueEquation.ts";
 import { auditSnapshot } from "./publicFlow.ts";
+import { BOOSTMATE_LOGO_LIGHT_PNG_BASE64 } from "./boostmateLogo.ts";
 
 const W = 595.28, H = 841.89, M = 56;
 const PRIMARY = rgb(0x62 / 255, 0x46 / 255, 1), PRIMARY_DARK = rgb(0.27, 0.18, 0.78), WHITE = rgb(1, 1, 1);
@@ -38,12 +39,14 @@ export function toText(v: unknown): string {
 export function humanize(s: unknown): string {
   return toText(s)
     .replace(/\(\s*['"]?[a-z ]+['"]?\s*(?:,\s*['"]?[a-z ]+['"]?\s*)*\)\s*from\s+(?:partial|weak)(?:\s*\/\s*(?:partial|weak))?\s+to\s+(?:strong|partial)/gi, "")
-    .replace(/,?\s*moving (?:them|it|these|this)?\s*from\s+(?:partial|weak)(?:\s*\/\s*(?:partial|weak))?\s+to\s+strong/gi, ", turning these into clear strengths")
-    .replace(/\bfrom\s+(?:partial|weak)(?:\s*\/\s*(?:partial|weak))?\s+to\s+strong\b/gi, "from a gap into a clear strength")
+    .replace(/,?\s*(?:moving|taking|raising|shifting)\s+[^.;]*?\bfrom\s+(?:partial|weak|a gap)[^.;]*?\bto\s+(?:strong|partial|a clear strength)/gi, "")
+    .replace(/\s*\bfrom\s+(?:partial|weak)(?:\s*\/\s*(?:partial|weak))?\s+to\s+(?:strong|partial)\b/gi, "")
     .replace(/\bfrom\s+weak\s+to\s+partial\b/gi, "from missing to partly in place")
     .replace(/\b(?:partial|weak)\s*\/\s*(?:partial|weak)\b/gi, "underdeveloped")
     .replace(/\b(criteri(?:on|a))\b/gi, (m) => (m.toLowerCase() === "criteria" ? "areas" : "area"))
     .replace(/\bverdicts?\b/gi, "assessment")
+    .replace(/\b(?:this|the)\s+dimension\b/gi, "this part of your offer")
+    .replace(/\b(?:low customer effort|obstacles removed|named method|real proof|fits the buyer|risk reversal|fast first win|clear milestones|clear timeline|support level|tools and resources|specific result|realistic scope)\b(?=['"])/gi, (m) => m)
     .replace(/\s{2,}/g, " ").replace(/\s+([.,;])/g, "$1").trim();
 }
 
@@ -113,6 +116,10 @@ class Writer {
     });
     this.y -= 6;
   }
+  /** Height a bullet list would take (for keeping blocks together). */
+  measureBullets(items: unknown[]) {
+    return items.map((i) => pdfSafe(toText(i))).filter(Boolean).reduce((h, it) => h + this.wrap(it, this.reg, 10.5, W - 2 * M - 20).length * 15.2 + 5, 6);
+  }
   /** Tinted card with a title and wrapped body; kept together on one page. */
   card(title: string, body: string, bg = SOFT, accent = PRIMARY) {
     const tw = W - 2 * M - 28;
@@ -142,7 +149,11 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   w.page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: PRIMARY });
   w.page.drawCircle({ x: W - 40, y: H - 60, size: 190, color: PRIMARY_DARK, opacity: 0.35 });
   w.page.drawCircle({ x: 30, y: 120, size: 120, color: rgb(1, 1, 1), opacity: 0.06 });
-  w.page.drawText("Boostmate", { x: M, y: H - 72, size: 18, font: w.bold, color: WHITE });
+  try {
+    const bin = atob(BOOSTMATE_LOGO_LIGHT_PNG_BASE64); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const logo = await w.doc.embedPng(bytes); const lw = 150, lh = lw * logo.height / logo.width;
+    w.page.drawImage(logo, { x: M, y: H - 60 - lh, width: lw, height: lh });
+  } catch { w.page.drawText("Boostmate", { x: M, y: H - 72, size: 18, font: w.bold, color: WHITE }); }
   w.y = H - 230;
   w.text("IRRESISTIBLE OFFER BLUEPRINT", { size: 10, bold: true, color: rgb(0.85, 0.82, 1), gap: 10 });
   w.text("Your Irresistible Offer Blueprint", { size: 32, bold: true, color: WHITE, gap: 26, width: W - 2 * M - 40 });
@@ -229,7 +240,9 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
     const n = Math.max(decided.length, helps.length);
     for (let i = 0; i < n; i++) {
       const dec = decided[i]; const h = helps[i];
-      w.card(pdfSafe(dec ? `${dec.choice}${dec.custom ? ` - ${dec.custom}` : ""}` : h?.area ?? ""), humanize(h?.howItHelps ?? ""));
+      const title = dec ? (dec.own ? "Your own improvement" : `${dec.choice}${dec.custom ? ` - ${dec.custom}` : ""}`) : h?.area ?? "";
+      const body = [dec?.own ? dec.custom : "", humanize(h?.howItHelps ?? ""), dec?.kind === "future_action" ? "Needs to be implemented before you can claim it." : ""].filter(Boolean).join(" ");
+      w.card(pdfSafe(title), body);
     }
   }
   w.h2("Pricing");
@@ -241,7 +254,9 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   // ---- 5. Action plan
   w.y -= 10; w.section(5, "Your implementation action plan", "What's already part of your improved offer, what you still need to do, and what to test before you rely on it.");
   const reflected = decided.length
-    ? decided.map((d: any) => `${d.choice}${d.custom ? ` (${d.custom})` : ""} - now part of how the offer is described.`)
+    ? decided.filter((d: any) => d.kind !== "future_action").map((d: any) => d.own
+      ? `Your own improvement: ${d.custom} - included in the proposal; build or confirm anything it depends on before you claim it.`
+      : `${d.choice}${d.custom ? ` (${d.custom})` : ""} - now part of how the offer is described.`)
     : helps.map((h: any) => humanize(h.howItHelps).split(/(?<=\.)\s/)[0]).filter(Boolean);
   if (reflected.length) { w.h2("Reflected in your proposed offer", 90); w.bullets(reflected, { color: GREEN }); }
   const todo = [...(r.futureActions ?? []), ...(r.validationNeeds ?? [])].map(humanize).filter((v, i, a) => v && a.findIndex((x) => isRedundant(x, v)) === i);
@@ -250,8 +265,12 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
     w.bullets(todo, { check: true });
     w.card("Before you promote this offer", "Any resources, playbooks, testimonials, case studies or guarantees described above are part of the proposed offer. Create, collect or confirm them before you present them to clients as available or proven.", AMBER_BG, AMBER);
   }
-  if (r.assumptions?.length) { w.h2("Assumptions to validate", 90); w.bullets(r.assumptions.map(humanize), { color: AMBER }); }
+  const assumptions = (r.assumptions ?? []).map(humanize).filter(Boolean);
   const next = (r.nextSteps?.length ? r.nextSteps : r.improvements ?? []).slice(0, 3).map(humanize);
+  // Balanced ending: never leave the first steps alone on a final page.
+  const hA = assumptions.length ? 30 + w.measureBullets(assumptions) : 0, hN = next.length ? 30 + w.measureBullets(next) + 40 : 0;
+  if (hA && hN && w.y - hA >= M && w.y - hA - hN < M) w.newPage();
+  if (assumptions.length) { w.h2("Assumptions to validate", 90); w.bullets(assumptions, { color: AMBER }); }
   if (next.length) { w.h2("Your first three steps", 90); w.bullets(next, { numbered: true }); }
   w.ensure(50); w.y -= 10;
   w.page.drawLine({ start: { x: M, y: w.y }, end: { x: W - M, y: w.y }, thickness: 1, color: LINE }); w.y -= 14;
