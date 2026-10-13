@@ -2345,6 +2345,44 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_blueprint_deliveries: {
+        Row: {
+          audit_requested: boolean
+          created_at: string
+          email_hash: string
+          generation_id: string
+          id: string
+          ip_hash: string | null
+          status: string
+        }
+        Insert: {
+          audit_requested?: boolean
+          created_at?: string
+          email_hash: string
+          generation_id: string
+          id?: string
+          ip_hash?: string | null
+          status?: string
+        }
+        Update: {
+          audit_requested?: boolean
+          created_at?: string
+          email_hash?: string
+          generation_id?: string
+          id?: string
+          ip_hash?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_blueprint_deliveries_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: false
+            referencedRelation: "public_offer_generations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offer_builder_messages: {
         Row: {
           content: string

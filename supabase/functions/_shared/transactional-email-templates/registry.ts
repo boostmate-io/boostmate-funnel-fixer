@@ -1,5 +1,7 @@
 import type * as React from 'npm:react@18.3.1'
 import { template as videoAuditRequest } from './video-audit-request.tsx'
+import { template as offerBlueprint } from './offer-blueprint.tsx'
+import { template as offerBlueprintLead } from './offer-blueprint-lead.tsx'
 
 export interface TemplateEntry {
   component: React.ComponentType<any>
@@ -12,4 +14,6 @@ export interface TemplateEntry {
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'video-audit-request': videoAuditRequest,
+  'offer-blueprint': offerBlueprint,
+  'offer-blueprint-lead': offerBlueprintLead,
 }

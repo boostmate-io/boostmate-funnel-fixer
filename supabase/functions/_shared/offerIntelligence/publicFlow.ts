@@ -226,3 +226,28 @@ export function auditSnapshot(gen: { input?: any; diagnosis?: any; strengthen?: 
     offer: r ? { name: r.offerName, promise: r.promise, audience: r.audience, method: r.methodSummary, deliverables: r.deliverables, pricing: r.pricing, futureActions: r.futureActions ?? [] } : null,
   };
 }
+
+// ---- Offer Blueprint PDF request (one form: PDF, optional video audit) ------
+export const BLUEPRINT_CONSENT_TEXT_VERSION = "blueprint-v1";
+export interface BlueprintRequestInput {
+  email: string; marketingConsent: boolean;
+  audit: { instagram: string; acquisition: string; website: string | null } | null;
+}
+
+export function validateBlueprintRequest(raw: any): { ok: true; value: BlueprintRequestInput } | { ok: false; errors: Record<string, string> } {
+  const errors: Record<string, string> = {};
+  const email = String(raw?.email ?? "").trim().toLowerCase();
+  if (!EMAIL_RE.test(email) || email.length > 254) errors.email = "invalid_email";
+  let audit: BlueprintRequestInput["audit"] = null;
+  if (raw?.auditRequested === true) {
+    const instagram = normalizeInstagram(raw?.instagram);
+    if (!instagram) errors.instagram = "invalid_instagram";
+    const acquisition = String(raw?.acquisition ?? "").trim();
+    if (acquisition.length < 3 || acquisition.length > 1500) errors.acquisition = "invalid_acquisition";
+    const website = normalizeWebsite(raw?.website);
+    if (website === false) errors.website = "invalid_website";
+    audit = { instagram: instagram ?? "", acquisition, website: website || null };
+  }
+  if (Object.keys(errors).length) return { ok: false, errors };
+  return { ok: true, value: { email, marketingConsent: raw?.marketingConsent === true, audit } };
+}

@@ -1,7 +1,7 @@
 // Public Mini Irresistible Offer Builder (lead magnet). Free, no account or
 // email needed: Discover → Diagnose → Strengthen → Your Improved Offer.
 // Primary conversion: Free Client Acquisition Video Audit request.
-// Secondary: "Save my offer in Boostmate" claims the result after signup.
+// Lead capture: one Offer Blueprint PDF form (optional Video Audit), emailed to visitor + admin.
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -19,9 +19,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ValueProfileChart from "@/components/offer-intelligence/ValueProfileChart";
 import { DIMENSION_LABELS, compareProfiles, type ValueDimension } from "@shared/offerIntelligence/valueEquation";
 import type { PublicOfferResult } from "@shared/offerIntelligence/publicResult";
-import { describeDecisions, type PublicDiagnosis, type PublicImprovement, type PublicChoice, type AuditChannel } from "@shared/offerIntelligence/publicFlow";
+import { describeDecisions, type PublicDiagnosis, type PublicImprovement, type PublicChoice } from "@shared/offerIntelligence/publicFlow";
 import {
-  diagnoseOffer, strengthenOffer, finalizeOffer, requestVideoAudit, generatorErrorMessage,
+  diagnoseOffer, strengthenOffer, finalizeOffer, requestOfferBlueprint, generatorErrorMessage,
   PENDING_OFFER_CLAIM_KEY, PUBLIC_BUILDER_STATE_KEY, type GeneratorIntake,
 } from "@/lib/offers/publicOfferGenerator";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,7 @@ const STAGES: { id: Stage; label: string }[] = [
 
 interface Saved {
   stage: Stage; form: GeneratorIntake; token: string | null; diagnosis: PublicDiagnosis | null;
-  items: PublicImprovement[] | null; choices: Record<string, PublicChoice>; result: PublicOfferResult | null; auditSent: boolean;
+  items: PublicImprovement[] | null; choices: Record<string, PublicChoice>; result: PublicOfferResult | null; auditSent: false | "pdf" | "audit";
 }
 const EMPTY_FORM: GeneratorIntake = { audience: "", outcome: "", delivery: "", obstacle: "", currentOffer: "", currentPrice: "", stage: "existing", currency: "EUR" };
 const INITIAL: Saved = { stage: "welcome", form: EMPTY_FORM, token: null, diagnosis: null, items: null, choices: {}, result: null, auditSent: false };
@@ -59,11 +59,6 @@ const DIMENSIONS: { id: ValueDimension; icon: typeof Target; q: string }[] = [
   { id: "ease_of_achievement", icon: Feather, q: "How easy and manageable does the journey feel?" },
 ];
 const CHALLENGES = ["It's hard to explain", "It sounds like everyone else", "People say it's too expensive", "Buyers aren't confident it will work", "Sales are inconsistent"];
-const CHANNELS: { v: AuditChannel; l: string }[] = [
-  { v: "instagram_organic", l: "Instagram / organic content" }, { v: "paid_ads", l: "Paid advertising" },
-  { v: "referrals", l: "Referrals / networking" }, { v: "combination", l: "A combination of channels" },
-  { v: "no_system", l: "No consistent system yet" }, { v: "other", l: "Other" },
-];
 const LOADING: Record<string, string[]> = {
   diagnose: ["Reading your answers…", "Looking at your result and promise…", "Checking how believable it feels…", "Scoring your offer…"],
   strengthen: ["Finding your biggest opportunities…", "Preparing practical options…"],
@@ -181,12 +176,6 @@ export default function OfferGenerator() {
 
   const startOver = () => { setS(INITIAL); setError(null); started.current = Date.now(); };
 
-  const saveToBoostmate = () => {
-    if (!s.token) return;
-    try { localStorage.setItem(PENDING_OFFER_CLAIM_KEY, s.token); sessionStorage.setItem(PENDING_OFFER_CLAIM_KEY, s.token); } catch { /* ignore */ }
-    if (user) navigate("/dashboard");
-    else setShowAuth(true);
-  };
 
   const idx = STAGES.findIndex((x) => x.id === s.stage);
 
@@ -415,7 +404,7 @@ export default function OfferGenerator() {
 
             {/* ---------------- Stage 4: Your Improved Offer ---------------- */}
             {s.stage === "final" && s.result && <FinalStage s={s} onBack={() => patch({ stage: "strengthen" })} onStartOver={startOver}
-              onAuditSent={() => patch({ auditSent: true })} onSave={saveToBoostmate} />}
+              onAuditSent={(v) => patch({ auditSent: v })} />}
           </>
         )}
       </main>
@@ -427,7 +416,7 @@ export default function OfferGenerator() {
 
 const DIR_STYLE = { up: "text-primary", down: "text-destructive", same: "text-muted-foreground" } as const;
 
-function FinalStage({ s, onBack, onStartOver, onAuditSent, onSave }: { s: Saved; onBack: () => void; onStartOver: () => void; onAuditSent: () => void; onSave: () => void }) {
+function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack: () => void; onStartOver: () => void; onAuditSent: (v: "pdf" | "audit") => void }) {
   const r = s.result!;
   const changes = compareProfiles(r.beforeProfile, r.profile);
   const deliverables: any[] = (r.design?.stack?.deliverables ?? []).filter((d: any) => d?.name);
@@ -562,15 +551,7 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent, onSave }: { s: Saved;
         </div>
       </div>
 
-      <VideoAuditSection token={s.token} sent={s.auditSent} onSent={onAuditSent} />
-
-      <div className="rounded-xl border border-border bg-card px-6 py-6 flex flex-col md:flex-row md:items-center gap-4 justify-between">
-        <div>
-          <h3 className="font-display font-semibold text-foreground text-lg">Want to keep improving your offer?</h3>
-          <p className="text-sm text-muted-foreground">Save your offer in Boostmate and continue building your business with our complete tools.</p>
-        </div>
-        <Button variant="outline" onClick={onSave}>Save my offer in Boostmate</Button>
-      </div>
+      <BlueprintSection token={s.token} sent={s.auditSent} onSent={onAuditSent} />
     </section>
   );
 }
@@ -582,92 +563,91 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
   </div>
 );
 
-function VideoAuditSection({ token, sent, onSent }: { token: string | null; sent: boolean; onSent: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ instagram: "", email: "", channel: "" as AuditChannel | "", website: "", consent: false });
+function BlueprintSection({ token, sent, onSent }: { token: string | null; sent: false | "pdf" | "audit"; onSent: (v: "pdf" | "audit") => void }) {
+  const [form, setForm] = useState({ email: "", audit: false, instagram: "", acquisition: "", website: "", consent: false, hp: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || !token) return;
     const local: Record<string, string> = {};
-    if (!form.instagram.trim()) local.instagram = "Please enter your Instagram username or profile link.";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) local.email = "Please enter a valid email address.";
-    if (!form.channel) local.channel = "Please choose an option.";
+    if (form.audit && !form.instagram.trim()) local.instagram = "Please enter your Instagram username or profile link.";
+    if (form.audit && form.acquisition.trim().length < 3) local.acquisition = "Please tell us briefly how you currently attract clients.";
     setErrors(local);
     if (Object.keys(local).length) return;
     setSubmitting(true); setErr(null);
     try {
-      await requestVideoAudit({ token, email: form.email.trim(), instagram: form.instagram.trim(), channel: form.channel as AuditChannel, website: form.website.trim(), marketingConsent: form.consent });
-      onSent();
+      const r = await requestOfferBlueprint({
+        token, email: form.email.trim(), marketingConsent: form.consent, auditRequested: form.audit, hp: form.hp,
+        ...(form.audit ? { instagram: form.instagram.trim(), acquisition: form.acquisition.trim(), website: form.website.trim() } : {}),
+      });
+      onSent(r.auditRequested ? "audit" : "pdf");
     } catch (x) {
       const fe = (x as Error & { fields?: Record<string, string> }).fields;
       if (fe) setErrors({
         ...(fe.instagram ? { instagram: "Use your username (e.g. @yourname) or a link like instagram.com/yourname." } : {}),
         ...(fe.email ? { email: "Please enter a valid email address." } : {}),
         ...(fe.website ? { website: "Please enter a valid website address, or leave it empty." } : {}),
-        ...(fe.channel ? { channel: "Please choose an option." } : {}),
+        ...(fe.acquisition ? { acquisition: "Please describe how you attract clients (max. 1500 characters)." } : {}),
       });
       else setErr(generatorErrorMessage((x as Error).message));
     } finally { setSubmitting(false); }
   };
 
   return (
-    <div id="video-audit" className="rounded-2xl bg-primary text-primary-foreground p-6 md:p-10 space-y-6">
+    <div id="offer-blueprint" className="rounded-2xl bg-primary text-primary-foreground p-6 md:p-10 space-y-6">
       {sent ? (
         <div className="space-y-3 text-center py-4" role="status">
           <CheckCircle2 className="w-10 h-10 mx-auto" />
-          <h2 className="text-2xl md:text-3xl font-display font-bold">Your video audit request is in!</h2>
-          <p className="max-w-xl mx-auto opacity-90">Thanks — we'll review your current setup and send your personalized 5-minute video audit to your inbox within 2 business days.</p>
+          <h2 className="text-2xl md:text-3xl font-display font-bold">{sent === "audit" ? "Your Offer Blueprint is on its way — and your audit is requested." : "Your Offer Blueprint is on its way."}</h2>
+          <p className="max-w-xl mx-auto opacity-90">{sent === "audit"
+            ? "We'll send your personalized PDF to your inbox. We'll also review your client acquisition setup and aim to deliver your 5-minute video audit within 2 business days."
+            : "Check your inbox for your personalized PDF. If you don't see it shortly, check your spam folder."}</p>
         </div>
       ) : (
         <>
           <div className="space-y-3 max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Free personal video audit</p>
-            <h2 className="text-2xl md:text-3xl font-display font-bold leading-tight">A stronger offer is just the beginning. Let's help you attract more clients.</h2>
-            <p className="opacity-90">You've improved your offer. Now let's look at how you're actually attracting clients. Request a free, personalized 5-minute video audit of your coaching business. I'll review your current client acquisition setup and show you the biggest opportunities to attract more qualified clients.</p>
-            <ul className="grid sm:grid-cols-2 gap-2 text-sm">
-              {["Personalized 5-minute video review", "Concrete recommendations for your business", "A practical plan to improve client acquisition", "Delivered within 2 business days", "Free, with no obligation"].map((b) => (
-                <li key={b} className="flex gap-2"><Check className="w-4 h-4 shrink-0 mt-0.5" />{b}</li>
-              ))}
-            </ul>
+            <h2 className="text-2xl md:text-3xl font-display font-bold leading-tight">Want to keep your improved offer?</h2>
+            <p className="opacity-90">Get your complete Irresistible Offer Blueprint as a professionally designed PDF, delivered straight to your inbox.</p>
+            <p className="text-sm opacity-80">Free · No account required</p>
           </div>
-          {!open ? (
-            <Button size="lg" variant="secondary" onClick={() => setOpen(true)}><Video className="w-4 h-4 mr-1.5" /> Request my free video audit <ArrowRight className="w-4 h-4 ml-1.5" /></Button>
-          ) : (
-            <form onSubmit={submit} noValidate className="rounded-xl bg-card text-card-foreground p-5 md:p-6 space-y-4 max-w-2xl">
-              {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
-              <div className="grid md:grid-cols-2 gap-4">
-                <Field id="ig" label="Instagram profile" hint="Your username (e.g. @yourname) or profile link.">
-                  <Input id="ig" value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} maxLength={120} aria-invalid={!!errors.instagram} />
+          <form onSubmit={submit} noValidate className="rounded-xl bg-card text-card-foreground p-5 md:p-6 space-y-4 max-w-2xl">
+            {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
+            <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" value={form.hp} onChange={(e) => setForm({ ...form, hp: e.target.value })} />
+            <Field id="bp-email" label="Email address" hint="We'll send your Offer Blueprint here.">
+              <Input id="bp-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} maxLength={254} autoComplete="email" aria-invalid={!!errors.email} />
+              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+            </Field>
+            <label htmlFor="bp-audit" className="flex items-start gap-2 text-sm text-foreground rounded-lg border border-border p-3">
+              <Checkbox id="bp-audit" checked={form.audit} onCheckedChange={(v) => setForm({ ...form, audit: v === true })} className="mt-0.5" />
+              <span><span className="font-medium flex items-center gap-1.5"><Video className="w-4 h-4" /> I'd also like a free personalized Client Acquisition Video Audit.</span>
+                <span className="block text-muted-foreground mt-1">Get a 5-minute video review of your client acquisition setup, with concrete recommendations to help you attract more qualified clients. Delivered within 2 business days.</span></span>
+            </label>
+            {form.audit && (
+              <div className="space-y-4 pl-1">
+                <Field id="bp-ig" label="Instagram profile" hint="Your username (e.g. @yourname) or profile link.">
+                  <Input id="bp-ig" value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} maxLength={120} aria-invalid={!!errors.instagram} />
                   {errors.instagram && <p className="text-xs text-destructive">{errors.instagram}</p>}
                 </Field>
-                <Field id="audit-email" label="Email address" hint="We'll send your video audit here.">
-                  <Input id="audit-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} maxLength={254} autoComplete="email" aria-invalid={!!errors.email} />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                <Field id="bp-acq" label="How do you currently attract clients?" hint="Tell us how you currently find and convert clients. For example: Instagram content, DMs, referrals, paid ads, your website, booking calls, or an existing funnel.">
+                  <Textarea id="bp-acq" rows={3} value={form.acquisition} onChange={(e) => setForm({ ...form, acquisition: e.target.value })} maxLength={1500} aria-invalid={!!errors.acquisition} />
+                  {errors.acquisition && <p className="text-xs text-destructive">{errors.acquisition}</p>}
+                </Field>
+                <Field id="bp-site" label="Website or funnel URL" optional>
+                  <Input id="bp-site" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} maxLength={300} placeholder="yourwebsite.com" />
+                  {errors.website && <p className="text-xs text-destructive">{errors.website}</p>}
                 </Field>
               </div>
-              <Field id="channel" label="How are you currently attracting clients?" hint="For example: Instagram content, referrals, paid ads, a website, email marketing, or something else.">
-                <Select value={form.channel} onValueChange={(v) => setForm({ ...form, channel: v as AuditChannel })}>
-                  <SelectTrigger id="channel" aria-invalid={!!errors.channel}><SelectValue placeholder="Choose one" /></SelectTrigger>
-                  <SelectContent>{CHANNELS.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}</SelectContent>
-                </Select>
-                {errors.channel && <p className="text-xs text-destructive">{errors.channel}</p>}
-              </Field>
-              <Field id="site" label="Website or funnel URL" optional>
-                <Input id="site" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} maxLength={300} placeholder="yourwebsite.com" />
-                {errors.website && <p className="text-xs text-destructive">{errors.website}</p>}
-              </Field>
-              <label htmlFor="audit-consent" className="flex items-start gap-2 text-sm text-foreground">
-                <Checkbox id="audit-consent" checked={form.consent} onCheckedChange={(v) => setForm({ ...form, consent: v === true })} className="mt-0.5" />
-                <span>Optional: also send me occasional tips about offers and client acquisition. You can unsubscribe anytime.</span>
-              </label>
-              <p className="text-xs text-muted-foreground">We use your details only to prepare and send your video audit, together with the offer you built here. We never add you to marketing emails unless you tick the box above.</p>
-              <Button type="submit" size="lg" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-1.5" />} Request my free video audit</Button>
-            </form>
-          )}
+            )}
+            <label htmlFor="bp-consent" className="flex items-start gap-2 text-sm text-foreground">
+              <Checkbox id="bp-consent" checked={form.consent} onCheckedChange={(v) => setForm({ ...form, consent: v === true })} className="mt-0.5" />
+              <span>I'd also like to receive practical tips and occasional updates from Boostmate. I can unsubscribe anytime.</span>
+            </label>
+            <Button type="submit" size="lg" disabled={submitting || !token}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-1.5" />} Send me my Offer Blueprint</Button>
+          </form>
         </>
       )}
     </div>

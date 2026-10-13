@@ -136,3 +136,21 @@ describe("Before/After consistency", () => {
     expect(PUBLIC_FINAL_INSTRUCTION).toMatch(/Evidence calibration/);
   });
 });
+
+import { validateBlueprintRequest } from "@shared/offerIntelligence/publicFlow";
+describe("validateBlueprintRequest", () => {
+  it("accepts PDF-only requests without audit fields", () => {
+    const r = validateBlueprintRequest({ email: "A@Example.com", auditRequested: false });
+    expect(r.ok && r.value).toEqual({ email: "a@example.com", marketingConsent: false, audit: null });
+  });
+  it("requires Instagram and acquisition text when the audit is requested", () => {
+    const r = validateBlueprintRequest({ email: "a@example.com", auditRequested: true });
+    expect(r.ok).toBe(false);
+    if (r.ok === false) expect(Object.keys(r.errors).sort()).toEqual(["acquisition", "instagram"]);
+  });
+  it("normalizes audit fields and keeps marketing consent separate", () => {
+    const r = validateBlueprintRequest({ email: "a@example.com", auditRequested: true, instagram: "instagram.com/Coach.Mark", acquisition: "Referrals and DMs", website: "coach.com", marketingConsent: true });
+    expect(r.ok && r.value.audit).toEqual({ instagram: "coach.mark", acquisition: "Referrals and DMs", website: "https://coach.com/" });
+    expect(r.ok && r.value.marketingConsent).toBe(true);
+  });
+});
