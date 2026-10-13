@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ValueProfileChart from "@/components/offer-intelligence/ValueProfileChart";
 import { DIMENSION_LABELS, compareProfiles, type ValueDimension } from "@shared/offerIntelligence/valueEquation";
 import type { PublicOfferResult } from "@shared/offerIntelligence/publicResult";
-import { toText, humanize, isRedundant, pricingHeadings, alignScoreWhy, splitPreProgram } from "@shared/offerIntelligence/plainLanguage";
+import { toText, humanize, isRedundant, pricingHeadings, IMPROVED_ASSESSMENT_NOTE, alignScoreWhy, splitPreProgram } from "@shared/offerIntelligence/plainLanguage";
 import { describeDecisions, type PublicDiagnosis, type PublicImprovement, type PublicChoice } from "@shared/offerIntelligence/publicFlow";
 import {
   diagnoseOffer, strengthenOffer, finalizeOffer, requestOfferBlueprint, generatorErrorMessage,
@@ -459,10 +459,10 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
   return (
     <section className="space-y-10">
       {/* A — transformation */}
-      <StageHeader eyebrow="Your improved offer" title="Here's how your offer has improved" subtitle="Your original offer and the improved proposal were assessed with the same Value Equation and the same evidence standard. Planned changes are credited carefully until they're in place." />
+      <StageHeader eyebrow="Your improved offer" title="Here's how your offer has improved" subtitle="Your original offer and the improved proposal were assessed with the same Value Equation and the same evidence standard. Proposed changes are credited for their design, never as proven results." />
 
       {/* B — Before/After profile */}
-      <Card><ValueProfileChart before={r.beforeProfile} after={r.profile} variant="large" /></Card>
+      <Card className="space-y-3"><ValueProfileChart before={r.beforeProfile} after={r.profile} variant="large" beforeLabel="Before: Current offer" afterLabel="After: Proposed improved offer" /><p className="text-sm text-muted-foreground">{IMPROVED_ASSESSMENT_NOTE}</p></Card>
 
       {/* C — What changed and why, one card per dimension */}
       <div className="space-y-5">

@@ -25,7 +25,7 @@ Separate confirmed facts the visitor stated, planned or proposed mechanisms, ass
 - Use unknown when the information is genuinely absent; never treat unknown as strength or as weakness.`;
 
 export const PUBLIC_DIAGNOSE_INSTRUCTION = `Audience: a coach or consultant without marketing training. Assess ONLY what the visitor actually described — for an existing offer, what is sold today; for an idea, the proposed concept as described (provisional). Never imagine an optimized version or credit improvements before they are chosen. Write every reason, strength, weakness and improvement in plain, encouraging English — one short sentence each, specific to THIS offer (never generic advice that fits any coach), no jargon and never criterion codes. Give 2–3 strengths, 2–3 weaknesses and exactly 3 top improvements, highest impact first. Phrase each top improvement as the strategic objective first (e.g. \"Show why your coaching works\"), optionally followed by \" — for example\" and one or two ways that fit this visitor's actual stage and evidence (e.g. explaining a credible method, sharing relevant experience, running a pilot, a transparent process). Never assume the visitor already has clients, results or testimonials unless they said so. For an offer idea, strengths are promising elements of an unlaunched concept: describe them as planned or proposed ("a planned six-week structure gives…"), never as working, functioning or proven. Never call a method proven, validated, tested or successful unless the visitor said so. Phrase weaknesses and improvements as strategic objectives ("Make your existing client results more credible and visible", "Reduce uncertainty for prospective clients"), not as a single tactic ("Add a guarantee", "Gather formal proof"). A missing guarantee is never automatically a weakness: judge perceived risk in the whole offer (clear expectations, methodology, experience, results, an introductory assessment, a clear delivery process) and mention a guarantee only when it is appropriate and realistically deliverable. Missing testimonials or case studies mean the evidence is not yet shown — never that the offer fails; never present testimonials or guarantees as universally necessary; never encourage promises the visitor cannot substantiate.\n\nEvidence handling: the "credibility" fact is the visitor's own statement. Specific stated results, testimonials or a confirmed guarantee are stated evidence (still not independently verified); relevant experience alone does not prove the promised outcome (at most partial); plans are not evidence. If "credibility" or "delivery" is missing, mark the criteria that depend on it unknown — never weak and never strong.\n\n${PUBLIC_SCORING_NOTE}`;
-export const PUBLIC_FINAL_INSTRUCTION = `Use exactly the same evidence standard as the diagnosis provided in the answers.\n\n${PUBLIC_SCORING_NOTE}`;
+export const PUBLIC_FINAL_INSTRUCTION = `Use the same criteria and evidence standard as the diagnosis provided in the answers, with one distinction for the After assessment: assess the PROPOSED OFFER DESIGN, assuming its explicitly described components are implemented as proposed — never as if they were already proven, delivered or producing results. A concrete, relevant component written into the offer (a structured method with phases, specific process milestones, clearer support or simpler steps) can earn credit on the criterion it addresses; a merely selected or vaguely named improvement earns none. Proof (results, testimonials, case studies) only counts when the visitor stated it; a proof-collection plan never raises proof. A score changes only when the final offer contains a concrete change that strengthens that dimension; never force improvement.\n\n${PUBLIC_SCORING_NOTE}`;
 export const PUBLIC_STRENGTHEN_INSTRUCTION = "Plain English for a non-marketer: weakness as a short objective-first title (max 7 words, e.g. \"Make your client results more visible\"), whyItMatters in 1–2 sentences from the buyer's view, option title max 7 words, change in 1–2 sentences, why in one sentence, tradeoff in one sentence. Never use criterion codes.";
 
 export interface PublicDiagnosis {
@@ -112,7 +112,7 @@ const dimOf = (id: string) => VALUE_CRITERIA.find((c) => c.id === id)?.dimension
 /**
  * Keep the After assessment consistent with what the flow can actually change:
  * - no new proof is supplied in the public flow → proof never rises;
- * - planned changes count at most "partial" for perceived likelihood and at most one step elsewhere;
+ * - proposed design changes rise at most one step; risk reduction stays at most "partial";
  * - a criterion only drops when the model explains a decrease for that dimension.
  * Re-scores the profile, syncs directions with the real deltas and lists future actions.
  */
@@ -127,16 +127,20 @@ export function reconcileFinal(result: PublicOfferResult, d: PublicDiagnosis, it
   const before = new Map(d.assessments.map((a) => [a.criterionId, a]));
   const claimedDown = new Set(result.dimensionChanges.filter((c) => c.direction === "down").map((c) => c.dimension));
   const touched = new Set<ValueDimension>();
+  // Only dimensions addressed by a chosen improvement may rise (a clearer method alone never lifts ease or outcome).
+  const targeted = new Set(items.filter((it) => { const c = choices.find((x) => x.itemId === it.id); return c && c.choice !== "keep"; }).map((it) => it.dimension));
   const after = new Map(result.assessments.map((a) => [a.criterionId, a]));
   const out: CriterionAssessment[] = [];
   for (const crit of VALUE_CRITERIA) {
     const b = before.get(crit.id)?.verdict ?? "unknown";
     const orig = after.get(crit.id) ?? { criterionId: crit.id, verdict: "unknown" as CriterionVerdict, reasoning: "" };
     let v = orig.verdict;
+    if (RANK[v] > RANK[b] && items.length && !targeted.has(crit.dimension) && RANK[b] >= 0) v = b;
     if (RANK[v] > RANK[b]) {
       let cap = Math.min(2, Math.max(RANK[b], 0) + 1);
       if (crit.id === "pl_proof") cap = RANK[b];
-      else if (crit.dimension === "perceived_likelihood" || crit.dimension === "speed_to_value") cap = Math.min(cap, Math.max(RANK[b], 1)); // proposed mechanisms/milestones are not demonstrated progress
+      else if (crit.id === "pl_risk") cap = Math.min(cap, 1); // proposed risk reducers are not demonstrated
+      // Design criteria (method, fit, milestones, early win, timeline, outcome, ease) may rise one step for a concrete proposed component.
       if (RANK[v] > cap) v = cap < 0 ? "unknown" : BY_RANK[cap];
     } else if (RANK[v] < RANK[b] && !claimedDown.has(crit.dimension)) v = b;
     if (v !== orig.verdict) touched.add(crit.dimension);
@@ -152,7 +156,7 @@ export function reconcileFinal(result: PublicOfferResult, d: PublicDiagnosis, it
   for (const it of items) {
     const ch = choices.find((x) => x.itemId === it.id);
     const o = it.options.find((x) => x.id === ch?.choice);
-    if (o?.kind === "future_action" && ![...future].some((f) => coversAction(f, `${o.title} ${o.change}`))) future.add(ch?.custom ? `${o.title}: ${ch.custom}` : `${o.title}: ${o.change}`);
+    if (o?.kind === "future_action" && ![...future].some((f) => coversAction(f, o.title))) future.add(ch?.custom ? `${o.title}: ${ch.custom}` : `${o.title}: ${o.change}`);
   }
   return { ...result, assessments: out, profile, beforeProfile: d.profile, dimensionChanges, futureActions: [...future].slice(0, 6) };
 }

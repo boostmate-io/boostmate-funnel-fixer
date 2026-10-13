@@ -3,7 +3,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "npm:pdf-lib@1.17.1";
 import { VALUE_DIMENSIONS, DIMENSION_LABELS } from "./valueEquation.ts";
 import { auditSnapshot } from "./publicFlow.ts";
-import { toText, humanize, isRedundant, pricingHeadings, promotionWarning, alignScoreWhy, splitPreProgram } from "./plainLanguage.ts";
+import { toText, humanize, isRedundant, pricingHeadings, promotionWarning, IMPROVED_ASSESSMENT_NOTE, alignScoreWhy, splitPreProgram } from "./plainLanguage.ts";
 export { toText, humanize, isRedundant };
 import { BOOSTMATE_LOGO_LIGHT_PNG_BASE64 } from "./boostmateLogo.ts";
 
@@ -155,8 +155,8 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
     : "The initial assessment of your offer idea compared with the improved proposal.");
   w.ensure(330);
   // legend
-  w.page.drawRectangle({ x: M, y: w.y - 9, width: 10, height: 8, color: GREY }); w.page.drawText("Before", { x: M + 14, y: w.y - 8.5, size: 9, font: w.reg, color: MUTED });
-  w.page.drawRectangle({ x: M + 60, y: w.y - 9, width: 10, height: 8, color: PRIMARY }); w.page.drawText("After", { x: M + 74, y: w.y - 8.5, size: 9, font: w.reg, color: MUTED });
+  w.page.drawRectangle({ x: M, y: w.y - 9, width: 10, height: 8, color: GREY }); w.page.drawText("Before: Current offer", { x: M + 14, y: w.y - 8.5, size: 9, font: w.reg, color: MUTED });
+  w.page.drawRectangle({ x: M + 130, y: w.y - 9, width: 10, height: 8, color: PRIMARY }); w.page.drawText("After: Proposed improved offer", { x: M + 144, y: w.y - 8.5, size: 9, font: w.reg, color: MUTED });
   w.y -= 24;
   const barX = M + 140, barW = W - M - barX - 70;
   for (const d of VALUE_DIMENSIONS) {
@@ -173,6 +173,7 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
     w.y -= 52;
   }
   if (VALUE_DIMENSIONS.some((d) => score(before, d) == null || score(after, d) == null)) w.text("\"Not assessed\" means your original answers didn't contain enough information to score that dimension responsibly - it is not a score of zero.", { size: 9, color: MUTED, gap: 2 });
+  w.text(IMPROVED_ASSESSMENT_NOTE, { size: 9, color: MUTED, gap: 2 });
   w.text("These scores are strategic assessments of how compelling the offer is. They are not sales, revenue or conversion predictions.", { size: 9, color: MUTED });
 
   // ---- 3. What changed and why

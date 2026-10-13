@@ -87,3 +87,6 @@ export function splitPreProgram<T extends { name?: unknown }>(deliverables: T[],
   const names = new Set((pre ?? []).map((p) => normName(p.name)).filter(Boolean));
   return names.size ? deliverables.filter((d) => !names.has(normName(d.name))) : deliverables;
 }
+
+/** Shown with every Before/After comparison (website and PDF). */
+export const IMPROVED_ASSESSMENT_NOTE = "The improved assessment reflects the offer as designed, assuming the proposed changes are implemented. It does not represent proven results or guaranteed conversion improvements.";
