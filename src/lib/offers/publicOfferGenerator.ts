@@ -2,7 +2,7 @@
 // request and the post-signup claim.
 import { supabase } from "@/integrations/supabase/client";
 import type { PublicOfferResult } from "@shared/offerIntelligence/publicResult";
-import type { PublicDiagnosis, PublicImprovement, PublicChoice, AuditChannel } from "@shared/offerIntelligence/publicFlow";
+import type { PublicDiagnosis, PublicImprovement, PublicChoice } from "@shared/offerIntelligence/publicFlow";
 
 export const PENDING_OFFER_CLAIM_KEY = "boostmate:pending_offer_claim";
 export const PUBLIC_BUILDER_STATE_KEY = "boostmate:public_offer_builder";
@@ -30,6 +30,8 @@ const MESSAGES: Record<string, string> = {
   storage_failed: "Something went wrong on our side. Please try again.",
   not_found: "This session has expired. Please start again.",
   invalid_email: "Please enter a valid email address.",
+  pdf_failed: "We couldn't create your PDF just now. Please try again in a moment.",
+  email_failed: "We couldn't send your email just now. Please try again in a moment.",
 };
 
 export function generatorErrorMessage(code: string | undefined): string {
@@ -57,8 +59,8 @@ export const strengthenOffer = (token: string, regenerate = false): Promise<{ it
 export const finalizeOffer = (token: string, choices: PublicChoice[]): Promise<{ result: PublicOfferResult }> =>
   call({ action: "finalize", token, choices });
 
-export const requestVideoAudit = (req: { token: string | null; email: string; instagram: string; channel: AuditChannel; website: string; marketingConsent: boolean }): Promise<{ ok: true; already?: boolean }> =>
-  call({ action: "audit_request", ...req });
+export const requestOfferBlueprint = (req: { token: string; email: string; marketingConsent: boolean; auditRequested: boolean; instagram?: string; acquisition?: string; website?: string; hp?: string }): Promise<{ ok: true; already?: boolean; auditRequested: boolean }> =>
+  call({ action: "blueprint_request", ...req });
 
 export async function claimOfferGeneration(claimToken: string, subAccountId: string): Promise<{ offer_id: string }> {
   const { data, error } = await supabase.functions.invoke("claim-offer-generation", {
