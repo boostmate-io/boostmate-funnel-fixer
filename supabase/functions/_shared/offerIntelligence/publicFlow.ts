@@ -116,6 +116,7 @@ const dimOf = (id: string) => VALUE_CRITERIA.find((c) => c.id === id)?.dimension
  * - a criterion only drops when the model explains a decrease for that dimension.
  * Re-scores the profile, syncs directions with the real deltas and lists future actions.
  */
+const EASE_RE = /templates?|done[- ](?:with|for)[- ]you|feedback|review|simplif|remov|fewer|less work|tools?\b|scripts?\b|swipe|ready[- ]to[- ]use|hands[- ]on|implementation support/i;
 const words = (t: string) => new Set(t.toLowerCase().match(/[a-z]{4,}/g) ?? []);
 /** True when an existing action already covers most of the title's key words. */
 export function coversAction(existing: string, candidate: string): boolean {
@@ -123,19 +124,38 @@ export function coversAction(existing: string, candidate: string): boolean {
   return c.length > 0 && c.filter((w) => e.has(w)).length / c.length >= 0.6;
 }
 
+const STOP = new Set(["your", "with", "their", "them", "that", "this", "from", "into", "each", "they", "will", "would", "about", "detailing", "specific", "previous", "past", "former", "explain", "refining", "program", "willing"]);
+const SYN: Record<string, string> = { reach: "contact", testi: "proof", case: "proof", resul: "proof", succe: "proof", outco: "proof", docum: "proof", gathe: "colle", reque: "colle", ask: "colle" };
+const keyStems = (t: string) => new Set((t.toLowerCase().match(/[a-z]{3,}/g) ?? []).filter((w) => !STOP.has(w)).map((w) => { const st = w.slice(0, 5); return SYN[st] ?? SYN[w] ?? st; }));
+/** Merge semantically equivalent checklist tasks (keeps order and the more detailed wording). */
+export function dedupeActions(list: string[]): string[] {
+  const out: string[] = [];
+  for (const raw of list) {
+    const t = raw.trim(); if (!t) continue;
+    const k = keyStems(t);
+    const i = out.findIndex((o) => { const ok = keyStems(o); const shared = [...k].filter((w) => ok.has(w)).length; return shared / Math.min(k.size, ok.size) >= 0.6; });
+    if (i < 0) out.push(t); else if (t.length > out[i].length) out[i] = t;
+  }
+  return out;
+}
+
 export function reconcileFinal(result: PublicOfferResult, d: PublicDiagnosis, items: PublicImprovement[], choices: PublicChoice[]): PublicOfferResult {
   const before = new Map(d.assessments.map((a) => [a.criterionId, a]));
   const claimedDown = new Set(result.dimensionChanges.filter((c) => c.direction === "down").map((c) => c.dimension));
   const touched = new Set<ValueDimension>();
-  // Only dimensions addressed by a chosen improvement may rise (a clearer method alone never lifts ease or outcome).
-  const targeted = new Set(items.filter((it) => { const c = choices.find((x) => x.itemId === it.id); return c && c.choice !== "keep"; }).map((it) => it.dimension));
+  // A dimension may rise only when the final offer names a concrete change for it (an "up" change
+  // with a whatChanged); ease additionally needs a real effort reducer, not just a clearer method.
+  const justified = new Set<ValueDimension>(result.dimensionChanges.filter((c) => c.direction === "up" && clip(c.whatChanged, 300).length > 8 && !/\bno (?:concrete |specific )?change|\bunchanged\b|remains? the same/i.test(c.whatChanged))
+    .filter((c) => c.dimension !== "ease_of_achievement" || EASE_RE.test(`${c.whatChanged} ${c.why}`))
+    .filter((c) => c.dimension !== "dream_outcome" || !/\bmethod|framework|steps?\b/i.test(c.whatChanged) || /outcome|result|promise|transformation/i.test(c.whatChanged))
+    .map((c) => c.dimension));
   const after = new Map(result.assessments.map((a) => [a.criterionId, a]));
   const out: CriterionAssessment[] = [];
   for (const crit of VALUE_CRITERIA) {
     const b = before.get(crit.id)?.verdict ?? "unknown";
     const orig = after.get(crit.id) ?? { criterionId: crit.id, verdict: "unknown" as CriterionVerdict, reasoning: "" };
     let v = orig.verdict;
-    if (RANK[v] > RANK[b] && items.length && !targeted.has(crit.dimension) && RANK[b] >= 0) v = b;
+    if (RANK[v] > RANK[b] && items.length && !justified.has(crit.dimension) && RANK[b] >= 0) v = b;
     if (RANK[v] > RANK[b]) {
       let cap = Math.min(2, Math.max(RANK[b], 0) + 1);
       if (crit.id === "pl_proof") cap = RANK[b];
@@ -158,7 +178,7 @@ export function reconcileFinal(result: PublicOfferResult, d: PublicDiagnosis, it
     const o = it.options.find((x) => x.id === ch?.choice);
     if (o?.kind === "future_action" && ![...future].some((f) => coversAction(f, o.title))) future.add(ch?.custom ? `${o.title}: ${ch.custom}` : `${o.title}: ${o.change}`);
   }
-  return { ...result, assessments: out, profile, beforeProfile: d.profile, dimensionChanges, futureActions: [...future].slice(0, 6) };
+  return { ...result, assessments: out, profile, beforeProfile: d.profile, dimensionChanges, futureActions: dedupeActions([...future]).slice(0, 6) };
 }
 
 /** Decisions as shown to the visitor (provenance preserved). */

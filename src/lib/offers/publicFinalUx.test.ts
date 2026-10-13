@@ -57,3 +57,16 @@ describe("pre-launch corrections", () => {
     expect(splitPreProgram(d, [])).toHaveLength(2);
   });
 });
+
+import { dedupeActions } from "@shared/offerIntelligence/publicFlow";
+describe("checklist dedupe", () => {
+  it("merges equivalent tasks, keeps distinct ones", () => {
+    const out = dedupeActions([
+      "Reach out to three previous clients to gather specific testimonials detailing their results.",
+      "Develop the content and exercises for each phase of the method.",
+      "Document past client successes: contact your three previous clients and ask for a testimonial with results and permission to use it.",
+    ]);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatch(/permission/);
+  });
+});
