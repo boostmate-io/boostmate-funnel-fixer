@@ -118,7 +118,7 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   w.text("These scores are strategic assessments of how compelling the offer is. They are not sales, revenue or conversion predictions.", { size: 9, color: MUTED });
 
   // ---- 3. What changed and why
-  w.newPage(); w.h1("3. What changed and why");
+  w.y -= 12; w.ensure(200); w.h1("3. What changed and why");
   for (const d of VALUE_DIMENSIONS) {
     const dc = (r.dimensionChanges ?? []).find((x: any) => x.dimension === d);
     const b = score(before, d), a = score(after, d);
