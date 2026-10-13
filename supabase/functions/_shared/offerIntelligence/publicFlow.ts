@@ -127,12 +127,15 @@ export function reconcileFinal(result: PublicOfferResult, d: PublicDiagnosis, it
   const before = new Map(d.assessments.map((a) => [a.criterionId, a]));
   const claimedDown = new Set(result.dimensionChanges.filter((c) => c.direction === "down").map((c) => c.dimension));
   const touched = new Set<ValueDimension>();
+  // Only dimensions addressed by a chosen improvement may rise (a clearer method alone never lifts ease or outcome).
+  const targeted = new Set(items.filter((it) => { const c = choices.find((x) => x.itemId === it.id); return c && c.choice !== "keep"; }).map((it) => it.dimension));
   const after = new Map(result.assessments.map((a) => [a.criterionId, a]));
   const out: CriterionAssessment[] = [];
   for (const crit of VALUE_CRITERIA) {
     const b = before.get(crit.id)?.verdict ?? "unknown";
     const orig = after.get(crit.id) ?? { criterionId: crit.id, verdict: "unknown" as CriterionVerdict, reasoning: "" };
     let v = orig.verdict;
+    if (RANK[v] > RANK[b] && items.length && !targeted.has(crit.dimension) && RANK[b] >= 0) v = b;
     if (RANK[v] > RANK[b]) {
       let cap = Math.min(2, Math.max(RANK[b], 0) + 1);
       if (crit.id === "pl_proof") cap = RANK[b];
@@ -153,7 +156,7 @@ export function reconcileFinal(result: PublicOfferResult, d: PublicDiagnosis, it
   for (const it of items) {
     const ch = choices.find((x) => x.itemId === it.id);
     const o = it.options.find((x) => x.id === ch?.choice);
-    if (o?.kind === "future_action" && ![...future].some((f) => coversAction(f, `${o.title} ${o.change}`))) future.add(ch?.custom ? `${o.title}: ${ch.custom}` : `${o.title}: ${o.change}`);
+    if (o?.kind === "future_action" && ![...future].some((f) => coversAction(f, o.title))) future.add(ch?.custom ? `${o.title}: ${ch.custom}` : `${o.title}: ${o.change}`);
   }
   return { ...result, assessments: out, profile, beforeProfile: d.profile, dimensionChanges, futureActions: [...future].slice(0, 6) };
 }
