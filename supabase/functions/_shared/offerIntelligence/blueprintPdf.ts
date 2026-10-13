@@ -128,7 +128,7 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   }
 
   // ---- 4. Complete blueprint
-  w.newPage(); w.h1("4. Your complete offer blueprint");
+  w.y -= 12; w.ensure(200); w.h1("4. Your complete offer blueprint");
   w.h2("Offer overview");
   w.field("Who it's for", r.audience); w.field("Promise", r.promise); w.field("Delivery", r.deliveryApproach || inp.delivery);
   w.h2("How it works");
