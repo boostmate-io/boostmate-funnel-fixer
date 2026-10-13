@@ -46,7 +46,6 @@ export function humanize(s: unknown): string {
     .replace(/\b(criteri(?:on|a))\b/gi, (m) => (m.toLowerCase() === "criteria" ? "areas" : "area"))
     .replace(/\bverdicts?\b/gi, "assessment")
     .replace(/\b(?:this|the)\s+dimension\b/gi, "this part of your offer")
-    .replace(/\b(?:low customer effort|obstacles removed|named method|real proof|fits the buyer|risk reversal|fast first win|clear milestones|clear timeline|support level|tools and resources|specific result|realistic scope)\b(?=['"])/gi, (m) => m)
     .replace(/\s{2,}/g, " ").replace(/\s+([.,;])/g, "$1").trim();
 }
 
