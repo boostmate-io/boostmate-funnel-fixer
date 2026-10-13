@@ -1,7 +1,7 @@
 // Public Mini Irresistible Offer Builder (lead magnet). Free, no account or
 // email needed: Discover → Diagnose → Strengthen → Your Improved Offer.
 // Primary conversion: Free Client Acquisition Video Audit request.
-// Secondary: "Save my offer in Boostmate" claims the result after signup.
+// Lead capture: one Offer Blueprint PDF form (optional Video Audit), emailed to visitor + admin.
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -176,12 +176,6 @@ export default function OfferGenerator() {
 
   const startOver = () => { setS(INITIAL); setError(null); started.current = Date.now(); };
 
-  const saveToBoostmate = () => {
-    if (!s.token) return;
-    try { localStorage.setItem(PENDING_OFFER_CLAIM_KEY, s.token); sessionStorage.setItem(PENDING_OFFER_CLAIM_KEY, s.token); } catch { /* ignore */ }
-    if (user) navigate("/dashboard");
-    else setShowAuth(true);
-  };
 
   const idx = STAGES.findIndex((x) => x.id === s.stage);
 
