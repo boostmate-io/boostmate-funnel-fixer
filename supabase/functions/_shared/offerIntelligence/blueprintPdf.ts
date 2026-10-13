@@ -242,7 +242,7 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   w.y -= 10; w.section(5, "Your implementation action plan", "What's already part of your improved offer, what you still need to do, and what to test before you rely on it.");
   const reflected = helps.map((h: any) => humanize(h.howItHelps).split(/(?<=\.)\s/)[0]).filter(Boolean);
   if (reflected.length) { w.h2("Reflected in your proposed offer", 90); w.bullets(reflected, { color: GREEN }); }
-  const todo = [...(r.futureActions ?? []), ...(r.validationNeeds ?? []), ...(r.nextSteps ?? [])].map(humanize).filter((v, i, a) => v && a.findIndex((x) => isRedundant(x, v)) === i);
+  const todo = [...(r.futureActions ?? []), ...(r.validationNeeds ?? [])].map(humanize).filter((v, i, a) => v && a.findIndex((x) => isRedundant(x, v)) === i);
   if (todo.length) {
     w.h2("Still to implement", 90);
     w.bullets(todo, { check: true });
