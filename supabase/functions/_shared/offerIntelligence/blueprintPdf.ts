@@ -142,7 +142,7 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   else { w.field("Desired transformation", transformation); w.field("Core promise", promise); }
   const oneLiner = toText(angle.short_description);
   if (oneLiner && !isRedundant(oneLiner, promise)) w.field("The offer in one sentence", oneLiner);
-  const positioning = toText(angle.positioning || angle.unique_angle || r.insights?.[0]);
+  const positioning = toText(r.positioning || angle.positioning || angle.unique_angle || r.insights?.[0]);
   if (positioning && !isRedundant(positioning, promise)) w.field("Positioning", humanize(positioning));
   const fw = angle.framework; const fwName = toText(typeof fw === "object" && fw ? fw.name ?? fw.title : fw);
   const fwDesc = typeof fw === "object" && fw ? toText(fw.description) : "";
@@ -172,7 +172,7 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
     });
     w.y -= 52;
   }
-  w.text("\"Not assessed\" means your original answers didn't contain enough information to score that dimension responsibly - it is not a score of zero.", { size: 9, color: MUTED, gap: 2 });
+  if (VALUE_DIMENSIONS.some((d) => score(before, d) == null || score(after, d) == null)) w.text("\"Not assessed\" means your original answers didn't contain enough information to score that dimension responsibly - it is not a score of zero.", { size: 9, color: MUTED, gap: 2 });
   w.text("These scores are strategic assessments of how compelling the offer is. They are not sales, revenue or conversion predictions.", { size: 9, color: MUTED });
 
   // ---- 3. What changed and why
