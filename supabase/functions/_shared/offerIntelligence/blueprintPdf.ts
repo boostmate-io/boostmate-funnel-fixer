@@ -3,7 +3,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "npm:pdf-lib@1.17.1";
 import { VALUE_DIMENSIONS, DIMENSION_LABELS } from "./valueEquation.ts";
 import { auditSnapshot } from "./publicFlow.ts";
-import { toText, humanize, isRedundant, pricingHeadings, promotionWarning } from "./plainLanguage.ts";
+import { toText, humanize, isRedundant, pricingHeadings, promotionWarning, alignScoreWhy, splitPreProgram } from "./plainLanguage.ts";
 export { toText, humanize, isRedundant };
 import { BOOSTMATE_LOGO_LIGHT_PNG_BASE64 } from "./boostmateLogo.ts";
 

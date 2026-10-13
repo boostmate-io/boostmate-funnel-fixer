@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ValueProfileChart from "@/components/offer-intelligence/ValueProfileChart";
 import { DIMENSION_LABELS, compareProfiles, type ValueDimension } from "@shared/offerIntelligence/valueEquation";
 import type { PublicOfferResult } from "@shared/offerIntelligence/publicResult";
-import { toText, humanize, isRedundant, pricingHeadings } from "@shared/offerIntelligence/plainLanguage";
+import { toText, humanize, isRedundant, pricingHeadings, alignScoreWhy, splitPreProgram } from "@shared/offerIntelligence/plainLanguage";
 import { describeDecisions, type PublicDiagnosis, type PublicImprovement, type PublicChoice } from "@shared/offerIntelligence/publicFlow";
 import {
   diagnoseOffer, strengthenOffer, finalizeOffer, requestOfferBlueprint, generatorErrorMessage,
