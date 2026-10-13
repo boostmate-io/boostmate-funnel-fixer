@@ -47,6 +47,8 @@ export interface PublicOfferResult {
   methodSteps?: { name: string; description: string }[];
   /** Useful opportunities the visitor did NOT select — optional, never part of the offer. */
   additionalRecommendations?: string[];
+  /** Full positioning statement (who, problem, transformation, difference, credibility). */
+  positioning?: string;
   /** Qualitative pricing assessment, always present for new results. */
   pricingGuidance?: { factors: string[]; strengthenValue: string[]; validateFirst: string[] } | null;
   /** Pricing writes are never stored in the public design (estimates only). */
@@ -98,6 +100,7 @@ export function buildPublicResult(raw: unknown, opts: { hasCurrentOffer: boolean
       futureActions: clipList(out.futureActions, 5).map(H), validationNeeds: clipList(out.validationNeeds, 6).map(H),
       methodSteps: (Array.isArray(out.methodSteps) ? out.methodSteps : []).map((m: any) => ({ name: H(clip(m?.name, 80)), description: H(clip(m?.description, 300)) })).filter((m: any) => m.name).slice(0, 6),
       additionalRecommendations: clipList(out.additionalRecommendations, 3).map(H),
+      positioning: H(clip(out.positioning, 700)),
       pricingGuidance: out.pricingGuidance && typeof out.pricingGuidance === "object"
         ? { factors: clipList(out.pricingGuidance.factors, 4).map(H), strengthenValue: clipList(out.pricingGuidance.strengthenValue, 3).map(H), validateFirst: clipList(out.pricingGuidance.validateFirst, 3).map(H) }
         : null,

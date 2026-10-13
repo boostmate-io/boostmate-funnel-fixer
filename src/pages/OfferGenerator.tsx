@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ValueProfileChart from "@/components/offer-intelligence/ValueProfileChart";
 import { DIMENSION_LABELS, compareProfiles, type ValueDimension } from "@shared/offerIntelligence/valueEquation";
 import type { PublicOfferResult } from "@shared/offerIntelligence/publicResult";
-import { toText, humanize, isRedundant } from "@shared/offerIntelligence/plainLanguage";
+import { toText, humanize, isRedundant, pricingHeadings } from "@shared/offerIntelligence/plainLanguage";
 import { describeDecisions, type PublicDiagnosis, type PublicImprovement, type PublicChoice } from "@shared/offerIntelligence/publicFlow";
 import {
   diagnoseOffer, strengthenOffer, finalizeOffer, requestOfferBlueprint, generatorErrorMessage,
@@ -322,7 +322,7 @@ export default function OfferGenerator() {
                 <Card><ValueProfileChart before={s.diagnosis.profile} variant="large" /></Card>
                 <p className="text-sm text-muted-foreground -mt-4">These are provisional assessments based on the information you've shared. If a dimension is marked “Not assessed”, it means we need more information — not that your offer is weak in that area.</p>
                 <div className="grid md:grid-cols-3 gap-4">
-                  <Card title="What's already working"><ul className="space-y-2 text-sm text-foreground">{s.diagnosis.strengths.map((x) => <li key={x} className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />{x}</li>)}</ul></Card>
+                  <Card title={isIdea ? "What's promising about your idea" : "What's already working"}><ul className="space-y-2 text-sm text-foreground">{s.diagnosis.strengths.map((x) => <li key={x} className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />{x}</li>)}</ul></Card>
                   <Card title="What's holding your offer back"><ul className="space-y-2 text-sm text-foreground list-disc pl-5">{s.diagnosis.weaknesses.map((x) => <li key={x}>{x}</li>)}</ul></Card>
                   <Card title="Where we can make the biggest difference" className="border-primary/30 bg-primary/5"><ol className="space-y-2 text-sm text-foreground list-decimal pl-5">{s.diagnosis.topImprovements.map((x) => <li key={x}>{x}</li>)}</ol></Card>
                 </div>
@@ -366,7 +366,7 @@ export default function OfferGenerator() {
                                 {on && <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">Your choice</span>}
                               </div>
                               <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-medium", o.kind === "future_action" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
-                                {o.kind === "future_action" ? "Requires implementation before it can be claimed" : "Can be reflected in your offer now"}
+                                {o.kind === "future_action" ? "Requires implementation before launch" : "Can be included in your proposed offer"}
                               </span>
                               <p className="text-sm text-foreground"><span className="font-medium">What to change: </span>{o.change}</p>
                               {o.why && <p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">Why it helps: </span>{o.why}</p>}
@@ -522,6 +522,7 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
               <>
                 <Section title="Who it's for">{r.audience || s.form.audience}</Section>
                 {transformation && !isRedundant(toText(transformation), r.promise) && <Section title="The transformation">{toText(transformation)}</Section>}
+                {r.positioning && !isRedundant(r.positioning, r.promise) && <Section title="Positioning">{humanize(r.positioning)}</Section>}
                 {r.deliveryApproach && <Section title="How it's delivered">{r.deliveryApproach}</Section>}
               </>
             )}
@@ -541,7 +542,7 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
                   </Section>
                 )}
                 {deliverables.length > 0 && (
-                  <Section title="Main program components">
+                  <Section title="What's included">
                     <div className="grid sm:grid-cols-2 gap-3">
                       {deliverables.map((d, i) => (
                         <div key={i} className="rounded-lg border border-border bg-muted/30 p-4 space-y-1">
@@ -581,7 +582,7 @@ function FinalStage({ s, onBack, onStartOver, onAuditSent }: { s: Saved; onBack:
                     <p className="text-xs text-muted-foreground mt-2">A recommendation based on your answers — not a validated market price.</p>
                   </Section>
                 ) : <p className="text-muted-foreground">There isn't enough information yet to recommend a specific new price — here's what to consider instead.</p>}
-                {r.pricingGuidance && ([["What influences whether this price makes sense", r.pricingGuidance.factors], ["How to strengthen the perceived value", r.pricingGuidance.strengthenValue], ["What to validate before changing your price", r.pricingGuidance.validateFirst]] as const).map(([t, list]) => list.length > 0 && (
+                {r.pricingGuidance && (() => { const h = pricingHeadings(!!price); return [[h[0], r.pricingGuidance.factors], [h[1], r.pricingGuidance.strengthenValue], [h[2], r.pricingGuidance.validateFirst]] as const; })().map(([t, list]) => list.length > 0 && (
                   <Section key={t} title={t}><ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">{list.map((a) => <li key={a}>{humanize(a)}</li>)}</ul></Section>
                 ))}
               </>
