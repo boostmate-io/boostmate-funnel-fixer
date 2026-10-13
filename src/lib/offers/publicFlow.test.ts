@@ -103,7 +103,7 @@ describe("Before/After consistency", () => {
 
   it("never creates proof, caps planned likelihood changes and limits jumps to one step", () => {
     const d = (buildDiagnosis({ ...diag(), assessments: verdicts({ pl_proof: "unknown", pl_risk: "weak", do_specific: "weak" }) }) as any).value;
-    const r = reconcileFinal(result(verdicts({}, "strong")), d, items(), [{ itemId: "i0", choice: "a" }, { itemId: "i1", choice: "a" }]);
+    const r = reconcileFinal(result(verdicts({}, "strong"), [{ dimension: "perceived_likelihood", direction: "up", whatChanged: "A four-phase method with weekly reviews" }, { dimension: "ease_of_achievement", direction: "up", whatChanged: "A clearer step-by-step method", why: "easier to follow" }]), d, items(), [{ itemId: "i0", choice: "a" }, { itemId: "i1", choice: "a" }]);
     const v = Object.fromEntries(r.assessments.map((a: any) => [a.criterionId, a.verdict]));
     expect(v.pl_proof).toBe("unknown");
     expect(v.pl_risk).toBe("partial");
@@ -111,6 +111,7 @@ describe("Before/After consistency", () => {
     expect(v.do_specific).toBe("weak"); // dream outcome not addressed by any chosen improvement
     expect(v.do_relevant).toBe("partial");
     expect(v.ea_steps).toBe("partial"); // a clearer method alone never lifts ease
+    expect(v.sv_milestones).toBe("partial"); // no concrete speed change named
     expect(r.profile.dimensions.perceived_likelihood.score).toBeLessThan(10);
     expect(r.dimensionChanges.find((c: any) => c.dimension === "perceived_likelihood").adjusted).toBe(true);
   });
