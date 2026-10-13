@@ -88,7 +88,7 @@ describe("new offer idea corrections", () => {
     expect(str).toMatch(/a pilot is primarily for validation/);
     expect(gen).toMatch(/never decide it in the offer/);
     expect(gen).toMatch(/separate step before the main program/);
-    expect(gen).toMatch(/never "now provides"/);
+    expect(gen).toMatch(/never 'now provides'/);
   });
   it("planned changes never jump a criterion to strong", () => {
     const before = VALUE_CRITERIA.map((c) => ({ criterionId: c.id, verdict: "weak" as const, reasoning: "" }));
