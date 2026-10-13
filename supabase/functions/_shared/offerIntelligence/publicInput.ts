@@ -11,6 +11,8 @@ export interface PublicOfferInput {
   delivery: string;
   obstacle: string;
   currentOffer?: string;
+  /** Visitor's own statement of evidence (results, experience, guarantee). Claims, not verified proof. */
+  credibility?: string;
   currentPrice?: string;
   /** "existing" = already selling; "idea" = not yet sold. */
   stage?: "existing" | "idea";
@@ -19,7 +21,7 @@ export interface PublicOfferInput {
   locale?: "en" | "nl";
 }
 
-const LIMITS = { audience: 300, outcome: 300, delivery: 300, obstacle: 300, currentOffer: 500, currentPrice: 40 } as const;
+const LIMITS = { audience: 300, outcome: 300, delivery: 800, obstacle: 300, currentOffer: 1000, credibility: 800, currentPrice: 40 } as const;
 const REQUIRED = ["audience", "outcome", "obstacle"] as const;
 const ALLOWED_KEYS = new Set([...Object.keys(LIMITS), "tier", "locale", "stage", "currency"]);
 export const PUBLIC_CURRENCIES = ["EUR", "USD", "GBP", "CAD", "AUD", "CHF"] as const;
@@ -64,6 +66,7 @@ export function publicInputToContext(input: PublicOfferInput) {
       ...(input.delivery ? { delivery: input.delivery } : {}),
       ...(input.stage ? { offerStage: input.stage === "idea" ? "offer idea, not sold yet" : "existing offer, already selling" } : {}),
       ...(input.currentOffer ? { currentOffer: input.currentOffer } : {}),
+      ...(input.credibility ? { credibility: `Visitor's own statement about why clients can trust the offer (a claim, not verified proof): ${input.credibility}` } : {}),
       ...(input.currentPrice ? { currentPrice: input.currentPrice + (input.currency ? ` ${input.currency}` : "") } : {}),
     },
     blueprint: null,
