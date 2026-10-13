@@ -133,44 +133,84 @@ Deno.serve(async (req) => {
     return json({ result });
   }
 
-  // ---- Free Video Audit request ------------------------------------------
-  if (body?.action === "audit_request") {
-    const v = validateAuditRequest(body);
+  // ---- Offer Blueprint PDF (+ optional Free Video Audit) -------------------
+  // PDF is rendered from the stored result (no AI), kept in a private bucket and
+  // delivered via a 30-day signed link to the visitor and the Boostmate admin.
+  // Only a minimal hashed record is kept (duplicates, rate limiting, retries).
+  if (body?.action === "blueprint_request") {
+    if (looksLikeBot(body)) return json({ error: "rejected" }, 400);
+    const v = validateBlueprintRequest(body);
     if (!v.ok) return json({ error: "invalid_input", fields: v.errors }, 400);
-    const row = body.token ? await loadRow(body.token) : null;
-    if (row) {
-      const { data: dup } = await admin.from("video_audit_requests").select("id").eq("generation_id", row.id).eq("email", v.value.email).maybeSingle();
-      if (dup) return json({ ok: true, already: true });
+    const row = await loadRow(body.token);
+    if (!row || row.status !== "complete" || !row.result) return json({ error: "not_found" }, 404);
+    const emailHash = await sha256(`${v.value.email}|${row.id}`);
+    const { data: prior } = await admin.from("offer_blueprint_deliveries").select("id,status").eq("generation_id", row.id).eq("email_hash", emailHash).maybeSingle();
+    if (prior && prior.status !== "pending") return json({ ok: true, already: true, auditRequested: !!v.value.audit });
+    if (!prior) {
+      const { count } = await admin.from("offer_blueprint_deliveries").select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", dayAgo);
+      if ((count ?? 0) >= MAX_AUDITS_PER_IP_DAY) return json({ error: "rate_limited" }, 429);
     }
-    const { count } = await admin.from("video_audit_requests").select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", dayAgo);
-    if ((count ?? 0) >= MAX_AUDITS_PER_IP_DAY) return json({ error: "rate_limited" }, 429);
-    const { data: created, error } = await admin.from("video_audit_requests").insert({
-      generation_id: row?.id ?? null, email: v.value.email, instagram: v.value.instagram, acquisition_channel: v.value.channel,
-      website: v.value.website, marketing_consent: v.value.marketingConsent, consent_text_version: AUDIT_CONSENT_TEXT_VERSION,
-      offer_snapshot: row ? auditSnapshot(row) : null, ip_hash: ipHash,
-    }).select("id,created_at").single();
-    if (error) {
-      if (error.code === "23505") return json({ ok: true, already: true });
-      console.error("audit_request insert", error.code);
-      return json({ error: "storage_failed" }, 500);
-    }
-    // Admin notice (one fixed internal recipient). A failed notice never fails the request.
-    const snap = row ? auditSnapshot(row) : null;
-    try {
-      const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-transactional-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
-        body: JSON.stringify({
-          templateName: "video-audit-request", idempotencyKey: `video-audit-request-${created!.id}`,
-          templateData: {
-            instagram: v.value.instagram, email: v.value.email, channel: AUDIT_CHANNEL_LABELS[v.value.channel], website: v.value.website ?? "",
-            offerName: snap?.offer?.name ?? "", scores: scoresLine(snap), submittedAt: new Date(created!.created_at).toUTCString(),
-          },
-        }),
-      });
-      if (!r.ok) console.error("audit notice failed", r.status, (await r.text()).slice(0, 200));
-    } catch (e) { console.error("audit notice error", String(e).slice(0, 200)); }
-    return json({ ok: true });
+    const rec = prior ?? (await admin.from("offer_blueprint_deliveries").insert({ generation_id: row.id, email_hash: emailHash, audit_requested: !!v.value.audit, ip_hash: ipHash }).select("id,status").single()).data;
+    if (!rec) return json({ error: "storage_failed" }, 500);
+
+    let pdf: Uint8Array;
+    try { pdf = await renderBlueprintPdf(row); } catch (e) { console.error("blueprint pdf", String(e).slice(0, 300)); return json({ error: "pdf_failed" }, 500); }
+    if (pdf.byteLength > 4_000_000) { console.error("blueprint pdf too large", pdf.byteLength); return json({ error: "pdf_failed" }, 500); }
+    const path = `${row.id}/${emailHash.slice(0, 24)}.pdf`;
+    const up = await admin.storage.from("offer-blueprints").upload(path, pdf, { contentType: "application/pdf", upsert: true });
+    if (up.error) { console.error("blueprint upload", up.error.message); return json({ error: "storage_failed" }, 500); }
+    const signed = await admin.storage.from("offer-blueprints").createSignedUrl(path, 30 * 86400, { download: "Irresistible-Offer-Blueprint.pdf" });
+    if (!signed.data?.signedUrl) return json({ error: "storage_failed" }, 500);
+    const downloadUrl = signed.data.signedUrl;
+
+    const send = async (payload: Record<string, unknown>) => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-transactional-email`, {
+            method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+            body: JSON.stringify(payload),
+          });
+          if (r.ok) return true;
+          console.error("blueprint email failed", payload.templateName, r.status, (await r.text()).slice(0, 200));
+          if (r.status < 500) return false;
+        } catch (e) { console.error("blueprint email error", payload.templateName, String(e).slice(0, 200)); }
+      }
+      return false;
+    };
+    const res = row.result as any; const inp = row.input as any; const snap = auditSnapshot(row);
+    const visitorOk = await send({
+      templateName: "offer-blueprint", recipientEmail: v.value.email, idempotencyKey: `offer-blueprint-${rec.id}`,
+      templateData: { offerName: res.offerName, downloadUrl, auditRequested: !!v.value.audit },
+    });
+    // No false success: the visitor may retry; the pending record is reused.
+    if (!visitorOk) return json({ error: "email_failed" }, 502);
+    const adminOk = await send({
+      templateName: "offer-blueprint-lead", idempotencyKey: `offer-blueprint-lead-${rec.id}`,
+      templateData: {
+        email: v.value.email, submittedAt: new Date().toUTCString(), auditRequested: !!v.value.audit, marketingConsent: v.value.marketingConsent,
+        original: [
+          { label: "Status", value: inp.stage === "idea" ? "New offer idea" : "Existing offer" },
+          { label: "Target audience", value: inp.audience ?? "" }, { label: "Desired result", value: inp.outcome ?? "" },
+          { label: "Current offer", value: inp.currentOffer ?? "" }, { label: "Delivery", value: inp.delivery ?? "" },
+          { label: "Biggest challenge", value: inp.obstacle ?? "" },
+          { label: "Current price", value: inp.currentPrice ? `${inp.currentPrice} ${inp.currency ?? ""}`.trim() : "" },
+        ],
+        improved: [
+          { label: "Name", value: res.offerName ?? "" }, { label: "Promise", value: res.promise ?? "" },
+          { label: "Scores (before → after)", value: scoresLine(snap) },
+        ],
+        decisions: snap.decisions.map((d: any) => `${d.area}: ${d.choice ?? "—"}${d.custom ? ` (${d.custom})` : ""}`),
+        audit: v.value.audit ? [
+          { label: "Instagram", value: `@${v.value.audit.instagram} (https://instagram.com/${v.value.audit.instagram})` },
+          { label: "Website or funnel", value: v.value.audit.website ?? "" },
+          { label: "Current client acquisition", value: v.value.audit.acquisition },
+        ] : [],
+        downloadUrl,
+      },
+    });
+    if (!adminOk) console.error("ADMIN NOTICE NOT DELIVERED for blueprint delivery", rec.id);
+    await admin.from("offer_blueprint_deliveries").update({ status: adminOk ? "sent" : "admin_failed" }).eq("id", rec.id);
+    return json({ ok: true, auditRequested: !!v.value.audit });
   }
 
   return json({ error: "unknown_action" }, 400);
