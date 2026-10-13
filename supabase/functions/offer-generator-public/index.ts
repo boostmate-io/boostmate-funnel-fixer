@@ -4,7 +4,7 @@
 //   finalize      — token + visitor decisions → shared `public_generate` op → full improved offer
 //   audit_request — Free Video Audit application (optionally linked to the token's result)
 // Never reads workspace, Blueprint or Coach data. Service role only touches
-// public_offer_generations and video_audit_requests.
+// public_offer_generations, offer_blueprint_deliveries and the private offer-blueprints bucket.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
   // delivered via a 30-day signed link to the visitor and the Boostmate admin.
   // Only a minimal hashed record is kept (duplicates, rate limiting, retries).
   if (body?.action === "blueprint_request") {
-    if (looksLikeBot(body)) return json({ error: "rejected" }, 400);
+    if (String(body.hp ?? "").trim() !== "") return json({ error: "rejected" }, 400); // honeypot
     const v = validateBlueprintRequest(body);
     if (!v.ok) return json({ error: "invalid_input", fields: v.errors }, 400);
     const row = await loadRow(body.token);
