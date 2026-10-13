@@ -27,6 +27,9 @@ export function humanize(s: unknown): string {
     .replace(/\b(?:partial|weak)\s*\/\s*(?:partial|weak)\b/gi, "underdeveloped")
     .replace(/\b(criteri(?:on|a))\b/gi, (m) => (m.toLowerCase() === "criteria" ? "areas" : "area"))
     .replace(/\bverdicts?\b/gi, "assessment")
+    .replace(/\b(?:the\s+)?(?:apply[ _-]now|future[ _-]actions?)\s+(?:improvements?|items?|changes?|decisions?)\b/gi, "the changes you chose")
+    .replace(/\[?\b(?:APPLY[ _-]NOW|FUTURE[ _-]ACTIONS?|apply_now|future_action)\b\]?:?\s*/g, "")
+    .replace(/\bselectedImprovements\b/g, "your chosen improvements")
     .replace(/\b(?:this|the)\s+dimension\b/gi, "this part of your offer")
     .replace(/\s{2,}/g, " ").replace(/\s+([.,;])/g, "$1").trim();
 }

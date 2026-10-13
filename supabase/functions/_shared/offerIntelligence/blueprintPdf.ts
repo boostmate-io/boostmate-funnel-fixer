@@ -100,6 +100,8 @@ class Writer {
   }
 }
 
+const kw = (t: string) => new Set(String(t).toLowerCase().match(/[a-z0-9]{4,}/g) ?? []);
+const overlap = (a: string, b: string) => { const x = kw(a), y = [...kw(b)]; return y.length ? y.filter((w) => x.has(w)).length / y.length : 0; };
 const score = (p: any, d: string): number | null => { const v = p?.dimensions?.[d]; return v?.status === "assessed" && typeof v.score === "number" ? v.score : null; };
 const fmt = (v: number | null) => (v == null ? "Not assessed" : `${Math.round(v * 10) / 10}/10`);
 
@@ -197,23 +199,39 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   const deliverables: any[] = (r.design?.stack?.deliverables ?? []).filter((x: any) => x?.name);
   const incl = deliverables.length ? deliverables.map((x) => (x.description ? `${toText(x.name)}: ${toText(x.description)}` : toText(x.name))) : (r.deliverables ?? []);
   if (incl.length) { w.label("What's included"); w.bullets(incl); }
-  w.h2("What makes it stronger", 120);
+  const steps: any[] = (r.methodSteps ?? []).filter((m: any) => m?.name);
+  if (steps.length) { w.label("The steps your clients follow"); w.bullets(steps.map((m: any) => (m.description ? `${m.name}: ${m.description}` : m.name)), { numbered: true }); }
+  w.h2("Included in your proposed offer", 120);
   const decided = snap.decisions.filter((d: any) => d.choice && d.choice !== "Keep current approach");
   const helps: any[] = r.appliedImprovements ?? [];
-  if (decided.length || helps.length) {
-    const n = Math.max(decided.length, helps.length);
-    for (let i = 0; i < n; i++) {
-      const dec = decided[i]; const h = helps[i];
-      const title = dec ? (dec.own ? "Your own improvement" : `${dec.choice}${dec.custom ? ` - ${dec.custom}` : ""}`) : h?.area ?? "";
-      const body = [dec?.own ? dec.custom : "", humanize(h?.howItHelps ?? ""), dec?.kind === "future_action" ? "Needs to be implemented before you can claim it." : ""].filter(Boolean).join(" ");
-      w.card(pdfSafe(title), body);
-    }
+  // Only what is actually part of the proposed offer; work still to be done lives in the checklist.
+  const included = decided.filter((d: any) => d.kind !== "future_action");
+  const used = new Set<number>();
+  const matchHelp = (d: any) => {
+    const text = `${d.choice ?? ""} ${d.custom ?? ""} ${d.area ?? ""}`;
+    let best = -1, bestScore = 0;
+    helps.forEach((h: any, i: number) => { if (used.has(i)) return; const sc = overlap(`${h.area} ${h.howItHelps}`, text); if (sc > bestScore) { best = i; bestScore = sc; } });
+    if (best >= 0 && bestScore >= 0.3) { used.add(best); return helps[best]; }
+    return null;
+  };
+  for (const dec of included) {
+    const h = matchHelp(dec);
+    const title = dec.own ? "Your own improvement" : `${dec.choice}${dec.custom ? ` - ${dec.custom}` : ""}`;
+    const body = [dec.own ? String(dec.custom ?? "").replace(/[.\s]*$/, ".") : "", humanize(h?.howItHelps ?? "")].filter((x) => x && x !== ".").join(" ");
+    w.card(pdfSafe(title), body);
   }
+  if (!included.length) w.text("You didn't add any immediate changes to the offer.", { color: MUTED, gap: 8 });
+  const extra = (r.additionalRecommendations ?? []).map(humanize).filter(Boolean);
+  if (extra.length) { w.h2("Additional recommendations", 80); w.text("Optional ideas you didn't select - they are not part of your proposed offer.", { color: MUTED, size: 9.5, gap: 6 }); w.bullets(extra); }
   w.h2("Pricing");
   const cur = inp.stage !== "idea" && inp.currentPrice ? `${inp.currentPrice} ${inp.currency ?? ""}`.trim() : "";
   if (cur) w.field("Your current price", cur);
   if (r.pricing) { w.field("Suggested price range (estimate)", `${r.pricing.low.toLocaleString("en-US")} - ${r.pricing.high.toLocaleString("en-US")}${inp.currency ? ` ${inp.currency}` : ""}`); w.text(humanize(r.pricing.reasoning), { color: MUTED, gap: 2 }); w.text("A recommendation based on your answers - not a validated market price.", { size: 9, color: MUTED, gap: 10 }); }
-  else w.text("There isn't enough information yet for a responsible price suggestion.", { color: MUTED, gap: 10 });
+  else w.text("There isn't enough information yet to recommend a specific new price - here's what to consider instead.", { color: MUTED, gap: 10 });
+  const pg = r.pricingGuidance;
+  if (pg) for (const [t, list] of [["What influences whether this price makes sense", pg.factors], ["How to strengthen the perceived value", pg.strengthenValue], ["What to validate before changing your price", pg.validateFirst]] as const) {
+    const items = (list ?? []).map(humanize).filter(Boolean); if (items.length) { w.label(t); w.bullets(items); }
+  }
 
   // ---- 5. Action plan
   w.y -= 10; w.section(5, "Your implementation action plan", "What's already part of your improved offer, what you still need to do, and what to test before you rely on it.");
@@ -223,9 +241,12 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
       : `${d.choice}${d.custom ? ` (${d.custom})` : ""} - now part of how the offer is described.`)
     : helps.map((h: any) => humanize(h.howItHelps).split(/(?<=\.)\s/)[0]).filter(Boolean);
   if (reflected.length) { w.h2("Reflected in your proposed offer", 90); w.bullets(reflected, { color: GREEN }); }
-  const todo = [...(r.futureActions ?? []), ...(r.validationNeeds ?? [])].map(humanize).filter((v, i, a) => v && a.findIndex((x) => isRedundant(x, v)) === i);
+  const dedupe = (v: string, i: number, a: string[]) => v && a.findIndex((x) => isRedundant(x, v)) === i;
+  const todo = (r.futureActions ?? []).map(humanize).filter(dedupe);
+  const validate = (r.validationNeeds ?? []).map(humanize).filter(dedupe).filter((v: string) => !todo.some((t: string) => isRedundant(t, v)));
+  if (validate.length) { w.h2("What still needs validation", 90); w.bullets(validate, { color: AMBER }); }
   if (todo.length) {
-    w.h2("Still to implement", 90);
+    w.h2("Your implementation checklist", 90);
     w.bullets(todo, { check: true });
     w.card("Before you promote this offer", "Any resources, playbooks, testimonials, case studies or guarantees described above are part of the proposed offer. Create, collect or confirm them before you present them to clients as available or proven.", AMBER_BG, AMBER);
   }
