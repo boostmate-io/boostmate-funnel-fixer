@@ -81,9 +81,9 @@ export function alignScoreWhy(state: "up" | "down" | "same", text: string, label
   return `The improved offer leaves this part less clearly supported than before, so ${label} is now ${after}.`;
 }
 
-const norm = (s: unknown) => toText(s).toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+const normName = (s: unknown) => toText(s).toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 /** Deliverables minus anything the AI positioned as a separate pre-enrollment step. */
 export function splitPreProgram<T extends { name?: unknown }>(deliverables: T[], pre: { name: string }[] | undefined): T[] {
-  const names = new Set((pre ?? []).map((p) => norm(p.name)).filter(Boolean));
-  return names.size ? deliverables.filter((d) => !names.has(norm(d.name))) : deliverables;
+  const names = new Set((pre ?? []).map((p) => normName(p.name)).filter(Boolean));
+  return names.size ? deliverables.filter((d) => !names.has(normName(d.name))) : deliverables;
 }
