@@ -43,7 +43,7 @@ interface Props {
   improvements?: Partial<Record<ValueDimension, string[]>>;
 }
 
-export default function ValueProfileChart({ before, after, className, improvements, variant = "large" }: Props) {
+export default function ValueProfileChart({ before, after, className, improvements, variant = "large", beforeLabel, afterLabel }: Props & { beforeLabel?: string; afterLabel?: string }) {
   const [selected, setSelected] = useState<ValueDimension | null>(null);
   const main = after ?? before ?? null;
   const beforePts = points(before);
@@ -97,8 +97,8 @@ export default function ValueProfileChart({ before, after, className, improvemen
 
   const legend = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-      {before && <span className="flex items-center gap-1.5"><span className={cn("w-2.5 h-2.5 rounded-full border-2", both ? "border-muted-foreground bg-background" : "border-primary bg-primary")} />{both ? "Before (diagnosis)" : "Current assessment"}</span>}
-      {after && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-primary" />After (final offer)</span>}
+      {before && <span className="flex items-center gap-1.5"><span className={cn("w-2.5 h-2.5 rounded-full border-2", both ? "border-muted-foreground bg-background" : "border-primary bg-primary")} />{beforeLabel ?? (both ? "Before (diagnosis)" : "Current assessment")}</span>}
+      {after && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-primary" />{afterLabel ?? "After (final offer)"}</span>}
       <span className="flex items-center gap-1.5"><span className="w-4 border-t border-dashed border-muted-foreground" />Not assessed</span>
     </div>
   );

@@ -107,7 +107,7 @@ describe("Before/After consistency", () => {
     const v = Object.fromEntries(r.assessments.map((a: any) => [a.criterionId, a.verdict]));
     expect(v.pl_proof).toBe("unknown");
     expect(v.pl_risk).toBe("partial");
-    expect(v.pl_method).toBe("partial");
+    expect(v.pl_method).toBe("strong"); // concrete proposed method may rise one step
     expect(v.do_specific).toBe("partial");
     expect(v.do_relevant).toBe("strong");
     expect(r.profile.dimensions.perceived_likelihood.score).toBeLessThan(10);

@@ -90,13 +90,14 @@ describe("new offer idea corrections", () => {
     expect(gen).toMatch(/BEFORE enrollment or before the main program go ONLY in preProgramSteps/);
     expect(gen).toMatch(/never 'now provides'/);
   });
-  it("planned changes never make likelihood or speed criteria strong", () => {
+  it("planned changes rise at most one step; proof never rises; risk stays partial", () => {
     const before = VALUE_CRITERIA.map((c) => ({ criterionId: c.id, verdict: "weak" as const, reasoning: "" }));
     const after = VALUE_CRITERIA.map((c) => ({ criterionId: c.id, verdict: "strong" as const, reasoning: "" }));
     const d: any = { assessments: before, profile: scoreValueProfile(before) };
     const r: any = { assessments: after, dimensionChanges: [], futureActions: [] };
     const out = reconcileFinal(r, d, [], []);
-    expect(out.assessments.filter((a) => /^(pl|sv)_/.test(a.criterionId)).every((a) => a.verdict !== "strong")).toBe(true);
+    expect(out.assessments.every((a) => a.verdict !== "strong")).toBe(true);
+    expect(out.assessments.find((a) => a.criterionId === "pl_proof")!.verdict).toBe("weak");
   });
   it("pricing headings depend on whether a price exists; warning is proposal-specific", () => {
     expect(pricingHeadings(false)[0]).toBe("What should influence your pricing");
