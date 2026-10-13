@@ -136,7 +136,7 @@ export function reconcileFinal(result: PublicOfferResult, d: PublicDiagnosis, it
     if (RANK[v] > RANK[b]) {
       let cap = Math.min(2, Math.max(RANK[b], 0) + 1);
       if (crit.id === "pl_proof") cap = RANK[b];
-      else cap = Math.min(cap, Math.max(RANK[b], 1)); // a planned change is at most partial in any dimension
+      else if (crit.dimension === "perceived_likelihood" || crit.dimension === "speed_to_value") cap = Math.min(cap, Math.max(RANK[b], 1)); // proposed mechanisms/milestones are not demonstrated progress
       if (RANK[v] > cap) v = cap < 0 ? "unknown" : BY_RANK[cap];
     } else if (RANK[v] < RANK[b] && !claimedDown.has(crit.dimension)) v = b;
     if (v !== orig.verdict) touched.add(crit.dimension);
