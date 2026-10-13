@@ -173,7 +173,7 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   w.field("Unique method", fwName && !methodBody.includes(fwName) ? `${fwName} - ${methodBody}` : methodBody || fwName);
 
   // ---- 2. Value Equation chart
-  w.y -= 10; w.section(2, "Value Equation: Before vs. After", r.beforeProfile
+  w.y -= 10; w.ensure(420); w.section(2, "Value Equation: Before vs. After", r.beforeProfile
     ? "Your original offer and the improved proposal, assessed with the same criteria and evidence standard."
     : "The initial assessment of your offer idea compared with the improved proposal.");
   w.ensure(330);
@@ -240,7 +240,9 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
 
   // ---- 5. Action plan
   w.y -= 10; w.section(5, "Your implementation action plan", "What's already part of your improved offer, what you still need to do, and what to test before you rely on it.");
-  const reflected = helps.map((h: any) => humanize(h.howItHelps).split(/(?<=\.)\s/)[0]).filter(Boolean);
+  const reflected = decided.length
+    ? decided.map((d: any) => `${d.choice}${d.custom ? ` (${d.custom})` : ""} - now part of how the offer is described.`)
+    : helps.map((h: any) => humanize(h.howItHelps).split(/(?<=\.)\s/)[0]).filter(Boolean);
   if (reflected.length) { w.h2("Reflected in your proposed offer", 90); w.bullets(reflected, { color: GREEN }); }
   const todo = [...(r.futureActions ?? []), ...(r.validationNeeds ?? [])].map(humanize).filter((v, i, a) => v && a.findIndex((x) => isRedundant(x, v)) === i);
   if (todo.length) {
