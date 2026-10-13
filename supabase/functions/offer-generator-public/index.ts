@@ -165,7 +165,10 @@ Deno.serve(async (req) => {
     const downloadUrl = signed.data.signedUrl;
 
     const send = async (payload: Record<string, unknown>) => {
-      for (let attempt = 0; attempt < 2; attempt++) {
+      // Up to 3 attempts for transient failures (network, 429, 5xx); the shared
+      // idempotency key makes retries safe — no duplicate notifications.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await new Promise((res) => setTimeout(res, attempt * 800));
         try {
           const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-transactional-email`, {
             method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
@@ -173,7 +176,7 @@ Deno.serve(async (req) => {
           });
           if (r.ok) return true;
           console.error("blueprint email failed", payload.templateName, r.status, (await r.text()).slice(0, 200));
-          if (r.status < 500) return false;
+          if (r.status < 500 && r.status !== 429) return false;
         } catch (e) { console.error("blueprint email error", payload.templateName, String(e).slice(0, 200)); }
       }
       return false;
