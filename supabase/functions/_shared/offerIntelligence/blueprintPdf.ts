@@ -3,7 +3,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "npm:pdf-lib@1.17.1";
 import { VALUE_DIMENSIONS, DIMENSION_LABELS } from "./valueEquation.ts";
 import { auditSnapshot } from "./publicFlow.ts";
-import { toText, humanize, isRedundant } from "./plainLanguage.ts";
+import { toText, humanize, isRedundant, pricingHeadings, promotionWarning } from "./plainLanguage.ts";
 export { toText, humanize, isRedundant };
 import { BOOSTMATE_LOGO_LIGHT_PNG_BASE64 } from "./boostmateLogo.ts";
 
@@ -229,18 +229,12 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   if (r.pricing) { w.field("Suggested price range (estimate)", `${r.pricing.low.toLocaleString("en-US")} - ${r.pricing.high.toLocaleString("en-US")}${inp.currency ? ` ${inp.currency}` : ""}`); w.text(humanize(r.pricing.reasoning), { color: MUTED, gap: 2 }); w.text("A recommendation based on your answers - not a validated market price.", { size: 9, color: MUTED, gap: 10 }); }
   else w.text("There isn't enough information yet to recommend a specific new price - here's what to consider instead.", { color: MUTED, gap: 10 });
   const pg = r.pricingGuidance;
-  if (pg) for (const [t, list] of [["What influences whether this price makes sense", pg.factors], ["How to strengthen the perceived value", pg.strengthenValue], ["What to validate before changing your price", pg.validateFirst]] as const) {
+  if (pg) for (const [t, list] of (() => { const h = pricingHeadings(!!cur); return [[h[0], pg.factors], [h[1], pg.strengthenValue], [h[2], pg.validateFirst]] as const; })()) {
     const items = (list ?? []).map(humanize).filter(Boolean); if (items.length) { w.label(t); w.bullets(items); }
   }
 
   // ---- 5. Action plan
-  w.y -= 10; w.section(5, "Your implementation action plan", "What's already part of your improved offer, what you still need to do, and what to test before you rely on it.");
-  const reflected = decided.length
-    ? decided.filter((d: any) => d.kind !== "future_action").map((d: any) => d.own
-      ? `Your own improvement: ${d.custom} - included in the proposal; build or confirm anything it depends on before you claim it.`
-      : `${d.choice}${d.custom ? ` (${d.custom})` : ""} - now part of how the offer is described.`)
-    : helps.map((h: any) => humanize(h.howItHelps).split(/(?<=\.)\s/)[0]).filter(Boolean);
-  if (reflected.length) { w.h2("Reflected in your proposed offer", 90); w.bullets(reflected, { color: GREEN }); }
+  w.y -= 10; w.section(5, "Your implementation action plan", "What you still need to build and test before you rely on this offer, and your first three steps.");
   const dedupe = (v: string, i: number, a: string[]) => v && a.findIndex((x) => isRedundant(x, v)) === i;
   const todo = (r.futureActions ?? []).map(humanize).filter(dedupe);
   const validate = (r.validationNeeds ?? []).map(humanize).filter(dedupe).filter((v: string) => !todo.some((t: string) => isRedundant(t, v)));
@@ -248,7 +242,7 @@ export async function renderBlueprintPdf(gen: { input: any; diagnosis: any; stre
   if (todo.length) {
     w.h2("Your implementation checklist", 90);
     w.bullets(todo, { check: true });
-    w.card("Before you promote this offer", "Any resources, playbooks, testimonials, case studies or guarantees described above are part of the proposed offer. Create, collect or confirm them before you present them to clients as available or proven.", AMBER_BG, AMBER);
+    w.card("Before you promote this offer", promotionWarning([...todo, ...decided.map((d: any) => `${d.choice ?? ""} ${d.custom ?? ""}`)]), AMBER_BG, AMBER);
   }
   const assumptions = (r.assumptions ?? []).map(humanize).filter(Boolean);
   const next = (r.nextSteps?.length ? r.nextSteps : r.improvements ?? []).slice(0, 3).map(humanize);

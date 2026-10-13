@@ -42,3 +42,23 @@ export function isRedundant(a: string, b: string): boolean {
   const x = norm(a), y = norm(b);
   return !!x && !!y && (x === y || x.includes(y) || y.includes(x));
 }
+
+/** Pricing guidance headings — shared by the website and the PDF. */
+export function pricingHeadings(hasPrice: boolean): [string, string, string] {
+  return hasPrice
+    ? ["What influences whether this price makes sense", "How to strengthen the perceived value", "What to validate before changing your price"]
+    : ["What should influence your pricing", "How to strengthen the perceived value", "What to validate before setting your price"];
+}
+
+/** Implementation warning that only names what the proposal actually contains. */
+export function promotionWarning(texts: string[]): string {
+  const all = texts.join(" ").toLowerCase();
+  const items: string[] = [];
+  if (/assessment|fit call|discovery call|clarity call/.test(all)) items.push("the proposed assessment");
+  if (/method|framework|curriculum|steps/.test(all)) items.push("the coaching method and materials");
+  if (/onboard|process|journey|delivery/.test(all)) items.push("the delivery process");
+  if (/testimonial|case stud/.test(all)) items.push("genuine testimonials or case studies (with consent)");
+  if (/guarantee/.test(all)) items.push("the terms of any guarantee");
+  const what = items.length ? items.join(", ").replace(/, ([^,]*)$/, " and $1") : "everything listed in your implementation checklist";
+  return `Before promoting this offer, develop ${what}. Validate any claims about client outcomes before using them in marketing.`;
+}
