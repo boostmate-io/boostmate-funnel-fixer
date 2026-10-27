@@ -21,6 +21,7 @@ import OAuthConsent from "./pages/OAuthConsent.tsx";
 import OfferGenerator from "./pages/OfferGenerator";
 import OfferBuilder from "./pages/OfferBuilder";
 import PublicAssessment from "./pages/PublicAssessment.tsx";
+import DocsViewer from "./pages/DocsViewer";
 import RedirectSlug from "./pages/RedirectSlug.tsx";
 import Unsubscribe from "./pages/Unsubscribe.tsx";
 
@@ -50,6 +51,8 @@ const App = () => (
           <Route path="/offer/:token" element={<SharedOffer />} />
           <Route path="/blueprint/:token" element={<SharedBlueprint />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/docs/:courseSlug" element={<DocsViewer />} />
+          <Route path="/docs/:courseSlug/:lessonSlug" element={<DocsViewer />} />
           <Route path="/r/:slug" element={<RedirectSlug />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
           

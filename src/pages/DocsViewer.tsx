@@ -53,7 +53,11 @@ const Toc = ({ items, activeId, onNavigate }: { items: TocItem[]; activeId: stri
         {items.map((h) => (
           <li key={h.id}>
             <a href={`#${h.id}`}
-              onClick={(e) => { e.preventDefault(); document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); history.replaceState(null, "", `#${h.id}`); onNavigate?.(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                const go = () => { document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); history.replaceState(null, "", `#${h.id}`); };
+                if (onNavigate) { onNavigate(); setTimeout(go, 300); } else go();
+              }}
               style={{ paddingLeft: `${0.75 + (h.level - minLevel) * 0.75}rem` }}
               className={`-ml-px block border-l py-1 pr-2 text-sm leading-snug transition-colors ${activeId === h.id ? "border-primary text-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground"} ${h.level === minLevel ? "" : "text-[13px]"}`}>
               {h.text}
