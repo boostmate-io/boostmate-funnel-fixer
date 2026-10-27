@@ -1141,6 +1141,80 @@ export type Database = {
         }
         Relationships: []
       }
+      doc_courses: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          slug: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          slug: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      doc_lessons: {
+        Row: {
+          content: Json
+          course_id: string
+          created_at: string
+          id: string
+          slug: string
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          course_id: string
+          created_at?: string
+          id?: string
+          slug: string
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          course_id?: string
+          created_at?: string
+          id?: string
+          slug?: string
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "doc_courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -3321,6 +3395,10 @@ export type Database = {
       copy_document_is_public: { Args: { _doc_id: string }; Returns: boolean }
       delete_email: {
         Args: { message_id: number; queue_name: string }
+        Returns: boolean
+      }
+      doc_course_is_published: {
+        Args: { _course_id: string }
         Returns: boolean
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
