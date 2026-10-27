@@ -353,3 +353,17 @@ body:has([data-offer-editor]) [data-coach-panel] {
 .bg-primary .coach-markdown a { color: inherit; }
 .bg-primary .coach-markdown code { background: rgba(255,255,255,0.18); }
 .bg-primary .coach-markdown blockquote { border-color: rgba(255,255,255,0.4); color: inherit; }
+
+/* Documentation lesson editor */
+.lesson-editor h1 { @apply font-display text-2xl font-bold mt-8 mb-3; }
+.lesson-editor h2 { @apply font-display text-xl font-bold mt-6 mb-2; }
+.lesson-editor h3 { @apply font-display text-lg font-semibold mt-5 mb-2; }
+.lesson-editor p { @apply my-3 leading-7; }
+.lesson-editor ul { @apply list-disc ml-6 my-3; }
+.lesson-editor ol { @apply list-decimal ml-6 my-3; }
+.lesson-editor li > p { @apply my-1; }
+.lesson-editor blockquote { @apply border-l-4 border-primary/40 pl-4 italic text-muted-foreground my-4; }
+.lesson-editor hr { @apply my-8 border-border; }
+.lesson-editor a { @apply text-primary underline; }
+.lesson-editor code { @apply rounded bg-muted px-1 text-sm; }
+.lesson-editor p.is-editor-empty:first-child::before { content: attr(data-placeholder); @apply text-muted-foreground float-left h-0 pointer-events-none; }
