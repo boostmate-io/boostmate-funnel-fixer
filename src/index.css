@@ -367,3 +367,4 @@ body:has([data-offer-editor]) [data-coach-panel] {
 .lesson-editor a { @apply text-primary underline; }
 .lesson-editor code { @apply rounded bg-muted px-1 text-sm; }
 .lesson-editor p.is-editor-empty:first-child::before { content: attr(data-placeholder); @apply text-muted-foreground float-left h-0 pointer-events-none; }
+.lesson-editor [data-node-view-wrapper] p { margin: 0; line-height: 1.4; }
