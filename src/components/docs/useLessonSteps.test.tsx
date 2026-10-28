@@ -28,6 +28,24 @@ describe("lesson step state", () => {
     localStorage.setItem(progressKey(lesson.id), JSON.stringify({ completed: [2], lastStep: 2 }));
     const { result } = renderHook(() => useLessonSteps(lesson), { wrapper: ({ children }) => <MemoryRouter initialEntries={["/lesson?step=1"]}>{children}</MemoryRouter> });
     expect(result.current.currentStep).toBe(1);
+  });
+  it("does not push another lesson's step onto a freshly opened lesson", async () => {
+    const target = { ...lesson, id: "next", slug: "customer-clarity" };
+    const { result } = renderHook(() => ({ steps: useLessonSteps(target), location: useLocation() }), {
+      wrapper: ({ children }) => <MemoryRouter initialEntries={["/docs/course/customer-clarity"]}>{children}</MemoryRouter>,
+    });
+    await waitFor(() => expect(result.current.location.search).toBe("?step=1"));
+    act(() => result.current.steps.goToStep(2));
+    await waitFor(() => expect(result.current.location.search).toBe("?step=2"));
+    // The URL now points at a lesson that has not loaded yet (still the previous one).
+    const previous = { ...lesson, id: "intro", slug: "introduction" };
+    const stale = renderHook(() => ({ steps: useLessonSteps(previous), location: useLocation() }), {
+      wrapper: ({ children }) => <MemoryRouter initialEntries={[`/docs/course/customer-clarity?step=2`]}>{children}</MemoryRouter>,
+    });
+    await Promise.resolve();
+    expect(stale.result.current.location.search).toBe("?step=2");
+    expect(stale.result.current.steps.currentStep).not.toBe(1);
+  });
     expect(result.current.completed).toEqual([2]);
   });
 });

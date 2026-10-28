@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import type { DocNode } from "@/lib/docs/docContent";
 import { progressKey, readProgress, requestedStep, splitLessonSteps, toggleCompleted, type LessonProgress } from "@/lib/docs/lessonSteps";
 
-export const useLessonSteps = (lesson: { id: string; content: DocNode; step_by_step: boolean } | null) => {
+export const useLessonSteps = (lesson: { id: string; slug?: string; content: DocNode; step_by_step: boolean } | null) => {
   const location = useLocation();
   const navigate = useNavigate();
   const steps = useMemo(() => splitLessonSteps(lesson?.content ?? { type: "doc" }), [lesson?.content]);
@@ -16,8 +16,13 @@ export const useLessonSteps = (lesson: { id: string; content: DocNode; step_by_s
   const currentStep = requestedStep(new URLSearchParams(location.search).get("step"), steps.length)
     ?? (hashStep >= 0 ? hashStep + 1 : progress.lastStep);
 
+  // While the loaded lesson is not yet the lesson the URL points at (e.g. just clicked
+  // "Go to <next lesson>"), the URL step belongs to another lesson: stay out of the way.
+  const slugInUrl = location.pathname.split("/").filter(Boolean).pop();
+  const lessonMatchesUrl = !lesson?.slug || lesson.slug === slugInUrl;
+
   useEffect(() => {
-    if (!lesson?.step_by_step) return;
+    if (!lesson?.step_by_step || !lessonMatchesUrl) return;
     if (requestedStep(new URLSearchParams(location.search).get("step"), steps.length) === null) {
       const params = new URLSearchParams(location.search);
       params.set("step", String(currentStep));
@@ -26,7 +31,7 @@ export const useLessonSteps = (lesson: { id: string; content: DocNode; step_by_s
     const next = { completed: progress.completed, lastStep: currentStep };
     if (progress.lastStep !== currentStep) setStored({ id: lesson.id, progress: next });
     try { localStorage.setItem(progressKey(lesson.id), JSON.stringify(next)); } catch { /* Storage may be disabled. Navigation still works. */ }
-  }, [lesson?.id, lesson?.step_by_step, currentStep, progress, location.pathname, location.search, location.hash, steps.length, navigate]);
+  }, [lesson?.id, lesson?.step_by_step, lessonMatchesUrl, currentStep, progress, location.pathname, location.search, location.hash, steps.length, navigate]);
 
   const goToStep = (step: number, heading?: string) => {
     const params = new URLSearchParams(location.search);
