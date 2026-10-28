@@ -1,0 +1,3 @@
+ALTER TABLE public.doc_lessons ADD COLUMN toc_heading_levels integer[] NOT NULL DEFAULT ARRAY[1]::integer[];
+ALTER TABLE public.doc_lessons ADD CONSTRAINT doc_lessons_toc_heading_levels_valid CHECK (toc_heading_levels <@ ARRAY[1,2,3]::integer[] AND array_position(toc_heading_levels, NULL) IS NULL);
+COMMENT ON COLUMN public.doc_lessons.toc_heading_levels IS 'Heading levels shown in this lesson table of contents; empty array hides all entries. Defaults to H1.';
