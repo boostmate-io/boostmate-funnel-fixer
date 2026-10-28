@@ -160,6 +160,12 @@ const DocsViewer = () => {
     requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
   const stepTocProps = lesson?.step_by_step ? { stepForHeading, currentStep, completed, onHeading } : {};
+  const nextLesson = useMemo(() => {
+    if (!lesson) return null;
+    const i = lessons.findIndex((l) => l.id === lesson.id);
+    return i >= 0 && i + 1 < lessons.length ? lessons[i + 1] : null;
+  }, [lessons, lesson]);
+  const nextLink = nextLesson && course ? { href: `/docs/${course.slug}/${nextLesson.slug}`, title: nextLesson.title } : null;
   const percent = completionPercent(completed, steps.length);
 
   const isDraft = course?.status !== "published" || (lesson && lesson.status !== "published");
@@ -218,7 +224,7 @@ const DocsViewer = () => {
                   <div id="lesson-step-content" className="scroll-mt-24">
                     <DocContentRenderer key={lesson.step_by_step ? `${lesson.id}:${currentStep}` : lesson.id} doc={lesson.step_by_step ? current.doc : lesson.content} headingIds={lesson.step_by_step ? current.headingIds : undefined} />
                   </div>
-                  {lesson.step_by_step && <LessonStepNavigation step={currentStep} count={steps.length} complete={completed.includes(currentStep)} onStep={goToStep} onToggle={toggle} />}
+                  {lesson.step_by_step && <LessonStepNavigation step={currentStep} count={steps.length} complete={completed.includes(currentStep)} onStep={goToStep} onToggle={toggle} next={nextLink} />}
                 </article>
               ) : (
                 <section>
