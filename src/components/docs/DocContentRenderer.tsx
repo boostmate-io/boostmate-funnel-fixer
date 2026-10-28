@@ -53,7 +53,7 @@ const DocContentRenderer = ({ doc }: { doc: DocNode }) => {
       case "listItem": return <li key={key} className="pl-1 [&>p]:my-1">{kids(n)}</li>;
       case "blockquote": return <blockquote key={key} className="my-6 border-l-4 border-primary/40 pl-4 italic text-muted-foreground">{kids(n)}</blockquote>;
       case "horizontalRule": return <hr key={key} className="my-10 border-border" />;
-      case "aiPrompt": return <PromptCard key={key} title={String(n.attrs?.title ?? "")} prompt={String(n.attrs?.prompt ?? "")} />;
+      case "aiPrompt": return <PromptCard key={key} title={String(n.attrs?.title ?? "")} prompt={String(n.attrs?.prompt ?? "")} content={n.attrs?.promptContent as DocNode | null | undefined} />;
       default: return null;
     }
   };
