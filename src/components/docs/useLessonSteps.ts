@@ -9,7 +9,7 @@ export const useLessonSteps = (lesson: { id: string; content: DocNode; step_by_s
   const steps = useMemo(() => splitLessonSteps(lesson?.content ?? { type: "doc" }), [lesson?.content]);
   const initial = useMemo(() => lesson ? readProgress(lesson.id, steps.length) : { completed: [], lastStep: 1 }, [lesson?.id, steps.length]);
   const [stored, setStored] = useState<{ id: string; progress: LessonProgress } | null>(null);
-  const progress = stored?.id === lesson?.id ? stored.progress : initial;
+  const progress = stored && stored.id === lesson?.id ? stored.progress : initial;
   let hash = "";
   try { hash = decodeURIComponent(location.hash.slice(1)); } catch { /* malformed link */ }
   const hashStep = steps.findIndex((s) => s.headingIds.includes(hash));
