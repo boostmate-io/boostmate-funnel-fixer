@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ArrowLeft, ArrowRight, Check, ListTree, Loader2, Menu } from "lucide-react";
+import { ArrowRight, Check, ListTree, Loader2, Menu } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { LessonStepNavigation } from "@/components/docs/LessonStepNavigation";
 import { useLessonSteps } from "@/components/docs/useLessonSteps";
@@ -162,9 +162,6 @@ const DocsViewer = () => {
   const stepTocProps = lesson?.step_by_step ? { stepForHeading, currentStep, completed, onHeading } : {};
   const percent = completionPercent(completed, steps.length);
 
-  const idx = lesson ? lessons.findIndex((l) => l.id === lesson.id) : -1;
-  const prev = idx > 0 ? lessons[idx - 1] : null;
-  const next = idx >= 0 && idx < lessons.length - 1 ? lessons[idx + 1] : null;
   const isDraft = course?.status !== "published" || (lesson && lesson.status !== "published");
 
   return (
@@ -222,20 +219,6 @@ const DocsViewer = () => {
                     <DocContentRenderer key={lesson.step_by_step ? `${lesson.id}:${currentStep}` : lesson.id} doc={lesson.step_by_step ? current.doc : lesson.content} headingIds={lesson.step_by_step ? current.headingIds : undefined} />
                   </div>
                   {lesson.step_by_step && <LessonStepNavigation step={currentStep} count={steps.length} complete={completed.includes(currentStep)} onStep={goToStep} onToggle={toggle} />}
-                  <div className="mt-16 pt-6 border-t grid gap-3 sm:grid-cols-2">
-                    {prev ? (
-                      <Link to={`/docs/${course.slug}/${prev.slug}`} className="rounded-lg border p-4 hover:border-primary/50 transition-colors">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1"><ArrowLeft className="w-3 h-3" />Previous</span>
-                        <span className="font-medium">{prev.title}</span>
-                      </Link>
-                    ) : <span />}
-                    {next && (
-                      <Link to={`/docs/${course.slug}/${next.slug}`} className="rounded-lg border p-4 text-right hover:border-primary/50 transition-colors">
-                        <span className="text-xs text-muted-foreground flex items-center justify-end gap-1">Next<ArrowRight className="w-3 h-3" /></span>
-                        <span className="font-medium">{next.title}</span>
-                      </Link>
-                    )}
-                  </div>
                 </article>
               ) : (
                 <section>
