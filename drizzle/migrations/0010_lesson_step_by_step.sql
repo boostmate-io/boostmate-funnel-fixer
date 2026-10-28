@@ -1,0 +1,2 @@
+ALTER TABLE public.doc_lessons ADD COLUMN step_by_step boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.doc_lessons.step_by_step IS 'Optional HR-separated lesson navigation; visitor progress is stored locally, not in the database.';

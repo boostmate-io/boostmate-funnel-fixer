@@ -1180,6 +1180,7 @@ export type Database = {
           slug: string
           sort_order: number
           status: string
+          step_by_step: boolean
           title: string
           toc_heading_levels: number[]
           updated_at: string
@@ -1192,6 +1193,7 @@ export type Database = {
           slug: string
           sort_order?: number
           status?: string
+          step_by_step?: boolean
           title: string
           toc_heading_levels?: number[]
           updated_at?: string
@@ -1204,6 +1206,7 @@ export type Database = {
           slug?: string
           sort_order?: number
           status?: string
+          step_by_step?: boolean
           title?: string
           toc_heading_levels?: number[]
           updated_at?: string
