@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ArrowLeft, ArrowRight, ListTree, Loader2, Menu } from "lucide-react";
 import DocContentRenderer from "@/components/docs/DocContentRenderer";
-import { extractHeadings, type DocNode, type TocItem } from "@/lib/docs/docContent";
+import { lessonTableOfContents, type DocNode, type TocItem } from "@/lib/docs/docContent";
 import logo from "@/assets/logo-boostmate.svg";
 
 // Uses the regular client: visitors are anonymous and RLS returns only published content;
@@ -14,7 +14,7 @@ const db = supabase as any;
 
 interface Course { id: string; title: string; description: string | null; slug: string; status: string; }
 interface LessonLink { id: string; title: string; slug: string; status: string; }
-interface Lesson extends LessonLink { content: DocNode; }
+interface Lesson extends LessonLink { content: DocNode; toc_heading_levels: number[]; }
 
 const setMeta = (title: string, description: string) => {
   document.title = title;
@@ -111,7 +111,7 @@ const DocsViewer = () => {
       const { data: ls } = await db.from("doc_lessons").select("id, title, slug, status").eq("course_id", c.id).order("sort_order");
       let current: Lesson | null = null;
       if (lessonSlug) {
-        const { data: l } = await db.from("doc_lessons").select("id, title, slug, status, content").eq("course_id", c.id).eq("slug", lessonSlug).maybeSingle();
+        const { data: l } = await db.from("doc_lessons").select("id, title, slug, status, content, toc_heading_levels").eq("course_id", c.id).eq("slug", lessonSlug).maybeSingle();
         if (cancelled) return;
         if (!l) { setCourse(c); setLessons(ls ?? []); setState("notfound"); return; }
         current = l;
@@ -131,7 +131,7 @@ const DocsViewer = () => {
     else window.scrollTo(0, 0);
   }, [state, lesson]);
 
-  const toc = useMemo(() => (lesson ? extractHeadings(lesson.content) : []), [lesson]);
+  const toc = useMemo(() => (lesson ? lessonTableOfContents(lesson.content, lesson.toc_heading_levels) : []), [lesson]);
   const tocIds = useMemo(() => toc.map((t) => t.id), [toc]);
   const activeId = useActiveHeading(state === "ok" ? tocIds : []);
 
