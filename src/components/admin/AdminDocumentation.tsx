@@ -91,6 +91,7 @@ const LessonEditView = ({ course, lessonId, onBack }: { course: Course; lessonId
   const [status, setStatus] = useState<Status>("draft");
   const [content, setContent] = useState<DocNode>(EMPTY_DOC);
   const [tocLevels, setTocLevels] = useState<number[]>([1]);
+  const [stepByStep, setStepByStep] = useState(false);
   const [initial, setInitial] = useState<DocNode | null>(null);
   const [dirty, setDirty] = useState(false); const [saving, setSaving] = useState(false);
   const [savedSlug, setSavedSlug] = useState("");
@@ -102,6 +103,7 @@ const LessonEditView = ({ course, lessonId, onBack }: { course: Course; lessonId
       if (error) { toast.error("Couldn't load lesson: " + error.message); onBack(); return; }
       setTitle(data.title); setSlug(data.slug); setSavedSlug(data.slug); setStatus(data.status);
       setTocLevels(tocHeadingLevels(data.toc_heading_levels));
+      setStepByStep(data.step_by_step === true);
       const doc = (data.content as DocNode) ?? EMPTY_DOC; setContent(doc); setInitial(doc); setLoading(false);
     })();
   }, [lessonId, onBack]);
@@ -119,7 +121,7 @@ const LessonEditView = ({ course, lessonId, onBack }: { course: Course; lessonId
     if (!title.trim()) return toast.error("Title is required");
     if (!s) return toast.error("URL slug is required");
     setSaving(true);
-    const { error } = await db.from("doc_lessons").update({ title: title.trim(), slug: s, status, content, toc_heading_levels: tocLevels }).eq("id", lessonId);
+    const { error } = await db.from("doc_lessons").update({ title: title.trim(), slug: s, status, content, toc_heading_levels: tocLevels, step_by_step: stepByStep }).eq("id", lessonId);
     setSaving(false);
     if (error) return toast.error("Save failed: " + errMsg(error, "lesson"));
     setSlug(s); setSavedSlug(s); setDirty(false); toast.success("Lesson saved");
@@ -165,6 +167,9 @@ const LessonEditView = ({ course, lessonId, onBack }: { course: Course; lessonId
           </label>
         ))}
       </fieldset>
+      <label className="flex items-center gap-2 text-sm font-medium">
+        <Checkbox checked={stepByStep} onCheckedChange={(checked) => { setStepByStep(checked === true); mark(); }} />Enable Step-by-Step Mode
+      </label>
       {course.status !== "published" && status === "published" && (
         <p className="text-xs text-muted-foreground">This lesson becomes public once the course is published too.</p>
       )}
