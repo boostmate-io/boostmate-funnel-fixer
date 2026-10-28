@@ -3,7 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ArrowLeft, ArrowRight, ListTree, Loader2, Menu } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ListTree, Loader2, Menu } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { LessonStepNavigation } from "@/components/docs/LessonStepNavigation";
+import { useLessonSteps } from "@/components/docs/useLessonSteps";
+import { completionPercent } from "@/lib/docs/lessonSteps";
 import DocContentRenderer from "@/components/docs/DocContentRenderer";
 import { lessonTableOfContents, type DocNode, type TocItem } from "@/lib/docs/docContent";
 import logo from "@/assets/logo-boostmate.svg";
@@ -14,7 +18,7 @@ const db = supabase as any;
 
 interface Course { id: string; title: string; description: string | null; slug: string; status: string; }
 interface LessonLink { id: string; title: string; slug: string; status: string; }
-interface Lesson extends LessonLink { content: DocNode; toc_heading_levels: number[]; }
+interface Lesson extends LessonLink { content: DocNode; toc_heading_levels: number[]; step_by_step: boolean; }
 
 const setMeta = (title: string, description: string) => {
   document.title = title;
@@ -43,7 +47,10 @@ const LessonNav = ({ course, lessons, activeSlug, onNavigate }: { course: Course
   </nav>
 );
 
-const Toc = ({ items, activeId, onNavigate }: { items: TocItem[]; activeId: string | null; onNavigate?: () => void }) => {
+const Toc = ({ items, activeId, onNavigate, stepForHeading, currentStep, completed, onHeading }: {
+  items: TocItem[]; activeId: string | null; onNavigate?: () => void;
+  stepForHeading?: (id: string) => number; currentStep?: number; completed?: number[]; onHeading?: (id: string) => void;
+}) => {
   if (!items.length) return null;
   const minLevel = Math.min(...items.map((i) => i.level));
   return (
@@ -55,12 +62,16 @@ const Toc = ({ items, activeId, onNavigate }: { items: TocItem[]; activeId: stri
             <a href={`#${h.id}`}
               onClick={(e) => {
                 e.preventDefault();
-                const go = () => { document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); history.replaceState(null, "", `#${h.id}`); };
+                const go = () => {
+                  if (onHeading) onHeading(h.id);
+                  else { document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); history.replaceState(history.state, "", `#${h.id}`); }
+                };
                 if (onNavigate) { onNavigate(); setTimeout(go, 300); } else go();
               }}
               style={{ paddingLeft: `${0.75 + (h.level - minLevel) * 0.75}rem` }}
-              className={`-ml-px block border-l py-1 pr-2 text-sm leading-snug transition-colors ${activeId === h.id ? "border-primary text-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground"} ${h.level === minLevel ? "" : "text-[13px]"}`}>
-              {h.text}
+              aria-current={activeId === h.id ? "location" : undefined}
+              className={`-ml-px block border-l py-1 pr-2 text-sm leading-snug transition-colors ${(stepForHeading ? stepForHeading(h.id) === currentStep : activeId === h.id) ? "border-primary text-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground"} ${h.level === minLevel ? "" : "text-[13px]"}`}>
+              <span className="flex gap-1.5 items-start"><span className="min-w-0 break-words">{h.text}</span>{stepForHeading && completed?.includes(stepForHeading(h.id)) && <Check aria-label="Step complete" className="h-3.5 w-3.5 shrink-0 mt-0.5" />}</span>
             </a>
           </li>
         ))}
@@ -72,6 +83,7 @@ const Toc = ({ items, activeId, onNavigate }: { items: TocItem[]; activeId: stri
 const useActiveHeading = (ids: string[]) => {
   const [active, setActive] = useState<string | null>(ids[0] ?? null);
   useEffect(() => {
+    setActive(ids[0] ?? null);
     if (!ids.length) return;
     const els = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
     const visible = new Set<string>();
@@ -100,6 +112,8 @@ const DocsViewer = () => {
   const [state, setState] = useState<"loading" | "ok" | "notfound">("loading");
   const [navOpen, setNavOpen] = useState(false);
   const [tocOpen, setTocOpen] = useState(false);
+  const { steps, currentStep, completed, goToStep, toggle, hash } = useLessonSteps(lesson);
+  const current = steps[currentStep - 1];
 
   useEffect(() => {
     let cancelled = false;
@@ -111,7 +125,7 @@ const DocsViewer = () => {
       const { data: ls } = await db.from("doc_lessons").select("id, title, slug, status").eq("course_id", c.id).order("sort_order");
       let current: Lesson | null = null;
       if (lessonSlug) {
-        const { data: l } = await db.from("doc_lessons").select("id, title, slug, status, content, toc_heading_levels").eq("course_id", c.id).eq("slug", lessonSlug).maybeSingle();
+        const { data: l } = await db.from("doc_lessons").select("id, title, slug, status, content, toc_heading_levels, step_by_step").eq("course_id", c.id).eq("slug", lessonSlug).maybeSingle();
         if (cancelled) return;
         if (!l) { setCourse(c); setLessons(ls ?? []); setState("notfound"); return; }
         current = l;
@@ -126,14 +140,27 @@ const DocsViewer = () => {
 
   useEffect(() => {
     if (state !== "ok" || !lesson) return;
-    const hash = decodeURIComponent(window.location.hash.slice(1));
+    if (lesson.step_by_step) {
+      const frame = requestAnimationFrame(() => {
+        const target = hash ? document.getElementById(hash) : document.getElementById("lesson-step-content");
+        target?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      });
+      return () => cancelAnimationFrame(frame);
+    }
     if (hash) requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView());
     else window.scrollTo(0, 0);
-  }, [state, lesson]);
+  }, [state, lesson, currentStep, hash]);
 
   const toc = useMemo(() => (lesson ? lessonTableOfContents(lesson.content, lesson.toc_heading_levels) : []), [lesson]);
-  const tocIds = useMemo(() => toc.map((t) => t.id), [toc]);
+  const tocIds = useMemo(() => toc.filter((t) => !lesson?.step_by_step || current.headingIds.includes(t.id)).map((t) => t.id), [toc, lesson?.step_by_step, current]);
   const activeId = useActiveHeading(state === "ok" ? tocIds : []);
+  const stepForHeading = (id: string) => steps.findIndex((s) => s.headingIds.includes(id)) + 1;
+  const onHeading = (id: string) => {
+    goToStep(stepForHeading(id), id);
+    requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
+  const stepTocProps = lesson?.step_by_step ? { stepForHeading, currentStep, completed, onHeading } : {};
+  const percent = completionPercent(completed, steps.length);
 
   const idx = lesson ? lessons.findIndex((l) => l.id === lesson.id) : -1;
   const prev = idx > 0 ? lessons[idx - 1] : null;
@@ -185,7 +212,16 @@ const DocsViewer = () => {
                 <article>
                   <p className="text-sm text-primary font-medium mb-2">{course.title}</p>
                   <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight mb-8">{lesson.title}</h1>
-                  <DocContentRenderer doc={lesson.content} />
+                  {lesson.step_by_step && (
+                    <div className="mb-8 space-y-2">
+                      <p className="text-sm text-muted-foreground flex justify-between gap-3"><span>Lesson progress</span><span className="tabular-nums" aria-live="polite">{percent}% complete</span></p>
+                      <Progress value={percent} aria-label="Lesson progress" className="h-2" />
+                    </div>
+                  )}
+                  <div id="lesson-step-content" className="scroll-mt-24">
+                    <DocContentRenderer key={lesson.step_by_step ? `${lesson.id}:${currentStep}` : lesson.id} doc={lesson.step_by_step ? current.doc : lesson.content} headingIds={lesson.step_by_step ? current.headingIds : undefined} />
+                  </div>
+                  {lesson.step_by_step && <LessonStepNavigation step={currentStep} count={steps.length} complete={completed.includes(currentStep)} onStep={goToStep} onToggle={toggle} />}
                   <div className="mt-16 pt-6 border-t grid gap-3 sm:grid-cols-2">
                     {prev ? (
                       <Link to={`/docs/${course.slug}/${prev.slug}`} className="rounded-lg border p-4 hover:border-primary/50 transition-colors">
@@ -227,7 +263,7 @@ const DocsViewer = () => {
           {lesson && toc.length > 0 && (
             <aside className="hidden xl:block w-60 shrink-0">
               <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto py-8">
-                <Toc items={toc} activeId={activeId} />
+                <Toc items={toc} activeId={activeId} {...stepTocProps} />
               </div>
             </aside>
           )}
@@ -245,7 +281,7 @@ const DocsViewer = () => {
       <Sheet open={tocOpen} onOpenChange={setTocOpen}>
         <SheetContent side="right" className="w-[85vw] max-w-xs overflow-y-auto">
           <SheetHeader><SheetTitle className="sr-only">On this page</SheetTitle></SheetHeader>
-          <div className="mt-4"><Toc items={toc} activeId={activeId} onNavigate={() => setTocOpen(false)} /></div>
+          <div className="mt-4"><Toc items={toc} activeId={activeId} onNavigate={() => setTocOpen(false)} {...stepTocProps} /></div>
         </SheetContent>
       </Sheet>
     </div>

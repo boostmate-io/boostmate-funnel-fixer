@@ -18,10 +18,15 @@ export const useLessonSteps = (lesson: { id: string; content: DocNode; step_by_s
 
   useEffect(() => {
     if (!lesson?.step_by_step) return;
+    if (requestedStep(new URLSearchParams(location.search).get("step"), steps.length) === null) {
+      const params = new URLSearchParams(location.search);
+      params.set("step", String(currentStep));
+      navigate({ pathname: location.pathname, search: params.toString(), hash: location.hash }, { replace: true });
+    }
     const next = { completed: progress.completed, lastStep: currentStep };
     if (progress.lastStep !== currentStep) setStored({ id: lesson.id, progress: next });
     try { localStorage.setItem(progressKey(lesson.id), JSON.stringify(next)); } catch { /* Storage may be disabled. Navigation still works. */ }
-  }, [lesson?.id, lesson?.step_by_step, currentStep, progress]);
+  }, [lesson?.id, lesson?.step_by_step, currentStep, progress, location.pathname, location.search, location.hash, steps.length, navigate]);
 
   const goToStep = (step: number, heading?: string) => {
     const params = new URLSearchParams(location.search);

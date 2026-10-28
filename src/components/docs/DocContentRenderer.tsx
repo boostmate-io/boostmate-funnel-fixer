@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { extractHeadings, safeHref, type DocNode } from "@/lib/docs/docContent";
+import { extractHeadings, nodeText, safeHref, type DocNode } from "@/lib/docs/docContent";
 import PromptCard from "./PromptCard";
 
 /**
@@ -42,7 +42,7 @@ const DocContentRenderer = ({ doc, headingIds }: { doc: DocNode; headingIds?: st
       case "hardBreak": return <br key={key} />;
       case "heading": {
         const level = Number(n.attrs?.level ?? 2);
-        const id = (n.content ?? []).some((child) => child.text?.trim() || child.content?.length) ? ids[hi++] : undefined;
+        const id = nodeText(n).trim() ? ids[hi++] : undefined;
         const cls = "scroll-mt-24 font-display font-bold text-foreground";
         if (level === 1) return <h2 key={key} id={id} className={`${cls} text-2xl sm:text-3xl mt-12 mb-4 pt-2 border-t first:border-t-0 first:mt-0`}>{kids(n)}</h2>;
         if (level === 2) return <h3 key={key} id={id} className={`${cls} text-xl mt-10 mb-3`}>{kids(n)}</h3>;
