@@ -64,6 +64,13 @@
       "when": 1793118212393,
       "tag": "0008_documentation_courses_lessons",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793170194553,
+      "tag": "0009_lesson_toc_heading_levels",
+      "breakpoints": true
     }
   ]
 }

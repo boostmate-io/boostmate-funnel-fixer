@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -14,7 +15,7 @@ import {
 import { ArrowDown, ArrowLeft, ArrowUp, Copy, ExternalLink, GripVertical, Loader2, Pencil, Plus, Save, Trash2, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import LessonEditor from "@/components/docs/LessonEditor";
-import { EMPTY_DOC, docCourseUrl, docLessonUrl, slugify, type DocNode } from "@/lib/docs/docContent";
+import { EMPTY_DOC, docCourseUrl, docLessonUrl, slugify, tocHeadingLevels, type DocNode } from "@/lib/docs/docContent";
 
 type Status = "draft" | "published";
 interface Course { id: string; title: string; description: string | null; slug: string; status: Status; updated_at: string; }
@@ -89,6 +90,7 @@ const LessonEditView = ({ course, lessonId, onBack }: { course: Course; lessonId
   const [title, setTitle] = useState(""); const [slug, setSlug] = useState("");
   const [status, setStatus] = useState<Status>("draft");
   const [content, setContent] = useState<DocNode>(EMPTY_DOC);
+  const [tocLevels, setTocLevels] = useState<number[]>([1]);
   const [initial, setInitial] = useState<DocNode | null>(null);
   const [dirty, setDirty] = useState(false); const [saving, setSaving] = useState(false);
   const [savedSlug, setSavedSlug] = useState("");
@@ -99,6 +101,7 @@ const LessonEditView = ({ course, lessonId, onBack }: { course: Course; lessonId
       const { data, error } = await db.from("doc_lessons").select("*").eq("id", lessonId).single();
       if (error) { toast.error("Couldn't load lesson: " + error.message); onBack(); return; }
       setTitle(data.title); setSlug(data.slug); setSavedSlug(data.slug); setStatus(data.status);
+      setTocLevels(tocHeadingLevels(data.toc_heading_levels));
       const doc = (data.content as DocNode) ?? EMPTY_DOC; setContent(doc); setInitial(doc); setLoading(false);
     })();
   }, [lessonId, onBack]);
@@ -116,7 +119,7 @@ const LessonEditView = ({ course, lessonId, onBack }: { course: Course; lessonId
     if (!title.trim()) return toast.error("Title is required");
     if (!s) return toast.error("URL slug is required");
     setSaving(true);
-    const { error } = await db.from("doc_lessons").update({ title: title.trim(), slug: s, status, content }).eq("id", lessonId);
+    const { error } = await db.from("doc_lessons").update({ title: title.trim(), slug: s, status, content, toc_heading_levels: tocLevels }).eq("id", lessonId);
     setSaving(false);
     if (error) return toast.error("Save failed: " + errMsg(error, "lesson"));
     setSlug(s); setSavedSlug(s); setDirty(false); toast.success("Lesson saved");
@@ -151,6 +154,17 @@ const LessonEditView = ({ course, lessonId, onBack }: { course: Course; lessonId
             <Input id="l-slug" value={slug} onChange={(e) => { setSlug(e.target.value); mark(); }} onBlur={() => setSlug(slugify(slug))} /></div></div>
         <label className="flex items-center gap-2 h-10 text-sm"><Switch checked={status === "published"} onCheckedChange={(v) => { setStatus(v ? "published" : "draft"); mark(); }} />{status === "published" ? "Published" : "Draft"}</label>
       </div>
+      <fieldset className="flex flex-wrap items-center gap-4 text-sm">
+        <legend className="font-medium mb-2">On This Page</legend>
+        {[1, 2, 3].map((level) => (
+          <label key={level} className="flex items-center gap-2">
+            <Checkbox checked={tocLevels.includes(level)} onCheckedChange={(checked) => {
+              setTocLevels((current) => [1, 2, 3].filter((l) => l === level ? checked === true : current.includes(l)));
+              mark();
+            }} />H{level}
+          </label>
+        ))}
+      </fieldset>
       {course.status !== "published" && status === "published" && (
         <p className="text-xs text-muted-foreground">This lesson becomes public once the course is published too.</p>
       )}

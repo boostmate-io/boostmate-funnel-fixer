@@ -15,6 +15,15 @@ export interface TocItem {
 
 export const EMPTY_DOC: DocNode = { type: "doc", content: [] };
 
+export const tocHeadingLevels = (value: unknown): number[] =>
+  Array.isArray(value) ? [1, 2, 3].filter((level) => value.includes(level)) : [1];
+
+/** Filter after assigning all anchors so omitted levels never change heading IDs. */
+export const lessonTableOfContents = (doc: DocNode, levels: unknown): TocItem[] => {
+  const selected = tocHeadingLevels(levels);
+  return extractHeadings(doc).filter((heading) => selected.includes(heading.level));
+};
+
 export const slugify = (v: string) =>
   v
     .toLowerCase()
