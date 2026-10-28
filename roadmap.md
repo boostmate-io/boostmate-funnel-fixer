@@ -1,10 +1,10 @@
 # Roadmap — Offer Design redesign
 
 ## Documentation step-by-step mode
-- [ ] Save optional lesson setting (default off)
-- [ ] HR steps, full-lesson TOC, URL/history navigation
-- [ ] Local manual completion and resume
-- [ ] Tests and desktop/mobile end-to-end verification
+- [x] Save optional lesson setting (default off)
+- [x] HR steps, full-lesson TOC, URL/history navigation
+- [x] Local manual completion and resume
+- [x] Tests and desktop/mobile end-to-end verification
 
 - [x] Step 1 (UI): read-only Offer Ecosystem cards
 - [x] Registry Step 1a–1d: baseline tests, optional metadata, editor-only fields, OFFER_ITEM_FIELDS / offerRelativePath / fieldsForTier, drift tests
