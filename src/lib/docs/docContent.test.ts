@@ -19,6 +19,19 @@ describe("documentation content helpers", () => {
   it("allows all levels to be unchecked", () => {
     expect(lessonTableOfContents(headingDoc, [])).toEqual([]);
   });
+
+  it("falls back to the shallowest heading the lesson actually has", () => {
+    const noH1 = {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Why It Matters" }] },
+        { type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "Detail" }] },
+      ],
+    };
+    expect(lessonTableOfContents(noH1, [1]).map((h) => [h.level, h.id])).toEqual([[2, "why-it-matters"]]);
+    expect(lessonTableOfContents(noH1, [1, 2, 3]).map((h) => h.level)).toEqual([2, 3]);
+    expect(lessonTableOfContents({ type: "doc", content: [] }, [1])).toEqual([]);
+  });
   it("builds a nested table of contents with unique ids, skipping prompt blocks", () => {
     const doc = {
       type: "doc",

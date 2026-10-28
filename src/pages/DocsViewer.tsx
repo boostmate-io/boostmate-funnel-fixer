@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ArrowLeft, ArrowRight, Check, ListTree, Loader2, Menu } from "lucide-react";
+import { ArrowRight, Check, ListTree, Loader2, Menu } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { LessonStepNavigation } from "@/components/docs/LessonStepNavigation";
 import { useLessonSteps } from "@/components/docs/useLessonSteps";
@@ -162,9 +162,6 @@ const DocsViewer = () => {
   const stepTocProps = lesson?.step_by_step ? { stepForHeading, currentStep, completed, onHeading } : {};
   const percent = completionPercent(completed, steps.length);
 
-  const idx = lesson ? lessons.findIndex((l) => l.id === lesson.id) : -1;
-  const prev = idx > 0 ? lessons[idx - 1] : null;
-  const next = idx >= 0 && idx < lessons.length - 1 ? lessons[idx + 1] : null;
   const isDraft = course?.status !== "published" || (lesson && lesson.status !== "published");
 
   return (

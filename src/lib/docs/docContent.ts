@@ -18,10 +18,16 @@ export const EMPTY_DOC: DocNode = { type: "doc", content: [] };
 export const tocHeadingLevels = (value: unknown): number[] =>
   Array.isArray(value) ? [1, 2, 3].filter((level) => value.includes(level)) : [1];
 
-/** Filter after assigning all anchors so omitted levels never change heading IDs. */
+/** Filter after assigning all anchors so omitted levels never change heading IDs.
+ * When the selected levels match no heading in the lesson, fall back to the shallowest
+ * level the lesson actually uses, so a lesson is never left without a contents list. */
 export const lessonTableOfContents = (doc: DocNode, levels: unknown): TocItem[] => {
   const selected = tocHeadingLevels(levels);
-  return extractHeadings(doc).filter((heading) => selected.includes(heading.level));
+  const headings = extractHeadings(doc);
+  const filtered = headings.filter((heading) => selected.includes(heading.level));
+  if (filtered.length || !selected.length) return filtered;
+  const shallowest = Math.min(...headings.map((heading) => heading.level));
+  return headings.filter((heading) => heading.level === shallowest);
 };
 
 export const slugify = (v: string) =>
