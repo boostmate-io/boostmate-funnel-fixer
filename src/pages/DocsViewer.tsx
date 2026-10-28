@@ -219,20 +219,6 @@ const DocsViewer = () => {
                     <DocContentRenderer key={lesson.step_by_step ? `${lesson.id}:${currentStep}` : lesson.id} doc={lesson.step_by_step ? current.doc : lesson.content} headingIds={lesson.step_by_step ? current.headingIds : undefined} />
                   </div>
                   {lesson.step_by_step && <LessonStepNavigation step={currentStep} count={steps.length} complete={completed.includes(currentStep)} onStep={goToStep} onToggle={toggle} />}
-                  <div className="mt-16 pt-6 border-t grid gap-3 sm:grid-cols-2">
-                    {prev ? (
-                      <Link to={`/docs/${course.slug}/${prev.slug}`} className="rounded-lg border p-4 hover:border-primary/50 transition-colors">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1"><ArrowLeft className="w-3 h-3" />Previous</span>
-                        <span className="font-medium">{prev.title}</span>
-                      </Link>
-                    ) : <span />}
-                    {next && (
-                      <Link to={`/docs/${course.slug}/${next.slug}`} className="rounded-lg border p-4 text-right hover:border-primary/50 transition-colors">
-                        <span className="text-xs text-muted-foreground flex items-center justify-end gap-1">Next<ArrowRight className="w-3 h-3" /></span>
-                        <span className="font-medium">{next.title}</span>
-                      </Link>
-                    )}
-                  </div>
                 </article>
               ) : (
                 <section>
