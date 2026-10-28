@@ -4,33 +4,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Check, Copy, Eye, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import PromptMarkdown from "./PromptMarkdown";
+import DocContentRenderer from "./DocContentRenderer";
+import { copyPromptContent } from "@/lib/docs/promptContent";
+import type { DocNode } from "@/lib/docs/docContent";
 
-const copyText = async (text: string): Promise<boolean> => {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.setAttribute("readonly", "");
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
-      return ok;
-    } catch {
-      return false;
-    }
-  }
-};
-
-const CopyButton = ({ text, variant = "default" }: { text: string; variant?: "default" | "outline" }) => {
+const CopyButton = ({ text, content, variant = "default" }: { text: string; content?: DocNode | null; variant?: "default" | "outline" }) => {
   const [copied, setCopied] = useState(false);
   const onCopy = async () => {
-    const ok = await copyText(text);
+    const ok = await copyPromptContent(text, content);
     if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
@@ -46,7 +27,7 @@ const CopyButton = ({ text, variant = "default" }: { text: string; variant?: "de
   );
 };
 
-const PromptCard = ({ title, prompt }: { title: string; prompt: string }) => {
+const PromptCard = ({ title, prompt, content }: { title: string; prompt: string; content?: DocNode | null }) => {
   const [open, setOpen] = useState(false);
   return (
     <div className="not-prose my-6 rounded-xl border border-primary/25 bg-primary/5 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -60,7 +41,7 @@ const PromptCard = ({ title, prompt }: { title: string; prompt: string }) => {
         </div>
       </div>
       <div className="flex gap-2 shrink-0">
-        <CopyButton text={prompt} />
+        <CopyButton text={prompt} content={content} />
         <Button size="sm" variant="outline" className="gap-1.5 min-h-9" onClick={() => setOpen(true)}>
           <Eye className="w-4 h-4" /> View Prompt
         </Button>
@@ -72,10 +53,10 @@ const PromptCard = ({ title, prompt }: { title: string; prompt: string }) => {
             <DialogDescription>Copy this prompt and paste it into your AI assistant.</DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border bg-muted/40 p-4">
-            <PromptMarkdown source={prompt} />
+            {content ? <DocContentRenderer doc={content} /> : <PromptMarkdown source={prompt} />}
           </div>
           <div className="flex justify-end">
-            <CopyButton text={prompt} />
+            <CopyButton text={prompt} content={content} />
           </div>
         </DialogContent>
       </Dialog>

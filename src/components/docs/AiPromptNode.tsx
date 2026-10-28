@@ -3,17 +3,20 @@ import { Node, mergeAttributes, NodeViewWrapper, ReactNodeViewRenderer, type Nod
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import PromptMarkdownEditor from "./PromptMarkdownEditor";
+import { DocumentationRichTextEditor } from "./DocumentationRichTextEditor";
+import { promptDocument, promptMarkdownSource } from "@/lib/docs/promptContent";
+import { markdownToEditorHtml } from "@/lib/docs/markdown";
+import type { DocNode } from "@/lib/docs/docContent";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Pencil, Sparkles, Trash2 } from "lucide-react";
 
 const PromptNodeView = ({ node, updateAttributes, deleteNode, selected }: NodeViewProps) => {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [prompt, setPrompt] = useState("");
-  const attrs = node.attrs as { title: string; prompt: string };
+  const [content, setContent] = useState<DocNode>({ type: "doc", content: [] });
+  const attrs = node.attrs as { title: string; prompt: string; promptContent?: DocNode | null };
 
-  const openEdit = () => { setTitle(attrs.title); setPrompt(attrs.prompt); setOpen(true); };
+  const openEdit = () => { setTitle(attrs.title); setContent(promptDocument(attrs.prompt, attrs.promptContent)); setOpen(true); };
 
   return (
     <NodeViewWrapper contentEditable={false} data-drag-handle="" className="my-4">
@@ -33,7 +36,7 @@ const PromptNodeView = ({ node, updateAttributes, deleteNode, selected }: NodeVi
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit AI Prompt</DialogTitle>
-            <DialogDescription>Readers see only the title with Copy and View buttons. The full text is copied exactly as written.</DialogDescription>
+            <DialogDescription>{title || "AI Prompt"}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 flex-1 min-h-0 flex flex-col">
             <div className="space-y-1.5">
@@ -42,12 +45,15 @@ const PromptNodeView = ({ node, updateAttributes, deleteNode, selected }: NodeVi
             </div>
             <div className="space-y-1.5 flex-1 min-h-0 flex flex-col">
               <Label htmlFor="prompt-body">Prompt content</Label>
-              {open && <PromptMarkdownEditor id="prompt-body" value={prompt} onChange={setPrompt} />}
+              {open && <DocumentationRichTextEditor id="prompt-body" compact prompts={false} initialContent={content} onChange={setContent} onImport={(editor) => {
+                const source = window.prompt("Import Markdown");
+                if (source !== null) editor.commands.setContent(markdownToEditorHtml(source, false));
+              }} />}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => { updateAttributes({ title: title.trim(), prompt }); setOpen(false); }}>Save prompt</Button>
+            <Button onClick={() => { updateAttributes({ title: title.trim(), prompt: promptMarkdownSource(content), promptContent: content }); setOpen(false); }}>Save prompt</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -64,6 +70,9 @@ export const AiPromptNode = Node.create({
     return {
       title: { default: "", parseHTML: (el) => el.getAttribute("data-title") ?? "", renderHTML: (a) => ({ "data-title": a.title }) },
       prompt: { default: "", parseHTML: (el) => el.getAttribute("data-prompt") ?? "", renderHTML: (a) => ({ "data-prompt": a.prompt }) },
+      promptContent: { default: null, parseHTML: (el) => {
+        try { return JSON.parse(el.getAttribute("data-prompt-content") ?? "null"); } catch { return null; }
+      }, renderHTML: (a) => a.promptContent ? { "data-prompt-content": JSON.stringify(a.promptContent) } : {} },
     };
   },
   parseHTML() { return [{ tag: "div[data-ai-prompt]" }]; },
