@@ -6,8 +6,8 @@ import PromptCard from "./PromptCard";
  * Renders stored Tiptap JSON as React elements. Never injects HTML, so lesson content
  * cannot execute scripts; unknown node types are ignored.
  */
-const DocContentRenderer = ({ doc }: { doc: DocNode }) => {
-  const ids = extractHeadings(doc).map((h) => h.id);
+const DocContentRenderer = ({ doc, headingIds }: { doc: DocNode; headingIds?: string[] }) => {
+  const ids = headingIds ?? extractHeadings(doc).map((h) => h.id);
   let hi = 0;
 
   const renderText = (n: DocNode, key: number): ReactNode => {
@@ -42,7 +42,7 @@ const DocContentRenderer = ({ doc }: { doc: DocNode }) => {
       case "hardBreak": return <br key={key} />;
       case "heading": {
         const level = Number(n.attrs?.level ?? 2);
-        const id = ids[hi++];
+        const id = (n.content ?? []).some((child) => child.text?.trim() || child.content?.length) ? ids[hi++] : undefined;
         const cls = "scroll-mt-24 font-display font-bold text-foreground";
         if (level === 1) return <h2 key={key} id={id} className={`${cls} text-2xl sm:text-3xl mt-12 mb-4 pt-2 border-t first:border-t-0 first:mt-0`}>{kids(n)}</h2>;
         if (level === 2) return <h3 key={key} id={id} className={`${cls} text-xl mt-10 mb-3`}>{kids(n)}</h3>;
