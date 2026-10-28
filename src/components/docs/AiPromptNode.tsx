@@ -3,7 +3,7 @@ import { Node, mergeAttributes, NodeViewWrapper, ReactNodeViewRenderer, type Nod
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import PromptMarkdownEditor from "./PromptMarkdownEditor";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Pencil, Sparkles, Trash2 } from "lucide-react";
 
@@ -42,7 +42,7 @@ const PromptNodeView = ({ node, updateAttributes, deleteNode, selected }: NodeVi
             </div>
             <div className="space-y-1.5 flex-1 min-h-0 flex flex-col">
               <Label htmlFor="prompt-body">Prompt content</Label>
-              <Textarea id="prompt-body" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="flex-1 min-h-[300px] font-mono text-sm" />
+              {open && <PromptMarkdownEditor id="prompt-body" value={prompt} onChange={setPrompt} />}
             </div>
           </div>
           <DialogFooter>

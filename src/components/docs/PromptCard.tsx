@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Check, Copy, Eye, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import PromptMarkdown from "./PromptMarkdown";
 
 const copyText = async (text: string): Promise<boolean> => {
   try {
@@ -71,7 +72,7 @@ const PromptCard = ({ title, prompt }: { title: string; prompt: string }) => {
             <DialogDescription>Copy this prompt and paste it into your AI assistant.</DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border bg-muted/40 p-4">
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground select-text">{prompt}</p>
+            <PromptMarkdown source={prompt} />
           </div>
           <div className="flex justify-end">
             <CopyButton text={prompt} />
